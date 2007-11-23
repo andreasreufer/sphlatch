@@ -14,7 +14,7 @@ typedef NodeProxy*	NodeProxyPtrType;
 typedef NodeProxy&	NodeProxyRefType;
 
 //#define NPARTS	20
-#define NPARTS	30000
+#define NPARTS	200000
 
 int main() {
 	//typedef OctTree<size_t> Tree;
@@ -68,6 +68,11 @@ int main() {
 	TimeStop  = microsec_clock::local_time();
 	std::cerr << "Calc. multipoles time   " << ( TimeStop - TimeStart ) << "\n";
 	
+#ifdef PROXY
+	std::cout << "using proxies!\n";
+#else
+	std::cout << "not using proxies!\n";
+#endif
 	show_progress.restart(NPARTS);
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < NPARTS; i++) {
@@ -76,60 +81,7 @@ int main() {
 	}
 	TimeStop  = microsec_clock::local_time();
 	std::cerr << "Gravity calc time       " << ( TimeStop - TimeStart ) << "\n";
-	
-	matrixType TreeData = Data;
-	
-	show_progress.restart(NPARTS*(NPARTS-1));
-	
-	TimeStart = microsec_clock::local_time();
-	for (size_t i = 0; i < NPARTS; i++) {
-		valueType partDist, partDistPow3;
-		Data(i, AX) = 0.;
-		Data(i, AY) = 0.;
-		Data(i, AZ) = 0.;
-		
-		for (size_t j = 0; j < NPARTS; j++) {
-			if ( i != j ) {
-				partDist = sqrt(	( Data(i, X) - Data(j, X) )*
-									( Data(i, X) - Data(j, X) ) +
-									( Data(i, Y) - Data(j, Y) )*
-									( Data(i, Y) - Data(j, Y) ) +
-									( Data(i, Z) - Data(j, Z) )*
-									( Data(i, Z) - Data(j, Z) ) );
-				partDistPow3 = partDist*partDist*partDist;
-				Data(i, AX) -= Data(j, M) * ( Data(i, X) - Data(j, X) )
-								/ partDistPow3;
-				Data(i, AY) -= Data(j, M) * ( Data(i, Y) - Data(j, Y) )
-								/ partDistPow3;
-				Data(i, AZ) -= Data(j, M) * ( Data(i, Z) - Data(j, Z) )
-								/ partDistPow3;
-				++show_progress;
-			}
-		}
-	}
-	TimeStop  = microsec_clock::local_time();
-	std::cerr << "Gravity BF calc time    " << ( TimeStop - TimeStart ) << "\n";
 
-	matrixType BFData = Data;
-	
-	std::vector<valueType> accLengthRelErr;
-	accLengthRelErr.resize(NPARTS);
-	
-	for (size_t i = 0; i < NPARTS; i++) {
-		valueType bfAccLength, treeAccLength;
-		
-		bfAccLength = sqrt(	BFData(i, AX) * BFData(i, AX)  +
-							BFData(i, AY) * BFData(i, AY)  +
-							BFData(i, AZ) * BFData(i, AZ) );
-
-		treeAccLength = sqrt(	TreeData(i, AX) * TreeData(i, AX) +
-								TreeData(i, AY) * TreeData(i, AY) +
-								TreeData(i, AZ) * TreeData(i, AZ) );
-							
-		accLengthRelErr[i] = ( treeAccLength - bfAccLength ) / bfAccLength;
-		std::cout << accLengthRelErr[i] << "\n";
-	}
-	std::cout << "\n";
 	
 	return EXIT_SUCCESS;
 }

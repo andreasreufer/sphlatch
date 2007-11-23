@@ -1,8 +1,8 @@
-#ifndef PARTICLEPROXY_H
-#define PARTICLEPROXY_H
+#ifndef NODEPROXY_H
+#define NODEPROXY_H
 
 /*
- *  particleproxy.h
+ *  nodeproxy.h
  *  
  *
  *  Created by Andreas Reufer on 15.11.07.
@@ -13,22 +13,21 @@
 #include "typedefs.h"
 
 #include "octreenode.h"
-
-struct ParticleProxy {
-	typedef ParticleProxy*	ParticleProxyTypePtr;
-	GenericOctNode<ParticleProxyTypePtr>*	nodePtr;
+struct NodeProxy {
+	typedef NodeProxy*	NodeProxyTypePtr;
+	GenericOctNode<NodeProxyTypePtr>*	nodePtr;
 	
 	matrixPtrType	matrixPtr;
 	size_t			rowIndex;
 
-	ParticleProxy(matrixPtrType _matrixPtr, size_t const _rowIndex) {
+	NodeProxy(matrixPtrType _matrixPtr, size_t const _rowIndex) {
 		matrixPtr = _matrixPtr;
 		rowIndex = _rowIndex;
 	}
 
-	ParticleProxy(void) {}
+	NodeProxy(void) {}
 
-	ParticleProxy* operator*() {
+	NodeProxy* operator*() {
 		return this;
 	}
 	

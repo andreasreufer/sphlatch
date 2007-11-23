@@ -72,7 +72,7 @@ class OctTree {
 			nodeCounter	= 1;
 			particleCounter	= 0;
 			
-			toptreeDepth = 1; // get this from costzone and MAC!
+			toptreeDepth = 6; // get this from costzone and MAC!
 			//thetaMAC = 1.;
 			thetaMAC = 0.7;
 			
@@ -338,6 +338,12 @@ class OctTree {
 					(*(CurNodePtr->payload))(CX) = monopolCXM / monopolCM;
 					(*(CurNodePtr->payload))(CY) = monopolCYM / monopolCM;
 					(*(CurNodePtr->payload))(CZ) = monopolCZM / monopolCM;
+					
+					/* copy data to node itself */
+					CurNodePtr->q000 = monopolCM;
+					CurNodePtr->xCom = monopolCXM / monopolCM;
+					CurNodePtr->yCom = monopolCYM / monopolCM;
+					CurNodePtr->zCom = monopolCZM / monopolCM;
 				}
 			}
 		}			
@@ -352,11 +358,19 @@ class OctTree {
 		void calcGravParticle() {
 			//std::cout << CurNodePtr->depth << "p ";
 			//calcGravityPartsCounter++;
+			
+#ifdef PROXY
 			partGravPartnerX = (*(CurNodePtr->payload))(X);
 			partGravPartnerY = (*(CurNodePtr->payload))(Y);
 			partGravPartnerZ = (*(CurNodePtr->payload))(Z);
 			partGravPartnerM = (*(CurNodePtr->payload))(M);
-			
+#else
+			partGravPartnerX = CurNodePtr->xCom;
+			partGravPartnerY = CurNodePtr->yCom;
+			partGravPartnerZ = CurNodePtr->zCom;
+			partGravPartnerM = CurNodePtr->q000;
+#endif
+
 			cellPartDist = sqrt(	(partGravPartnerX - curGravParticleX)*
 				(partGravPartnerX - curGravParticleX) +
 				(partGravPartnerY - curGravParticleY)*
@@ -386,6 +400,7 @@ class OctTree {
 		void calcGravCell() {
 			//std::cout << CurNodePtr->depth << "c ";
 			//calcGravityCellsCounter++;
+#ifdef PROXY
 			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist;
 			curGravParticleAX -=  (*(CurNodePtr->payload))(Q000) *
 				( curGravParticleX - (*(CurNodePtr->payload))(CX) ) / 
@@ -396,6 +411,17 @@ class OctTree {
 			curGravParticleAZ -=  (*(CurNodePtr->payload))(Q000) *
 				( curGravParticleZ - (*(CurNodePtr->payload))(CZ) ) / 
 				cellPartDistPow3;
+#else
+			curGravParticleAX -= ( CurNodePtr->q000 ) * 
+				( curGravParticleX - CurNodePtr->xCom ) /
+				cellPartDistPow3;
+			curGravParticleAY -= ( CurNodePtr->q000 ) * 
+				( curGravParticleY - CurNodePtr->yCom ) /
+				cellPartDistPow3;
+			curGravParticleAX -= ( CurNodePtr->q000 ) * 
+				( curGravParticleZ - CurNodePtr->zCom ) /
+				cellPartDistPow3;
+#endif
 		}
 		
 		/**
@@ -570,6 +596,12 @@ class OctTree {
 				CurNodePtr->isParticle		= true;
 				CurNodePtr->isEmpty			= false;
 				CurNodePtr->isGravitating	= _newIsGravitating;
+				
+				/* particle saves its position to node directly */
+				CurNodePtr->xCom = (*_newPayload)(X);
+				CurNodePtr->yCom = (*_newPayload)(Y);
+				CurNodePtr->zCom = (*_newPayload)(Z);
+				CurNodePtr->q000 = (*_newPayload)(M);
 				
 				/**
 				* don't forget to wire the nodePtr of the 
