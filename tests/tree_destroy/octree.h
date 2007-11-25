@@ -84,7 +84,10 @@ class OctTree {
 		*/
 		~OctTree(void) {
 			std::cerr << " deleting tree ...\n";
+			goRoot();
+			std::cout << CurNodePtr << "   " << RootPtr << "\n";
 			empty();
+			std::cout << CurNodePtr << "   " << RootPtr << "\n";
 			std::cerr << " ... done!\n";
 		}
 		
@@ -558,7 +561,7 @@ class OctTree {
 		void calcGravParticle() {
 #ifdef TREEPROFILE
 			calcGravityPartsCounter++;
-#endif TREEPROFILE
+#endif
 			partGravPartnerX = (*(CurNodePtr->payload))(X);
 			partGravPartnerY = (*(CurNodePtr->payload))(Y);
 			partGravPartnerZ = (*(CurNodePtr->payload))(Z);
@@ -639,6 +642,7 @@ class OctTree {
 		*/
 	private:	
 		void empty(void) {
+			goRoot();
 			emptyRecursor();
 		}
 		
