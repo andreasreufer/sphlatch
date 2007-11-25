@@ -39,7 +39,6 @@ class OctTree {
 		* - build toptree
 		* - set up CellMultipoles matrix
 		*/
-		 
 		OctTree(void) {
 			//RootPtr = new GenericOctNode<T>;
 			RootPtr = new GenericOctNode<NodeProxyPtrType>;
@@ -72,7 +71,7 @@ class OctTree {
 			nodeCounter	= 1;
 			particleCounter	= 0;
 			
-			toptreeDepth = 1; // get this from costzone and MAC!
+			toptreeDepth = 6; // get this from costzone and MAC!
 			//thetaMAC = 1.;
 			thetaMAC = 0.7;
 			
@@ -83,321 +82,27 @@ class OctTree {
 		* destructor:
 		*  - postorder recurse node deletion
 		*/
-		~OctTree(void) {}
-	
-		/**
-		* method to insert particle:
-		*  - go to root
-		*  - call the insertion recursor
-		*/		
-		void insertParticle(NodeProxyType* newPayload, 
-				nodetypeType newType) {
-			goRoot();
-			insertParticleRecursor(newPayload, newType);
-			particleCounter++;
+		~OctTree(void) {
+			std::cerr << " deleting tree ...\n";
+			empty();
+			std::cerr << " ... done!\n";
 		}
-
-		/**
-		* calculate multipoles:
-		*  - prepare cellData matrix and cellProxies vector
-		*  - connect every node to a matrix row
-		*  - go to root
-		*  - call the multipole recursor
-		*  - exchange toptrees
-		*/
-		void calcMultipoles(void) {
-			cellData.resize(nodeCounter, MSIZE);
-			cellProxies.resize(nodeCounter);
-			//std::cout << nodeCounter << " nodes \n";
-			for (size_t i = 0; i < nodeCounter; i++) {
-				( cellProxies[i] ).setup(&cellData, i);
-				cellData(i, CID) = i;
-			}
-			
-			nodeCounter = 0;
-			goRoot();
-			connectCellDataRecursor();
-			
-			debugCounter = 0;
-			goRoot();
-			calcMultipoleRecursor();
-			/*std::cout << "empty: " << debugCounter << "\n";
-			
-			std::cout << (*(RootPtr->payload))(CX) << "   "
-				<< (*(RootPtr->payload))(CY) << "   "
-				<< (*(RootPtr->payload))(CZ) << "   "
-				<< (*(RootPtr->payload))(Q000) << "\n";*/
-			
-#ifdef OOSPH_MPI
-			//(Exchange)
-#endif
-		}
-		 
-		/**
-		* calculate gravitation for a particle:
-		*  - load current particle data
-		*  - go to root
-		*  - call the gravity calculation recursor
-		*  - write back resulting acceleration
-		*/
-		NodeProxyType* curGravNodeProxy;
-		valueType curGravParticleX, curGravParticleY, curGravParticleZ;
-		valueType curGravParticleAX, curGravParticleAY, curGravParticleAZ;
-		valueType thetaMAC;
 		
-		size_t calcGravityCellsCounter, calcGravityPartsCounter;
-		void calcGravity(NodeProxyType* _curParticle) {
-			curGravNodeProxy = _curParticle;
-						
-			curGravParticleX = (*curGravNodeProxy)(X);
-			curGravParticleY = (*curGravNodeProxy)(Y);
-			curGravParticleZ = (*curGravNodeProxy)(Z);
-			curGravParticleAX = 0.;
-			curGravParticleAY = 0.;
-			curGravParticleAZ = 0.;
-						
-			// do something so that _curParticle
-			// is excluded from the recursion
-			
-			/**
-			* trick: hide the current particle by letting it look like
-			* an empty cell node, so that it doesn't gravitate with
-			* itself.
-			*/
-			curGravNodeProxy->nodePtr->isParticle	= false;
-			curGravNodeProxy->nodePtr->isEmpty		= true;
-			
-			calcGravityPartsCounter = 0;
-			calcGravityCellsCounter = 0;
-			
-			goRoot();
-			calcGravityRecursor();
-			
-			/*std::cout << "\nstats: " << calcGravityPartsCounter
-				<< " particles and "
-				<< calcGravityCellsCounter << " cells\n";*/
-			
-			(*curGravNodeProxy)(AX) += curGravParticleAX;
-			(*curGravNodeProxy)(AY) += curGravParticleAY;
-			(*curGravNodeProxy)(AZ) += curGravParticleAZ;
-			
-			/**
-			* de-trick
-			*/
-			curGravNodeProxy->nodePtr->isParticle	= true;
-			curGravNodeProxy->nodePtr->isEmpty		= false;			
-		}
-	
-		  
-		/**
-		* find neighbours:
-		*  - load current particle data
-		*  - go to current particle node
-		*  - go up until every neighbour is within current cell
-		*  - call the neighbour search recursor
-		*  - brute force sort out non-neighbours
-		*  - return neighbours
-		*/
-		/*somecontainer_type findNeighbours(
-				const GenericOctNodePtr _curParticle, 
-				const valueRefType _search_radius) {
-			CurNodePtr = _curParticle;
-			size_t topDepth = <crazyformula>
-			while ( CurNodePtr->depth > topDepth ) {
-				goUp();
-			}
-			neighbourFindRecursor(_curParticle);
-			return neighbours;
-		}*/
-		   
 	private:
-
-		/**
-		* stop recursion if:
-		* - when we've arrived in Neverland :-)
-		*/
-		bool neverStop(void) {
-			return false;
-		};
-		
-		/**
-		* stop recursion if:
-		* - depth of current node is below toptreeDepth
-		*/
-		bool belowToptreeStop(void) {
-			return ( CurNodePtr->depth >= toptreeDepth );
-		};
-		
-		/**
-		* stop recursion if:
-		* - current node is empty
-		* - current node is a particle
-		*/
-		bool calcMultipoleStop(void) {
-			return ( CurNodePtr->isEmpty || CurNodePtr->isParticle );
-		};
-
-		/**
-		* stop recursion if:
-		* - current node is empty
-		* - MAC is fulfilled
-		*/
-		/*valueTye theta;
-		bool calcGravStop(void) {
-			if ( CurNodePtr->isEmpty || CurNodePtr->isParticle ) {
-				return true;
-			} else
-			if ( 
-				
-				||  CurNodePtr->isParticle
-			return ( CurNodePtr->isEmpty || CurNodePtr->isParticle );
-			//		insert MAC
-		}*/
-		
-		valueType cellPartDist;
-		bool calcGravMAC(void) {
-			cellPartDist = sqrt( (CurNodePtr->xCenter - curGravParticleX)*
-				(CurNodePtr->xCenter - curGravParticleX) +
-				(CurNodePtr->yCenter - curGravParticleY)*
-				(CurNodePtr->yCenter - curGravParticleY) + 
-				(CurNodePtr->zCenter - curGravParticleZ)*
-				(CurNodePtr->zCenter - curGravParticleZ)
-				);
-			return ( ( ( CurNodePtr->cellSize) / cellPartDist ) < thetaMAC );
-		}
+		GenericOctNodePtr CurNodePtr, RootPtr;
 			
 		/**
-		* do nothing :-)
+		* variables
 		*/
-		void doNothing(void) {}
+		size_t nodeCounter, particleCounter, toptreeDepth;
+		size_t debugCounter;	// just to fool around
 		
-		/**
-		* make empty cell nodes for the toptree
-		*/
-		void makeEmptyCells(void) {
-			for (size_t i = 0; i < 8; i++) {
-				newChild(i);
-				goChild(i);
-				CurNodePtr->payload = NULL;
-				CurNodePtr->isParticle		= false;
-				CurNodePtr->isEmpty			= true;
-				CurNodePtr->isGravitating	= false;
-				nodeCounter++;
-				goUp();
-			}
-		}
+		matrixType				cellData;
+		std::vector<NodeProxy>	cellProxies;
 		
-		/**
-		* connect cell to a matrix row
-		*/
-		void connectCellData() {
-			if ( ! (CurNodePtr->isParticle) ) {
-				CurNodePtr->payload = *(cellProxies[nodeCounter]);
-				nodeCounter++;
-			}
-		}
-		
-		/**
-		* calculate multipole from children
-		* todo: include isGravitating flag
-		*/
-		
-		valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
-		void calcMultipole() {
-			if (! CurNodePtr->isParticle ) {	// save this check by making
-				if (! CurNodePtr->isEmpty ) {	//  particles empty
-					monopolCM = 0.;
-					monopolCXM = 0.;
-					monopolCYM = 0.;
-					monopolCZM = 0.;
-					for (size_t i = 0; i < 8; i++) {
-						if ( CurNodePtr->child[i] != NULL ) {
-							goChild(i);
-							if ( CurNodePtr->isParticle ) {
-								monopolCM  += (*(CurNodePtr->payload))(M);
-								monopolCXM += (*(CurNodePtr->payload))(X) *
-									(*(CurNodePtr->payload))(M);
-								monopolCYM += (*(CurNodePtr->payload))(Y) *
-									(*(CurNodePtr->payload))(M);
-								monopolCZM += (*(CurNodePtr->payload))(Z) *
-									(*(CurNodePtr->payload))(M);
-								} else
-							if (! CurNodePtr->isEmpty ) {
-								monopolCM  += (*(CurNodePtr->payload))(Q000);
-								monopolCXM += (*(CurNodePtr->payload))(CX) *
-									(*(CurNodePtr->payload))(Q000);
-								monopolCYM += (*(CurNodePtr->payload))(CY) *
-									(*(CurNodePtr->payload))(Q000);
-								monopolCZM += (*(CurNodePtr->payload))(CZ) *
-									(*(CurNodePtr->payload))(Q000);
-							} else {}
-							goUp();
-						}
-					}
-					(*(CurNodePtr->payload))(Q000) = monopolCM;
-					(*(CurNodePtr->payload))(CX) = monopolCXM / monopolCM;
-					(*(CurNodePtr->payload))(CY) = monopolCYM / monopolCM;
-					(*(CurNodePtr->payload))(CZ) = monopolCZM / monopolCM;
-				}
-			}
-		}			
-		
-		/**
-		* calculate acceleration due to a particle
-		* todo: add grav-const
-		*/
-		
-		valueType partGravPartnerX, partGravPartnerY, partGravPartnerZ, 
-				  partGravPartnerM;
-		void calcGravParticle() {
-			//std::cout << CurNodePtr->depth << "p ";
-			//calcGravityPartsCounter++;
-			partGravPartnerX = (*(CurNodePtr->payload))(X);
-			partGravPartnerY = (*(CurNodePtr->payload))(Y);
-			partGravPartnerZ = (*(CurNodePtr->payload))(Z);
-			partGravPartnerM = (*(CurNodePtr->payload))(M);
-			
-			cellPartDist = sqrt(	(partGravPartnerX - curGravParticleX)*
-				(partGravPartnerX - curGravParticleX) +
-				(partGravPartnerY - curGravParticleY)*
-				(partGravPartnerY - curGravParticleY) + 
-				(partGravPartnerZ - curGravParticleZ)*
-				(partGravPartnerZ - curGravParticleZ)
-				); // include softening here
-									
-			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist;
-			
-			curGravParticleAX -=  partGravPartnerM *
-				( curGravParticleX - partGravPartnerX ) / 
-				cellPartDistPow3;
-			curGravParticleAY -=  partGravPartnerM *
-				( curGravParticleY - partGravPartnerY ) / 
-				cellPartDistPow3;
-			curGravParticleAZ -=  partGravPartnerM *
-				( curGravParticleZ - partGravPartnerZ ) / 
-				cellPartDistPow3;
-		}
-		
-		/**
-		* calculate acceleration due to a cell
-		* todo: add grav-const
-		*/
-		valueType cellPartDistPow3;
-		void calcGravCell() {
-			//std::cout << CurNodePtr->depth << "c ";
-			//calcGravityCellsCounter++;
-			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist;
-			curGravParticleAX -=  (*(CurNodePtr->payload))(Q000) *
-				( curGravParticleX - (*(CurNodePtr->payload))(CX) ) / 
-				cellPartDistPow3;
-			curGravParticleAY -=  (*(CurNodePtr->payload))(Q000) *
-				( curGravParticleY - (*(CurNodePtr->payload))(CY) ) / 
-				cellPartDistPow3;
-			curGravParticleAZ -=  (*(CurNodePtr->payload))(Q000) *
-				( curGravParticleZ - (*(CurNodePtr->payload))(CZ) ) / 
-				cellPartDistPow3;
-		}
-		
+		   
+		// little private helpers
+	private:
 		/**
 		* go up one level if there is a parent
 		*/
@@ -483,7 +188,14 @@ class OctTree {
 				nodeCounter++;
 			}
 		};
+		// end of little helpers
 		
+		
+		// top tree stuff
+	private:
+		/**
+		* recursor to build toptree
+		*/
 		void buildToptreeRecursor(void) {
 			if ( belowToptreeStop() ) {} else {
 				makeEmptyCells();
@@ -496,50 +208,45 @@ class OctTree {
 				}
 			}
 		};	
-		
-		void connectCellDataRecursor(void) {
-			connectCellData();
-			for (size_t i = 0; i < 8; i++) { // try without loop
-				if ( CurNodePtr->child[i] != NULL ) {
-					goChild(i);
-					connectCellDataRecursor();
-					goUp();
-				}
+		/**
+		* make empty cell nodes for the toptree
+		*/
+		void makeEmptyCells(void) {
+			for (size_t i = 0; i < 8; i++) {
+				newChild(i);
+				goChild(i);
+				CurNodePtr->payload = NULL;
+				CurNodePtr->isParticle		= false;
+				CurNodePtr->isEmpty			= true;
+				CurNodePtr->isGravitating	= false;
+				nodeCounter++;
+				goUp();
 			}
 		}
+		/**
+		* stop recursion if:
+		* - depth of current node is below toptreeDepth
+		*/
+		bool belowToptreeStop(void) {
+			return ( CurNodePtr->depth >= toptreeDepth );
+		};
+		// end of top tree stuff
+	
 		
-		void calcMultipoleRecursor(void) {
-			if ( calcMultipoleStop() ) {} else {
-				for (size_t i = 0; i < 8; i++) { // try without loop
-					if ( CurNodePtr->child[i] != NULL ) {
-						goChild(i);
-						calcMultipoleRecursor();
-						goUp();
-					}
-				}
-				calcMultipole();
-			}
-		};	
-
-		void calcGravityRecursor(void) {
-			if ( CurNodePtr->isParticle ) {
-				calcGravParticle();
-			} else
-			if ( CurNodePtr->isEmpty ) {
-			} else
-			if ( calcGravMAC() ) {
-				calcGravCell();					
-			} else {
-				for (size_t i = 0; i < 8; i++) { // try without loop
-					if ( CurNodePtr->child[i] != NULL ) {
-						goChild(i);
-						calcGravityRecursor();
-						goUp();
-					}
-				}
-			}
+		// insertParticle() stuff
+	public:
+		/**
+		* method to insert particle:
+		*  - go to root
+		*  - call the insertion recursor
+		*/		
+		void insertParticle(NodeProxyType* newPayload, 
+				nodetypeType newType) {
+			goRoot();
+			insertParticleRecursor(newPayload, newType);
+			particleCounter++;
 		}
-		
+	private:		
 		/**
 		* recursor for inserting a new particle:
 		* try to insert as child of current
@@ -613,20 +320,345 @@ class OctTree {
 			} else {
 				/* this never happens */
 			}
+		}		
+		// end of insertParticle() stuff
+		
+		
+		// calcMultipoles() stuff
+	public:
+		/**
+		* calculate multipoles:
+		*  - prepare cellData matrix and cellProxies vector
+		*  - connect every node to a matrix row
+		*  - go to root
+		*  - call the multipole recursor
+		*  - exchange toptrees
+		*/
+		void calcMultipoles(void) {
+			cellData.resize(nodeCounter, MSIZE);
+			cellProxies.resize(nodeCounter);
+
+			for (size_t i = 0; i < nodeCounter; i++) {
+				( cellProxies[i] ).setup(&cellData, i);
+				cellData(i, CID) = i;
+			}
+			
+			nodeCounter = 0;
+			goRoot();
+			connectCellDataRecursor();
+			
+			debugCounter = 0;
+			goRoot();
+			calcMultipoleRecursor();
+			/*std::cout << "empty: " << debugCounter << "\n";
+			
+			std::cout << (*(RootPtr->payload))(CX) << "   "
+				<< (*(RootPtr->payload))(CY) << "   "
+				<< (*(RootPtr->payload))(CZ) << "   "
+				<< (*(RootPtr->payload))(Q000) << "\n";*/
+			
+#ifdef OOSPH_MPI
+			//(Exchange)
+#endif
+		}
+	
+	private:
+		/**
+		* recursor for multipole calculation
+		*/
+		void calcMultipoleRecursor(void) {
+			if ( calcMultipoleStop() ) {} else {
+				for (size_t i = 0; i < 8; i++) { // try without loop
+					if ( CurNodePtr->child[i] != NULL ) {
+						goChild(i);
+						calcMultipoleRecursor();
+						goUp();
+					}
+				}
+				calcMultipole();
+			}
+		};	
+		
+		/**
+		* stop recursion if:
+		* - current node is empty
+		* - current node is a particle
+		*/
+		bool calcMultipoleStop(void) {
+			return ( CurNodePtr->isEmpty || CurNodePtr->isParticle );
+		};
+		
+		/**
+		* recursive function to connect
+		* cells to a matrix row
+		*/
+		void connectCellDataRecursor(void) {
+			connectCellData();
+			for (size_t i = 0; i < 8; i++) { // try without loop
+				if ( CurNodePtr->child[i] != NULL ) {
+					goChild(i);
+					connectCellDataRecursor();
+					goUp();
+				}
+			}
+		}
+
+		/**
+		* connect cell to a matrix row
+		*/
+		void connectCellData() {
+			if ( ! (CurNodePtr->isParticle) ) {
+				CurNodePtr->payload = *(cellProxies[nodeCounter]);
+				nodeCounter++;
+			}
+		}
+
+		/**
+		* calculate multipole from children
+		* todo: include isGravitating flag
+		*/
+		valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
+		void calcMultipole() {
+			if (! CurNodePtr->isParticle ) {	// save this check by making
+				if (! CurNodePtr->isEmpty ) {	//  particles empty
+					monopolCM = 0.;
+					monopolCXM = 0.;
+					monopolCYM = 0.;
+					monopolCZM = 0.;
+					for (size_t i = 0; i < 8; i++) {
+						if ( CurNodePtr->child[i] != NULL ) {
+							goChild(i);
+							if ( CurNodePtr->isParticle ) {
+								monopolCM  += (*(CurNodePtr->payload))(M);
+								monopolCXM += (*(CurNodePtr->payload))(X) *
+									(*(CurNodePtr->payload))(M);
+								monopolCYM += (*(CurNodePtr->payload))(Y) *
+									(*(CurNodePtr->payload))(M);
+								monopolCZM += (*(CurNodePtr->payload))(Z) *
+									(*(CurNodePtr->payload))(M);
+								} else
+							if (! CurNodePtr->isEmpty ) {
+								monopolCM  += (*(CurNodePtr->payload))(Q000);
+								monopolCXM += (*(CurNodePtr->payload))(CX) *
+									(*(CurNodePtr->payload))(Q000);
+								monopolCYM += (*(CurNodePtr->payload))(CY) *
+									(*(CurNodePtr->payload))(Q000);
+								monopolCZM += (*(CurNodePtr->payload))(CZ) *
+									(*(CurNodePtr->payload))(Q000);
+							} else {}
+							goUp();
+						}
+					}
+					(*(CurNodePtr->payload))(Q000) = monopolCM;
+					(*(CurNodePtr->payload))(CX) = monopolCXM / monopolCM;
+					(*(CurNodePtr->payload))(CY) = monopolCYM / monopolCM;
+					(*(CurNodePtr->payload))(CZ) = monopolCZM / monopolCM;
+				}
+			}
+		}			
+		// end of multipole stuff
+
+		
+		// calcGravity() stuff
+	private:
+		NodeProxyType* curGravNodeProxy;
+		valueType curGravParticleX, curGravParticleY, curGravParticleZ;
+		valueType curGravParticleAX, curGravParticleAY, curGravParticleAZ;
+		valueType thetaMAC;
+		size_t calcGravityCellsCounter, calcGravityPartsCounter;
+	public:
+		/**
+		* calculate gravitation for a particle:
+		*  - load current particle data
+		*  - go to root
+		*  - call the gravity calculation recursor
+		*  - write back resulting acceleration
+		*/
+		void calcGravity(NodeProxyType* _curParticle) {
+			curGravNodeProxy = _curParticle;
+						
+			curGravParticleX = (*curGravNodeProxy)(X);
+			curGravParticleY = (*curGravNodeProxy)(Y);
+			curGravParticleZ = (*curGravNodeProxy)(Z);
+			curGravParticleAX = 0.;
+			curGravParticleAY = 0.;
+			curGravParticleAZ = 0.;
+#ifdef TREEPROFILE
+			calcGravityPartsCounter = 0;
+			calcGravityCellsCounter = 0;
+#endif
+			
+			/**
+			* trick: hide the current particle by letting it look like
+			* an empty cell node, so that it doesn't gravitate with
+			* itself.
+			*/
+			curGravNodeProxy->nodePtr->isParticle	= false;
+			curGravNodeProxy->nodePtr->isEmpty		= true;
+			
+			calcGravityPartsCounter = 0;
+			calcGravityCellsCounter = 0;
+			
+			goRoot();
+			calcGravityRecursor();
+			
+			(*curGravNodeProxy)(AX) += curGravParticleAX;
+			(*curGravNodeProxy)(AY) += curGravParticleAY;
+			(*curGravNodeProxy)(AZ) += curGravParticleAZ;
+			
+			/**
+			* de-trick
+			*/
+			curGravNodeProxy->nodePtr->isParticle	= true;
+			curGravNodeProxy->nodePtr->isEmpty		= false;			
+		}
+		
+	private:
+		void calcGravityRecursor(void) {
+			if ( CurNodePtr->isParticle ) {
+				calcGravParticle();
+			} else
+			if ( CurNodePtr->isEmpty ) {
+			} else
+			if ( calcGravMAC() ) {
+				calcGravCell();					
+			} else {
+				for (size_t i = 0; i < 8; i++) { // try without loop
+					if ( CurNodePtr->child[i] != NULL ) {
+						goChild(i);
+						calcGravityRecursor();
+						goUp();
+					}
+				}
+			}
+		}
+		/**
+		* stop recursion if:
+		* - current node is empty
+		* - MAC is fulfilled
+		*/
+		valueType cellPartDist;
+		bool calcGravMAC(void) {
+			cellPartDist = sqrt( (CurNodePtr->xCenter - curGravParticleX)*
+				(CurNodePtr->xCenter - curGravParticleX) +
+				(CurNodePtr->yCenter - curGravParticleY)*
+				(CurNodePtr->yCenter - curGravParticleY) + 
+				(CurNodePtr->zCenter - curGravParticleZ)*
+				(CurNodePtr->zCenter - curGravParticleZ)
+				);
+			return ( ( ( CurNodePtr->cellSize) / cellPartDist ) < thetaMAC );
+		}
+
+		/**
+		* calculate acceleration due to a particle
+		* todo: add grav-const
+		*/
+		valueType partGravPartnerX, partGravPartnerY, partGravPartnerZ, 
+				  partGravPartnerM;
+		void calcGravParticle() {
+#ifdef TREEPROFILE
+			calcGravityPartsCounter++;
+#endif TREEPROFILE
+			partGravPartnerX = (*(CurNodePtr->payload))(X);
+			partGravPartnerY = (*(CurNodePtr->payload))(Y);
+			partGravPartnerZ = (*(CurNodePtr->payload))(Z);
+			partGravPartnerM = (*(CurNodePtr->payload))(M);
+			
+			cellPartDist = sqrt(	(partGravPartnerX - curGravParticleX)*
+				(partGravPartnerX - curGravParticleX) +
+				(partGravPartnerY - curGravParticleY)*
+				(partGravPartnerY - curGravParticleY) + 
+				(partGravPartnerZ - curGravParticleZ)*
+				(partGravPartnerZ - curGravParticleZ)
+				); // include softening here
+									
+			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist;
+			
+			curGravParticleAX -=  partGravPartnerM *
+				( curGravParticleX - partGravPartnerX ) / 
+				cellPartDistPow3;
+			curGravParticleAY -=  partGravPartnerM *
+				( curGravParticleY - partGravPartnerY ) / 
+				cellPartDistPow3;
+			curGravParticleAZ -=  partGravPartnerM *
+				( curGravParticleZ - partGravPartnerZ ) / 
+				cellPartDistPow3;
 		}
 		
 		/**
-		* */
-		GenericOctNodePtr CurNodePtr, RootPtr;
-			
-		/**
-		* variables
+		* calculate acceleration due to a cell
+		* todo: add grav-const
 		*/
-		size_t nodeCounter, particleCounter, toptreeDepth;
-		size_t debugCounter;	// just to fool around
+		valueType cellPartDistPow3;
+		void calcGravCell() {
+#ifdef TREEPROFILE
+			calcGravityCellsCounter++;
+#endif
+			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist;
+			curGravParticleAX -=  (*(CurNodePtr->payload))(Q000) *
+				( curGravParticleX - (*(CurNodePtr->payload))(CX) ) / 
+				cellPartDistPow3;
+			curGravParticleAY -=  (*(CurNodePtr->payload))(Q000) *
+				( curGravParticleY - (*(CurNodePtr->payload))(CY) ) / 
+				cellPartDistPow3;
+			curGravParticleAZ -=  (*(CurNodePtr->payload))(Q000) *
+				( curGravParticleZ - (*(CurNodePtr->payload))(CZ) ) / 
+				cellPartDistPow3;
+		}
+		// end of calcGravity() stuff
 		
-		matrixType					cellData;
-		std::vector<NodeProxy>	cellProxies;
+		// neighbour search stuff
+	public:
+		/**
+		* find neighbours:
+		*  - load current particle data
+		*  - go to current particle node
+		*  - go up until every neighbour is within current cell
+		*  - call the neighbour search recursor
+		*  - brute force sort out non-neighbours
+		*  - return neighbours
+		*/
+		/*somecontainer_type findNeighbours(
+				const GenericOctNodePtr _curParticle, 
+				const valueRefType _search_radius) {
+			CurNodePtr = _curParticle;
+			size_t topDepth = <crazyformula>
+			while ( CurNodePtr->depth > topDepth ) {
+				goUp();
+			}
+			neighbourFindRecursor(_curParticle);
+			return neighbours;
+		}*/
+	private:
+		// end of neighbour search stuff
+
+
+		// empty() stuff
+		/**
+		* delete all node
+		*/
+	private:	
+		void empty(void) {
+			emptyRecursor();
+		}
+		
+		/**
+		* recursor for emptying the
+		* tree
+		*/
+		void emptyRecursor() {
+			for (size_t i = 0; i < 8; i++) { // try without loop
+				if ( CurNodePtr->child[i] != NULL ) {
+					goChild(i);
+					emptyRecursor();
+					goUp();
+				}
+				CurNodePtr->child[i] = NULL;
+			}
+			delete CurNodePtr;
+		};
+		// end of empty() stuff
+	
 };
 
 #endif
