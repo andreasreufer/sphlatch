@@ -71,9 +71,9 @@ class OctTree {
 			nodeCounter	= 1;
 			particleCounter	= 0;
 			
-			toptreeDepth = 6; // get this from costzone and MAC!
+			toptreeDepth = 0; // get this from costzone and MAC!
 			//thetaMAC = 1.;
-			thetaMAC = 0.7;
+			thetaMAC = 0.4;
 			
 			buildToptreeRecursor();
 		};
@@ -83,12 +83,10 @@ class OctTree {
 		*  - postorder recurse node deletion
 		*/
 		~OctTree(void) {
-			std::cerr << " deleting tree ...\n";
 			goRoot();
-			std::cout << CurNodePtr << "   " << RootPtr << "\n";
 			empty();
-			std::cout << CurNodePtr << "   " << RootPtr << "\n";
-			std::cerr << " ... done!\n";
+			goRoot();
+			delete CurNodePtr; // Seppuku!
 		}
 		
 	private:
@@ -107,14 +105,14 @@ class OctTree {
 		// little private helpers
 	private:
 		/**
-		* go up one level if there is a parent
+		* go up one level
 		*/
 		inline void goUp() {
 			CurNodePtr = CurNodePtr->parent;
 		}
 
 		/**
-		* go to child if it exists
+		* go to child
 		*/
 		inline void goChild(const size_t _n) {
 			CurNodePtr = CurNodePtr->child[_n];
@@ -278,8 +276,15 @@ class OctTree {
 
 				CurNodePtr->payload			= _newPayload;
 				CurNodePtr->isParticle		= true;
-				CurNodePtr->isEmpty			= false;
+				//CurNodePtr->isEmpty			= false;
+				CurNodePtr->isEmpty			= true;
 				CurNodePtr->isGravitating	= _newIsGravitating;
+				
+				/* particle saves its position to node directly */
+				CurNodePtr->xCom = (*_newPayload)(X);
+				CurNodePtr->yCom = (*_newPayload)(Y);
+				CurNodePtr->zCom = (*_newPayload)(Z);
+				CurNodePtr->q000 = (*_newPayload)(M);				
 				
 				/**
 				* don't forget to wire the nodePtr of the 
@@ -353,13 +358,6 @@ class OctTree {
 			debugCounter = 0;
 			goRoot();
 			calcMultipoleRecursor();
-			/*std::cout << "empty: " << debugCounter << "\n";
-			
-			std::cout << (*(RootPtr->payload))(CX) << "   "
-				<< (*(RootPtr->payload))(CY) << "   "
-				<< (*(RootPtr->payload))(CZ) << "   "
-				<< (*(RootPtr->payload))(Q000) << "\n";*/
-			
 #ifdef OOSPH_MPI
 			//(Exchange)
 #endif
@@ -422,42 +420,34 @@ class OctTree {
 		*/
 		valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
 		void calcMultipole() {
-			if (! CurNodePtr->isParticle ) {	// save this check by making
+			/*if (! CurNodePtr->isParticle ) {*/	// save this check by making
 				if (! CurNodePtr->isEmpty ) {	//  particles empty
 					monopolCM = 0.;
 					monopolCXM = 0.;
 					monopolCYM = 0.;
 					monopolCZM = 0.;
 					for (size_t i = 0; i < 8; i++) {
-						if ( CurNodePtr->child[i] != NULL ) {
+						if ( CurNodePtr->child[i] != NULL &&
+							CurNodePtr->isGravitating ) {
 							goChild(i);
-							if ( CurNodePtr->isParticle ) {
-								monopolCM  += (*(CurNodePtr->payload))(M);
-								monopolCXM += (*(CurNodePtr->payload))(X) *
-									(*(CurNodePtr->payload))(M);
-								monopolCYM += (*(CurNodePtr->payload))(Y) *
-									(*(CurNodePtr->payload))(M);
-								monopolCZM += (*(CurNodePtr->payload))(Z) *
-									(*(CurNodePtr->payload))(M);
-								} else
-							if (! CurNodePtr->isEmpty ) {
-								monopolCM  += (*(CurNodePtr->payload))(Q000);
-								monopolCXM += (*(CurNodePtr->payload))(CX) *
-									(*(CurNodePtr->payload))(Q000);
-								monopolCYM += (*(CurNodePtr->payload))(CY) *
-									(*(CurNodePtr->payload))(Q000);
-								monopolCZM += (*(CurNodePtr->payload))(CZ) *
-									(*(CurNodePtr->payload))(Q000);
-							} else {}
+							monopolCM += CurNodePtr->q000;
+							monopolCXM += (CurNodePtr->xCom)*
+											(CurNodePtr->q000);
+							monopolCYM += (CurNodePtr->yCom)*
+											(CurNodePtr->q000);
+							monopolCZM += (CurNodePtr->zCom)*
+											(CurNodePtr->q000);
 							goUp();
 						}
 					}
-					(*(CurNodePtr->payload))(Q000) = monopolCM;
-					(*(CurNodePtr->payload))(CX) = monopolCXM / monopolCM;
-					(*(CurNodePtr->payload))(CY) = monopolCYM / monopolCM;
-					(*(CurNodePtr->payload))(CZ) = monopolCZM / monopolCM;
+										
+					/* copy data to node itself */
+					CurNodePtr->q000 = monopolCM;
+					CurNodePtr->xCom = monopolCXM / monopolCM;
+					CurNodePtr->yCom = monopolCYM / monopolCM;
+					CurNodePtr->zCom = monopolCZM / monopolCM;					
 				}
-			}
+			//}
 		}			
 		// end of multipole stuff
 
@@ -562,10 +552,10 @@ class OctTree {
 #ifdef TREEPROFILE
 			calcGravityPartsCounter++;
 #endif
-			partGravPartnerX = (*(CurNodePtr->payload))(X);
-			partGravPartnerY = (*(CurNodePtr->payload))(Y);
-			partGravPartnerZ = (*(CurNodePtr->payload))(Z);
-			partGravPartnerM = (*(CurNodePtr->payload))(M);
+			partGravPartnerX = CurNodePtr->xCom;
+			partGravPartnerY = CurNodePtr->yCom;
+			partGravPartnerZ = CurNodePtr->zCom;
+			partGravPartnerM = CurNodePtr->q000;
 			
 			cellPartDist = sqrt(	(partGravPartnerX - curGravParticleX)*
 				(partGravPartnerX - curGravParticleX) +
@@ -597,16 +587,16 @@ class OctTree {
 #ifdef TREEPROFILE
 			calcGravityCellsCounter++;
 #endif
-			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist;
-			curGravParticleAX -=  (*(CurNodePtr->payload))(Q000) *
-				( curGravParticleX - (*(CurNodePtr->payload))(CX) ) / 
+			curGravParticleAX -= ( CurNodePtr->q000 ) * 
+				( curGravParticleX - CurNodePtr->xCom ) /
 				cellPartDistPow3;
-			curGravParticleAY -=  (*(CurNodePtr->payload))(Q000) *
-				( curGravParticleY - (*(CurNodePtr->payload))(CY) ) / 
+			curGravParticleAY -= ( CurNodePtr->q000 ) * 
+				( curGravParticleY - CurNodePtr->yCom ) /
 				cellPartDistPow3;
-			curGravParticleAZ -=  (*(CurNodePtr->payload))(Q000) *
-				( curGravParticleZ - (*(CurNodePtr->payload))(CZ) ) / 
+			curGravParticleAX -= ( CurNodePtr->q000 ) * 
+				( curGravParticleZ - CurNodePtr->zCom ) /
 				cellPartDistPow3;
+			
 		}
 		// end of calcGravity() stuff
 		
@@ -638,11 +628,10 @@ class OctTree {
 
 		// empty() stuff
 		/**
-		* delete all node
+		* deletes the current subtree
 		*/
 	private:	
 		void empty(void) {
-			goRoot();
 			emptyRecursor();
 		}
 		
@@ -656,13 +645,13 @@ class OctTree {
 					goChild(i);
 					emptyRecursor();
 					goUp();
+					
+					delete CurNodePtr->child[i];
+					CurNodePtr->child[i] = NULL;
 				}
-				CurNodePtr->child[i] = NULL;
 			}
-			delete CurNodePtr;
 		};
 		// end of empty() stuff
-	
 };
 
 #endif

@@ -47,6 +47,9 @@ struct GenericOctNode {
 	*/
 	T payload;
 	
+	valueType xCom, yCom, zCom,	q000;
+	valueType ax, ay, az;
+
 	/**
 	* isParticle:    is a particle
 	*/
