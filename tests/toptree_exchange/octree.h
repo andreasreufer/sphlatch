@@ -14,6 +14,8 @@
 #include <cassert>
 #include <cmath>
 #include <vector>
+#include <stack>
+#include <queue>
 
 #ifdef OOSPH_MPI
 #include <mpi.h>
@@ -30,7 +32,8 @@ typedef NodeProxy&	NodeProxyRefType;
 typedef GenericOctNode<NodeProxyPtrType>* GenericOctNodePtr;
 
 enum ParticleIndex { PID, X, Y, Z, M, AX, AY, AZ, PSIZE };
-enum MonopolIndex  { CID, CX, CY, CZ, Q000, MSIZE};
+//enum MonopolIndex  { CID, CX, CY, CZ, Q000, MSIZE};
+enum QuadrupolIndex  { CID, CX, CY, CZ, Q000, Q001, Q002, Q010, Q011, MSIZE};
 
 //template <typename T>
 class OctTree {
@@ -75,9 +78,9 @@ class OctTree {
 			nodeCounter	= 1;
 			particleCounter	= 0;
 			
-			toptreeDepth = 0; // get this from costzone and MAC!
+			toptreeDepth = 6; // get this from costzone and MAC!
 			//thetaMAC = 1.;
-			thetaMAC = 0.4;
+			thetaMAC = 0.6;
 			
 			buildToptreeRecursor();
 		};
@@ -89,7 +92,6 @@ class OctTree {
 		~OctTree(void) {
 			goRoot();
 			empty();
-			goRoot();
 			delete CurNodePtr; // Seppuku!
 		}
 		
@@ -460,11 +462,19 @@ class OctTree {
 		*/
 		void globalSumupMultipoles() {
 #ifdef OOSPH_MPI
+		
+			matrixType recvBuffer;
+
 			const size_t RANK = MPI::COMM_WORLD.Get_rank();
 			const size_t SIZE = MPI::COMM_WORLD.Get_size();
 
+			size_t round = 0;
+			size_t remNodes = SIZE;
+			const size_t noBytes = ( cellData.size1() )*( cellData.size2() )*sizeof(valueType);
 			std::queue<size_t> sumUpSend, sumUpRecv;
 			std::stack<size_t> distrSend, distrRecv;
+
+			recvBuffer.resize( cellData.size1(), cellData.size2() );
 			
 			/**
 			* magic algorithm which prepares sending and receiving queues
@@ -493,50 +503,66 @@ class OctTree {
 			
 			// fill cellIsFilled bitset
 			
+			//MPI::COMM_WORLD.Barrier();
 			/**
 			* receive multipoles from other nodes and add
 			* them to local value
 			*/
 			while ( ! sumUpRecv.empty() ) {
-				size_t RecvFrom = sumUpRecv.front();
+				size_t recvFrom = sumUpRecv.front();
 				sumUpRecv.pop();
-				MPI::COMM_WORLD.Recv( &RecvBuff(0, 0) , noBytes,
-					MPI_BYTE, RecvFrom, RANK );
+				MPI::COMM_WORLD.Recv( &recvBuffer(0, 0) , noBytes,
+					MPI_BYTE, recvFrom, RANK );
 
+				std::cerr << "sumup @ RANK " << RANK << " recv from " << recvFrom << "\n";
 			// add buffer to local value
+			// cellData += recvBuffer
 			}
 			
 			/**
 			* send local value to another node
 			*/
 			while ( ! sumUpSend.empty() ) {
-				size_t SendTo = sumUpSend.front();
+				size_t sendTo = sumUpSend.front();
 				sumUpSend.pop();
 		
-				MPI::COMM_WORLD.Send( &LocalValue(0, 0), noBytes,
-					MPI_BYTE, SendTo, SendTo );
+				/**
+				 * do a synchronous send, which is non-blocking but
+				 * still prevents the receiving node from getting
+				 * bombarded by multiple sends
+				 * */
+				MPI::COMM_WORLD.Ssend( &cellData(0, 0), noBytes,
+					MPI_BYTE, sendTo, sendTo );
+				std::cerr << "sumup @ RANK " << RANK << " send to   " << sendTo << "\n";
 			}
 			
 			/**
 			* receive global result
 			*/
 			while ( ! distrRecv.empty() ) {
-				size_t RecvFrom = distrRecv.top();
+				size_t recvFrom = distrRecv.top();
 				distrRecv.pop();
 
-				MPI::COMM_WORLD.Recv( &LocalValue(0, 0), noBytes,
-					MPI_BYTE, RecvFrom, RANK );
+				MPI::COMM_WORLD.Recv( &cellData(0, 0), noBytes,
+					MPI_BYTE, recvFrom, RANK );
+				std::cerr << "distr @ RANK " << RANK << " recv from " << recvFrom << "\n";
 			}
 			
 			/**
 			* ... and distribute it to other nodes
 			*/
 			while ( ! distrSend.empty() ) {
-				size_t SendTo = distrSend.top();
+				size_t sendTo = distrSend.top();
 				distrSend.pop();
 
-				MPI::COMM_WORLD.Send( &LocalValue(0, 0), noBytes,
-					MPI_BYTE, SendTo, SendTo );
+				/**
+				 * do a synchronous send, which is non-blocking but
+				 * still prevents the receiving node from getting
+				 * bombarded by multiple sends
+				 * */
+				MPI::COMM_WORLD.Ssend( &cellData(0, 0), noBytes,
+					MPI_BYTE, sendTo, sendTo );
+				std::cerr << "distr @ RANK " << RANK << " send to   " << sendTo << "\n";
 			}
 #endif		
 		}
@@ -747,3 +773,4 @@ class OctTree {
 };
 
 #endif
+
