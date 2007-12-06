@@ -10,6 +10,7 @@
 #include <vector>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
+#include <boost/dynamic_bitset.hpp>
 
 #ifdef SINGLEPREC
 typedef float		valueType;
@@ -24,3 +25,7 @@ typedef boost::numeric::ublas::matrix<valueType>	matrixType;
 typedef boost::numeric::ublas::matrix<valueType>*	matrixPtrType;
 typedef boost::numeric::ublas::matrix_row<matrixType>	particleRowType;
 typedef boost::numeric::ublas::matrix_row<matrixType>*	particleRowPtr;
+
+typedef unsigned long int bitsetBlockType;
+typedef boost::dynamic_bitset<bitsetBlockType> bitsetType;
+

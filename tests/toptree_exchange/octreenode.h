@@ -57,15 +57,15 @@ struct GenericOctNode {
 	 
 	/**
 	* isEmpty:		 a cell node whose subtrees do not contain particles
-	*                on any costzone domain.
+	*                on any costzone domain. 
 	*/
 	bool isEmpty		:1;
 	
 	/**
-	* isGravitating: particle is gravitating actively, so it contributes to
-	*                the multipole moments
+	* isLocal:       determines whether a particle is local or non-
+    *                local (ghost). 
 	*/
-	bool isGravitating	:1;
+	bool isLocal	:1;
 	
 	/**
 	* pointer operator

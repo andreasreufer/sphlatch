@@ -20,15 +20,18 @@ typedef NodeProxy	NodeProxyType;
 typedef NodeProxy*	NodeProxyPtrType;
 typedef NodeProxy&	NodeProxyRefType;
 
+//#define NPARTS	0
 //#define NPARTS	20
-#define NPARTS	100000
+//#define NPARTS	200
 //#define NPARTS	10000
+#define NPARTS	100000
+//#define NPARTS	300000
 
 int main(int argc, char* argv[]) {
 	
 	MPI::Init(argc, argv);
 	
-	using namespace boost::posix_time;
+    using namespace boost::posix_time;
 	ptime TimeStart, TimeStop;
 	
 	matrixType Data(NPARTS, PSIZE);
