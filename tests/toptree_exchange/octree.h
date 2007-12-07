@@ -599,8 +599,45 @@ class OctTree {
                           << ( microsec_clock::local_time() - TimeStart )
                           << "\n";
             
-			// add buffer to local value
-			// cellData += recvBuffer
+                // add buffer to local value
+                // cellData += recvBuffer
+                
+                valueType oldQ000, newQ000;
+                for ( size_t i = 0; i < noToptreeCells; i++) {
+                    if ( recvCellIsFilled[i] ) {
+                        if ( cellIsFilled[i] ) {
+                            oldQ000 = cellData(i, Q000);
+                            newQ000 = oldQ000 + recvBuffer(i, Q000);
+                    
+                            cellData(i, Q000) = newQ000;
+                            cellData(i, CX) = ( ( oldQ000 / newQ000 )*
+                                cellData(i, CX) )
+                                + ( ( recvBuffer(i, Q000) / newQ000 )*
+                                recvBuffer(i, CX) );
+                            cellData(i, CY) = ( ( oldQ000 / newQ000 )*
+                                cellData(i, CY) )
+                                + ( ( recvBuffer(i, Q000) / newQ000 )*
+                                recvBuffer(i, CY) );
+                            cellData(i, CZ) = ( ( oldQ000 / newQ000 )*
+                                cellData(i, CZ) )
+                                + ( ( recvBuffer(i, Q000) / newQ000 )*
+                                recvBuffer(i, CZ) );
+                        } else {
+                            cellData(i, Q000) = recvBuffer(i, Q000);
+                            cellData(i, CX) = recvBuffer(i, CX);
+                            cellData(i, CY) = recvBuffer(i, CY);
+                            cellData(i, CZ) = recvBuffer(i, CZ);
+                        }
+                    }
+                }
+                
+                cellIsFilled |= recvCellIsFilled;
+                
+                timeFile  << "  RANK " << RANK
+                          << "        reduced multipoles  "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+            
 			}
 			
 			/**
@@ -649,10 +686,17 @@ class OctTree {
 
                 timeFile  << "  RANK " << RANK
                           << " <- " << recvFrom << "  "
+                          << " wait f. gl. bitset  "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+                
+                recvBitset( cellIsFilled, recvFrom );
+
+                timeFile  << "  RANK " << RANK
+                          << " <- " << recvFrom << "  "
                           << " wait f. gl. multip. "
                           << ( microsec_clock::local_time() - TimeStart )
                           << "\n";
-
 
 				MPI::COMM_WORLD.Recv( &cellData(0, 0), noCellBytes,
 					MPI_BYTE, recvFrom, RANK );
@@ -672,6 +716,13 @@ class OctTree {
 				size_t sendTo = distrSend.top();
 				distrSend.pop();
 
+                timeFile  << "  RANK " << RANK
+                          << " -> " << sendTo << "  "
+                          << " send global bitset  "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+                
+                sendBitset( cellIsFilled, sendTo );
 				/**
 				 * do a synchronous send, which is non-blocking but
 				 * still prevents the receiving node from getting
@@ -778,9 +829,7 @@ class OctTree {
             
             // copy bitset to buffer
             boost::to_block_range( _bitSet, sendBuff.begin() );
-            
-            std::cout << sendBuff.size() << " " << _bitSet.size() << " " << noBsBytes << "\n";
-            
+                        
             // send
             MPI::COMM_WORLD.Ssend( &(sendBuff[0]), noBsBytes,
                 MPI_BYTE, _recvRank, _recvRank );
