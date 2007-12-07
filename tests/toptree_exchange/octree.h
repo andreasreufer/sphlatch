@@ -21,6 +21,8 @@
 #include <mpi.h>
 #endif
 
+#include <fstream>
+
 #include "typedefs.h"
 
 #include "nodeproxy.h"
@@ -512,7 +514,7 @@ class OctTree {
 			size_t round = 0;
 			size_t remNodes = SIZE;
 
-			const size_t noBytes = noToptreeCells*MSIZE*sizeof(valueType);
+			const size_t noCellBytes = noToptreeCells*MSIZE*sizeof(valueType);
             
 			std::queue<size_t> sumUpSend, sumUpRecv;
 			std::stack<size_t> distrSend, distrRecv;
@@ -524,7 +526,7 @@ class OctTree {
             toptreeCounter = 0;
             cellToIsFilledVectorRecursor();
             //std::cout << cellIsFilled << "\n";
-            //std::cout << cellIsFilled.count() << "\n";
+            //std::cout << cellIsFilled.count() << " toptree cells are filled " << "\n";
             //std::cout << cellIsFilled.size() << "\n";
             //std::cout << recvCellIsFilled.size() << "\n";
 
@@ -556,19 +558,41 @@ class OctTree {
 			
 			// fill cellIsFilled bitset
 			
+            using namespace boost::posix_time;
+            ptime TimeStart, TimeStop;
+            std::string timeFileName = "timing_rank";
+            timeFileName += boost::lexical_cast<std::string>(RANK);
+            std::fstream timeFile;
+            timeFile.open(timeFileName.c_str(), std::ios::out);
+            
+            TimeStart = microsec_clock::local_time();
+                                                            
 			//MPI::COMM_WORLD.Barrier();
 			/**
 			* receive multipoles from other nodes and add
 			* them to local value
 			*/
-			while ( ! sumUpRecv.empty() ) {
+			while ( ! sumUpRecv.empty() ) {                
 				size_t recvFrom = sumUpRecv.front();
 				sumUpRecv.pop();
-				MPI::COMM_WORLD.Recv( &recvBuffer(0, 0) , noBytes,
-					MPI_BYTE, recvFrom, RANK );
+                
+                recvBitset( recvCellIsFilled, recvFrom );
 
-				std::cerr << "sumup @ RANK " << RANK 
-                        << " recv from " << recvFrom << "\n";
+                timeFile  << "  RANK " << RANK
+                          << " -> " << recvFrom << "  "
+                          << " recvd bitset        "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+                
+				MPI::COMM_WORLD.Recv( &recvBuffer(0, 0) , noCellBytes,
+					MPI_BYTE, recvFrom, RANK );
+                    
+                timeFile  << "  RANK " << RANK
+                          << " -> " << recvFrom << "  "
+                          << " recvd multipoles    "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+            
 			// add buffer to local value
 			// cellData += recvBuffer
 			}
@@ -579,16 +603,29 @@ class OctTree {
 			while ( ! sumUpSend.empty() ) {
 				size_t sendTo = sumUpSend.front();
 				sumUpSend.pop();
-		
+                
+                sendBitset( cellIsFilled, sendTo );
+
+                timeFile  << "  RANK " << RANK
+                          << " -> " << sendTo << "  "
+                          << " sent bitset         "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+
 				/**
 				 * do a synchronous send, which is non-blocking but
 				 * still prevents the receiving node from getting
 				 * bombarded by multiple sends
 				 * */
-				MPI::COMM_WORLD.Ssend( &cellData(0, 0), noBytes,
+				MPI::COMM_WORLD.Ssend( &cellData(0, 0), noCellBytes,
 					MPI_BYTE, sendTo, sendTo );
-				std::cerr << "sumup @ RANK " << RANK
-                    << " send to   " << sendTo << "\n";
+                    
+                timeFile  << "  RANK " << RANK
+                          << " -> " << sendTo << "  "
+                          << " sent multipoles     "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+
 			}
 			
 			/**
@@ -598,11 +635,23 @@ class OctTree {
 				size_t recvFrom = distrRecv.top();
 				distrRecv.pop();
 
-				MPI::COMM_WORLD.Recv( &cellData(0, 0), noBytes,
+                timeFile  << "  RANK " << RANK
+                          << " -> " << recvFrom << "  "
+                          << " wait f. gl. multip. "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+
+
+				MPI::COMM_WORLD.Recv( &cellData(0, 0), noCellBytes,
 					MPI_BYTE, recvFrom, RANK );
-				std::cerr << "distr @ RANK " << RANK
-                    << " recv from " << recvFrom << "\n";
-			}
+
+                timeFile  << "  RANK " << RANK
+                          << " -> " << recvFrom << "  "
+                          << " recvd. gl. multip.  "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+
+            }
 			
 			/**
 			* ... and distribute it to other nodes
@@ -616,10 +665,21 @@ class OctTree {
 				 * still prevents the receiving node from getting
 				 * bombarded by multiple sends
 				 * */
-				MPI::COMM_WORLD.Ssend( &cellData(0, 0), noBytes,
+                timeFile  << "  RANK " << RANK
+                          << " -> " << sendTo << "  "
+                          << " sent global bitset  "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+
+				MPI::COMM_WORLD.Ssend( &cellData(0, 0), noCellBytes,
 					MPI_BYTE, sendTo, sendTo );
-				std::cerr << "distr @ RANK " << RANK
-                    << " send to   " << sendTo << "\n";
+                
+                timeFile  << "  RANK " << RANK
+                          << " -> " << sendTo << "  "
+                          << " sent global multip. "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
+
 			}
 #endif		
 		}
@@ -653,7 +713,7 @@ class OctTree {
             if ( belowToptreeStop() ) {} else {
                 CurNodePtr->isEmpty = ! cellIsFilled[toptreeCounter];
                 toptreeCounter++;
-                
+                                
                 for (size_t i = 0; i < 8; i++) { // try without loop
                     if ( CurNodePtr->child[i] != NULL ) {
                         goChild(i);
@@ -671,6 +731,48 @@ class OctTree {
 		bool belowToptreeStop(void) {
 			return ( CurNodePtr->depth > toptreeDepth );
 		};
+        
+        /**
+        * little comm helper
+        * \todo move to comm_manager later on
+        */
+        
+        void recvBitset( bitsetRefType _bitSet, size_t _sendRank ) {
+            // prepare buffer
+            const size_t RANK = MPI::COMM_WORLD.Get_rank();
+            size_t noBlocks = lrint( ceil(
+                (double)noToptreeCells
+                / ( sizeof(bitsetBlockType) * 8 ) ) );
+            size_t noBsBytes = noBlocks*sizeof(bitsetBlockType);
+            std::vector<bitsetBlockType> recvBuff(noBlocks);
+            
+            // receive
+            MPI::COMM_WORLD.Recv( &(recvBuff[0]), noBsBytes,
+                MPI_BYTE, _sendRank, RANK );
+                
+            // copy back to bitset
+            boost::from_block_range( recvBuff.begin(), recvBuff.end(),
+                _bitSet );
+        }
+        
+        void sendBitset( bitsetRefType _bitSet, size_t _recvRank ) {
+            // prepare buffer
+            const size_t RANK = MPI::COMM_WORLD.Get_rank();
+            size_t noBlocks = lrint( ceil(
+                (double)noToptreeCells
+                / ( sizeof(bitsetBlockType) * 8 ) ) );
+            size_t noBsBytes = noBlocks*sizeof(bitsetBlockType);
+            std::vector<bitsetBlockType> sendBuff(noBlocks);
+            
+            // copy bitset to buffer
+            boost::to_block_range( _bitSet, sendBuff.begin() );
+            
+            std::cout << sendBuff.size() << " " << _bitSet.size() << " " << noBsBytes << "\n";
+            
+            // send
+            MPI::COMM_WORLD.Ssend( &(sendBuff[0]), noBsBytes,
+                MPI_BYTE, _recvRank, _recvRank );
+        }
 
 		// end of multipole stuff
 
@@ -819,7 +921,6 @@ class OctTree {
 			curGravParticleAX -= ( CurNodePtr->q000 ) * 
 				( curGravParticleZ - CurNodePtr->zCom ) /
 				cellPartDistPow3;
-			
 		}
 		// end of calcGravity() stuff
 		

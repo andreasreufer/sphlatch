@@ -28,4 +28,5 @@ typedef boost::numeric::ublas::matrix_row<matrixType>*	particleRowPtr;
 
 typedef unsigned long int bitsetBlockType;
 typedef boost::dynamic_bitset<bitsetBlockType> bitsetType;
+typedef boost::dynamic_bitset<bitsetBlockType>& bitsetRefType;
 

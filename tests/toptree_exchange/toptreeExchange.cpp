@@ -79,8 +79,8 @@ int main(int argc, char* argv[]) {
 	TimeStart = microsec_clock::local_time();	
 	BarnesHutTree.calcMultipoles();
 	TimeStop  = microsec_clock::local_time();
-	std::cout << "Calc. multipoles time   " << ( TimeStop - TimeStart ) << "\n";
-	
+	std::cerr << "Calc. multipoles time   " << ( TimeStop - TimeStart ) << "\n";
+
 	//show_progress.restart(NPARTS);
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < NPARTS; i++) {
