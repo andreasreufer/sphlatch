@@ -7,7 +7,7 @@
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include <boost/numeric/ublas/io.hpp>
 
-#define SINGLEPREC
+//#define SINGLEPREC
 #define OOSPH_MPI
 
 #ifdef OOSPH_MPI

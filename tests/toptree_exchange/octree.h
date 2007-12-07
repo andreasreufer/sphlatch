@@ -575,11 +575,17 @@ class OctTree {
 			while ( ! sumUpRecv.empty() ) {                
 				size_t recvFrom = sumUpRecv.front();
 				sumUpRecv.pop();
+
+                timeFile  << "  RANK " << RANK
+                          << " <- " << recvFrom << "  "
+                          << " recv  bitset        "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
                 
                 recvBitset( recvCellIsFilled, recvFrom );
 
                 timeFile  << "  RANK " << RANK
-                          << " -> " << recvFrom << "  "
+                          << " <- " << recvFrom << "  "
                           << " recvd bitset        "
                           << ( microsec_clock::local_time() - TimeStart )
                           << "\n";
@@ -588,7 +594,7 @@ class OctTree {
 					MPI_BYTE, recvFrom, RANK );
                     
                 timeFile  << "  RANK " << RANK
-                          << " -> " << recvFrom << "  "
+                          << " <- " << recvFrom << "  "
                           << " recvd multipoles    "
                           << ( microsec_clock::local_time() - TimeStart )
                           << "\n";
@@ -603,6 +609,12 @@ class OctTree {
 			while ( ! sumUpSend.empty() ) {
 				size_t sendTo = sumUpSend.front();
 				sumUpSend.pop();
+
+                timeFile  << "  RANK " << RANK
+                          << " -> " << sendTo << "  "
+                          << " send bitset         "
+                          << ( microsec_clock::local_time() - TimeStart )
+                          << "\n";
                 
                 sendBitset( cellIsFilled, sendTo );
 
@@ -619,7 +631,7 @@ class OctTree {
 				 * */
 				MPI::COMM_WORLD.Ssend( &cellData(0, 0), noCellBytes,
 					MPI_BYTE, sendTo, sendTo );
-                    
+
                 timeFile  << "  RANK " << RANK
                           << " -> " << sendTo << "  "
                           << " sent multipoles     "
@@ -636,7 +648,7 @@ class OctTree {
 				distrRecv.pop();
 
                 timeFile  << "  RANK " << RANK
-                          << " -> " << recvFrom << "  "
+                          << " <- " << recvFrom << "  "
                           << " wait f. gl. multip. "
                           << ( microsec_clock::local_time() - TimeStart )
                           << "\n";
@@ -646,7 +658,7 @@ class OctTree {
 					MPI_BYTE, recvFrom, RANK );
 
                 timeFile  << "  RANK " << RANK
-                          << " -> " << recvFrom << "  "
+                          << " <- " << recvFrom << "  "
                           << " recvd. gl. multip.  "
                           << ( microsec_clock::local_time() - TimeStart )
                           << "\n";
