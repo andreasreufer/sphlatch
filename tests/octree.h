@@ -23,6 +23,8 @@
 
 #include <fstream>
 
+namespace knack {
+
 #include "typedefs.h"
 
 #include "nodeproxy.h"
@@ -80,7 +82,7 @@ class OctTree {
 			cellCounter	= 1;  // we now have the root cell and no particles
 			partCounter	= 0;
 			
-			toptreeDepth = 6; // get this from costzone and MAC!
+			toptreeDepth = 2; // get this from costzone and MAC!
 			thetaMAC = 1.;
 			//thetaMAC = 0.4;
 			
@@ -287,8 +289,8 @@ class OctTree {
 
 				CurNodePtr->payload			= _newPayload;
 				CurNodePtr->isParticle		= true;
-				//CurNodePtr->isEmpty			= false;
-				CurNodePtr->isEmpty			= true;
+				CurNodePtr->isEmpty			= false;
+				//CurNodePtr->isEmpty			= true;
 				CurNodePtr->isLocal     	= _newIsLocal;
 				
 				/* particle saves its position to node directly */
@@ -356,10 +358,9 @@ class OctTree {
 		void calcMultipoles(void) {
 			cellData.resize(cellCounter, MSIZE);
 			cellProxies.resize(cellCounter);
-
 			for (size_t i = 0; i < cellCounter; i++) {
 				( cellProxies[i] ).setup(&cellData, i);
-				cellData(i, CID) = i;
+				cellData(i, CID) = -( static_cast<valueType>(i+1) );
 			}
 			std::cout << cellCounter << " cells in tree \n";
 			cellCounter = 0;
@@ -1010,6 +1011,71 @@ class OctTree {
 	private:
 		// end of neighbour search stuff
 
+        // treeDOTDump() stuff
+    public: 
+        /**
+        * dump the tree as a 
+        * dot file
+        */
+        std::fstream dumpFile;
+        void treeDOTDump(std::string _dumpFileName) {
+            dumpFile.open(_dumpFileName.c_str(), std::ios::out);
+            
+            goRoot();
+            dumpFile << "digraph graphname { \n";
+            treeDumpRecursor();
+            dumpFile << "}\n";
+            dumpFile.close();
+        }
+        
+    private:
+        /**
+        * treeDOTDump() recursor
+        */
+        void treeDumpRecursor() {
+            dumpFile << (*CurNodePtr->payload)(0)
+                << " [label=\"\" ";
+                         
+            if ( CurNodePtr->isParticle ) {
+                dumpFile << ",shape=circle";
+            } else {
+                dumpFile << ",shape=box";
+            }
+                        
+            if ( ! CurNodePtr->isEmpty ) {
+                dumpFile << ",style=filled";
+            }
+            
+            if ( CurNodePtr->isLocal ) {
+                if ( CurNodePtr->isParticle ) {
+                    dumpFile << ",color=green";
+                } else {
+                    if ( CurNodePtr->depth <= toptreeDepth ) {
+                        dumpFile << ",color=blue";
+                    } else {
+                        dumpFile << ",color=red";
+                    }
+                }
+            } else {
+                dumpFile << ",color=grey";
+            }
+            
+            dumpFile << ",width=0.1,height=0.1];\n";
+
+			for (size_t i = 0; i < 8; i++) { // try without loop                
+                if ( CurNodePtr->child[i] != NULL ) {
+                    dumpFile << (*(CurNodePtr->payload))(0)
+                             << " -> "
+                             << (*(CurNodePtr->child[i]->payload))(0)
+                             << "\n";
+					goChild(i);
+					treeDumpRecursor();
+					goUp();
+                }
+			}
+        }                
+
+        // end of treeDump() stuff
 
 		// empty() stuff
 		/**
@@ -1019,7 +1085,7 @@ class OctTree {
 		void empty(void) {
 			emptyRecursor();
 		}
-		
+		        
 		/**
 		* recursor for emptying the
 		* tree
@@ -1039,5 +1105,7 @@ class OctTree {
 		// end of empty() stuff
 };
 
+
+};
 #endif
 
