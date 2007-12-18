@@ -35,7 +35,7 @@ typedef NodeProxy&	NodeProxyRefType;
 #include "octreenode.h"
 typedef GenericOctNode<NodeProxyPtrType>* GenericOctNodePtr;
 
-enum ParticleIndex { PID, X, Y, Z, M, AX, AY, AZ, PSIZE };
+enum ParticleIndex { PID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, PSIZE };
 enum MonopolIndex  { CID, CX, CY, CZ, Q000, MSIZE};
 //enum QuadrupolIndex  { CID, CX, CY, CZ, Q000, Q001, Q002, Q010, Q011, MSIZE};
 
@@ -82,9 +82,9 @@ class OctTree {
 			cellCounter	= 1;  // we now have the root cell and no particles
 			partCounter	= 0;
 			
-			toptreeDepth = 2; // get this from costzone and MAC!
-			thetaMAC = 1.;
-			//thetaMAC = 0.4;
+			toptreeDepth = 3; // get this from costzone and MAC!
+			//thetaMAC = 1.;
+			thetaMAC = 0.4;
 			
 			buildToptreeRecursor();
             noToptreeCells = cellCounter;
@@ -233,7 +233,7 @@ class OctTree {
 				CurNodePtr->isParticle		= false;
 				CurNodePtr->isEmpty			= true;
 				CurNodePtr->isLocal	= false;
-				cellCounter++;
+                cellCounter++;
 				goUp();
 			}
 		}
@@ -254,10 +254,10 @@ class OctTree {
 		*  - go to root
 		*  - call the insertion recursor
 		*/		
-		void insertParticle(NodeProxyType* newPayload, 
-				nodetypeType newType) {
+		void insertParticle(NodeProxyType* _newPayload, 
+				bool _newIsLocal) {
 			goRoot();
-			insertParticleRecursor(newPayload, newType);
+			insertParticleRecursor(_newPayload, _newIsLocal);
 			partCounter++;
 		}
 	private:		
@@ -277,7 +277,7 @@ class OctTree {
 			targetOctant += ( (*_newPayload)(X) < CurNodePtr->xCenter ) ? 0 : 1;
 			targetOctant += ( (*_newPayload)(Y) < CurNodePtr->yCenter ) ? 0 : 2;
 			targetOctant += ( (*_newPayload)(Z) < CurNodePtr->zCenter ) ? 0 : 4;
-
+            
 			/**
 			* If targeted child is empty, place the particle there
 			**/
@@ -289,8 +289,8 @@ class OctTree {
 
 				CurNodePtr->payload			= _newPayload;
 				CurNodePtr->isParticle		= true;
-				CurNodePtr->isEmpty			= false;
-				//CurNodePtr->isEmpty			= true;
+				//CurNodePtr->isEmpty			= false;
+				CurNodePtr->isEmpty			= true;
 				CurNodePtr->isLocal     	= _newIsLocal;
 				
 				/* particle saves its position to node directly */
@@ -559,6 +559,7 @@ class OctTree {
 			
 			// fill cellIsFilled bitset
 			
+            // debug stuff
             using namespace boost::posix_time;
             ptime TimeStart, TimeStop;
             std::string timeFileName = "timing_rank";
@@ -845,6 +846,7 @@ class OctTree {
 		valueType curGravParticleX, curGravParticleY, curGravParticleZ;
 		valueType curGravParticleAX, curGravParticleAY, curGravParticleAZ;
 		valueType thetaMAC;
+        valueType epsilonSquare;
 		size_t calcGravityCellsCounter, calcGravityPartsCounter;
 	public:
 		/**
@@ -863,6 +865,10 @@ class OctTree {
 			curGravParticleAX = 0.;
 			curGravParticleAY = 0.;
 			curGravParticleAZ = 0.;
+            
+            //epsilonSquare = 0.01;
+            epsilonSquare = 0.0025;
+            
 #ifdef TREEPROFILE
 			calcGravityPartsCounter = 0;
 			calcGravityCellsCounter = 0;
@@ -876,12 +882,9 @@ class OctTree {
 			curGravNodeProxy->nodePtr->isParticle	= false;
 			curGravNodeProxy->nodePtr->isEmpty		= true;
 			
-			calcGravityPartsCounter = 0;
-			calcGravityCellsCounter = 0;
-			
 			goRoot();
 			calcGravityRecursor();
-			
+            
 			(*curGravNodeProxy)(AX) += curGravParticleAX;
 			(*curGravNodeProxy)(AY) += curGravParticleAY;
 			(*curGravNodeProxy)(AZ) += curGravParticleAZ;
@@ -950,9 +953,11 @@ class OctTree {
 				(partGravPartnerY - curGravParticleY) + 
 				(partGravPartnerZ - curGravParticleZ)*
 				(partGravPartnerZ - curGravParticleZ)
-				); // include softening here
+				);
 									
-			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist;
+			//cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist;
+			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist
+                + cellPartDist*epsilonSquare;
 			
 			curGravParticleAX -=  partGravPartnerM *
 				( curGravParticleX - partGravPartnerX ) / 
@@ -974,6 +979,10 @@ class OctTree {
 #ifdef TREEPROFILE
 			calcGravityCellsCounter++;
 #endif
+            // cellPartDist is already set by the MAC function
+			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist
+                + cellPartDist*epsilonSquare;
+                            
 			curGravParticleAX -= ( CurNodePtr->q000 ) * 
 				( curGravParticleX - CurNodePtr->xCom ) /
 				cellPartDistPow3;
@@ -983,7 +992,7 @@ class OctTree {
 			curGravParticleAX -= ( CurNodePtr->q000 ) * 
 				( curGravParticleZ - CurNodePtr->zCom ) /
 				cellPartDistPow3;
-		}
+        }
 		// end of calcGravity() stuff
 		
 		// neighbour search stuff

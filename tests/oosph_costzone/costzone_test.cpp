@@ -135,11 +135,20 @@ int main(int argc, char* argv[])
     TimeStop  = microsec_clock::local_time();
     std::cerr << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
     
-	//boost::progress_display show_progress( NPARTS , std::cout);
+	//boost::progress_display show_progress( noParts , std::cout);
 	TimeStart = microsec_clock::local_time();	
-	for (size_t i = 0; i < noParts; i++) {
+	for (size_t i = 0; i < noParts; i++) {    
+        /*std::cout << Data(i, ID) << "\t"
+                  << Data(i, X) << "\t"
+                  << Data(i, Y) << "\t"
+                  << Data(i, Z) << "\n";
+        std::cout << ((partProxies[i]))(knack::PID) << "\t"
+                  << ((partProxies[i]))(knack::X) << "\t"
+                  << ((partProxies[i]))(knack::Y) << "\t"
+                  << ((partProxies[i]))(knack::Z) << "\t"
+                  << "\n";*/
         BarnesHutTree.insertParticle( *(partProxies[i]), true);
-		//++show_progress;
+        //++show_progress;
 	}
 	TimeStop  = microsec_clock::local_time();
 	std::cerr << "Tree populate time      " << ( TimeStop - TimeStart ) << "\n";
@@ -154,9 +163,12 @@ int main(int argc, char* argv[])
     
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < noParts; i++) {
-		BarnesHutTree.calcGravity(*(partProxies[i]) );
+        
+        BarnesHutTree.calcGravity(*(partProxies[i]) );
+                
 		//++show_progress;
 	}
+    //BarnesHutTree.calcGravity(*(partProxies[0]) );
 	TimeStop  = microsec_clock::local_time();
 	std::cout << "Gravity calc time       " << ( TimeStop - TimeStart ) << "\n";
 
@@ -168,7 +180,7 @@ int main(int argc, char* argv[])
     std::string outFilename = "out.cdat";
     outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
     IOManager.SaveCDAT(outFilename, outputAttrSet);
-    
+        
     MPI::Finalize();
     return EXIT_SUCCESS;
 }
