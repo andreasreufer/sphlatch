@@ -31,8 +31,9 @@ public:
                 Y = X + 1,
                 Z = X + 2};
 
-    //enum config {default_depth = 4};
-    enum config {default_depth = 6};
+    //enum config {default_depth = 3};
+    enum config {default_depth = 4};
+    //enum config {default_depth = 6};
 
     typedef CostZone self_type;
     typedef CostZone& self_reference;
@@ -398,6 +399,9 @@ bool CostZone<Indices, SimTrait>::CreateParticleBucket(bucket_reference Bucket =
     const value_type Interval = fabs(max - min);
     const value_type NInt = static_cast<value_type>(side) / Interval;
     const value_type NIntMin = min * NInt;
+
+    std::cout << "costzone debug\n";
+    std::cout << min << "   " << max << "    " << NIntMin / NInt <<  "\n";
 
     const int max_index = (int)side - 1;
 

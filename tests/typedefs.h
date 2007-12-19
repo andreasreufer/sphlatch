@@ -19,7 +19,8 @@ typedef double		valueType;
 #endif
 typedef valueType*		valuePtrType;
 typedef valueType&		valueRefType;
-typedef unsigned int	nodetypeType;
+
+typedef int	identType;
 
 typedef boost::numeric::ublas::matrix<valueType>	matrixType;
 typedef boost::numeric::ublas::matrix<valueType>*	matrixPtrType;

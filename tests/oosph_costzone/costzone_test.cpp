@@ -50,6 +50,7 @@ using namespace boost::assign;
 #include <vector>
 
 // tree stuff
+#define OOSPH_MPI
 #include "octree.h"
 
 int main(int argc, char* argv[])
@@ -89,6 +90,7 @@ int main(int argc, char* argv[])
     SimTrait::matrix_reference Data(MemManager.Data);
     SimTrait::matrix_reference GData(MemManager.GData);
     
+    const size_t SIZE = MPI::COMM_WORLD.Get_size();
     const size_t RANK = MPI::COMM_WORLD.Get_rank();
     
     std::string InputFileName = VMap["input-file"].as<std::string>();
@@ -113,7 +115,9 @@ int main(int argc, char* argv[])
 
     const size_t noParts = Data.size1();
     const size_t noGhosts = GData.size1();
-
+    
+    std::cout << GData << "\n";
+    
     // particles are all distributed now
     using namespace boost::posix_time;
 	ptime TimeStart, TimeStop;
@@ -135,22 +139,34 @@ int main(int argc, char* argv[])
     TimeStop  = microsec_clock::local_time();
     std::cerr << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
     
-	//boost::progress_display show_progress( noParts , std::cout);
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < noParts; i++) {
         BarnesHutTree.insertParticle( *(partProxies[i]), true);
-        //++show_progress;
 	}
+	/*for (size_t i = 0; i < noGhosts; i++) {
+        BarnesHutTree.insertParticle( *(ghostProxies[i]), false);
+	}*/
 	TimeStop  = microsec_clock::local_time();
 	std::cerr << "Tree populate time      " << ( TimeStop - TimeStart ) << "\n";
+    
+    // dump toptree
+    //BarnesHutTree.toptreeDump("toptree_presync.txt");
 
 	TimeStart = microsec_clock::local_time();	
 	BarnesHutTree.calcMultipoles();
 	TimeStop  = microsec_clock::local_time();
 	std::cerr << "Calc. multipoles time   " << ( TimeStop - TimeStart ) << "\n";
+
+    // dump toptree
+    std::string toptreeDumpFilename = "toptree_postsync_";
+    toptreeDumpFilename += boost::lexical_cast<std::string>(RANK+1);
+    toptreeDumpFilename += "_of_";
+    toptreeDumpFilename += boost::lexical_cast<std::string>(SIZE);
+    toptreeDumpFilename += ".txt";
+    BarnesHutTree.toptreeDump(toptreeDumpFilename);
     
     // dump tree;
-    BarnesHutTree.treeDOTDump("treedump_before_grav.dot");
+    //BarnesHutTree.treeDOTDump("treedump_before_grav.dot");
 
 	boost::progress_display show_progress( noParts , std::cout);
 	TimeStart = microsec_clock::local_time();	
@@ -162,7 +178,12 @@ int main(int argc, char* argv[])
 	std::cout << "Gravity calc time       " << ( TimeStop - TimeStart ) << "\n";
 
     // dump tree;
-    BarnesHutTree.treeDOTDump("treedump_after_grav.dot");
+    std::string treeDumpFilename = "treedump_";
+    treeDumpFilename += boost::lexical_cast<std::string>(RANK+1);
+    treeDumpFilename += "_of_";
+    treeDumpFilename += boost::lexical_cast<std::string>(SIZE);
+    treeDumpFilename += ".dot";
+    BarnesHutTree.treeDOTDump(treeDumpFilename);
 
     // save particles
     std::vector<int> outputAttrSet;

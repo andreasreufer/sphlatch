@@ -31,6 +31,13 @@ struct GenericOctNode {
 	*/
 	size_t depth;
 	
+    /**
+    * identifier of the node which is casted from
+    * the ID row for particles. should be unique in
+    * each local tree.
+    */
+    identType ident;
+    
 	/**
 	* in case of a cell node, the coordinates are
 	* set to the center of the cell.  in case of 
