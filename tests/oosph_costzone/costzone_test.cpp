@@ -137,16 +137,7 @@ int main(int argc, char* argv[])
     
 	//boost::progress_display show_progress( noParts , std::cout);
 	TimeStart = microsec_clock::local_time();	
-	for (size_t i = 0; i < noParts; i++) {    
-        /*std::cout << Data(i, ID) << "\t"
-                  << Data(i, X) << "\t"
-                  << Data(i, Y) << "\t"
-                  << Data(i, Z) << "\n";
-        std::cout << ((partProxies[i]))(knack::PID) << "\t"
-                  << ((partProxies[i]))(knack::X) << "\t"
-                  << ((partProxies[i]))(knack::Y) << "\t"
-                  << ((partProxies[i]))(knack::Z) << "\t"
-                  << "\n";*/
+	for (size_t i = 0; i < noParts; i++) {
         BarnesHutTree.insertParticle( *(partProxies[i]), true);
         //++show_progress;
 	}
@@ -160,21 +151,19 @@ int main(int argc, char* argv[])
     
     // dump tree;
     BarnesHutTree.treeDOTDump("treedump_before_grav.dot");
-    
+
+	boost::progress_display show_progress( noParts , std::cout);
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < noParts; i++) {
-        
         BarnesHutTree.calcGravity(*(partProxies[i]) );
-                
-		//++show_progress;
+		++show_progress;
 	}
-    //BarnesHutTree.calcGravity(*(partProxies[0]) );
 	TimeStop  = microsec_clock::local_time();
 	std::cout << "Gravity calc time       " << ( TimeStop - TimeStart ) << "\n";
 
     // dump tree;
     BarnesHutTree.treeDOTDump("treedump_after_grav.dot");
-    
+
     // save particles
     std::vector<int> outputAttrSet;
     std::string outFilename = "out.cdat";

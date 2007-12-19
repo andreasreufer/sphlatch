@@ -84,7 +84,8 @@ class OctTree {
 			
 			toptreeDepth = 3; // get this from costzone and MAC!
 			//thetaMAC = 1.;
-			thetaMAC = 0.4;
+			thetaMAC = 0.6;
+			//thetaMAC = 0.4;
 			
 			buildToptreeRecursor();
             noToptreeCells = cellCounter;
@@ -289,7 +290,6 @@ class OctTree {
 
 				CurNodePtr->payload			= _newPayload;
 				CurNodePtr->isParticle		= true;
-				//CurNodePtr->isEmpty			= false;
 				CurNodePtr->isEmpty			= true;
 				CurNodePtr->isLocal     	= _newIsLocal;
 				
@@ -378,7 +378,7 @@ class OctTree {
             //std::cout << CurNodePtr->xCom << "   " << CurNodePtr->isEmpty << "\n";
             //std::cout << (*(CurNodePtr->payload))(CX) << "   " << CurNodePtr->isEmpty << "\n";
             
-			globalSumupMultipoles();
+			//globalSumupMultipoles();
 		}
 	
 	private:
@@ -479,7 +479,7 @@ class OctTree {
                     monopolCXM += (CurNodePtr->xCom)*
                                     (CurNodePtr->q000);
                     monopolCYM += (CurNodePtr->yCom)*
-											(CurNodePtr->q000);
+                                    (CurNodePtr->q000);
                     monopolCZM += (CurNodePtr->zCom)*
                                     (CurNodePtr->q000);
                     goUp();
@@ -880,7 +880,7 @@ class OctTree {
 			* itself.
 			*/
 			curGravNodeProxy->nodePtr->isParticle	= false;
-			curGravNodeProxy->nodePtr->isEmpty		= true;
+			//curGravNodeProxy->nodePtr->isEmpty		= true;
 			
 			goRoot();
 			calcGravityRecursor();
@@ -893,7 +893,7 @@ class OctTree {
 			* undo the trick above
 			*/
 			curGravNodeProxy->nodePtr->isParticle	= true;
-			curGravNodeProxy->nodePtr->isEmpty		= false;			
+			//curGravNodeProxy->nodePtr->isEmpty		= true;			
 		}
 		
 	private:
@@ -989,7 +989,7 @@ class OctTree {
 			curGravParticleAY -= ( CurNodePtr->q000 ) * 
 				( curGravParticleY - CurNodePtr->yCom ) /
 				cellPartDistPow3;
-			curGravParticleAX -= ( CurNodePtr->q000 ) * 
+			curGravParticleAZ -= ( CurNodePtr->q000 ) * 
 				( curGravParticleZ - CurNodePtr->zCom ) /
 				cellPartDistPow3;
         }
