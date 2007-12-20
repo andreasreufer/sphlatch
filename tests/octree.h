@@ -76,7 +76,7 @@ class OctTree {
             
 			RootPtr->isParticle		= false;
 			RootPtr->isEmpty		= true;
-			RootPtr->isLocal    	= true;
+			RootPtr->isLocal    	= false;
 			RootPtr->depth = 0;
 			
 			CurNodePtr = RootPtr;
@@ -84,7 +84,7 @@ class OctTree {
 			cellCounter	= 1;  // we now have the root cell and no particles
 			partCounter	= 0;
 			
-			toptreeDepth = 4; // get this from costzone and MAC!
+			toptreeDepth = 6; // get this from costzone and MAC!
 			//thetaMAC = 1.;
 			thetaMAC = 0.6;
 			//thetaMAC = 0.4;
@@ -202,6 +202,8 @@ class OctTree {
                 
 				CurNodePtr->isParticle = false;
 				CurNodePtr->isEmpty    = true;
+                
+                CurNodePtr->isLocal = false;
 				
 				cellCounter++;
 			}
@@ -310,7 +312,7 @@ class OctTree {
 				CurNodePtr->q000 = (*_newPayload)(M);		
                 
                 CurNodePtr->ident =
-                    static_cast<identType>( (*_newPayload)(ID) );
+                    static_cast<identType>( (*_newPayload)(PID) );
 				
 				/**
 				* don't forget to wire the nodePtr of the 
@@ -407,6 +409,7 @@ class OctTree {
 		* calculate multipole from children
 		*/
 		valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
+        //bool multipoleContribution;
 		void calcMultipole() {
             monopolCM = 0.;
             monopolCXM = 0.;
@@ -438,30 +441,44 @@ class OctTree {
             * the same locality as the current node.
             * all this locality business guarantees, that every particle
             * contributes only ONCE to the multipole moments of the global tree
-            * but "ghost" cells still 
+            * but "ghost" cells still contain the multipoles contributed by
+            * their ghost children.
+            *
+            * a special case are the deepest toptree cells which are per
+            * definition local. if all children are ghosts, none of if contri-
+            * butes anything so monopolCM gets 0 and fucks the center of mass
+            * of the cell. so if nobody contributes anything, omit the addition
+            * to the cell.
             */
             for (size_t i = 0; i < 8; i++) {
-                if ( CurNodePtr->child[i] != NULL &&
-                    ( CurNodePtr->child[i]->isLocal == CurNodePtr->isLocal )
-                    ) {
-                    goChild(i);
-                    monopolCM += CurNodePtr->q000;
-                    monopolCXM += (CurNodePtr->xCom)*
+                if ( CurNodePtr->child[i] != NULL ) {
+                    if ( CurNodePtr->child[i]->isLocal 
+                        == CurNodePtr->isLocal ) {
+                        goChild(i);
+                        monopolCM += CurNodePtr->q000;
+                        monopolCXM += (CurNodePtr->xCom)*
                                     (CurNodePtr->q000);
-                    monopolCYM += (CurNodePtr->yCom)*
+                        monopolCYM += (CurNodePtr->yCom)*
                                     (CurNodePtr->q000);
-                    monopolCZM += (CurNodePtr->zCom)*
+                        monopolCZM += (CurNodePtr->zCom)*
                                     (CurNodePtr->q000);
-                    goUp();
+                        goUp();
+                    }
                 }
             }
-										
+                        
             /* copy data to node itself ... */
-            CurNodePtr->q000 = monopolCM;
-            CurNodePtr->xCom = monopolCXM / monopolCM;
-            CurNodePtr->yCom = monopolCYM / monopolCM;
-            CurNodePtr->zCom = monopolCZM / monopolCM;
-        
+            if ( monopolCM > 0. ) {
+                CurNodePtr->q000 = monopolCM;
+                CurNodePtr->xCom = monopolCXM / monopolCM;
+                CurNodePtr->yCom = monopolCYM / monopolCM;
+                CurNodePtr->zCom = monopolCZM / monopolCM;
+            } else {
+                CurNodePtr->q000 = 0.;
+                CurNodePtr->xCom = 0.;
+                CurNodePtr->yCom = 0.;
+                CurNodePtr->zCom = 0.;
+            }        
 		}
 		
 		/**
@@ -534,10 +551,7 @@ class OctTree {
 					MPI_BYTE, recvFrom, RANK );
 
                 valueType oldQ000, newQ000;
-                for ( size_t i = 0; i < noToptreeCells; i++) {
-                            //std::cout << localCells(i, Q000) << " " << localCells(i, CX) << " " << localCells(i, CY) << " " << localCells(i, CZ) << "\t"
-                            //          << remoteCells(i, Q000) << " " << remoteCells(i, CX) << " " << remoteCells(i, CY) << " " << remoteCells(i, CZ) << "\n";
- 
+                for ( size_t i = 0; i < noToptreeCells; i++) { 
                     if ( remoteIsFilled[i] ) {
                         if ( localIsFilled[i] ) {
                             oldQ000 = localCells(i, Q000);
@@ -556,12 +570,6 @@ class OctTree {
                                 localCells(i, CZ) )
                                 + ( ( remoteCells(i, Q000) / newQ000 )*
                                 remoteCells(i, CZ) );
-                            
-                            /*for (size_t j = 1; j < 4; i++) {
-                                if ( localCells( i, j ) != localCells( i, j ) ) {
-                                    std::cerr << "EEEEK!!! " << RANK << " from " << recvFrom << " " << i << " " << j << " " << localCells( i, j ) << "\n";
-                                }
-                            }*/
                         } else {
                             localCells(i, Q000) = remoteCells(i, Q000);
                             localCells(i, CX) = remoteCells(i, CX);

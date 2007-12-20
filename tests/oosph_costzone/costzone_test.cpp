@@ -115,9 +115,7 @@ int main(int argc, char* argv[])
 
     const size_t noParts = Data.size1();
     const size_t noGhosts = GData.size1();
-    
-    std::cout << GData << "\n";
-    
+        
     // particles are all distributed now
     using namespace boost::posix_time;
 	ptime TimeStart, TimeStop;
@@ -187,7 +185,10 @@ int main(int argc, char* argv[])
 
     // save particles
     std::vector<int> outputAttrSet;
-    std::string outFilename = "out.cdat";
+    std::string outFilename;
+    outFilename += "out";
+    outFilename += boost::lexical_cast<std::string>(SIZE);
+    outFilename += ".cdat";
     outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
     IOManager.SaveCDAT(outFilename, outputAttrSet);
         
