@@ -87,7 +87,7 @@ class OctTree {
 			toptreeDepth = 6; // get this from costzone and MAC!
 			//thetaMAC = 1.;
 			thetaMAC = 0.6;
-			//thetaMAC = 0.4;
+			//thetaMAC = 0.25;
 			
 			buildToptreeRecursor();
             noToptreeCells = cellCounter;
@@ -244,8 +244,7 @@ class OctTree {
 				CurNodePtr->isEmpty			= true;
 				
                 CurNodePtr->isLocal	= false;
-                //CurNodePtr->isLocal	= true;
-                
+                    
                 cellCounter++;
 				goUp();
 			}
@@ -556,20 +555,28 @@ class OctTree {
                         if ( localIsFilled[i] ) {
                             oldQ000 = localCells(i, Q000);
                             newQ000 = oldQ000 + remoteCells(i, Q000);
+                            
+                            /**
+                            * newQ000 may be zero for non-empty cells. this
+                            * happens when all children are ghosts and do not
+                            * contribute to the local toptree
+                            */
+                            if ( newQ000 > 0. ) {
+                                localCells(i, Q000) = newQ000;
+                                localCells(i, CX) = ( ( oldQ000 / newQ000 )*
+                                    localCells(i, CX) )
+                                    + ( ( remoteCells(i, Q000) / newQ000 )*
+                                    remoteCells(i, CX) );
+                                localCells(i, CY) = ( ( oldQ000 / newQ000 )*
+                                    localCells(i, CY) )
+                                    + ( ( remoteCells(i, Q000) / newQ000 )*
+                                    remoteCells(i, CY) );
+                                localCells(i, CZ) = ( ( oldQ000 / newQ000 )*
+                                    localCells(i, CZ) )
+                                    + ( ( remoteCells(i, Q000) / newQ000 )*
+                                    remoteCells(i, CZ) );
+                            }
 
-                            localCells(i, Q000) = newQ000;
-                            localCells(i, CX) = ( ( oldQ000 / newQ000 )*
-                                localCells(i, CX) )
-                                + ( ( remoteCells(i, Q000) / newQ000 )*
-                                remoteCells(i, CX) );
-                            localCells(i, CY) = ( ( oldQ000 / newQ000 )*
-                                localCells(i, CY) )
-                                + ( ( remoteCells(i, Q000) / newQ000 )*
-                                remoteCells(i, CY) );
-                            localCells(i, CZ) = ( ( oldQ000 / newQ000 )*
-                                localCells(i, CZ) )
-                                + ( ( remoteCells(i, Q000) / newQ000 )*
-                                remoteCells(i, CZ) );
                         } else {
                             localCells(i, Q000) = remoteCells(i, Q000);
                             localCells(i, CX) = remoteCells(i, CX);
@@ -767,6 +774,7 @@ class OctTree {
             
             //epsilonSquare = 0.01;
             epsilonSquare = 0.0025;
+            //epsilonSquare = 0.0000;
             
 #ifdef TREEPROFILE
 			calcGravityPartsCounter = 0;
