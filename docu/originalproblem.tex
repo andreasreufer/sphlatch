@@ -1,0 +1,51 @@
+%% original problem
+
+\section{A problem and one of its solutions}
+
+\subsection{the N-Body problem}
+
+$O(N^2)$ of N-Body calculation
+
+\subsection{the Barnes \& Hut tree as a solution}
+%do not mention implementation stuff
+
+$O( N \log N )$\\
+- hierarchical representation
+
+multipole moments:
+
+the $1st$ order monopole tensor
+\begin{equation}
+M = \sum_{k} m_k \\
+\end{equation}
+
+the $2nd$ order quadrupole tensor
+\begin{equation}
+Q_{ij} = \sum_{k} m_k \big( 3 r_{i,k} r_{j,k} - \rvec_{k}^2 \delta_{i,j} \big) \\
+\end{equation}
+
+the components of the $3rd$ order octupole tensor
+\begin{equation}
+S_{ij}  = \sum_{k} m_k \big[ 5 \big( 3 - 2  \delta_{i,j} \big) r_{i, k}^2 - 3 \rvec_{k}^2 \big] r_{j,k}\\
+\end{equation}
+
+\begin{equation}
+S_{1 2 3} = 15 \sum_{k} m_k r_{1, k} r_{2, k} r_{3, k}
+\end{equation}
+
+the resulting potential
+\begin{equation}
+\phi(\rvec) = 
+\underbrace{ - \frac{G M}{r} }_{monopole} ~ 
+\underbrace{ - \frac{G Q_{ij} r_{i} r_{j} }{2 r^5} }_{quadrupole}~ 
+\underbrace{ - \frac{S_{ij} r_{i}^2 r_{j} + S_{1 2 3} r_{1} r_{2} r_{3} }{2 r^{7}} }_{octupole}~ 
++ O\Big(\frac{1}{r^{7}}\Big)
+\end{equation}
+
+and the resulting acceleration for a point mass at $\rvec$
+\begin{equation}
+\avec(\rvec) = - \nabla \phi(\rvec) = - \frac{G M}{r^2} \frac{\rvec}{r} + 
+\end{equation}
+
+$\theta$ clumping parameter, self-acceleration for $\theta \ge 1$
+\cite{1986Natur.324..446B}

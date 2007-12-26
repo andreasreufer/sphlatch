@@ -116,7 +116,7 @@ class OctTree {
         matrixType      localCells, remoteCells;
         bitsetType      localIsFilled, remoteIsFilled;		
 		   
-		// little private helpers
+		// little helpers
 	private:
 		/**
 		* go up one level
@@ -408,7 +408,6 @@ class OctTree {
 		* calculate multipole from children
 		*/
 		valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
-        //bool multipoleContribution;
 		void calcMultipole() {
             monopolCM = 0.;
             monopolCXM = 0.;
@@ -742,7 +741,6 @@ class OctTree {
             MPI::COMM_WORLD.Ssend( &(sendBuff[0]), noBsBytes,
                 MPI_BYTE, _recvRank, _recvRank );
         }
-
 		// end of multipole stuff
 
 		
@@ -754,6 +752,7 @@ class OctTree {
 		valueType thetaMAC;
         valueType epsilonSquare;
 		size_t calcGravityCellsCounter, calcGravityPartsCounter;
+        
 	public:
 		/**
 		* calculate gravitation for a particle:
@@ -772,6 +771,7 @@ class OctTree {
 			curGravParticleAY = 0.;
 			curGravParticleAZ = 0.;
             
+            // get this from each particle individually
             //epsilonSquare = 0.01;
             epsilonSquare = 0.0025;
             //epsilonSquare = 0.0000;
@@ -822,7 +822,7 @@ class OctTree {
 		}
 		/**
 		* stop recursion if:
-		* - current node is empty
+		* - current node is empty << ??
 		* - MAC is fulfilled
 		*/
 		valueType cellPartDist;
@@ -993,7 +993,6 @@ class OctTree {
                 }
 			}
         }                
-
         // end of treeDump() stuff
         
         // toptreeDump() stuff

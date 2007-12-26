@@ -1,0 +1,86 @@
+\documentclass[12pt,a4paper,titlepage]{article}
+%\documentclass[a4paper,twoside]{article} 
+%\documentclass[12pt,a4paper,twoside]{article} 
+
+\usepackage[pdftex]{graphicx}
+%\usepackage[pdftex,draft]{graphicx}
+
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage[pdftex,
+	% remove to generate the printout version
+	colorlinks=true,
+	%citecolor=black,
+	%urlcolor=black
+	pdfauthor={Andreas Reufer},
+	pdftitle={Tree musings},
+	pdfkeywords={tree, octree, parallel}
+]{hyperref}
+
+
+\usepackage{amssymb, amsmath}
+\usepackage{mathrsfs}
+\usepackage{amsfonts}
+
+%\footnotesep0.5cm
+
+\usepackage{aas_macros}
+
+%\usepackage[T1]{fontenc}
+%\usepackage{pxfonts}
+
+%% One and a half spacing
+\usepackage{setspace}
+
+\usepackage{a4wide}
+\usepackage{enumerate}
+
+\usepackage{natbib}
+\bibpunct{(}{)}{;}{a}{}{,}
+
+\usepackage{verbatim}
+\usepackage{moreverb}
+\let\verbatiminclude\verbatimtabinput
+\def\verbatimtabsize{4\relax}
+
+\newcommand{\ud}{\boldsymbol{d}}
+\newcommand{\rvec}{\boldsymbol{r}}
+\newcommand{\rsvec}{\boldsymbol{r'}}
+\newcommand{\rivec}{\boldsymbol{r}_i}
+\newcommand{\vvec}{\boldsymbol{v}}
+\newcommand{\avec}{\boldsymbol{a}}
+\newcommand{\Qtens}{\boldsymbol{Q}}
+
+\author{Andreas Reufer}
+\title{parallel trees}
+
+
+\begin{document}
+\pagestyle{headings}
+
+\maketitle
+
+%\begin{spacing}{1.5}
+
+%% Sections
+\include{title}
+\include{originalproblem}
+\include{tree_excursion}
+\include{implementation}
+
+% Include a bibliography
+\bibliographystyle{plain}
+%\bibliographystyle{natbib}
+%\bibliographystyle{natdin}
+%\bibliographystyle{abbrvnat}
+%\bibliographystyle{unsrtnat}
+%\bibliographystyle{plainnat}
+
+\bibliography{bibliography}
+
+% Appendix
+%\appendix
+
+%\end{spacing}
+
+\end{document}
