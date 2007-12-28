@@ -1,0 +1,40 @@
+\section{Appendix}
+
+\subsection{Explicit scalar expressions for adding up multipoles}
+
+In practice we need scalar expressions for the multipole tensors and break up the sums given in equations \ref{eq_monopole} $-$ \ref{eq_octupole}. Given an existing parent clump with a center of mass $X'_{i}$ and multipole moments $M', Q'_{i j}, S'_{i j}, S'_{123}$ and another clump with $x_i, m, q_{i j}, s_{i j}, s_{123}$ we want to merge to the parent clump, we would like to be able to write the new multipole moments of the new parent cluster as
+\begin{align}
+M &= M' + \Delta M \\
+Q_{ij} &= Q'_{ij} + \Delta Q_{ij}\\
+S_{ij} &= S'_{ij} + \Delta S_{ij}\\
+S_{123} &= S'_{123} + \Delta Q_{123}
+\end{align}
+
+The new center of mass can be calculated with
+\begin{equation}
+X_{1} = X'_{1} \frac{M'}{M'+m} + x_1 m ~~~~ X_{2} = X'_{2} \frac{M'}{M'+m} + x_2 m ~~~~ X_{3} = X'_{3} \frac{M'}{M'+m} + x_3 m
+\end{equation}
+
+The $\Delta$-expressions yield
+
+\begin{align}
+\Delta M &= m \\
+\Delta Q_{11} &= m (3 r_1^2 - \rvec^2) + q_{11} \\
+\Delta Q_{22} &= m (3 r_2^2 - \rvec^2) + q_{22} \\
+\Delta Q_{33} &= m (3 r_3^2 - \rvec^2) + q_{33} \\
+\Delta Q_{12} &= \Delta Q_{21} = m ( 3 r_1 r_2 ) + q_{12}\\
+\Delta Q_{13} &= \Delta Q_{31} = m ( 3 r_1 r_3 ) + q_{13}\\
+\Delta Q_{23} &= \Delta Q_{32} = m ( 3 r_2 r_3 ) + q_{23}\\
+\Delta S_{11} &= m ( 5 r_1^2 - 3 \rvec^2 ) r_1 + q_{11} (3/2) r_1 - q_{12} r_2 - q_{13} r_3 + s_{11} \\
+\Delta S_{22} &= m ( 5 r_2^2 - 3 \rvec^2 ) r_2 + q_{22} (3/2) r_2 - q_{12} r_1 - q_{23} r_3 + s_{22} \\
+\Delta S_{33} &= m ( 5 r_3^2 - 3 \rvec^2 ) r_3 + q_{33} (3/2) r_3 - q_{13} r_1 - q_{23} r_2 + s_{33} \\
+\Delta S_{12} &= m ( 15 r_1^2 - 3 \rvec^2 ) r_2 + q_{12} ( 4 r_1 + (5/2) r_2) - q_{22} r_2 - q_{23} r_3 + s_{12} \\
+\Delta S_{21} &= m ( 15 r_2^2 - 3 \rvec^2 ) r_1 + q_{21} ( 4 r_2 + (5/2) r_1) - q_{11} r_1 - q_{13} r_3 + s_{21} \\
+\Delta S_{13} &= m ( 15 r_1^2 - 3 \rvec^2 ) r_3 + q_{13} ( 4 r_1 + (5/2) r_3) - q_{23} r_2 - q_{33} r_3 + s_{13} \\
+\Delta S_{31} &= m ( 15 r_3^2 - 3 \rvec^2 ) r_1 + q_{31} ( 4 r_3 + (5/2) r_1) - q_{11} r_1 - q_{12} r_2 + s_{31} \\
+\Delta S_{23} &= m ( 15 r_2^2 - 3 \rvec^2 ) r_3 + q_{23} ( 4 r_2 + (5/2) r_3) - q_{13} r_1 - q_{33} r_3 + s_{23} \\
+\Delta S_{32} &= m ( 15 r_3^2 - 3 \rvec^2 ) r_2 + q_{32} ( 4 r_3 + (5/2) r_2) - q_{12} r_1 - q_{22} r_2 + s_{32} \\
+\Delta S_{123} &=15 \big( m r_1 r_2 r_3 + (5 / 3) ( q_{12}  r_3 + q_{13} r_2 + q_{23} r_1) + s_{123} \big)
+\end{align}
+
+where $r_i = x_i - X_i$

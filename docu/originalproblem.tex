@@ -6,46 +6,95 @@
 
 $O(N^2)$ of N-Body calculation
 
+short-range, long-range physics
+
 \subsection{the Barnes \& Hut tree as a solution}
 %do not mention implementation stuff
 
 $O( N \log N )$\\
 - hierarchical representation
 
-multipole moments:
-
-the $1st$ order monopole tensor
+As shown in \cite{1993ApJ...414..200M} the multipole moments relative to the center of mass 
 \begin{equation}
-M = \sum_{k} m_k \\
+X_{i} = \frac{1}{M} \sum_{c} m_{c} x_{i, c} ~~~~~~~~ \text{for}~M > 0
 \end{equation}
 
-the $2nd$ order quadrupole tensor
+of a clump of particles with masses $m_{c}$ and positions $\xvec_{c}$ are given by the following equations for the rank-0 monopole tensor (or the common mass)
 \begin{equation}
-Q_{ij} = \sum_{k} m_k \big( 3 r_{i,k} r_{j,k} - \rvec_{k}^2 \delta_{i,j} \big) \\
+M = \sum_{c} m_c \\
 \end{equation}
 
-the components of the $3rd$ order octupole tensor
+the symmetric and traceless rank-2 quadrupole tensor 
 \begin{equation}
-S_{ij}  = \sum_{k} m_k \big[ 5 \big( 3 - 2  \delta_{i,j} \big) r_{i, k}^2 - 3 \rvec_{k}^2 \big] r_{j,k}\\
+Q_{ij} = \sum_{c} m_c \big( 3 r_{i, c} r_{j, c} - \rvec_{c}^2 \delta_{i j} \big) \\
 \end{equation}
 
+(where $\rvec = \xvec_{c} - \Xvec $ denotes the position of the particle relative to the center of mass), the rank-3 octupole tensor which can be reduced to a rank-2 tensor
 \begin{equation}
-S_{1 2 3} = 15 \sum_{k} m_k r_{1, k} r_{2, k} r_{3, k}
+S_{ij}  = \sum_{k} m_c \big[ 5 \big( 3 - 2  \delta_{i j} \big) r_{i, c}^2 - 3 \rvec_{k}^2 \big] r_{j, c}\\
 \end{equation}
 
-the resulting potential
+and a rank-0 tensor component
 \begin{equation}
-\phi(\rvec) = 
-\underbrace{ - \frac{G M}{r} }_{monopole} ~ 
-\underbrace{ - \frac{G Q_{ij} r_{i} r_{j} }{2 r^5} }_{quadrupole}~ 
-\underbrace{ - \frac{S_{ij} r_{i}^2 r_{j} + S_{1 2 3} r_{1} r_{2} r_{3} }{2 r^{7}} }_{octupole}~ 
-+ O\Big(\frac{1}{r^{7}}\Big)
+S_{1 2 3} = 15 \sum_{k} m_c r_{1, c} r_{2, c} r_{3, c}
 \end{equation}
 
-and the resulting acceleration for a point mass at $\rvec$
+This representation of multiple particles as a clump with a center of mass and its multipole moments is a special case of the more general case, where the constituents of the parent clumps are also clumps with multipole moments. The generalization gives the following equations where $c$ indexes the children clumps. For the parent clump the monopole moment yields
+
 \begin{equation}
-\avec(\rvec) = - \nabla \phi(\rvec) = - \frac{G M}{r^2} \frac{\rvec}{r} + 
+\label{eq_monopole}
+M = \sum_{c} M_{c}
 \end{equation}
+
+the quadrupole tensor
+\begin{equation}
+\label{eq_quadrupole}
+Q_{ij} = \sum_{c} M_{c} \big( 3 r_{i, c} r_{j, c} - \rvec_{c}^{2} \delta_{i j} \big) + Q_{i j, c} 
+\end{equation}
+
+the octupole tensor components
+\begin{align}
+\label{eq_octupole}
+S_{ij} =& \sum_{c}  M_{c} \big[ 5 \big( 3 - 2 \delta_{i,j} \big) r_{i, c}^{2} - 3 \rvec_{c}^2 \big] r_{j, c} 
++ 5 \big( 1 - \delta_{i j} \big) r_{i, c} Q_{i j, c} \nonumber \\
+&+ \frac{5}{2} r_{j, c} Q_{i j, c} - \sum_{l} \big[ r_{l, c} Q_{j l, c} \big] + S_{i j, c} \\
+S_{1 2 3} =& 15 \sum_{c} M_{c} r_{1, c} r_{2, c} r_{3, c} + \frac{5}{3} \big( r_{1, c} Q_{2 3, c} + r_{2, c} Q_{3 1, c} + r_{3, c} Q_{1 2, c} \big) + S_{1 2 3, c }
+\end{align}
+
+and finally the center of mass yields
+\begin{equation}
+X_{i} = \frac{1}{M} \sum_{c} M_{c} X_{i, c} ~~~~~~~~  M > 0
+\end{equation}
+
+So particles can be treated like clumps with only a monopole moment and vanishing higher order multipoles.\\
+
+The gravitational potential of a clump can now be approximated in terms of its multipole moments
+
+\begin{equation}
+\phi(\rvec) = G \bigg(
+\underbrace{ - \frac{M}{r} }_{monopole} ~ 
+\underbrace{ - \frac{Q_{i j}}{r^{3}} \frac{r_{i} r_{j} }{2 r^{2} } }_{quadrupole}~ 
+\underbrace{ - \frac{S_{i j}}{r^{4}} \frac{r_{i}^2 r_{j}}{2 r^{3} } + \frac{ S_{1 2 3} }{r^{4}}\frac{ r_{1} r_{2} r_{3} }{2 r^{3}} }_{octupole}~ 
++ O\Big(\frac{1}{r^{7}}\Big) \bigg)
+\end{equation}
+
+and so we get the resulting acceleration for a point mass at $\rvec$ in this potential
+\begin{align}
+a_{k} &= - \nabla_{k} \phi(\rvec) \approx - G \bigg(
+\underbrace{ \frac{M}{r^{2}} \frac{r_{k}}{r} }_{monopole}+ 
+\underbrace{ \frac{Q_{i j}}{r^{4}}
+\big( \frac{\delta_{i k} r_{j} }{2r} + \frac{5 r_{i} r_{j} r_{k} }{2r^{3}} \big)
+}_{quadrupole} \nonumber \\
+&+ \underbrace{ \frac{S_{i j}}{r^{5}}
+\big( \frac{ \delta_{i k} r_{i} r_{j} }{r^{2}}
++ \frac{ \delta_{j k} r_{i}^{2} }{2 r^{2} }
+- \frac{7 r_{i}^{2} r_{j} r_{k} }{r^{4} } \big) 
+ + \frac{S_{1 2 3}}{r^{5} }
+\big( \frac{\delta_{1 k} r_{2} r_{3} + \delta_{2 k} r_{3} r_{1} + \delta_{3 k} r_{1} r_{2}}{2 r^{2}} 
+- \frac{7 r_{1} r_{2} r_{3} r_{k} }{2 r^{4}}\big) 
+}_{octupole}
+\bigg)
+\end{align}
 
 $\theta$ clumping parameter, self-acceleration for $\theta \ge 1$
 \cite{1986Natur.324..446B}
