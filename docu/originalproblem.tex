@@ -3,73 +3,79 @@
 \section{A problem and one of its solutions}
 
 \subsection{the N-Body problem}
+One way of simulating a physical system is representing it with particles each carrying information about physical quantities. For example a system of $N$ gravitationally interacting bodies like stars in a galaxy, where the representation by particles is natural. When $\xvec_{i}$ is the position and $m_i$ the mass of particle $i$, then the acceleration of particle $j$ caused by gravitational interaction can be calculated by the \emph{direct sum}
+\begin{equation}
+\avec_j = - G \sum_{i \ne j} \frac{m_i}{r_{ij}^2} \frac{\rvec_{ij}}{r_{ij}} ~~~~ \text{where}~\rvec_{ij} = \rvec_j - \rvec_j
+\end{equation}
 
-$O(N^2)$ of N-Body calculation
+So we have to evaluate $N$ sums with $N-1$ terms, a problem with complexity $O(N^2)$. By using Newtons third law the number of calculations can be reduced to half this number, but the order of complexity is still the same.\\
 
-short-range, long-range physics
+%short-range, long-range physics, inherent problem of n-body simulations
 
-\subsection{the Barnes \& Hut tree as a solution}
-%do not mention implementation stuff
+\subsection{The multipole approximation}
+One solution to this problem is to use the multipole approximation. The idea is simple: Combine particles in spatial proximity into \emph{clusters}. When calculating the interactions of a single distant particle $j$ at $r_j$ with a cluster of particles $i$ at $r_i$  (where $j~\epsilon~C$) we can use as an approximation
+\begin{align}
+\avec_j &= - G \sum_{i~\epsilon~C} \frac{m_i}{r_{ij}^2} \frac{\rvec_{ij}}{r_{ij}} \approx - G \frac{m_{C}}{r_{Cj}} \frac{\rvec_{Cj}}{r_{Cj}} ~~~~ \text{when}~r_{ij} \gg r_{jk} ~~~ \forall j,k ~ \epsilon~C \\
+m_C &= \sum_{i~\epsilon~C} m_i ~~~~ \rvec_C = \frac{1}{m_C} \sum_{i~\epsilon~C} \rvec_i m_i ~~~~ \rvec_{Cj} = \rvec_j - \rvec_C 
+\end{align}
 
-$O( N \log N )$\\
-- hierarchical representation
+This is called the \emph{monopole approximation} and approximates the gravitational potential of the cluster of particles with a single gravitational monopole with mass $m_C$ at $\rvec_C$. This is a good approximation when the distance between the single particle and the cluster is big compared to the distances between the particles of the cluster between each other. The reason why the complexity of the computation gets lower, is that these two quantities are calculated once before the acceleration calculation and can be reused also for other distant particles. \\
 
-As shown in \cite{1993ApJ...414..200M} the multipole moments relative to the center of mass 
+This method can also be used with higher multipole moments which get arbitrarily complicated. We will now use the same denominations like in \cite{1993ApJ...414..200M}. The index $c$ stands for the particles constituting a clump, the \emph{children} of a clump. Indices $i, j, l$ number the three spatial dimensions. So the center of mass of a clump with children of masses $m_{c}$ and positions $\xvec_{c}$ can be written as
 \begin{equation}
 X_{i} = \frac{1}{M} \sum_{c} m_{c} x_{i, c} ~~~~~~~~ \text{for}~M > 0
 \end{equation}
 
-of a clump of particles with masses $m_{c}$ and positions $\xvec_{c}$ are given by the following equations for the rank-0 monopole tensor (or the common mass)
+The total mass of the clump or in more technical terms, the rank-0 monopole tensor yields
 \begin{equation}
 M = \sum_{c} m_c \\
 \end{equation}
 
-the symmetric and traceless rank-2 quadrupole tensor 
+the symmetric and traceless rank-2 quadrupole tensor, where $\rvec = \xvec_{c} - \Xvec $ denotes the position of the particle relative to the center of mass
 \begin{equation}
 Q_{ij} = \sum_{c} m_c \big( 3 r_{i, c} r_{j, c} - \rvec_{c}^2 \delta_{i j} \big) \\
 \end{equation}
 
-(where $\rvec = \xvec_{c} - \Xvec $ denotes the position of the particle relative to the center of mass), the rank-3 octupole tensor which can be reduced to a rank-2 tensor
+and the rank-3 octupole tensor which can be reduced to a rank-2 tensor
 \begin{equation}
 S_{ij}  = \sum_{k} m_c \big[ 5 \big( 3 - 2  \delta_{i j} \big) r_{i, c}^2 - 3 \rvec_{k}^2 \big] r_{j, c}\\
 \end{equation}
 
-and a rank-0 tensor component
+and a rank-0 tensor component yield
 \begin{equation}
 S_{1 2 3} = 15 \sum_{k} m_c r_{1, c} r_{2, c} r_{3, c}
 \end{equation}
 
-This representation of multiple particles as a clump with a center of mass and its multipole moments is a special case of the more general case, where the constituents of the parent clumps are also clumps with multipole moments. The generalization gives the following equations where $c$ indexes the children clumps. For the parent clump the monopole moment yields
+Of cource the series continues with higher order multipole moments, but we will stop here as the approximation with multipoles moments up to the octupole is already pretty good for most cases. This representation of multiple particles as a clump with a center of mass and its multipole moments is a special case of the more general case, where the children of the parent cluster are also clusters with multipole moments. For the parent clump the monopole moment yields again
 
 \begin{equation}
 \label{eq_monopole}
 M = \sum_{c} M_{c}
 \end{equation}
 
-the quadrupole tensor
+the quadrupole tensor now includes the quadrupole moments of the children 
 \begin{equation}
 \label{eq_quadrupole}
 Q_{ij} = \sum_{c} M_{c} \big( 3 r_{i, c} r_{j, c} - \rvec_{c}^{2} \delta_{i j} \big) + Q_{i j, c} 
 \end{equation}
 
-the octupole tensor components
+the octupole tensor components yields
 \begin{align}
 \label{eq_octupole}
-S_{ij} =& \sum_{c}  M_{c} \big[ 5 \big( 3 - 2 \delta_{i,j} \big) r_{i, c}^{2} - 3 \rvec_{c}^2 \big] r_{j, c} 
+S_{ij} = \sum_{c}&  M_{c} \big[ 5 \big( 3 - 2 \delta_{i,j} \big) r_{i, c}^{2} - 3 \rvec_{c}^2 \big] r_{j, c} 
 + 5 \big( 1 - \delta_{i j} \big) r_{i, c} Q_{i j, c} \nonumber \\
 &+ \frac{5}{2} r_{j, c} Q_{i j, c} - \sum_{l} \big[ r_{l, c} Q_{j l, c} \big] + S_{i j, c} \\
 S_{1 2 3} =& 15 \sum_{c} M_{c} r_{1, c} r_{2, c} r_{3, c} + \frac{5}{3} \big( r_{1, c} Q_{2 3, c} + r_{2, c} Q_{3 1, c} + r_{3, c} Q_{1 2, c} \big) + S_{1 2 3, c }
 \end{align}
 
-and finally the center of mass yields
+The center of mass is given again by
 \begin{equation}
 X_{i} = \frac{1}{M} \sum_{c} M_{c} X_{i, c} ~~~~~~~~  M > 0
 \end{equation}
 
-So particles can be treated like clumps with only a monopole moment and vanishing higher order multipoles.\\
+So particles can be treated like clusters with only a monopole moment and vanishing higher order multipoles.\\
 
-The gravitational potential of a clump can now be approximated in terms of its multipole moments
-
+The gravitational potential of a cluster can now be approximated in terms of its multipole moments up to the octupole
 \begin{equation}
 \phi(\rvec) = G \bigg(
 \underbrace{ - \frac{M}{r} }_{monopole} ~ 
@@ -78,7 +84,7 @@ The gravitational potential of a clump can now be approximated in terms of its m
 + O\Big(\frac{1}{r^{7}}\Big) \bigg)
 \end{equation}
 
-and so we get the resulting acceleration for a point mass at $\rvec$ in this potential
+and so the acceleration for a point mass at $\rvec$ in this potential yields
 \begin{align}
 a_{k} &= - \nabla_{k} \phi(\rvec) \approx - G \bigg(
 \underbrace{ \frac{M}{r^{2}} \frac{r_{k}}{r} }_{monopole}+ 
@@ -96,5 +102,3 @@ a_{k} &= - \nabla_{k} \phi(\rvec) \approx - G \bigg(
 \bigg)
 \end{align}
 
-$\theta$ clumping parameter, self-acceleration for $\theta \ge 1$
-\cite{1986Natur.324..446B}
