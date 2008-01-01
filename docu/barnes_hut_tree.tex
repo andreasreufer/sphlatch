@@ -1,0 +1,109 @@
+%% a little excursion about trees
+
+\section{the Barnes \& Hut tree algorithm}
+In the previous chapter we saw a general formalism on how a cluster of particles can be approximated by multipole moments relative to their center of mass. This formalism however does not propose how to partition a given set of particles into clusters and clusters of clusters. The \emph{Barnes \& Hut tree algorithm} proposed in \cite{1986Natur.324..446B} does exactly that with the help a tree, a datastructure well suited to imply a hierarchy on a set of elements, in this case particles and clusters.
+
+\subsection{A little excursion about trees}
+First we need to know a few basic things about trees. A graph is a set of elements represented by \emph{nodes}. A tree is a rooted, directed graph in which any two nodes are connected by one and only one path. This means a node is the \emph{root node} and the connections between the nodes have a direction. Each node can have a number of children\footnote{often the term \emph{daughter} is used, but because of the asexual nature of tree nodes we are using here the term \emph{child}} 
+nodes and has exactly one parent, expect for the root node which has no parent. Nodes can be assigned a depth. The root node per definition has depth $0$ and the children of a node have the inherit the depth of the parent increased by one. Figure \ref{fig:simpletree} shows a simple tree. The blue square represents the root node and has two children with depth 1, while on of this children has again two children with depth 2. Tree data structures are usually drawn upside-down, this means with the root on top and increasing depth to the bottom.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics{simpletree.pdf}
+\caption{A simple tree. the squares represent nodes which are interconnected by arrows pointing from the parent node to its children}
+\label{fig:simpletree}
+\end{center}
+\end{figure}
+
+Nodes without children are called \emph{leaf nodes}. A disjoint set of trees is called a \emph{forest}. One notices that the definition for a tree does not only fit the whole set of nodes of a tree, but also subsets. Every node can be taken as a root node and forms again a tree, also called a \emph{subtree} of the tree. Or one can say, that the children of a node form a forest of trees.
+
+\subsection{Tree walks}
+A tree walk is a sequence going through all the nodes of a tree once. For a tree with $N$ nodes there exist $N!$ possible tree walks, a few of them are special which are useful for the Barnes \& Hut tree algorithm.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[scale=0.4]{simple_numbered_tree.pdf}
+\caption{A slightly more complex tree with arbitrarly numbered nodes.}
+\label{fig:simplenumtree}
+\end{center}
+\end{figure}
+
+walks as recursive functions:
+
+\paragraph{post order}
+The post order tree walk starts at the root node. It can be implemented as shown in the following recursive algorithm
+\begin{algorithm}
+\caption{post order walk}
+\begin{algorithmic}
+\label{alg:postorder}
+\STATE{pick current node}
+\FORALL{children}
+\STATE{go to child}
+\STATE{do post order walk}
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+\\
+
+When $f_{post} (n)$ stands for applying the post order algorithm to node $n$ and the children are iterated from left to rigth, then the post order walk for the tree in figure \ref{fig:simplenumtree} can be elaborated in the following way
+\begin{align}
+\big\{& f_{post} (0) \big\} \nonumber \\
+\big\{& 0, f_{post} (5),  f_{post} (1),  f_{post} (2),  f_{post} (7) \big\} \nonumber \\
+\big\{& 0, 5, 1, f_{post} (4), f_{post} (12), 2, f_{post} (3), f_{post} (6), 7, f_{post} (9), f_{post} (8), f_{post} (10)\big\} \nonumber \\
+\big\{& 0, 5, 1, 4, 12, f_{post} (11), f_{post} (14), 2, 3, 6, 7, 9, 8, f_{post} (15), f_{post} (13), 10 \big\} \nonumber \\
+\big\{& 0, 5, 1, 4, 12, 11, 14, 2, 3, 6, 7, 9, 8, 15, 13, 10 \big\} \nonumber 
+\end{align}
+
+The key property of this walk is, that a node is not walked by unless every node on the path between the node and the root node has been walked. This property is useful, if a calculation on a node depends on results from the parent node.
+
+\paragraph{pre order}
+The pre order walk is similar to the post order walk, the only difference is that the children are walked before picking the current node. This gives the algorithm
+
+\begin{algorithm}
+\caption{pre order walk}
+\begin{algorithmic}
+\label{alg:preorder}
+\FORALL{children}
+\STATE{go to child}
+\STATE{do pre order walk}
+\ENDFOR
+\STATE{pick current node}
+\end{algorithmic}
+\end{algorithm}
+
+When $f_{post} (n)$ stands for applying the post order algorithm to node $n$, then the post order walk for the tree in figure \ref{fig:simplenumtree} can be elaborated in the following way
+
+ %f_{post} ()
+\begin{align}
+\big\{& f_{pre} (0) \big\} \nonumber \\
+\big\{& f_{pre} (5),  f_{pre} (1),  f_{pre} (2),  f_{pre} (7), 0\big\} \nonumber \\
+\big\{& 5, f_{pre} (4), f_{pre} (12), 1,  f_{pre} (3),  f_{pre} (6), 2,  f_{pre} (9),  f_{pre} (8), f_{pre} (10), 7, 0\big\} \nonumber \\
+\big\{& 5, 4,  f_{pre} (11),  f_{pre} (14), 12, 1, 3, 6, 2, 9,  f_{pre} (15),  f_{pre} (13), 8, 10, 7, 0\big\} \nonumber \\
+\big\{& 5, 4, 11, 14, 12, 1, 3, 6, 2, 9, 15, 13, 8, 10, 7, 0\big\} \nonumber
+\end{align}
+
+The key property of the pre order walk, is that a node is not walked until all its children and their subtrees have been walked. Again, this is useful, if a calculation on a node depends on results from the children nodes.
+
+\subsection{Octrees}
+octant
+
+(often the term daughter is used for this element, but as trees are asexual we use the neutral term of children)
+
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics{ttnode_filled_local.pdf}
+\includegraphics{ttnode_empty_local.pdf}
+\includegraphics{node_filled_local.pdf}
+\includegraphics{node_filled_remote.pdf}
+\hspace{1cm}
+\includegraphics{particle_filled_local.pdf}
+\includegraphics{particle_filled_remote.pdf}
+\caption{symbols used for tree nodes}
+\label{fig:nodetypes}
+\end{center}
+\end{figure}
+
+
+\subsection{the B\&H algorithm}
+$\theta$ clumping parameter, self-acceleration for $\theta \ge 1$

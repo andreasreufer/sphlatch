@@ -43,6 +43,9 @@
 \let\verbatiminclude\verbatimtabinput
 \def\verbatimtabsize{4\relax}
 
+\usepackage{algorithmic}
+\usepackage{algorithm}
+
 \newcommand{\ud}{\boldsymbol{d}}
 \newcommand{\rvec}{\boldsymbol{r}}
 \newcommand{\rsvec}{\boldsymbol{r'}}
@@ -56,7 +59,6 @@
 \author{Andreas Reufer}
 \title{On parallizing clumps, forests and families}
 
-
 \begin{document}
 \pagestyle{headings}
 
@@ -68,7 +70,7 @@
 
 %% Sections
 \include{originalproblem}
-\include{tree_excursion}
+\include{barnes_hut_tree}
 \include{implementation}
 
 % Include a bibliography
