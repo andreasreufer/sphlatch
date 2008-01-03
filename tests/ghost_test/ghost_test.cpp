@@ -23,7 +23,7 @@ typedef NodeProxy&	NodeProxyRefType;*/
 
 //#define NPARTS	0
 //#define NPARTS	20
-#define NPARTS	100
+#define NPARTS	1000
 //#define NPARTS	10000
 //#define NPARTS	100000
 //#define NPARTS	300000
@@ -130,6 +130,15 @@ int main(int argc, char* argv[]) {
         }
 		//++show_progress;
 	}
+    
+    // dump tree
+    treeDumpFilename = "treedump_";
+    treeDumpFilename += boost::lexical_cast<std::string>(RANK+1);
+    treeDumpFilename += "_of_";
+    treeDumpFilename += boost::lexical_cast<std::string>(SIZE);
+    treeDumpFilename += ".txt";
+    BarnesHutTree.treeDump(treeDumpFilename);
+    
 	TimeStop  = microsec_clock::local_time();
 	std::cout << "Gravity calc time       " << ( TimeStop - TimeStart ) << "\n";
 	

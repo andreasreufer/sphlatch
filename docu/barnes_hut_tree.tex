@@ -28,8 +28,6 @@ A tree walk is a sequence going through all the nodes of a tree once. For a tree
 \end{center}
 \end{figure}
 
-walks as recursive functions:
-
 \paragraph{post order}
 The post order tree walk starts at the root node. It can be implemented as shown in the following recursive algorithm
 \begin{algorithm}
@@ -85,6 +83,8 @@ When $f_{post} (n)$ stands for applying the post order algorithm to node $n$, th
 The key property of the pre order walk, is that a node is not walked until all its children and their subtrees have been walked. Again, this is useful, if a calculation on a node depends on results from the children nodes.
 
 \subsection{Octrees}
+Octrees are trees which nodes can have up to $8$ children. 
+
 octant
 
 (often the term daughter is used for this element, but as trees are asexual we use the neutral term of children)

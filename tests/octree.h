@@ -938,7 +938,7 @@ class OctTree {
             
             goRoot();
             dumpFile << "digraph graphname { \n";
-            treeDumpRecursor();
+            treeDOTDumpRecursor();
             dumpFile << "}\n";
             dumpFile.close();
         }
@@ -947,7 +947,7 @@ class OctTree {
         /**
         * treeDOTDump() recursor
         */
-        void treeDumpRecursor() {
+        void treeDOTDumpRecursor() {
             dumpFile << CurNodePtr->ident
                 << " [label=\"\" ";
                          
@@ -988,11 +988,66 @@ class OctTree {
                              << CurNodePtr->child[i]->ident
                              << "\n";
 					goChild(i);
-					treeDumpRecursor();
+					treeDOTDumpRecursor();
 					goUp();
                 }
 			}
         }                
+        // end of treeDOTDump() stuff
+        
+        // treeDump() stuff
+    public:
+        void treeDump(std::string _dumpFileName) {
+            dumpFile.open(_dumpFileName.c_str(), std::ios::out);
+            goRoot();
+            treeDumpRecursor();
+            dumpFile.close();
+        }
+        
+    private:
+        void treeDumpRecursor() {
+            if ( CurNodePtr->isParticle ) {
+                dumpFile << "P";
+            } else {
+                dumpFile << "N";
+            }
+            if ( CurNodePtr->isEmpty ) {
+                dumpFile << "E";
+            } else {
+                dumpFile << "F";
+            }
+            if ( CurNodePtr->isLocal ) {
+                dumpFile << "L";
+            } else {
+                dumpFile << "R";
+            }
+            dumpFile << "   ";
+            
+            dumpFile << CurNodePtr->ident;
+            dumpFile << "   ";
+            
+            if ( CurNodePtr->isParticle ) {
+                dumpFile << CurNodePtr->xCom << "   ";
+                dumpFile << CurNodePtr->yCom << "   ";
+                dumpFile << CurNodePtr->zCom << "   ";
+                dumpFile << CurNodePtr->q000;
+            } else {
+                dumpFile << CurNodePtr->xCenter << "   ";
+                dumpFile << CurNodePtr->yCenter << "   ";
+                dumpFile << CurNodePtr->zCenter << "   ";
+                dumpFile << CurNodePtr->cellSize;
+            }
+            
+            dumpFile << "\n";
+
+			for (size_t i = 0; i < 8; i++) { // try without loop                
+                if ( CurNodePtr->child[i] != NULL ) {
+					goChild(i);
+					treeDumpRecursor();
+					goUp();
+                }
+			}
+        }
         // end of treeDump() stuff
         
         // toptreeDump() stuff
