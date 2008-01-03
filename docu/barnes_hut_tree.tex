@@ -82,12 +82,33 @@ When $f_{post} (n)$ stands for applying the post order algorithm to node $n$, th
 
 The key property of the pre order walk, is that a node is not walked until all its children and their subtrees have been walked. Again, this is useful, if a calculation on a node depends on results from the children nodes.
 
-\subsection{Octrees}
-Octrees are trees which nodes can have up to $8$ children. 
+\subsection{Trees for spatial subdivision}
+A tree datastructure can be used to recursively subdivide space. The basic idea is to take a volume, assign this volume to a node in a tree, then subdivide this volume in disjoint subvolumes and assign these subvolumes to the children of the node. So the subdivision of space can be mapped onto a tree.\ The easiest form of subdivision is using volumes aligned with the dimensions and having the same side length in each dimension. So in 2D this corresponds to squares and in 3D to cubes along the axis. This volumes are then divided along each dimension into two equal-length intervals, which leads to $2^d$ subvolumes in $d$ dimensions. So if we have an arbitrary volume with a minimum $x_{i,min}$ and a maximum $x_{i,max}$ in each coordinate $i$ we can enclose this volume with a volume with sidelength $l$ and the center $x_{i,c}$
 
-octant
+\begin{equation}
+l = \max_{i} ( x_{i,max} - x_{i,min})  ~~~~ x_{i,center}= \frac{ x_{i,min} + x_{i,max} }{2}
+\end{equation}
 
-(often the term daughter is used for this element, but as trees are asexual we use the neutral term of children)
+The $2^{d}$ subvolumes indexed with $j$ have a side length of $\frac{l}{2}$ and center vector components $i = 0 \dots d$, where $d_{i}$ stands for $i^{th}$ digit of the binary representation of the subvolume index $j$
+
+\begin{equation}
+x_{i, j~center} = x_{i,center} + l \frac{(-1)^{d_{i} + 1}}{2} ~~~~~ d_{i} = \frac{j  - \sum_{k \ne i} ( j \mod 2^{k} )}{2^{i}}
+\end{equation}
+
+In 2D this subvolumes are called \emph{quadrants}, in 3D \emph{octants}. The corresponding trees to which this subdivision can be mapped to are called \emph{quadtrees} and \emph{octrees}, having up to 4 and 8 children per node.
+
+\subsection{the B\&H algorithm}
+The Barnes \& Hut algorithm described in \cite{1986Natur.324..446B} subdivides the computational universe containing $N$ gravitationally interacting particles in subvolumes, called \emph{cells}. The particles are children of cell nodes. The tree must be built in a way, such that no cell octant contains more than one particle. An example of such a tree is shown in figure \ref{2D_CHtree} for 50 randomly distrbuted particles in 2D. 
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[scale=0.6]{quadtree50_xy.pdf}
+\includegraphics[scale=0.3]{quadtree50.pdf}
+\caption{50 particles randomly distributed in $2D$ and the partitioning into cells (upper plot) with the and the corresponding \emph{quadtree} (lower plot)}
+\label{fig:2D_BHtree}
+\end{center}
+\end{figure}
+
 
 
 \begin{figure}[htbp]
@@ -99,11 +120,12 @@ octant
 \hspace{1cm}
 \includegraphics{particle_filled_local.pdf}
 \includegraphics{particle_filled_remote.pdf}
-\caption{symbols used for tree nodes}
+\caption{Symbols used for tree nodes. Squares stand for \emph{cells}, circles for \emph{particles}}
 \label{fig:nodetypes}
 \end{center}
 \end{figure}
 
 
-\subsection{the B\&H algorithm}
+Each cell in the tree represents now a clump of particles. 
+
 $\theta$ clumping parameter, self-acceleration for $\theta \ge 1$
