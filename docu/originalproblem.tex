@@ -13,6 +13,7 @@ So we have to evaluate $N$ sums with $N-1$ terms, a problem with complexity $O(N
 %short-range, long-range physics, inherent problem of n-body simulations
 
 \subsection{The multipole approximation}
+\label{multipoleapprox}
 One solution to this problem is to use the multipole approximation. The idea is simple: Combine particles in spatial proximity into \emph{clusters}. When calculating the interactions of a single distant particle $j$ at $r_j$ with a cluster of particles $i$ at $r_i$  (where $j~\epsilon~C$) we can use as an approximation
 \begin{align}
 \avec_j &= - G \sum_{i~\epsilon~C} \frac{m_i}{r_{ij}^2} \frac{\rvec_{ij}}{r_{ij}} \approx - G \frac{m_{C}}{r_{Cj}} \frac{\rvec_{Cj}}{r_{Cj}} ~~~~ \text{when}~r_{ij} \gg r_{jk} ~~~ \forall j,k ~ \epsilon~C \\
@@ -86,6 +87,7 @@ The gravitational potential of a cluster can now be approximated in terms of its
 
 and so the acceleration for a point mass at $\rvec$ in this potential yields
 \begin{align}
+\label{eq:mpacc}
 a_{k} &= - \nabla_{k} \phi(\rvec) \approx - G \bigg(
 \underbrace{ \frac{M}{r^{2}} \frac{r_{k}}{r} }_{monopole}+ 
 \underbrace{ \frac{Q_{i j}}{r^{4}}

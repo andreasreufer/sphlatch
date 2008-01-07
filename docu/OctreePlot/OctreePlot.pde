@@ -13,8 +13,9 @@ boolean[] isCell;
 float[] xPos, yPos, zPos, cellSize;
 
 void setup(){
-  inputStrings = loadStrings("treedump20.txt");
+  //inputStrings = loadStrings("treedump20.txt");
   //inputStrings = loadStrings("treedump50.txt");
+  inputStrings = loadStrings("treedump50_costzones.txt");
   
   noNodes = inputStrings.length;
   isCell = new boolean[noNodes];
@@ -41,7 +42,7 @@ void setup(){
     }    
   }
   
-  size(600, 600, PDF, "output.pdf");
+  size(600, 600, PDF, "output_costzones.pdf");
   //size(600, 600, P2D);
   noStroke();
 }
@@ -78,14 +79,29 @@ void draw(){
       noFill();
       //fill(#00FF00, 5);
       //box( depth*cellSize[i] );
+      if ( cellSize[i] == 0.250 ) {
+         if ( xPos[i] < 0.5 ) {
+           fill(#00FF00, 50);
+         } else
+         if ( xPos[i] < 0.75 ) {
+           fill(#999999, 50);
+         } else {
+           fill(#0000FF, 50);
+         }
+      }
       float dx = 0.5*depth*cellSize[i];
       quad( -dx, dx,
           dx, dx,
           dx, -dx,
           -dx, -dx );
     } else {
-      stroke(#00FF00, 255);
-      fill(#00FF00, 255);
+      if ( xPos[i] > 0.5 ) {
+        fill(#999999, 255);
+        stroke(#999999, 255);
+      } else {
+        fill(#00FF00, 255);
+        stroke(#00FF00, 255);
+      }
       ellipse(0,0,5,5);
       //point(0,0);
       //sphereDetail(1);
@@ -95,6 +111,17 @@ void draw(){
     translate(-depth*xPos[i], -depth*yPos[i]);   
   }
   
+  translate(depth*0.5, depth*0.625);
+  strokeWeight(2);
+  stroke(#FF0000, 255);
+  fill(#FF0000, 255);
+  translate(-3,0);
+  ellipse(0,0,7,7);
+  translate(3,0);
+  line(0,0, depth*0.375, 0);
+  translate(depth*0.375, 0);
+  line(-5,-5,5,5);
+  line(5,-5,-5,5);
   exit();
 }
 

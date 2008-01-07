@@ -71,7 +71,6 @@ The pre order walk is similar to the post order walk, the only difference is tha
 
 When $f_{post} (n)$ stands for applying the post order algorithm to node $n$, then the post order walk for the tree in figure \ref{fig:simplenumtree} can be elaborated in the following way
 
- %f_{post} ()
 \begin{align}
 \big\{& f_{pre} (0) \big\} \nonumber \\
 \big\{& f_{pre} (5),  f_{pre} (1),  f_{pre} (2),  f_{pre} (7), 0\big\} \nonumber \\
@@ -98,34 +97,37 @@ x_{i, j~center} = x_{i,center} + l \frac{(-1)^{d_{i} + 1}}{2} ~~~~~ d_{i} = \fra
 In 2D this subvolumes are called \emph{quadrants}, in 3D \emph{octants}. The corresponding trees to which this subdivision can be mapped to are called \emph{quadtrees} and \emph{octrees}, having up to 4 and 8 children per node.
 
 \subsection{the B\&H algorithm}
-The Barnes \& Hut algorithm described in \cite{1986Natur.324..446B} subdivides the computational universe containing $N$ gravitationally interacting particles in subvolumes, called \emph{cells}. The particles are children of cell nodes. The tree must be built in a way, such that no cell octant contains more than one particle. An example of such a tree is shown in figure \ref{2D_CHtree} for 50 randomly distrbuted particles in 2D. 
-
+The Barnes \& Hut algorithm described in \cite{1986Natur.324..446B} subdivides the computational universe containing $N$ gravitationally interacting particles in subvolumes, called \emph{cells}. The particles are children of cell nodes. The tree must be built in a way, that a subvolume of a cell, an octant in 3D, contains no more than one particle. If it does, the subvolume can be again subdivided into a number of cells until the requirement is fulfilled. An example of such a tree is shown in figure \ref{fig:2D_BHtree} for 50 randomly distrbuted particles in 2D. We note that no cell contains more than one particle. Shown below is the corresponding quad-tree to this subdivision of space for the particles
 \begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.6]{quadtree50_xy.pdf}
 \includegraphics[scale=0.3]{quadtree50.pdf}
-\caption{50 particles randomly distributed in $2D$ and the partitioning into cells (upper plot) with the and the corresponding \emph{quadtree} (lower plot)}
+\caption{50 particles randomly distributed in $2D$ and the partitioning into cells (upper plot) with the and the corresponding \emph{quadtree} (lower plot) The green dots represent particles, the red and blue squares cell nodes.}
+\label{fig:2D_BHtree}
+\end{center}
+\end{figure}\\
+
+Each cell in the tree represents now a clump of particles. For each cell a center of mass and its multipole moments can be calculated according to section \ref{multipoleapprox}. This calculation is done \emph{bottom-up} with a pre-order tree walk, so that the multipole moments of the children of node are already calculated, when the multipole moments of the node itself are to be calculated. We end up finally with a tree of multipole moments for all the particle clumps given by the subtrees in the tree.\\
+
+For each particle the acceleration due to gravity can now be calculated according to equation \ref{eq:mpacc}. As already mentioned, the multipole approximation only holds, when then size of the particle cluster is small compared to distance of the particle to the cluster $r_{part cell}$. A good measure for the size of cluster is the cell size $l$, in which it is contained. The cluster cannot be bigger than the cell and it is usually not smaller by magnitudes expect in pathological cases. The cell sizes get smaller by descending in the tree, so that depending of the particle-cell distance the cell size gets small enough to use the multipole approximation. To decide whether it is necessary to descend further down in the tree, the \emph{multipole acceptance criteron} short \emph{MAC} is used. The one proposed by \cite{1986Natur.324..446B} is
+
+\begin{equation}
+\frac{l}{r_{part cell}} \le \theta ~~~~ \theta = 0.6 \dots 1.0
+\end{equation}
+
+where $\theta$ is the \emph{opening angle} chosen depending on the desired accuracy. The smaller the opening angle, the more accurate the calculation becomes. When $\theta = 0$ no particle cluster cell fulfills the MAC and the tree walk is completed down to each particle, leading again to the  direct summation with complexity O($N^2$). For $\theta \ge 1$ the calculation gets besides 
+
+The size of the cluster 
+MAC 
+
+$\theta$ clumping parameter, self-acceleration for $\theta \ge 1$
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[scale=0.6]{quadtree50_xy_TPL2.pdf}
+\includegraphics[scale=0.6]{quadtree50_TPL2.pdf}
+\caption{50 particles randomly distributed in $2D$ and the partitioning into cells (upper plot) with the and the corresponding \emph{quadtree} (lower plot) The green dots represent particles, the red and blue squares cell nodes.}
 \label{fig:2D_BHtree}
 \end{center}
 \end{figure}
 
-
-
-\begin{figure}[htbp]
-\begin{center}
-\includegraphics{ttnode_filled_local.pdf}
-\includegraphics{ttnode_empty_local.pdf}
-\includegraphics{node_filled_local.pdf}
-\includegraphics{node_filled_remote.pdf}
-\hspace{1cm}
-\includegraphics{particle_filled_local.pdf}
-\includegraphics{particle_filled_remote.pdf}
-\caption{Symbols used for tree nodes. Squares stand for \emph{cells}, circles for \emph{particles}}
-\label{fig:nodetypes}
-\end{center}
-\end{figure}
-
-
-Each cell in the tree represents now a clump of particles. 
-
-$\theta$ clumping parameter, self-acceleration for $\theta \ge 1$
