@@ -23,7 +23,8 @@ typedef NodeProxy&	NodeProxyRefType;*/
 
 //#define NPARTS	0
 //#define NPARTS	20
-#define NPARTS	1000
+#define NPARTS	50
+//#define NPARTS	1000
 //#define NPARTS	10000
 //#define NPARTS	100000
 //#define NPARTS	300000
@@ -46,8 +47,8 @@ int main(int argc, char* argv[]) {
 		Data(i, knack::PID) = i;
 		Data(i, knack::X) = ( (valueType)rand() ) / RAND_MAX;
 		Data(i, knack::Y) = ( (valueType)rand() ) / RAND_MAX;
-		Data(i, knack::Z) = ( (valueType)rand() ) / RAND_MAX;
-		//Data(i, Z) = 0.;
+		//Data(i, knack::Z) = ( (valueType)rand() ) / RAND_MAX;
+		Data(i, knack::Z) = 0.;
 		Data(i, knack::M) = 1.;
 		CenterX += Data(i, knack::X);
 		CenterY += Data(i, knack::Y);
@@ -70,7 +71,7 @@ int main(int argc, char* argv[]) {
 	//boost::progress_display show_progress( NPARTS , std::cout);
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < NPARTS; i++) {
-        if ( RANK == 0 ) {
+        /*if ( RANK == 0 ) {
             if ( Data(i, knack::Z) < 0.50 ) {
                 BarnesHutTree.insertParticle( *(DataProxies[i]),true );
             }
@@ -84,8 +85,9 @@ int main(int argc, char* argv[]) {
             if ( Data(i, knack::Z) < 0.50 && Data(i, knack::Z) > 0.25 ) {
                 BarnesHutTree.insertParticle( *(DataProxies[i]),false );
             }
-        }
+        }*/
 		//BarnesHutTree.insertParticle( *(DataProxies[i]), locality);
+        BarnesHutTree.insertParticle( *(DataProxies[i]), true);
 		//++show_progress;
 	}
 	TimeStop  = microsec_clock::local_time();

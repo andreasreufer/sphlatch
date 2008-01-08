@@ -87,7 +87,7 @@ class OctTree {
 			toptreeDepth = 6; // get this from costzone and MAC!
 			//thetaMAC = 1.;
 			thetaMAC = 0.6;
-			//thetaMAC = 0.25;
+			//thetaMAC = 0.05;
 			
 			buildToptreeRecursor();
             noToptreeCells = cellCounter;
@@ -444,7 +444,7 @@ class OctTree {
             *
             * a special case are the deepest toptree cells which are per
             * definition local. if all children are ghosts, none of if contri-
-            * butes anything so monopolCM gets 0 and fucks the center of mass
+            * butes anything so monopolCM gets 0 and fucks up the center of mass
             * of the cell. so if nobody contributes anything, omit the addition
             * to the cell.
             */
@@ -486,8 +486,6 @@ class OctTree {
 		*/
 		void globalSumupMultipoles() {
 #ifdef OOSPH_MPI
-			//matrixType recvBuffer;
-
 			const size_t RANK = MPI::COMM_WORLD.Get_rank();
 			const size_t SIZE = MPI::COMM_WORLD.Get_size();
 
@@ -637,12 +635,6 @@ class OctTree {
             goRoot();
             toptreeCounter = 0;
             buffersToToptreeRecursor();
-            
-            /*localCells.resize( 0, 0 );
-            localIsFilled.resize( 0 );
-            
-            remoteCells.resize( 0, 0 );
-            remoteIsFilled.resize( 0 );*/
 #endif		
 		}
 		
@@ -773,8 +765,8 @@ class OctTree {
             
             // get this from each particle individually
             //epsilonSquare = 0.01;
-            epsilonSquare = 0.0025;
-            //epsilonSquare = 0.0000;
+            //epsilonSquare = 0.0025;
+            epsilonSquare = 0.0000;
             
 #ifdef TREEPROFILE
 			calcGravityPartsCounter = 0;
@@ -827,13 +819,14 @@ class OctTree {
 		*/
 		valueType cellPartDist;
 		bool calcGravMAC(void) {
-			cellPartDist = sqrt( (CurNodePtr->xCenter - curGravParticleX)*
-				(CurNodePtr->xCenter - curGravParticleX) +
-				(CurNodePtr->yCenter - curGravParticleY)*
-				(CurNodePtr->yCenter - curGravParticleY) + 
-				(CurNodePtr->zCenter - curGravParticleZ)*
-				(CurNodePtr->zCenter - curGravParticleZ)
-				);
+            cellPartDist = sqrt(
+                (CurNodePtr->xCom - curGravParticleX)*
+                (CurNodePtr->xCom - curGravParticleX) +
+                (CurNodePtr->yCom - curGravParticleY)*
+                (CurNodePtr->yCom - curGravParticleY) +
+                (CurNodePtr->zCom - curGravParticleZ)*
+                (CurNodePtr->zCom - curGravParticleZ)
+            );
 			return ( ( ( CurNodePtr->cellSize) / cellPartDist ) < thetaMAC );
 		}
 
@@ -860,7 +853,6 @@ class OctTree {
 				(partGravPartnerZ - curGravParticleZ)
 				);
 									
-			//cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist;
 			cellPartDistPow3 = cellPartDist*cellPartDist*cellPartDist
                 + cellPartDist*epsilonSquare;
 			

@@ -15,7 +15,7 @@ float[] xPos, yPos, zPos, cellSize;
 void setup(){
   //inputStrings = loadStrings("treedump20.txt");
   //inputStrings = loadStrings("treedump50.txt");
-  inputStrings = loadStrings("treedump50_costzones.txt");
+  inputStrings = loadStrings("treedump50_1of2.txt");
   
   noNodes = inputStrings.length;
   isCell = new boolean[noNodes];
@@ -111,15 +111,15 @@ void draw(){
     translate(-depth*xPos[i], -depth*yPos[i]);   
   }
   
-  translate(depth*0.5, depth*0.625);
+  translate(depth*0.5, depth*0.577);
   strokeWeight(2);
   stroke(#FF0000, 255);
   fill(#FF0000, 255);
   translate(-3,0);
   ellipse(0,0,7,7);
   translate(3,0);
-  line(0,0, depth*0.375, 0);
-  translate(depth*0.375, 0);
+  line(0,0, depth*0.253, 0);
+  translate(depth*0.253, 0);
   line(-5,-5,5,5);
   line(5,-5,-5,5);
   exit();

@@ -115,7 +115,7 @@ For each particle the acceleration due to gravity can now be calculated accordin
 \frac{l}{r_{part cell}} \le \theta ~~~~ \theta = 0.6 \dots 1.0
 \end{equation}
 
-where $\theta$ is the \emph{opening angle} chosen depending on the desired accuracy. The smaller the opening angle, the more accurate the calculation becomes. When $\theta = 0$ no particle cluster cell fulfills the MAC and the tree walk is completed down to each particle, leading again to the  direct summation with complexity O($N^2$). For $\theta \ge 1$ the calculation gets besides 
+where $\theta$ is the \emph{opening angle} chosen depending on the desired accuracy. The smaller the opening angle, the more accurate the calculation becomes. When $\theta = 0$ no particle cluster cell fulfills the MAC and the tree walk is completed down to each particle, leading again to the direct summation with complexity O($N^2$). For $\theta \ge 1$ an additional error may be introduced, as depending on the distance form the particle to the center of mass of its 
 
 The size of the cluster 
 MAC 
@@ -125,9 +125,10 @@ $\theta$ clumping parameter, self-acceleration for $\theta \ge 1$
 \begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.6]{quadtree50_xy_TPL2.pdf}
-\includegraphics[scale=0.6]{quadtree50_TPL2.pdf}
-\caption{50 particles randomly distributed in $2D$ and the partitioning into cells (upper plot) with the and the corresponding \emph{quadtree} (lower plot) The green dots represent particles, the red and blue squares cell nodes.}
-\label{fig:2D_BHtree}
+\includegraphics[scale=0.3]{quadtree50_TPL2.pdf}
+\caption{the same 50 particles randomly distributed in $2D$}
+\caption{50 particles randomly distributed in 2D and the partitioning into cells (upper plot) with the and the corresponding \emph{quadtree} (lower plot) The green dots represent particles, the red and blue squares cell nodes.}
+\label{fig:2D_BHtree_costzone}
 \end{center}
 \end{figure}
 
