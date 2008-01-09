@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
     using namespace boost::posix_time;
 	ptime TimeStart, TimeStop;
     
-    std::vector<knack::NodeProxy> partProxies;
+    std::vector<sphlatch::NodeProxy> partProxies;
     
     AccInt.BootStrap();
     
@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
         // predicition context
         { 
             TimeStart = microsec_clock::local_time();
-            knack::OctTree BarnesHutTree;
+            sphlatch::OctTree BarnesHutTree;
             TimeStop  = microsec_clock::local_time();
             std::cerr << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
     
@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
         // correction context
         { 
             TimeStart = microsec_clock::local_time();
-            knack::OctTree BarnesHutTree;
+            sphlatch::OctTree BarnesHutTree;
             TimeStop  = microsec_clock::local_time();
             std::cerr << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
     

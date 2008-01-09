@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
     using namespace boost::posix_time;
 	ptime TimeStart, TimeStop;
     
-    /*std::vector<knack::NodeProxy> partProxies, ghostProxies;
+    /*std::vector<sphlatch::NodeProxy> partProxies, ghostProxies;
     
     partProxies.resize(noParts);
     for (size_t i = 0; i < noParts; i++) {
@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
     }
     
     TimeStart = microsec_clock::local_time();
-    knack::OctTree BarnesHutTree;
+    sphlatch::OctTree BarnesHutTree;
     TimeStop  = microsec_clock::local_time();
     std::cerr << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
     

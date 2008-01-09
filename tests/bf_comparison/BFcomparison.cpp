@@ -29,31 +29,31 @@ int main(int argc, char* argv[]) {
 	using namespace boost::posix_time;
 	ptime TimeStart, TimeStop;
 	
-	matrixType Data(NPARTS, knack::PSIZE);
+	matrixType Data(NPARTS, sphlatch::PSIZE);
 
 	valueType CenterX = 0;
 	valueType CenterY = 0;
 	for (size_t i = 0; i < NPARTS; i++) {
-		Data(i, knack::PID) = i;
-		Data(i, knack::X) = ( (valueType)rand() ) / RAND_MAX;
-		Data(i, knack::Y) = ( (valueType)rand() ) / RAND_MAX;
-		Data(i, knack::Z) = ( (valueType)rand() ) / RAND_MAX;
+		Data(i, sphlatch::PID) = i;
+		Data(i, sphlatch::X) = ( (valueType)rand() ) / RAND_MAX;
+		Data(i, sphlatch::Y) = ( (valueType)rand() ) / RAND_MAX;
+		Data(i, sphlatch::Z) = ( (valueType)rand() ) / RAND_MAX;
 		//Data(i, Z) = 0.;
-		Data(i, knack::M) = 1.;
-		CenterX += Data(i, knack::X);
-		CenterY += Data(i, knack::Y);
+		Data(i, sphlatch::M) = 1.;
+		CenterX += Data(i, sphlatch::X);
+		CenterY += Data(i, sphlatch::Y);
 	}
 
 	/*std::cout << "CenterX " << CenterX / NPARTS
 			  << "       CenterY " << CenterY / NPARTS << "\n";*/
 	TimeStart = microsec_clock::local_time();	
 //	OctTree<NodeProxyPtrType> BarnesHutTree;
-	knack::OctTree BarnesHutTree;
+	sphlatch::OctTree BarnesHutTree;
 
 	TimeStop  = microsec_clock::local_time();
 	std::cerr << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
 	
-	std::vector<knack::NodeProxy> DataProxies;
+	std::vector<sphlatch::NodeProxy> DataProxies;
 	DataProxies.resize(NPARTS);
 	
 	for (size_t i = 0; i < NPARTS; i++) {
@@ -91,24 +91,24 @@ int main(int argc, char* argv[]) {
 	TimeStart = microsec_clock::local_time();
 	for (size_t i = 0; i < NPARTS; i++) {
 		valueType partDist, partDistPow3;
-		Data(i, knack::AX) = 0.;
-		Data(i, knack::AY) = 0.;
-		Data(i, knack::AZ) = 0.;
+		Data(i, sphlatch::AX) = 0.;
+		Data(i, sphlatch::AY) = 0.;
+		Data(i, sphlatch::AZ) = 0.;
 		
 		for (size_t j = 0; j < NPARTS; j++) {
 			if ( i != j ) {
-				partDist = sqrt(	( Data(i, knack::X) - Data(j, knack::X) )*
-									( Data(i, knack::X) - Data(j, knack::X) ) +
-									( Data(i, knack::Y) - Data(j, knack::Y) )*
-									( Data(i, knack::Y) - Data(j, knack::Y) ) +
-									( Data(i, knack::Z) - Data(j, knack::Z) )*
-									( Data(i, knack::Z) - Data(j, knack::Z) ) );
+				partDist = sqrt(	( Data(i, sphlatch::X) - Data(j, sphlatch::X) )*
+									( Data(i, sphlatch::X) - Data(j, sphlatch::X) ) +
+									( Data(i, sphlatch::Y) - Data(j, sphlatch::Y) )*
+									( Data(i, sphlatch::Y) - Data(j, sphlatch::Y) ) +
+									( Data(i, sphlatch::Z) - Data(j, sphlatch::Z) )*
+									( Data(i, sphlatch::Z) - Data(j, sphlatch::Z) ) );
 				partDistPow3 = partDist*partDist*partDist;
-				Data(i, knack::AX) -= Data(j, knack::M) * ( Data(i, knack::X) - Data(j, knack::X) )
+				Data(i, sphlatch::AX) -= Data(j, sphlatch::M) * ( Data(i, sphlatch::X) - Data(j, sphlatch::X) )
 								/ partDistPow3;
-				Data(i, knack::AY) -= Data(j, knack::M) * ( Data(i, knack::Y) - Data(j, knack::Y) )
+				Data(i, sphlatch::AY) -= Data(j, sphlatch::M) * ( Data(i, sphlatch::Y) - Data(j, sphlatch::Y) )
 								/ partDistPow3;
-				Data(i, knack::AZ) -= Data(j, knack::M) * ( Data(i, knack::Z) - Data(j, knack::Z) )
+				Data(i, sphlatch::AZ) -= Data(j, sphlatch::M) * ( Data(i, sphlatch::Z) - Data(j, sphlatch::Z) )
 								/ partDistPow3;
 				++show_progress;
 			}
@@ -125,13 +125,13 @@ int main(int argc, char* argv[]) {
 	for (size_t i = 0; i < NPARTS; i++) {
 		valueType bfAccLength, treeAccLength;
 		
-		bfAccLength = sqrt(	BFData(i, knack::AX) * BFData(i, knack::AX)  +
-							BFData(i, knack::AY) * BFData(i, knack::AY)  +
-							BFData(i, knack::AZ) * BFData(i, knack::AZ) );
+		bfAccLength = sqrt(	BFData(i, sphlatch::AX) * BFData(i, sphlatch::AX)  +
+							BFData(i, sphlatch::AY) * BFData(i, sphlatch::AY)  +
+							BFData(i, sphlatch::AZ) * BFData(i, sphlatch::AZ) );
 
-		treeAccLength = sqrt(	TreeData(i, knack::AX) * TreeData(i, knack::AX) +
-								TreeData(i, knack::AY) * TreeData(i, knack::AY) +
-								TreeData(i, knack::AZ) * TreeData(i, knack::AZ) );
+		treeAccLength = sqrt(	TreeData(i, sphlatch::AX) * TreeData(i, sphlatch::AX) +
+								TreeData(i, sphlatch::AY) * TreeData(i, sphlatch::AY) +
+								TreeData(i, sphlatch::AZ) * TreeData(i, sphlatch::AZ) );
 							
 		accLengthRelErr[i] = ( treeAccLength - bfAccLength ) / bfAccLength;
 		std::cout << fabs( accLengthRelErr[i] ) << "\n";

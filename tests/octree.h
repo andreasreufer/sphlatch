@@ -24,7 +24,7 @@
 
 #include <fstream>
 
-namespace knack {
+namespace sphlatch {
 
 #include "typedefs.h"
 

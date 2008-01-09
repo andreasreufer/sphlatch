@@ -39,22 +39,22 @@ int main(int argc, char* argv[]) {
     using namespace boost::posix_time;
 	ptime TimeStart, TimeStop;
 	
-	matrixType Data(NPARTS, knack::PSIZE);
+	matrixType Data(NPARTS, sphlatch::PSIZE);
 
 	valueType CenterX = 0;
 	valueType CenterY = 0;
 	for (size_t i = 0; i < NPARTS; i++) {
-		Data(i, knack::PID) = i;
-		Data(i, knack::X) = ( (valueType)rand() ) / RAND_MAX;
-		Data(i, knack::Y) = ( (valueType)rand() ) / RAND_MAX;
-		//Data(i, knack::Z) = ( (valueType)rand() ) / RAND_MAX;
-		Data(i, knack::Z) = 0.;
-		Data(i, knack::M) = 1.;
-		CenterX += Data(i, knack::X);
-		CenterY += Data(i, knack::Y);
+		Data(i, sphlatch::PID) = i;
+		Data(i, sphlatch::X) = ( (valueType)rand() ) / RAND_MAX;
+		Data(i, sphlatch::Y) = ( (valueType)rand() ) / RAND_MAX;
+		//Data(i, sphlatch::Z) = ( (valueType)rand() ) / RAND_MAX;
+		Data(i, sphlatch::Z) = 0.;
+		Data(i, sphlatch::M) = 1.;
+		CenterX += Data(i, sphlatch::X);
+		CenterY += Data(i, sphlatch::Y);
 	}
 		
-	std::vector<knack::NodeProxy> DataProxies;
+	std::vector<sphlatch::NodeProxy> DataProxies;
 	DataProxies.resize(NPARTS);
 	
 	for (size_t i = 0; i < NPARTS; i++) {
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
 
 	// start tree context
 	TimeStart = microsec_clock::local_time();	
-	knack::OctTree BarnesHutTree;
+	sphlatch::OctTree BarnesHutTree;
 
 	TimeStop  = microsec_clock::local_time();
 	std::cout << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
@@ -72,17 +72,17 @@ int main(int argc, char* argv[]) {
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < NPARTS; i++) {
         /*if ( RANK == 0 ) {
-            if ( Data(i, knack::Z) < 0.50 ) {
+            if ( Data(i, sphlatch::Z) < 0.50 ) {
                 BarnesHutTree.insertParticle( *(DataProxies[i]),true );
             }
-            if ( Data(i, knack::Z) > 0.50 && Data(i, knack::Z) < 0.75 ) {
+            if ( Data(i, sphlatch::Z) > 0.50 && Data(i, sphlatch::Z) < 0.75 ) {
                 BarnesHutTree.insertParticle( *(DataProxies[i]),false );
             }
         } else {
-            if ( Data(i, knack::Z) > 0.50 ) {
+            if ( Data(i, sphlatch::Z) > 0.50 ) {
                 BarnesHutTree.insertParticle( *(DataProxies[i]),true );
             }
-            if ( Data(i, knack::Z) < 0.50 && Data(i, knack::Z) > 0.25 ) {
+            if ( Data(i, sphlatch::Z) < 0.50 && Data(i, sphlatch::Z) > 0.25 ) {
                 BarnesHutTree.insertParticle( *(DataProxies[i]),false );
             }
         }*/
@@ -126,8 +126,8 @@ int main(int argc, char* argv[]) {
 	//show_progress.restart(NPARTS);
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < NPARTS; i++) {
-        if ( ( ( RANK == 0 ) && Data(i, knack::Z) < 0.50 ) ||
-             ( ( RANK == 1 ) && Data(i, knack::Z) > 0.50 ) ) {
+        if ( ( ( RANK == 0 ) && Data(i, sphlatch::Z) < 0.50 ) ||
+             ( ( RANK == 1 ) && Data(i, sphlatch::Z) > 0.50 ) ) {
             BarnesHutTree.calcGravity(*(DataProxies[i]) );
         }
 		//++show_progress;
