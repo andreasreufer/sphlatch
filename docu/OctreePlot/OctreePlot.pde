@@ -80,6 +80,7 @@ void draw(){
       //fill(#00FF00, 5);
       //box( depth*cellSize[i] );
       if ( cellSize[i] == 0.250 ) {
+         //stroke(#FF0000, 255);
          if ( xPos[i] < 0.5 ) {
            fill(#00FF00, 50);
          } else

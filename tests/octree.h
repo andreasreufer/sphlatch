@@ -368,8 +368,8 @@ class OctTree {
 		*  - exchange toptrees
 		*/
 		void calcMultipoles(void) {
-            std::cout << noToptreeCells << " toptree cells and "
-                      << cellCounter - noToptreeCells << " normal cells\n";
+//            std::cerr << noToptreeCells << " toptree cells and "
+//                      << cellCounter - noToptreeCells << " normal cells\n";
             goRoot();
             calcMultipoleRecursor();
 
