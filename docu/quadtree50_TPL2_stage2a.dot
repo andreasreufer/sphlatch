@@ -1,0 +1,101 @@
+digraph graphname { 
+-1 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-1 -> -2
+-2 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-2 -> -10
+-10 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-10 -> 0
+0 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-2 -> -11
+-11 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-11 -> -80
+-80 [label="",shape=box,style=filled,color=red,width=0.2,height=0.2];
+-80 -> 16
+16 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-80 -> 33
+33 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-11 -> 9
+9 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-11 -> 27
+27 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-2 -> -12
+-12 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-12 -> -82
+-82 [label="",shape=box,style=filled,color=red,width=0.2,height=0.2];
+-82 -> -83
+-83 [label="",shape=box,style=filled,color=red,width=0.2,height=0.2];
+-83 -> 26
+26 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-83 -> 45
+45 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-2 -> -13
+-13 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-13 -> -84
+-84 [label="",shape=box,style=filled,color=red,width=0.2,height=0.2];
+-84 -> -85
+-85 [label="",shape=box,style=filled,color=red,width=0.2,height=0.2];
+-85 -> -86
+-86 [label="",shape=box,style=filled,color=red,width=0.2,height=0.2];
+-86 -> 49
+49 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-86 -> 24
+24 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-1 -> -3
+-3 [label="",shape=box,color=blue,width=0.2,height=0.2];
+-3 -> -18
+-18 [label="",shape=box,color=blue,width=0.2,height=0.2];
+-3 -> -19
+-19 [label="",shape=box,color=blue,width=0.2,height=0.2];
+-3 -> -20
+-20 [label="",shape=box,color=blue,width=0.2,height=0.2];
+-3 -> -21
+-21 [label="",shape=box,color=blue,width=0.2,height=0.2];
+-1 -> -4
+-4 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-4 -> -26
+-26 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-26 -> 7
+7 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-26 -> -74
+-74 [label="",shape=box,style=filled,color=red,width=0.2,height=0.2];
+-74 -> 3
+3 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-74 -> 13
+13 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-74 -> 41
+41 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-4 -> -27
+-27 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-27 -> 46
+46 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-27 -> 5
+5 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-27 -> -75
+-75 [label="",shape=box,style=filled,color=red,width=0.2,height=0.2];
+-75 -> 10
+10 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-75 -> 14
+14 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-4 -> -28
+-28 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-28 -> 20
+20 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-4 -> -29
+-29 [label="",shape=box,style=filled,color=blue,width=0.2,height=0.2];
+-29 -> 48
+48 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-29 -> 36
+36 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-29 -> 28
+28 [label="",shape=circle,style=filled,color=green,width=0.2,height=0.2];
+-1 -> -5
+-5 [label="",shape=box,color=blue,width=0.2,height=0.2];
+-5 -> -34
+-34 [label="",shape=box,color=blue,width=0.2,height=0.2];
+-5 -> -35
+-35 [label="",shape=box,color=blue,width=0.2,height=0.2];
+-5 -> -36
+-36 [label="",shape=box,color=blue,width=0.2,height=0.2];
+-5 -> -37
+-37 [label="",shape=box,color=blue,width=0.2,height=0.2];
+}
