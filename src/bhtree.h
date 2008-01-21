@@ -368,8 +368,6 @@ class OctTree {
 		*  - exchange toptrees
 		*/
 		void calcMultipoles(void) {
-//            std::cerr << noToptreeCells << " toptree cells and "
-//                      << cellCounter - noToptreeCells << " normal cells\n";
             goRoot();
             calcMultipoleRecursor();
 
@@ -949,7 +947,7 @@ class OctTree {
                 dumpFile << ",shape=box";
             }
                         
-            if ( ( ! CurNodePtr->isEmpty ) || 
+            if ( ( ! CurNodePtr->isEmpty ) or 
                 CurNodePtr->isParticle ) {
                 dumpFile << ",style=filled";
             }
