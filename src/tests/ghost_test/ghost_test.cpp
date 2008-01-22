@@ -7,19 +7,14 @@
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include <boost/numeric/ublas/io.hpp>
 
-//#define SINGLEPREC
-#define OOSPH_MPI
+#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_MPI
 
-#ifdef OOSPH_MPI
+#ifdef SPHLATCH_MPI
 #include <mpi.h>
 #endif
 
-#include "typedefs.h"
-#include "octree.h"
-#include "nodeproxy.h"
-/*typedef NodeProxy	NodeProxyType;
-typedef NodeProxy*	NodeProxyPtrType;
-typedef NodeProxy&	NodeProxyRefType;*/
+#include "bhtree.h"
 
 //#define NPARTS	0
 //#define NPARTS	20

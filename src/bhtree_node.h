@@ -1,8 +1,8 @@
-#ifndef OCTREENODE_H
-#define OCTREENODE_H
+#ifndef BHTREE_NODE_H
+#define BHTREE_NODE_H
 
 /*
- *  octreenode.h
+ *  bhtree_node.h
  *  
  *
  *  Created by Andreas Reufer on 15.11.07.
@@ -11,6 +11,8 @@
  */
 
 #include "typedefs.h"
+
+namespace sphlatch {
 
 /** \brief tree node struct with an
 *           arbitrary payload
@@ -80,6 +82,8 @@ struct GenericOctNode {
 	GenericOctNode*  operator*() {
 		return this;
 	}
+};
+
 };
 
 #endif

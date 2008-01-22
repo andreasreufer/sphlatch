@@ -1,8 +1,8 @@
-#ifndef NODEPROXY_H
-#define NODEPROXY_H
+#ifndef BHTREE_NODE_PROXY_H
+#define BHTREE_NODE_PROXY_H
 
 /*
- *  nodeproxy.h
+ *  bhtree_node_proxy.h
  *  
  *
  *  Created by Andreas Reufer on 15.11.07.
@@ -12,7 +12,10 @@
 
 #include "typedefs.h"
 
-#include "octreenode.h"
+#include "bhtree_node.h"
+
+namespace sphlatch {
+
 struct NodeProxy {
 	typedef NodeProxy*	NodeProxyTypePtr;
 	GenericOctNode<NodeProxyTypePtr>*	nodePtr;
@@ -39,6 +42,8 @@ struct NodeProxy {
 		matrixPtr = _matrixPtr;
 		rowIndex = _rowIndex;
 	}
+};
+
 };
 
 #endif

@@ -1,8 +1,8 @@
-#ifndef OCTREE_H
-#define OCTREE_H
+#ifndef BHTREE_H
+#define BHTREE_H
 
 /*
- *  octree.h
+ *  bhtree.h
  *  
  *
  *  Created by Andreas Reufer on 12.11.07.
@@ -18,22 +18,26 @@
 #include <stack>
 #include <queue>
 
-#ifdef OOSPH_MPI
+#ifdef SPHLATCH_MPI
 #include <mpi.h>
 #endif
 
 #include <fstream>
 
-namespace sphlatch {
+#include "typedefs.h"
 
 #include "typedefs.h"
 
-#include "nodeproxy.h"
+#include "bhtree_node_proxy.h"
+
+#include "bhtree_node.h"
+
+namespace sphlatch {
+
 typedef NodeProxy	NodeProxyType;
 typedef NodeProxy*	NodeProxyPtrType;
 typedef NodeProxy&	NodeProxyRefType;
 
-#include "octreenode.h"
 typedef GenericOctNode<NodeProxyPtrType>* GenericOctNodePtr;
 
 enum ParticleIndex { PID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, PSIZE };
@@ -86,7 +90,7 @@ class OctTree {
 			
 			toptreeDepth = 6; // get this from costzone and MAC!
 			//thetaMAC = 1.;
-			thetaMAC = 0.6;
+			thetaMAC = 0.9;
 			//thetaMAC = 0.05;
 			
 			buildToptreeRecursor();
@@ -483,7 +487,7 @@ class OctTree {
 		* defined, nothing is done here.
 		*/
 		void globalSumupMultipoles() {
-#ifdef OOSPH_MPI
+#ifdef SPHLATCH_MPI
 			const size_t RANK = MPI::COMM_WORLD.Get_rank();
 			const size_t SIZE = MPI::COMM_WORLD.Get_size();
 
@@ -640,7 +644,8 @@ class OctTree {
 		* preorder recursive function to connect
 		* cells to a matrix row
 		*/
-        
+
+#ifdef SPHLATCH_MPI        
         size_t toptreeCounter;
 		void toptreeToBuffersRecursor(void) {
             if ( belowToptreeStop() ) {} else {                
@@ -717,9 +722,9 @@ class OctTree {
         
         void sendBitset( bitsetRefType _bitSet, size_t _recvRank ) {
             // prepare buffer
-            const size_t RANK = MPI::COMM_WORLD.Get_rank();
+            //const size_t RANK = MPI::COMM_WORLD.Get_rank();
             size_t noBlocks = lrint( ceil(
-                (double)noToptreeCells
+                static_cast<double>(noToptreeCells)
                 / ( sizeof(bitsetBlockType) * 8 ) ) );
             size_t noBsBytes = noBlocks*sizeof(bitsetBlockType);
             std::vector<bitsetBlockType> sendBuff(noBlocks);
@@ -731,6 +736,7 @@ class OctTree {
             MPI::COMM_WORLD.Ssend( &(sendBuff[0]), noBsBytes,
                 MPI_BYTE, _recvRank, _recvRank );
         }
+#endif
 		// end of multipole stuff
 
 		
@@ -766,7 +772,7 @@ class OctTree {
             //epsilonSquare = 0.0025;
             epsilonSquare = 0.0000;
             
-#ifdef TREEPROFILE
+#ifdef SPHLATCH_TREE_PROFILE
 			calcGravityPartsCounter = 0;
 			calcGravityCellsCounter = 0;
 #endif
@@ -835,7 +841,7 @@ class OctTree {
 		valueType partGravPartnerX, partGravPartnerY, partGravPartnerZ, 
 				  partGravPartnerM;
 		void calcGravParticle() {
-#ifdef TREEPROFILE
+#ifdef SPHLATCH_TREE_PROFILE
 			calcGravityPartsCounter++;
 #endif
 			partGravPartnerX = CurNodePtr->xCom;
@@ -871,7 +877,7 @@ class OctTree {
 		*/
 		valueType cellPartDistPow3;
 		void calcGravCell() {
-#ifdef TREEPROFILE
+#ifdef SPHLATCH_TREE_PROFILE
 			calcGravityCellsCounter++;
 #endif
             // cellPartDist is already set by the MAC function

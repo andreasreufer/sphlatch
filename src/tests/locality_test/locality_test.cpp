@@ -7,18 +7,14 @@
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include <boost/numeric/ublas/io.hpp>
 
-//#define SINGLEPREC
-#define OOSPH_MPI
+//#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_MPI
 
-#ifdef OOSPH_MPI
+#ifdef SPHLATCH_MPI
 #include <mpi.h>
 #endif
 
-#include "octree.h"
-#include "nodeproxy.h"
-typedef NodeProxy	NodeProxyType;
-typedef NodeProxy*	NodeProxyPtrType;
-typedef NodeProxy&	NodeProxyRefType;
+#include "bhtree.h"
 
 //#define NPARTS	0
 //#define NPARTS	10
@@ -36,6 +32,8 @@ int main(int argc, char* argv[]) {
 	MPI::Init(argc, argv);
 	
     using namespace boost::posix_time;
+    using namespace sphlatch;
+    
 	ptime TimeStart, TimeStop;
 	
 	matrixType Data(NPARTS, PSIZE);
@@ -52,11 +50,8 @@ int main(int argc, char* argv[]) {
 		CenterX += Data(i, X);
 		CenterY += Data(i, Y);
 	}
-
-	/*std::cout << "CenterX " << CenterX / NPARTS
-			  << "       CenterY " << CenterY / NPARTS << "\n";*/
 		
-	std::vector<NodeProxy> DataProxies;
+	std::vector<sphlatch::NodeProxy> DataProxies;
 	DataProxies.resize(NPARTS);
 	
 	for (size_t i = 0; i < NPARTS; i++) {
@@ -65,8 +60,7 @@ int main(int argc, char* argv[]) {
 
 	// start tree context
 	TimeStart = microsec_clock::local_time();	
-//	OctTree<NodeProxyPtrType> BarnesHutTree;
-	OctTree BarnesHutTree;
+	sphlatch::OctTree BarnesHutTree;
 
 	TimeStop  = microsec_clock::local_time();
 	std::cerr << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
