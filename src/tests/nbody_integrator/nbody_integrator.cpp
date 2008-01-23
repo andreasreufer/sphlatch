@@ -119,17 +119,28 @@ int main(int argc, char* argv[])
   std::string InputFileName = VMap["input-file"].as<std::string>();
   IOManager.LoadCDAT(InputFileName);
   value_type dt, absTime = 0.; // load from file
-  value_type theta = 0.8;
+  value_type theta = 0.7;
   size_t noParts, noGhosts, step = 0;
 
+  std::string logFilename = "logRank000";
+  std::string rankString = boost::lexical_cast<std::string>(RANK);
+  logFilename.replace(logFilename.size() - 3 - rankString.size(),
+                      rankString.size(), rankString);
+  std::fstream logFile;
+  logFile.open(logFilename.c_str(), std::ios::out);
+  logFile << MPI_Wtime() << "    start log\n";
+  
   // bootstrapping context
   if (RANK == 0)
     {
       std::cerr << "-------- bootstrapping step -----\n";
     }
   {
+    logFile << MPI_Wtime() << "    bootstrap\n";
     ComManager.Exchange(Data, CostZone.CreateDomainIndexVector(), Data);
+    logFile << MPI_Wtime() << "    exchange parts\n";
     ComManager.Exchange(Data, CostZone.CreateDomainGhostIndexVector(), GData);
+    logFile << MPI_Wtime() << "    exchange ghosts\n";
     noParts = Data.size1();
     noGhosts = GData.size1();
     std::cerr << "Rank " << RANK << ": "
@@ -138,11 +149,13 @@ int main(int argc, char* argv[])
     partProxies.resize(noParts);
     for (size_t i = 0; i < noParts; i++)
       {
+        Data(i, M) = Data(i, M) / 100.; // adapt mass
         (partProxies[i]).setup(&Data, i);
       }
     ghostProxies.resize(noParts);
     for (size_t i = 0; i < noGhosts; i++)
       {
+        GData(i, M) = GData(i, M) / 100.; // adapt mass
         (ghostProxies[i]).setup(&GData, i);
       }
 
@@ -284,7 +297,7 @@ int main(int argc, char* argv[])
       }
       AccInt.Corrector(dt);
 
-      if ((step % 6) == 0)
+      if ((step % 10) == 0)
         {
           std::vector<int> outputAttrSet;
 
@@ -304,7 +317,8 @@ int main(int argc, char* argv[])
       step++;
       Erazer();
     }
-
+  
+  logFile.close();
   MPI::Finalize();
   return EXIT_SUCCESS;
 }
