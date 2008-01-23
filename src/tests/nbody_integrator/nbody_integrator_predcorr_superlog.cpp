@@ -69,13 +69,15 @@ using namespace boost::assign;
 int main(int argc, char* argv[])
 {
   MPI::Init(argc, argv);
+  double logStartTime = MPI_Wtime();
 
   const size_t RANK = MPI::COMM_WORLD.Get_rank();
   //const size_t SIZE = MPI::COMM_WORLD.Get_size();
 
   po::options_description Options("Global Options");
   Options.add_options() ("help,h", "Produces this Help blabla...")
-  ("input-file,i", po::value<std::string>(), "InputFile");
+  ("input-file,i", po::value<std::string>(), "InputFile")
+  ("output-file,o", po::value<std::string>(), "OutputFile");
 
   po::positional_options_description POD;
   POD.add("input-file", 1);
@@ -117,8 +119,11 @@ int main(int argc, char* argv[])
   Data.resize(Data.size1(), oosph::SIZE);
   GData.resize(GData.size1(), oosph::OX);
 
+  std::string OutputTag = VMap["output-file"].as<std::string>();
   std::string InputFileName = VMap["input-file"].as<std::string>();
   IOManager.LoadCDAT(InputFileName);
+  Erazer();
+  
   value_type dt, absTime = 0.; // load from file
   value_type theta = 0.7;
   size_t noParts, noGhosts, step = 0;
@@ -129,8 +134,6 @@ int main(int argc, char* argv[])
                       rankString.size(), rankString);
   std::fstream logFile;
   logFile.open(logFilename.c_str(), std::ios::out);
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << std::flush;
-  double logStartTime = MPI_Wtime();
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    start log\n";
   
   // bootstrapping context
@@ -139,7 +142,7 @@ int main(int argc, char* argv[])
       std::cerr << "-------- bootstrapping step -----\n";
     }
   {
-    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    bootstrap\n" << std::flush;
+    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << " BB bootstrap\n" << std::flush;
     ComManager.Exchange(Data, CostZone.CreateDomainIndexVector(), Data);
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    exchanged parts\n" << std::flush;
     ComManager.Exchange(Data, CostZone.CreateDomainGhostIndexVector(), GData);
@@ -152,18 +155,16 @@ int main(int argc, char* argv[])
     partProxies.resize(noParts);
     for (size_t i = 0; i < noParts; i++)
       {
-        Data(i, M) = Data(i, M) / 100.; // adapt mass
         (partProxies[i]).setup(&Data, i);
       }
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    prepared part proxies\n" << std::flush;
-    ghostProxies.resize(noParts);
+    ghostProxies.resize(noGhosts);
     for (size_t i = 0; i < noGhosts; i++)
       {
-        GData(i, M) = GData(i, M) / 100.; // adapt mass
         (ghostProxies[i]).setup(&GData, i);
       }
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    prepared ghost proxies\n" << std::flush;
-    
+
     TimeStart = microsec_clock::local_time();
     sphlatch::OctTree BarnesHutTree(theta,
                                     CostZone.getDepth(),
@@ -180,7 +181,10 @@ int main(int argc, char* argv[])
         BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
       }
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    inserted ghosts\n" << std::flush;
-    BarnesHutTree.calcMultipoles();
+
+    MPI::COMM_WORLD.Barrier();
+    
+BarnesHutTree.calcMultipoles();
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    calculated multipoles\n" << std::flush;
     TimeStop = microsec_clock::local_time();
     std::cerr << "Rank " << RANK << ": "
@@ -202,7 +206,7 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    erazed\n" << std::flush;
   
 
-  while (step < 10000)
+  while (step < 100000)
     {
       if (RANK == 0)
         {
@@ -210,7 +214,7 @@ int main(int argc, char* argv[])
         }
       // prediction context
       {
-        logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    predicting step " << step << "\n" << std::flush;
+        logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << " PP predicting step " << step << "\n" << std::flush;
         ComManager.Exchange(Data, CostZone.CreateDomainIndexVector(), Data);
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    exchanged parts\n" << std::flush;
         ComManager.Exchange(Data, CostZone.CreateDomainGhostIndexVector(), GData);
@@ -226,7 +230,7 @@ int main(int argc, char* argv[])
             (partProxies[i]).setup(&Data, i);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    prepared part proxies\n" << std::flush;
-        ghostProxies.resize(noParts);
+        ghostProxies.resize(noGhosts);
         for (size_t i = 0; i < noGhosts; i++)
           {
             (ghostProxies[i]).setup(&GData, i);
@@ -266,7 +270,8 @@ int main(int argc, char* argv[])
                   << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
       }
 
-      dt = 0.000005;
+      //dt = 0.000005;
+      dt = 0.000001;
       AccInt.Predictor(dt);
       logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    integrator predicted\n" << std::flush;
       absTime += dt;
@@ -274,7 +279,7 @@ int main(int argc, char* argv[])
 
       // correction context
       {
-        logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    correcting step " << step << "\n" << std::flush;
+        logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << " CC correcting step " << step << "\n" << std::flush;
         ComManager.Exchange(Data, CostZone.CreateDomainIndexVector(), Data);
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    exchanged parts\n" << std::flush;
         ComManager.Exchange(Data, CostZone.CreateDomainGhostIndexVector(), GData);
@@ -336,7 +341,8 @@ int main(int argc, char* argv[])
         {
           std::vector<int> outputAttrSet;
 
-          std::string outFilename = "out000000.cdat";
+          std::string outFilename = OutputTag;
+	  outFilename += "000000.cdat";
           std::string stepString = boost::lexical_cast<std::string>(step);
           outFilename.replace(outFilename.size() - 5 - stepString.size(),
                               stepString.size(), stepString);
