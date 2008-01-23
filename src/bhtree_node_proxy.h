@@ -3,7 +3,7 @@
 
 /*
  *  bhtree_node_proxy.h
- *  
+ *
  *
  *  Created by Andreas Reufer on 15.11.07.
  *  Copyright 2007 University of Berne. All rights reserved.
@@ -15,35 +15,39 @@
 #include "bhtree_node.h"
 
 namespace sphlatch {
-
 struct NodeProxy {
-	typedef NodeProxy*	NodeProxyTypePtr;
-	GenericOctNode<NodeProxyTypePtr>*	nodePtr;
-	
-	matrixPtrType	matrixPtr;
-	size_t			rowIndex;
+  typedef NodeProxy*      NodeProxyTypePtr;
+  GenericOctNode<NodeProxyTypePtr>*       nodePtr;
 
-	NodeProxy(matrixPtrType _matrixPtr, size_t const _rowIndex) {
-		matrixPtr = _matrixPtr;
-		rowIndex = _rowIndex;
-	}
+  matrixPtrType matrixPtr;
+  size_t rowIndex;
 
-	NodeProxy(void) {}
+  NodeProxy(matrixPtrType _matrixPtr, size_t const _rowIndex)
+  {
+    matrixPtr = _matrixPtr;
+    rowIndex = _rowIndex;
+  }
 
-	NodeProxy* operator*() {
-		return this;
-	}
-	
-	valueRefType operator ()(const size_t &j) {
-		return  (*matrixPtr)(rowIndex, j);
-	}
+  NodeProxy(void)
+  {
+  }
 
-	void setup(matrixPtrType _matrixPtr, size_t const _rowIndex) {
-		matrixPtr = _matrixPtr;
-		rowIndex = _rowIndex;
-	}
+  NodeProxy* operator*()
+  {
+    return this;
+  }
+
+  valueRefType operator ()(const size_t &j)
+  {
+    return (*matrixPtr)(rowIndex, j);
+  }
+
+  void setup(matrixPtrType _matrixPtr, size_t const _rowIndex)
+  {
+    matrixPtr = _matrixPtr;
+    rowIndex = _rowIndex;
+  }
 };
-
 };
 
 #endif

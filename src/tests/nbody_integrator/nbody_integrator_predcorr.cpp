@@ -108,19 +108,20 @@ int main(int argc, char* argv[])
   using namespace boost::posix_time;
   ptime TimeStart, TimeStop;
 
-  std::vector<sphlatch::NodeProxy> partProxies, ghostProxies;
+  std::vector<sphlatch::NodeProxy> partProxies;
 
   SimTrait::matrix_reference Data(MemManager.Data);
   SimTrait::matrix_reference GData(MemManager.GData);
 
+  std::string InputFileName = VMap["input-file"].as<std::string>();
+
   Data.resize(Data.size1(), oosph::SIZE);
   GData.resize(GData.size1(), oosph::OX);
-
-  std::string InputFileName = VMap["input-file"].as<std::string>();
+  
   IOManager.LoadCDAT(InputFileName);
   value_type dt, absTime = 0.; // load from file
   value_type theta = 0.8;
-  size_t noParts, noGhosts, step = 0;
+  size_t noParts, step = 0;
 
   // bootstrapping context
   if (RANK == 0)
@@ -130,22 +131,16 @@ int main(int argc, char* argv[])
   {
     ComManager.Exchange(Data, CostZone.CreateDomainIndexVector(), Data);
     ComManager.Exchange(Data, CostZone.CreateDomainGhostIndexVector(), GData);
-    noParts = Data.size1();
-    noGhosts = GData.size1();
     std::cerr << "Rank " << RANK << ": "
-              << noParts << " particles and " << noGhosts << " ghosts\n";
+              << MemManager.Data.size1() << " particles and "
+              << MemManager.GData.size1() << " ghosts\n";
+    noParts = Data.size1();
 
     partProxies.resize(noParts);
     for (size_t i = 0; i < noParts; i++)
       {
         (partProxies[i]).setup(&Data, i);
       }
-    ghostProxies.resize(noParts);
-    for (size_t i = 0; i < noGhosts; i++)
-      {
-        (ghostProxies[i]).setup(&GData, i);
-      }
-
     TimeStart = microsec_clock::local_time();
     sphlatch::OctTree BarnesHutTree(theta,
                                     CostZone.getDepth(),
@@ -154,10 +149,6 @@ int main(int argc, char* argv[])
     for (size_t i = 0; i < noParts; i++)
       {
         BarnesHutTree.insertParticle(*(partProxies[i]), true);
-      }
-    for (size_t i = 0; i < noGhosts; i++)
-      {
-        BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
       }
     BarnesHutTree.calcMultipoles();
     TimeStop = microsec_clock::local_time();
@@ -176,7 +167,7 @@ int main(int argc, char* argv[])
   AccInt.BootStrap();
   Erazer();
 
-  while (step < 1000)
+  while ( step < 1000 )
     {
       if (RANK == 0)
         {
@@ -186,22 +177,16 @@ int main(int argc, char* argv[])
       {
         ComManager.Exchange(Data, CostZone.CreateDomainIndexVector(), Data);
         ComManager.Exchange(Data, CostZone.CreateDomainGhostIndexVector(), GData);
-        noParts = Data.size1();
-        noGhosts = GData.size1();
         std::cerr << "Rank " << RANK << ": "
-                  << noParts << " particles and " << noGhosts << " ghosts\n";
+                  << MemManager.Data.size1() << " particles and "
+                  << MemManager.GData.size1() << " ghosts\n";
+        noParts = Data.size1();
 
         partProxies.resize(noParts);
         for (size_t i = 0; i < noParts; i++)
           {
             (partProxies[i]).setup(&Data, i);
           }
-        ghostProxies.resize(noParts);
-        for (size_t i = 0; i < noGhosts; i++)
-          {
-            (ghostProxies[i]).setup(&GData, i);
-          }
-
         TimeStart = microsec_clock::local_time();
         sphlatch::OctTree BarnesHutTree(theta,
                                         CostZone.getDepth(),
@@ -210,10 +195,6 @@ int main(int argc, char* argv[])
         for (size_t i = 0; i < noParts; i++)
           {
             BarnesHutTree.insertParticle(*(partProxies[i]), true);
-          }
-        for (size_t i = 0; i < noGhosts; i++)
-          {
-            BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
           }
         BarnesHutTree.calcMultipoles();
         TimeStop = microsec_clock::local_time();
@@ -229,7 +210,7 @@ int main(int argc, char* argv[])
         std::cerr << "Rank " << RANK << ": "
                   << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
       }
-
+      
       dt = 0.000005;
       AccInt.Predictor(dt);
       absTime += dt;
@@ -239,22 +220,16 @@ int main(int argc, char* argv[])
       {
         ComManager.Exchange(Data, CostZone.CreateDomainIndexVector(), Data);
         ComManager.Exchange(Data, CostZone.CreateDomainGhostIndexVector(), GData);
-        noParts = Data.size1();
-        noGhosts = GData.size1();
         std::cerr << "Rank " << RANK << ": "
-                  << noParts << " particles and " << noGhosts << " ghosts\n";
+                  << MemManager.Data.size1() << " particles and "
+                  << MemManager.GData.size1() << " ghosts\n";
+        noParts = Data.size1();
 
         partProxies.resize(noParts);
         for (size_t i = 0; i < noParts; i++)
           {
             (partProxies[i]).setup(&Data, i);
           }
-        ghostProxies.resize(noParts);
-        for (size_t i = 0; i < noGhosts; i++)
-          {
-            (ghostProxies[i]).setup(&GData, i);
-          }
-
         TimeStart = microsec_clock::local_time();
         sphlatch::OctTree BarnesHutTree(theta,
                                         CostZone.getDepth(),
@@ -263,10 +238,6 @@ int main(int argc, char* argv[])
         for (size_t i = 0; i < noParts; i++)
           {
             BarnesHutTree.insertParticle(*(partProxies[i]), true);
-          }
-        for (size_t i = 0; i < noGhosts; i++)
-          {
-            BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
           }
         BarnesHutTree.calcMultipoles();
         TimeStop = microsec_clock::local_time();
