@@ -295,7 +295,7 @@ BarnesHutTree.calcMultipoles();
             (partProxies[i]).setup(&Data, i);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    prepared part proxies\n" << std::flush;
-        ghostProxies.resize(noParts);
+        ghostProxies.resize(noGhosts);
         for (size_t i = 0; i < noGhosts; i++)
           {
             (ghostProxies[i]).setup(&GData, i);
