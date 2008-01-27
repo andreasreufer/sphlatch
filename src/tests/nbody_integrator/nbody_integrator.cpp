@@ -122,8 +122,39 @@ int main(int argc, char* argv[])
   std::string InputFileName = VMap["input-file"].as<std::string>();
   std::string outputTag = VMap["output-tag"].as<std::string>();
   IOManager.LoadCDAT(InputFileName);
-  value_type dt, absTime = 0.; // load from file
-  value_type theta = 0.7;
+
+  value_type gravTheta = MemManager.LoadParameter("GRAVTHETA");
+  if (gravTheta != gravTheta)
+    {
+      gravTheta = 0.7;       // standard value for opening angle theta
+    }
+  MemManager.SaveParameter("GRAVTHETA", gravTheta, true);
+
+  value_type gravConst = MemManager.LoadParameter("GRAVCONST");
+  if (gravConst != gravConst)
+    {
+      //gravConst = 1.;       //  G=1 system
+      gravConst = 6.67259e-11;       //  SI units
+    }
+  MemManager.SaveParameter("GRAVCONST", gravConst, true);
+
+  value_type absTime = MemManager.LoadParameter("TIME");
+  if (absTime != absTime)
+    {
+      absTime = 0.;       // start at t = 0
+    }
+  MemManager.SaveParameter("TIME", absTime, true);
+
+  value_type maxRadius = MemManager.LoadParameter("MAXRAD");
+  if (maxRadius != maxRadius)
+    {
+      //maxRadius = 1; 
+      maxRadius = 6.e11;  // ~ 4 AU in SI-units 
+    }
+  MemManager.SaveParameter("MAXRAD", maxRadius, true);
+
+  //value_type dt = 0.000001; // just right for random_1M.cdat
+  value_type dt = 5.049e6; // gives 50 steps for a 4AU solar orbit
   size_t noParts, noGhosts, step = 0;
 
   std::string logFilename = "logRank000";
@@ -142,14 +173,13 @@ int main(int argc, char* argv[])
           std::cerr << "------- step " << step << " at t = " << absTime << " -------- \n";
         }
 
-      const value_type maxRadius = 1.;
       index_vector_type delParts;
       for (size_t j = 0; j < Data.size1(); j++)
         {
           value_type curRadius = sqrt(
-            (Data(j, X) - 0.5) * (Data(j, X) - 0.5) +
-            (Data(j, Y) - 0.5) * (Data(j, Y) - 0.5) +
-            (Data(j, Z) - 0.5) * (Data(j, Z) - 0.5));
+            (Data(j, X) - 0.0) * (Data(j, X) - 0.0) +
+            (Data(j, Y) - 0.0) * (Data(j, Y) - 0.0) +
+            (Data(j, Z) - 0.0) * (Data(j, Z) - 0.0) );
           if (curRadius > maxRadius)
             {
               delParts += j;
@@ -196,7 +226,8 @@ int main(int argc, char* argv[])
                 << MPI_Wtime() - logStartTime << "    prepared ghost proxies\n" << std::flush;
 
         TimeStart = microsec_clock::local_time();
-        sphlatch::OctTree BarnesHutTree(theta,
+        sphlatch::OctTree BarnesHutTree(gravTheta,
+                                        gravConst,
                                         CostZone.getDepth(),
                                         CostZone.getCenter(),
                                         CostZone.getSidelength());
@@ -216,9 +247,10 @@ int main(int argc, char* argv[])
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                 << MPI_Wtime() - logStartTime << "    inserted ghosts\n" << std::flush;
-        
+
         MPI::COMM_WORLD.Barrier();
         BarnesHutTree.calcMultipoles();
+        MPI::COMM_WORLD.Barrier();
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                 << MPI_Wtime() - logStartTime << "    calculated multipoles\n" << std::flush;
         TimeStop = microsec_clock::local_time();
@@ -237,7 +269,6 @@ int main(int argc, char* argv[])
                   << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
       }
 
-      dt = 0.000001; // just right for random_1M.cdat
       AccInt.getPos(dt);
       logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
               << MPI_Wtime() - logStartTime
@@ -281,7 +312,8 @@ int main(int argc, char* argv[])
                 << MPI_Wtime() - logStartTime << "    prepared ghost proxies\n" << std::flush;
 
         TimeStart = microsec_clock::local_time();
-        sphlatch::OctTree BarnesHutTree(theta,
+        sphlatch::OctTree BarnesHutTree(gravTheta,
+                                        gravConst,
                                         CostZone.getDepth(),
                                         CostZone.getCenter(),
                                         CostZone.getSidelength());
@@ -301,9 +333,10 @@ int main(int argc, char* argv[])
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                 << MPI_Wtime() - logStartTime << "    inserted ghosts\n" << std::flush;
-                
+
         MPI::COMM_WORLD.Barrier();
         BarnesHutTree.calcMultipoles();
+        MPI::COMM_WORLD.Barrier();
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                 << MPI_Wtime() - logStartTime << "    calculated multipoles\n" << std::flush;
         TimeStop = microsec_clock::local_time();
@@ -321,7 +354,7 @@ int main(int argc, char* argv[])
         std::cerr << "Rank " << RANK << ": "
                   << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
       }
-      
+
       AccInt.getVel(dt);
       logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
               << MPI_Wtime() - logStartTime

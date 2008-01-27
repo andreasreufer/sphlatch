@@ -39,7 +39,10 @@ typedef NodeProxy&      NodeProxyRefType;
 
 typedef GenericOctNode<NodeProxyPtrType>* GenericOctNodePtr;
 
-enum ParticleIndex { PID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, PSIZE };
+// hack
+enum ParticleIndex { PID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M,
+                     H, DHDT, RHO, E, P, POW, DIV_V,
+                     ROTX_V, ROTY_V, ROTZ_V, Q, GRAVEPS };
 enum MonopolIndex { CX, CY, CZ, Q000, MSIZE };
 //enum QuadrupolIndex  { CX, CY, CZ, Q000, Q001, Q002, Q010, Q011, MSIZE};
 
@@ -54,20 +57,22 @@ public:
  * - set up CellMultipoles matrix
  */
 OctTree(valueType _thetaMAC,
+        valueType _gravConst,
         size_t _czDepth,
         valvectType _rootCenter,
         valueType _rootSize)
 {
-  if ( _thetaMAC < 0. )
+  if (_thetaMAC < 0.)
     {
       std::cerr << "error: theta may not be negative! setting theta = 0.6\n";
       _thetaMAC = 0.6;
-    } else
-  if ( _thetaMAC > 1. )
+    }
+  else
+  if (_thetaMAC > 1.)
     {
       std::cerr << "warning: theta > 1. leads to self-acceleration!\n";
     }
-  
+
   RootPtr = new GenericOctNode<NodeProxyPtrType>;
 
   RootPtr->parent = NULL;
@@ -83,7 +88,7 @@ OctTree(valueType _thetaMAC,
   RootPtr->yCenter = _rootCenter(1);
   RootPtr->zCenter = _rootCenter(2);
   RootPtr->cellSize = _rootSize;
-  
+
   RootPtr->isParticle = false;
   RootPtr->isEmpty = true;
   RootPtr->isLocal = false;
@@ -95,17 +100,18 @@ OctTree(valueType _thetaMAC,
   partCounter = 0;
 
   thetaMAC = _thetaMAC;
+  gravConst = _gravConst;
   toptreeDepth = std::max(_czDepth,
                           _czDepth +
-                          static_cast<size_t>( ceil(-log(thetaMAC) /
-                                                    log(2.0) ) ) );  
-  
-  if ( toptreeDepth > 6 )
+                          static_cast<size_t>(ceil(-log(thetaMAC) /
+                                                   log(2.0))));
+
+  if (toptreeDepth > 6)
     {
       std::cerr << "warning: toptree depth of " << toptreeDepth
                 << " is pretty big!\n";
     }
-  
+
   buildToptreeRecursor();
   noToptreeCells = cellCounter;
 };
@@ -686,8 +692,8 @@ void globalSumupMultipoles()
        * still prevents the receiving node from getting
        * bombarded by multiple sends
        * */
-      MPI::COMM_WORLD.Ssend(&localCells(0, 0), noCellBytes,
-                            MPI_BYTE, sendTo, sendTo);
+      MPI::COMM_WORLD.Send(&localCells(0, 0), noCellBytes,
+                           MPI_BYTE, sendTo, sendTo);
     }
 
   /**
@@ -715,8 +721,8 @@ void globalSumupMultipoles()
        * still prevents the receiving node from getting
        * bombarded by multiple sends
        * */
-      MPI::COMM_WORLD.Ssend(&localCells(0, 0), noCellBytes,
-                            MPI_BYTE, sendTo, sendTo);
+      MPI::COMM_WORLD.Send(&localCells(0, 0), noCellBytes,
+                           MPI_BYTE, sendTo, sendTo);
     }
 
   // buffers to toptree
@@ -834,8 +840,8 @@ void sendBitset(bitsetRefType _bitSet, size_t _recvRank)
   boost::to_block_range(_bitSet, sendBuff.begin());
 
   // send
-  MPI::COMM_WORLD.Ssend(&(sendBuff[0]), noBsBytes,
-                        MPI_BYTE, _recvRank, _recvRank);
+  MPI::COMM_WORLD.Send(&(sendBuff[0]), noBsBytes,
+                       MPI_BYTE, _recvRank, _recvRank);
 }
 #endif
 // end of multipole stuff
@@ -846,7 +852,7 @@ private:
 NodeProxyType* curGravNodeProxy;
 valueType curGravParticleX, curGravParticleY, curGravParticleZ;
 valueType curGravParticleAX, curGravParticleAY, curGravParticleAZ;
-valueType thetaMAC;
+valueType thetaMAC, gravConst;
 valueType epsilonSquare;
 size_t calcGravityCellsCounter, calcGravityPartsCounter;
 
@@ -869,10 +875,7 @@ void calcGravity(NodeProxyType* _curParticle)
   curGravParticleAY = 0.;
   curGravParticleAZ = 0.;
 
-  // get this from each particle individually
-  //epsilonSquare = 0.01;
-  epsilonSquare = 0.0025;
-  //epsilonSquare = 0.0000;
+  epsilonSquare = (*curGravNodeProxy)(GRAVEPS) * (*curGravNodeProxy)(GRAVEPS);
 
 #ifdef SPHLATCH_TREE_PROFILE
   calcGravityPartsCounter = 0;
@@ -889,9 +892,9 @@ void calcGravity(NodeProxyType* _curParticle)
   goRoot();
   calcGravityRecursor();
 
-  (*curGravNodeProxy)(AX) += curGravParticleAX;
-  (*curGravNodeProxy)(AY) += curGravParticleAY;
-  (*curGravNodeProxy)(AZ) += curGravParticleAZ;
+  (*curGravNodeProxy)(AX) += gravConst * curGravParticleAX;
+  (*curGravNodeProxy)(AY) += gravConst * curGravParticleAY;
+  (*curGravNodeProxy)(AZ) += gravConst * curGravParticleAZ;
 
   /**
    * undo the trick above

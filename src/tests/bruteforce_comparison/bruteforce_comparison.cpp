@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
   valueType universeSize = 1., theta = 0.6;
   size_t costzoneDepth = 4;
   
-  sphlatch::OctTree BarnesHutTree(theta, costzoneDepth, universeCenter, universeSize);
+  sphlatch::OctTree BarnesHutTree(theta, 1.0, costzoneDepth, universeCenter, universeSize);
   
   TimeStop = microsec_clock::local_time();
   std::cerr << "Tree prepare time       " << (TimeStop - TimeStart) << "\n";

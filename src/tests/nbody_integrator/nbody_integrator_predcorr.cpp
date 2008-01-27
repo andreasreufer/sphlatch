@@ -169,6 +169,7 @@ int main(int argc, char* argv[])
 
     TimeStart = microsec_clock::local_time();
     sphlatch::OctTree BarnesHutTree(theta,
+                                    1.0,
                                     CostZone.getDepth(),
                                     CostZone.getCenter(),
                                     CostZone.getSidelength());
@@ -249,6 +250,7 @@ int main(int argc, char* argv[])
 
         TimeStart = microsec_clock::local_time();
         sphlatch::OctTree BarnesHutTree(theta,
+                                        1.0,
                                         CostZone.getDepth(),
                                         CostZone.getCenter(),
                                         CostZone.getSidelength());
@@ -324,6 +326,7 @@ int main(int argc, char* argv[])
 
         TimeStart = microsec_clock::local_time();
         sphlatch::OctTree BarnesHutTree(theta,
+                                        1.0,
                                         CostZone.getDepth(),
                                         CostZone.getCenter(),
                                         CostZone.getSidelength());
