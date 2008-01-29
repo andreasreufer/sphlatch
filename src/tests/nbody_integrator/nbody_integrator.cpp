@@ -1,11 +1,16 @@
 // some defs
 
-#define OOSPH_SINGLE_PRECISION
-#define SPHLATCH_SINGLEPREC
+// uncomment for single-precision calculation
+//#define OOSPH_SINGLE_PRECISION
+//#define SPHLATCH_SINGLEPREC
 
+// enable load-balancing (fishy!)
 //#define OOSPH_LOADBALANCE
+
+// enable parallel tree
 #define SPHLATCH_MPI
 
+// enable intensive logging for toptree global summation
 //#define SPHLATCH_TREE_LOGSUMUPMP
 
 #ifdef SPHLATCH_MPI
@@ -188,7 +193,8 @@ int main(int argc, char* argv[])
         {
           std::cout << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                     << MPI_Wtime() - logStartTime
-                    << "    step " << step << " at t = " << absTime << "\n";
+                    << "    step " << step << " at t = "
+                    << std::scientific << absTime << "\n";
         }
 
       index_vector_type delParts;
@@ -378,14 +384,14 @@ int main(int argc, char* argv[])
               std::cout << std::fixed << std::right
                         << std::setw(15) << std::setprecision(6)
                         << MPI_Wtime() - logStartTime
-                        << "    save dump to " << outFilename << "\n";
+                        << "     save dump to " << outFilename << "\n";
             }
 
           outputAttrSet += ID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M;
           IOManager.SaveCDAT(outFilename, outputAttrSet);
 
           logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                  << MPI_Wtime() - logStartTime << "    saved file\n" << std::flush;
+                  << MPI_Wtime() - logStartTime << "    saved dump\n" << std::flush;
           lastSavetime = absTime;
         }
 
