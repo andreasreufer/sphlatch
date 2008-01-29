@@ -50,11 +50,13 @@ enum MonopolIndex { CX, CY, CZ, Q000, MSIZE };
 class OctTree {
 public:
 /** \brief constructor:
+ * - set theta, gravity constant and toptree depth
+ * - check them for sanity
  * - allocate and setup RootNode and point cursor to it
  * - set counters
  * - instantiate recursors
  * - build toptree
- * - set up CellMultipoles matrix
+ * - set up buffer matrices for toptree cell nodes
  */
 OctTree(valueType _thetaMAC,
         valueType _gravConst,
@@ -114,6 +116,14 @@ OctTree(valueType _thetaMAC,
 
   buildToptreeRecursor();
   noToptreeCells = cellCounter;
+
+#ifdef SPHLATCH_MPI
+  localCells.resize(noToptreeCells, MSIZE);
+  localIsFilled.resize(noToptreeCells);
+
+  remoteCells.resize(noToptreeCells, MSIZE);
+  remoteIsFilled.resize(noToptreeCells);
+#endif
 };
 
 /**
@@ -137,6 +147,8 @@ size_t cellCounter, partCounter, toptreeDepth, noToptreeCells;
 
 matrixType localCells, remoteCells;
 bitsetType localIsFilled, remoteIsFilled;
+
+std::fstream logFile;
 
 // little helpers
 private:
@@ -566,6 +578,17 @@ void globalSumupMultipoles()
   const size_t RANK = MPI::COMM_WORLD.Get_rank();
   const size_t SIZE = MPI::COMM_WORLD.Get_size();
 
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+  std::string logFilename = "MPlogRank000";
+  std::string rankString = boost::lexical_cast<std::string>(RANK);
+  logFilename.replace(logFilename.size() - 0 - rankString.size(),
+                      rankString.size(), rankString);
+  double logStartTime = MPI_Wtime();
+  logFile.open(logFilename.c_str(), std::ios::out);
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - logStartTime << "    start log\n";
+#endif
+
   size_t round = 0;
   size_t remNodes = SIZE;
 
@@ -573,13 +596,6 @@ void globalSumupMultipoles()
 
   std::queue<size_t> sumUpSend, sumUpRecv;
   std::stack<size_t> distrSend, distrRecv;
-
-
-  localCells.resize(noToptreeCells, MSIZE);
-  localIsFilled.resize(noToptreeCells);
-
-  remoteCells.resize(noToptreeCells, MSIZE);
-  remoteIsFilled.resize(noToptreeCells);
 
   /**
    * magic algorithm which prepares sending and receiving queues
@@ -619,7 +635,20 @@ void globalSumupMultipoles()
   toptreeCounter = 0;
   toptreeToBuffersRecursor();
 
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - logStartTime << "   "
+          << " tree -> buffers \n" << std::flush;
+#endif
+
   MPI::COMM_WORLD.Barrier();
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - logStartTime << "   "
+          << " binary exchange tree up\n" << std::flush;
+#endif
+
   /**
    * receive multipoles from other nodes and add
    * them to local value
@@ -628,9 +657,29 @@ void globalSumupMultipoles()
     {
       size_t recvFrom = sumUpRecv.front();
       sumUpRecv.pop();
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " receive bitset from " << recvFrom << "\n" << std::flush;
+#endif
+
       recvBitset(remoteIsFilled, recvFrom);
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " receive cells  from " << recvFrom << "\n" << std::flush;
+#endif
+
       MPI::COMM_WORLD.Recv(&remoteCells(0, 0), noCellBytes,
                            MPI_BYTE, recvFrom, RANK);
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " add up multipoles \n" << std::flush;
+#endif
 
       valueType oldQ000, newQ000;
       for (size_t i = 0; i < noToptreeCells; i++)
@@ -685,7 +734,20 @@ void globalSumupMultipoles()
     {
       size_t sendTo = sumUpSend.front();
       sumUpSend.pop();
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " send bitset to " << sendTo << "\n" << std::flush;
+#endif
+
       sendBitset(localIsFilled, sendTo);
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " send cells to " << sendTo << "\n" << std::flush;
+#endif
 
       /**
        * do a synchronous send, which is non-blocking but
@@ -694,7 +756,21 @@ void globalSumupMultipoles()
        * */
       MPI::COMM_WORLD.Send(&localCells(0, 0), noCellBytes,
                            MPI_BYTE, sendTo, sendTo);
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " send to " << sendTo << " done\n" << std::flush;
+#endif
     }
+
+
+  MPI::COMM_WORLD.Barrier();
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - logStartTime << "   "
+          << " binary excghange tree down\n" << std::flush;
+#endif
 
   /**
    * receive global result
@@ -703,9 +779,29 @@ void globalSumupMultipoles()
     {
       size_t recvFrom = distrRecv.top();
       distrRecv.pop();
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " receive bitset from " << recvFrom << "\n" << std::flush;
+#endif
+
       recvBitset(localIsFilled, recvFrom);
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " receive cells  from " << recvFrom << "\n" << std::flush;
+#endif
+
       MPI::COMM_WORLD.Recv(&localCells(0, 0), noCellBytes,
                            MPI_BYTE, recvFrom, RANK);
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " receive from " << recvFrom << " done\n" << std::flush;
+#endif
     }
 
   /**
@@ -715,7 +811,21 @@ void globalSumupMultipoles()
     {
       size_t sendTo = distrSend.top();
       distrSend.pop();
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " send bitset to " << sendTo << "\n" << std::flush;
+#endif
+
       sendBitset(localIsFilled, sendTo);
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " send cells to " << sendTo << "\n" << std::flush;
+#endif
+
       /**
        * do a synchronous send, which is non-blocking but
        * still prevents the receiving node from getting
@@ -723,12 +833,32 @@ void globalSumupMultipoles()
        * */
       MPI::COMM_WORLD.Send(&localCells(0, 0), noCellBytes,
                            MPI_BYTE, sendTo, sendTo);
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime << "   "
+              << " send to " << sendTo << " done\n" << std::flush;
+#endif
     }
 
   // buffers to toptree
   goRoot();
   toptreeCounter = 0;
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - logStartTime << "   "
+          << " buffers -> tree \n" << std::flush;
+#endif
+
   buffersToToptreeRecursor();
+
+#ifdef SPHLATCH_TREE_LOGSUMUPMP
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - logStartTime << "   "
+          << " globalSumup() done\n" << std::flush;
+  logFile.close();
+#endif
 #endif
 }
 
@@ -819,7 +949,7 @@ void recvBitset(bitsetRefType _bitSet, size_t _sendRank)
 
   // receive
   MPI::COMM_WORLD.Recv(&(recvBuff[0]), noBsBytes,
-                       MPI_BYTE, _sendRank, RANK);
+                       MPI_BYTE, _sendRank, RANK + 255);
 
   // copy back to bitset
   boost::from_block_range(recvBuff.begin(), recvBuff.end(),
@@ -841,7 +971,7 @@ void sendBitset(bitsetRefType _bitSet, size_t _recvRank)
 
   // send
   MPI::COMM_WORLD.Send(&(sendBuff[0]), noBsBytes,
-                       MPI_BYTE, _recvRank, _recvRank);
+                       MPI_BYTE, _recvRank, _recvRank + 255);
 }
 #endif
 // end of multipole stuff
@@ -875,7 +1005,7 @@ void calcGravity(NodeProxyType* _curParticle)
   curGravParticleAY = 0.;
   curGravParticleAZ = 0.;
 
-  epsilonSquare = (*curGravNodeProxy)(GRAVEPS) * (*curGravNodeProxy)(GRAVEPS);
+  epsilonSquare = (*curGravNodeProxy)(GRAVEPS)*(*curGravNodeProxy)(GRAVEPS);
 
 #ifdef SPHLATCH_TREE_PROFILE
   calcGravityPartsCounter = 0;
@@ -975,8 +1105,12 @@ void calcGravParticle()
                       (partGravPartnerZ - curGravParticleZ)
                       );
 
-  cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist
-                     + cellPartDist * epsilonSquare;
+  // todo: include spline softening
+  /*cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist
+   + cellPartDist * epsilonSquare;*/
+
+  cellPartDistPow3 = static_cast<valueType>(
+    pow(cellPartDist * cellPartDist + epsilonSquare, 3. / 2.));
 
   curGravParticleAX -= partGravPartnerM *
                        (curGravParticleX - partGravPartnerX) /
