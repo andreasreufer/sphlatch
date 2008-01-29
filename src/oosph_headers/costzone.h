@@ -30,7 +30,8 @@ enum Index { X = mpl::at_c<Indices, 0>::type::value,
              Y = X + 1,
              Z = X + 2 };
 
-enum config {default_depth = 5};
+enum config {default_depth = 4};
+//enum config {default_depth = 5};
 //enum config { default_depth = 6 };
 
 typedef CostZone self_type;

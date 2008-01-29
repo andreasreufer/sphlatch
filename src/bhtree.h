@@ -1134,8 +1134,11 @@ void calcGravCell()
   calcGravityCellsCounter++;
 #endif
   // cellPartDist is already set by the MAC function
-  cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist
-                     + cellPartDist * epsilonSquare;
+  
+  // no softening for cells
+  /*cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist
+                     + cellPartDist * epsilonSquare;*/
+  cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
 
   curGravParticleAX -= (CurNodePtr->q000) *
                        (curGravParticleX - CurNodePtr->xCom) /

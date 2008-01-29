@@ -176,8 +176,6 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - logStartTime << "    start log\n";
 
-  //value_type dt = 0.000001; // just right for random_1M.cdat
-  //value_type dtInput = 5.049e6; // gives 50 steps for a 4AU solar orbit
   value_type saveTimestep, stopTime, dtInput, dtSave, dt, lastSavetime;
 
   saveTimestep = VMap["save-time"].as<value_type>();
@@ -276,6 +274,7 @@ int main(int argc, char* argv[])
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                 << MPI_Wtime() - logStartTime << "    calculated multipoles\n" << std::flush;
 
+        Erazer();
         for (size_t i = 0; i < noParts; i++)
           {
             BarnesHutTree.calcGravity(*(partProxies[i]));
@@ -355,6 +354,7 @@ int main(int argc, char* argv[])
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                 << MPI_Wtime() - logStartTime << "    calculated multipoles\n" << std::flush;
 
+        Erazer();
         for (size_t i = 0; i < noParts; i++)
           {
             BarnesHutTree.calcGravity(*(partProxies[i]));
@@ -396,10 +396,7 @@ int main(int argc, char* argv[])
         }
 
       step++;
-      Erazer();
-      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-              << MPI_Wtime() - logStartTime << "    erazed\n" << std::flush;
-    }
+  }
 
   logFile.close();
   MPI::Finalize();
