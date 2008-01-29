@@ -387,7 +387,7 @@ int main(int argc, char* argv[])
                         << "     save dump to " << outFilename << "\n";
             }
 
-          outputAttrSet += ID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M;
+          outputAttrSet += ID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, GRAVEPS;
           IOManager.SaveCDAT(outFilename, outputAttrSet);
 
           logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
