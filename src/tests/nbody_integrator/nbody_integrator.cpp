@@ -166,6 +166,13 @@ int main(int argc, char* argv[])
     }
   MemManager.SaveParameter("MAXRAD", maxRadius, true);
 
+  identType starID = static_cast<identType>(MemManager.LoadParameter("STARID"));
+  if (starID != starID)
+    {
+      starID = 1;
+    }
+  MemManager.SaveParameter("starID", maxRadius, true);
+
   // set up logging stuff
   std::string logFilename = "logRank000";
   std::string rankString = boost::lexical_cast<std::string>(RANK);
@@ -195,6 +202,8 @@ int main(int argc, char* argv[])
                     << std::scientific << absTime << "\n";
         }
 
+      double stepStartTime = MPI_Wtime();
+
       index_vector_type delParts;
       for (size_t j = 0; j < Data.size1(); j++)
         {
@@ -209,163 +218,199 @@ int main(int argc, char* argv[])
         }
       MemManager.DelParticles(delParts);
       logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-              << MPI_Wtime() - logStartTime
+              << MPI_Wtime() - stepStartTime
               << "    deleted " << delParts.size() << " particles\n" << std::flush;
 
       // next step position context
       {
-        logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime
-                << "    predicting step " << step << "\n" << std::flush;
-
+        stepStartTime = MPI_Wtime();
         ComManager.Exchange(Data, CostZone.CreateDomainIndexVector(), Data);
         noParts = Data.size1();
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime
+                << MPI_Wtime() - stepStartTime
                 << "    exchanged parts  (" << noParts << ")\n" << std::flush;
 
+        stepStartTime = MPI_Wtime();
         ComManager.Exchange(Data, CostZone.CreateDomainGhostIndexVector(), GData);
         noGhosts = GData.size1();
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime
+                << MPI_Wtime() - stepStartTime
                 << "    exchanged ghosts (" << noGhosts << ")\n" << std::flush;
 
+        for (size_t i = 0; i < noParts; i++)
+          {
+            if (starID == static_cast<identType>(Data(i, ID)))
+              {
+                Data(i, X) = 0.;
+                Data(i, Y) = 0.;
+                Data(i, Z) = 0.;
+                Data(i, VX) = 0.;
+                Data(i, VY) = 0.;
+                Data(i, VZ) = 0.;
+              }
+          }
+
+        stepStartTime = MPI_Wtime();
         partProxies.resize(noParts);
         for (size_t i = 0; i < noParts; i++)
           {
             (partProxies[i]).setup(&Data, i);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    prepared part proxies\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    prepared part proxies\n" << std::flush;
 
+        stepStartTime = MPI_Wtime();
         ghostProxies.resize(noGhosts);
         for (size_t i = 0; i < noGhosts; i++)
           {
             (ghostProxies[i]).setup(&GData, i);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    prepared ghost proxies\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    prepared ghost proxies\n" << std::flush;
 
+        stepStartTime = MPI_Wtime();
         sphlatch::OctTree BarnesHutTree(gravTheta,
                                         gravConst,
                                         CostZone.getDepth(),
                                         CostZone.getCenter(),
                                         CostZone.getSidelength());
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    constructed tree\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    constructed tree\n" << std::flush;
 
+        stepStartTime = MPI_Wtime();
         for (size_t i = 0; i < noParts; i++)
           {
             BarnesHutTree.insertParticle(*(partProxies[i]), true);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    inserted parts\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    inserted parts\n" << std::flush;
 
+        stepStartTime = MPI_Wtime();
         for (size_t i = 0; i < noGhosts; i++)
           {
             BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    inserted ghosts\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    inserted ghosts\n" << std::flush;
 
-        MPI::COMM_WORLD.Barrier();
+        stepStartTime = MPI_Wtime();
         BarnesHutTree.calcMultipoles();
-        MPI::COMM_WORLD.Barrier();
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    calculated multipoles\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    calculated multipoles\n" << std::flush;
 
         Erazer();
+        stepStartTime = MPI_Wtime();
         for (size_t i = 0; i < noParts; i++)
           {
             BarnesHutTree.calcGravity(*(partProxies[i]));
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    calculated gravity\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;
       }
 
       // determine timestep to next save
+      stepStartTime = MPI_Wtime();
       dtSave = (lrint(lastSavetime / saveTimestep)
                 + 1) * saveTimestep - absTime;
       dt = std::min(dtInput, dtSave);
       AccInt.getPos(dt);
       logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-              << MPI_Wtime() - logStartTime
+              << MPI_Wtime() - stepStartTime
               << "    intergrate to next position\n" << std::flush;
       absTime += dt;
       MemManager.SaveParameter("TIME", absTime, true);
 
       // next step velocity context
       {
-        logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime
-                << "    predicting step " << step << "\n" << std::flush;
+        stepStartTime = MPI_Wtime();
         ComManager.Exchange(Data, CostZone.CreateDomainIndexVector(), Data);
         noParts = Data.size1();
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime
+                << MPI_Wtime() - stepStartTime
                 << "    exchanged parts  (" << noParts << ")\n" << std::flush;
+
+        stepStartTime = MPI_Wtime();
         ComManager.Exchange(Data, CostZone.CreateDomainGhostIndexVector(), GData);
         noGhosts = GData.size1();
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime
+                << MPI_Wtime() - stepStartTime
                 << "    exchanged ghosts (" << noGhosts << ")\n" << std::flush;
 
+        for (size_t i = 0; i < noParts; i++)
+          {
+            if (starID == static_cast<identType>(Data(i, ID)))
+              {
+                Data(i, X) = 0.;
+                Data(i, Y) = 0.;
+                Data(i, Z) = 0.;
+                Data(i, VX) = 0.;
+                Data(i, VY) = 0.;
+                Data(i, VZ) = 0.;
+              }
+          }
+
+        stepStartTime = MPI_Wtime();
         partProxies.resize(noParts);
         for (size_t i = 0; i < noParts; i++)
           {
             (partProxies[i]).setup(&Data, i);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    prepared part proxies\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    prepared part proxies\n" << std::flush;
 
+        stepStartTime = MPI_Wtime();
         ghostProxies.resize(noGhosts);
         for (size_t i = 0; i < noGhosts; i++)
           {
             (ghostProxies[i]).setup(&GData, i);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    prepared ghost proxies\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    prepared ghost proxies\n" << std::flush;
 
+        stepStartTime = MPI_Wtime();
         sphlatch::OctTree BarnesHutTree(gravTheta,
                                         gravConst,
                                         CostZone.getDepth(),
                                         CostZone.getCenter(),
                                         CostZone.getSidelength());
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    constructed tree\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    constructed tree\n" << std::flush;
 
+        stepStartTime = MPI_Wtime();
         for (size_t i = 0; i < noParts; i++)
           {
             BarnesHutTree.insertParticle(*(partProxies[i]), true);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    inserted parts\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    inserted parts\n" << std::flush;
 
+        stepStartTime = MPI_Wtime();
         for (size_t i = 0; i < noGhosts; i++)
           {
             BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    inserted ghosts\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    inserted ghosts\n" << std::flush;
 
-        MPI::COMM_WORLD.Barrier();
+        stepStartTime = MPI_Wtime();
         BarnesHutTree.calcMultipoles();
-        MPI::COMM_WORLD.Barrier();
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    calculated multipoles\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    calculated multipoles\n" << std::flush;
 
         Erazer();
+        stepStartTime = MPI_Wtime();
         for (size_t i = 0; i < noParts; i++)
           {
             BarnesHutTree.calcGravity(*(partProxies[i]));
           }
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                << MPI_Wtime() - logStartTime << "    calculated gravity\n" << std::flush;
+                << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;
       }
 
+      stepStartTime = MPI_Wtime();
       AccInt.getVel(dt);
       logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-              << MPI_Wtime() - logStartTime
+              << MPI_Wtime() - stepStartTime
               << "    intergrate to next velocities\n" << std::flush;
 
       if (fabs((lrint(lastSavetime / saveTimestep)
@@ -391,12 +436,12 @@ int main(int argc, char* argv[])
           IOManager.SaveCDAT(outFilename, outputAttrSet);
 
           logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-                  << MPI_Wtime() - logStartTime << "    saved dump\n" << std::flush;
+                  << MPI_Wtime() - stepStartTime << "    saved dump\n" << std::flush;
           lastSavetime = absTime;
         }
 
       step++;
-  }
+    }
 
   logFile.close();
   MPI::Finalize();
