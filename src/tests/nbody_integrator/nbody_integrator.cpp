@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
     {
       starID = 1;
     }
-  MemManager.SaveParameter("starID", maxRadius, true);
+  MemManager.SaveParameter("starID", starID, true);
 
   // set up logging stuff
   std::string logFilename = "logRank000";
