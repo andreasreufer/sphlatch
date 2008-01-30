@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
   value_type gravTheta = MemManager.LoadParameter("GRAVTHETA");
   if (gravTheta != gravTheta)
     {
-      gravTheta = 0.7;       // standard value for opening angle theta
+      gravTheta = 0.5;       // standard value for opening angle theta
     }
   MemManager.SaveParameter("GRAVTHETA", gravTheta, true);
 
@@ -166,12 +166,12 @@ int main(int argc, char* argv[])
     }
   MemManager.SaveParameter("MAXRAD", maxRadius, true);
 
-  identType starID = static_cast<identType>(MemManager.LoadParameter("STARID"));
+  value_type starID = MemManager.LoadParameter("STARID");
   if (starID != starID)
     {
-      starID = 1;
+      starID = 1.;
     }
-  MemManager.SaveParameter("starID", starID, true);
+  MemManager.SaveParameter("STARID", starID, true);
 
   // set up logging stuff
   std::string logFilename = "logRank000";
@@ -194,6 +194,10 @@ int main(int argc, char* argv[])
 
   while (absTime < stopTime)
     {
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - logStartTime
+              << "a   step " << step << "\n" << std::flush;
+
       if (RANK == 0)
         {
           std::cout << std::fixed << std::right << std::setw(15) << std::setprecision(6)
@@ -236,19 +240,6 @@ int main(int argc, char* argv[])
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                 << MPI_Wtime() - stepStartTime
                 << "    exchanged ghosts (" << noGhosts << ")\n" << std::flush;
-
-        for (size_t i = 0; i < noParts; i++)
-          {
-            if (starID == static_cast<identType>(Data(i, ID)))
-              {
-                Data(i, X) = 0.;
-                Data(i, Y) = 0.;
-                Data(i, Z) = 0.;
-                Data(i, VX) = 0.;
-                Data(i, VY) = 0.;
-                Data(i, VZ) = 0.;
-              }
-          }
 
         stepStartTime = MPI_Wtime();
         partProxies.resize(noParts);
@@ -320,6 +311,20 @@ int main(int argc, char* argv[])
       absTime += dt;
       MemManager.SaveParameter("TIME", absTime, true);
 
+      for (size_t i = 0; i < noParts; i++)
+        {
+          if (lrint(starID) == lrint(Data(i, ID)))
+            {
+              Data(i, X) = 0.;
+              Data(i, Y) = 0.;
+              Data(i, Z) = 0.;
+              Data(i, VX) = 0.;
+              Data(i, VY) = 0.;
+              Data(i, VZ) = 0.;
+            }
+        }
+
+
       // next step velocity context
       {
         stepStartTime = MPI_Wtime();
@@ -335,19 +340,6 @@ int main(int argc, char* argv[])
         logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                 << MPI_Wtime() - stepStartTime
                 << "    exchanged ghosts (" << noGhosts << ")\n" << std::flush;
-
-        for (size_t i = 0; i < noParts; i++)
-          {
-            if (starID == static_cast<identType>(Data(i, ID)))
-              {
-                Data(i, X) = 0.;
-                Data(i, Y) = 0.;
-                Data(i, Z) = 0.;
-                Data(i, VX) = 0.;
-                Data(i, VY) = 0.;
-                Data(i, VZ) = 0.;
-              }
-          }
 
         stepStartTime = MPI_Wtime();
         partProxies.resize(noParts);
@@ -412,6 +404,19 @@ int main(int argc, char* argv[])
       logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
               << MPI_Wtime() - stepStartTime
               << "    intergrate to next velocities\n" << std::flush;
+
+      for (size_t i = 0; i < noParts; i++)
+        {
+          if (lrint(starID) == lrint(Data(i, ID)))
+            {
+              Data(i, X) = 0.;
+              Data(i, Y) = 0.;
+              Data(i, Z) = 0.;
+              Data(i, VX) = 0.;
+              Data(i, VY) = 0.;
+              Data(i, VZ) = 0.;
+            }
+        }
 
       if (fabs((lrint(lastSavetime / saveTimestep)
                 + 1) * saveTimestep - absTime) < 1e-5 * saveTimestep)
