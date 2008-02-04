@@ -1159,7 +1159,10 @@ public:
  *  - load current particle data
  *  - go to current particle node
  *  - go up until every neighbour is within current cell
+ *    ( 2h sphere around part. fully within cell )
  *  - call the neighbour search recursor
+ *  - sort out cells which do not touch 2h sphere
+ *  - add particles to list
  *  - brute force sort out non-neighbours
  *  - return neighbours
  */
