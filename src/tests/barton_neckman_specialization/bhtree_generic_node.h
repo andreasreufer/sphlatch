@@ -1,12 +1,12 @@
-#ifndef BHTREE_NODE_H
-#define BHTREE_NODE_H
+#ifndef BHTREE_GENERIC_NODE_H
+#define BHTREE_GENERIC_NODE_H
 
 /*
- *  bhtree_node.h
+ *  bhtree_generic_node.h
  *
  *
- *  Created by Andreas Reufer on 15.11.07.
- *  Copyright 2007 University of Berne. All rights reserved.
+ *  Created by Andreas Reufer on 06.02.08.
+ *  Copyright 2008 University of Berne. All rights reserved.
  *
  */
 
@@ -17,14 +17,13 @@ namespace sphlatch {
  *           arbitrary payload
  */
 
-template <typename T>
-struct GenericOctNode {
-  typedef GenericOctNode* GenericOctNodePtr;
+struct genericNode {
+  typedef genericNode* genericNodePtrType;
+
   /**
-   * pointers to parent and children
+   * pointer to parent
    */
-  GenericOctNodePtr parent;
-  GenericOctNodePtr child[8];
+  genericNodePtrType parent;
 
   /**
    * the root node has depth = 0, its
@@ -40,17 +39,6 @@ struct GenericOctNode {
   identType ident;
 
   /**
-   * in case of a cell node, the coordinates are
-   * set to the center of the cell.  in case of
-   * particle the coordinates of the particle are
-   * saved for caching reasons.
-   */ 
-  valueType xCenter;
-  valueType yCenter;
-  valueType zCenter;
-  valueType cellSize;
-
-  /**
    * payload of the node
    */
   T payload;
@@ -60,13 +48,13 @@ struct GenericOctNode {
   /**
    * isParticle:    is a particle
    */
-  bool isParticle         : 1;
+  bool isParticle : 1;
 
   /**
    * isEmpty:		 a cell node whose subtrees do not contain particles
    *                on any costzone domain.
    */
-  bool isEmpty            : 1;
+  bool isEmpty    : 1;
 
   /**
    * isLocal:       determines whether a particle is local or non-
@@ -77,9 +65,24 @@ struct GenericOctNode {
   /**
    * pointer operator
    */
-  GenericOctNode*  operator*() {
+  genericNode*  operator*() {
     return this;
   }
+};
+
+struct genericCellNode : public genericNode {
+  typedef genericNode* genericNodePtrType;
+
+  /**
+   * pointers to children
+   */
+  genericNodePtrType child[8];
+
+  /**
+   * center and size of the cell
+   */
+  valueType xCenter, yCenter, zCenter;
+  valueType cellSize;
 };
 };
 
