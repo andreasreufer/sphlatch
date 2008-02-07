@@ -1,5 +1,5 @@
-#ifndef PARTICLE_NODE_H
-#define PARTICLE_NODE_H
+#ifndef BHTREE_PARTICLE_NODE_H
+#define BHTREE_PARTICLE_NODE_H
 
 /*
  *  particle_node.h
@@ -11,23 +11,17 @@
  */
 
 #include "typedefs.h"
+#include "bhtree_generic_node.h"
+#include "bhtree_particle_proxy.h"
 
 namespace sphlatch {
-/** \brief tree node struct with an
- *           arbitrary payload
- */
-
 struct particleNode : public genericNode {
-  typedef particleProxy*      particleProxyPtrType;
+  
+  // pointer to particle proxy
+  particleProxy* partProxy;
 
-  /**
-   * pointers to children
-   */
-  particleProxyPtrType partProxy;
-
-  /**
-   * center and size of the cell
-   */
+  // particle position and mass
+  // are cached locally
   valueType xPos, yPos, zPos;
   valueType mass;
 };

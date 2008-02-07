@@ -26,28 +26,28 @@
 
 #include "typedefs.h"
 
-#include "typedefs.h"
+#include "bhtree_generic_node.h"
+#include "bhtree_particle_node.h"
+#include "bhtree_particle_proxy.h"
 
-#include "bhtree_node_proxy.h"
-
-#include "bhtree_node.h"
+#include "monopole_node.h"
 
 namespace sphlatch {
-typedef NodeProxy NodeProxyType;
-typedef NodeProxy*      NodeProxyPtrType;
-typedef NodeProxy&      NodeProxyRefType;
-
-typedef GenericOctNode<NodeProxyPtrType>* GenericOctNodePtr;
 
 // hack
 enum ParticleIndex { PID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M,
                      H, DHDT, RHO, E, P, POW, DIV_V,
                      ROTX_V, ROTY_V, ROTZ_V, Q, GRAVEPS };
-enum MonopolIndex { CX, CY, CZ, Q000, MSIZE };
+enum MonopolIndex { CX, CY, CZ, Q000, MSIZE }; // get rid of that
 //enum QuadrupolIndex  { CX, CY, CZ, Q000, Q001, Q002, Q010, Q011, MSIZE};
 
-//template <typename T>
-class OctTree {
+template<class T_leaftype>
+class BHtree {
+
+typedef particleProxy particleProxyType;
+typedef genericNode genericNodeType;
+typedef genericNode* genericNodePtrType;
+
 public:
 /** \brief constructor:
  * - set theta, gravity constant and toptree depth
@@ -58,7 +58,7 @@ public:
  * - build toptree
  * - set up buffer matrices for toptree cell nodes
  */
-OctTree(valueType _thetaMAC,
+BHtree(valueType _thetaMAC,
         valueType _gravConst,
         size_t _czDepth,
         valvectType _rootCenter,
@@ -75,28 +75,29 @@ OctTree(valueType _thetaMAC,
       std::cerr << "warning: theta > 1. leads to self-acceleration!\n";
     }
 
-  RootPtr = new GenericOctNode<NodeProxyPtrType>;
+  rootPtr = new monopoleCellNode;
 
-  RootPtr->parent = NULL;
+  rootPtr->parent = NULL;
+  rootPtr->depth = 0;
   for (size_t i = 0; i < 8; i++)
     {
-      RootPtr->child[i] = NULL;
+      static_cast<genericCellNode*>(rootPtr)->child[i] = NULL;
     }
 
-  RootPtr->payload = NULL;
-  RootPtr->ident = -1;
+  /*rootPtr->payload = NULL;
+  rootPtr->ident = -1;
 
-  RootPtr->xCenter = _rootCenter(0);
-  RootPtr->yCenter = _rootCenter(1);
-  RootPtr->zCenter = _rootCenter(2);
-  RootPtr->cellSize = _rootSize;
+  rootPtr->xCenter = _rootCenter(0);
+  rootPtr->yCenter = _rootCenter(1);
+  rootPtr->zCenter = _rootCenter(2);
+  rootPtr->cellSize = _rootSize;
 
-  RootPtr->isParticle = false;
-  RootPtr->isEmpty = true;
-  RootPtr->isLocal = false;
-  RootPtr->depth = 0;
+  rootPtr->isParticle = false;
+  rootPtr->isEmpty = true;
+  rootPtr->isLocal = false;
+ 
 
-  CurNodePtr = RootPtr;
+  curNodePtr = rootPtr;
 
   cellCounter = 1;  // we now have the root cell and no particles
   partCounter = 0;
@@ -123,22 +124,22 @@ OctTree(valueType _thetaMAC,
 
   remoteCells.resize(noToptreeCells, MSIZE);
   remoteIsFilled.resize(noToptreeCells);
-#endif
+#endif */
 };
 
 /**
  * destructor:
  *  - postorder recurse node deletion
  */
-~OctTree(void)
+~BHtree(void)
 {
-  goRoot();
+  /*goRoot();
   empty();
-  delete CurNodePtr;                       // Seppuku!
+  delete curNodePtr;*/                       // Seppuku!
 }
 
-private:
-GenericOctNodePtr CurNodePtr, RootPtr;
+protected:
+genericNodePtrType curNodePtr, rootPtr;
 
 /**
  * variables
@@ -155,108 +156,110 @@ private:
 /**
  * go up one level
  */
+ /*
 inline void goUp()
 {
-  CurNodePtr = CurNodePtr->parent;
-}
+  curNodePtr = curNodePtr->parent;
+}*/
 
 /**
  * go to child
  */
-inline void goChild(const size_t _n)
+/*inline void goChild(const size_t _n)
 {
-  CurNodePtr = CurNodePtr->child[_n];
-}
+  curNodePtr = curNodePtr->child[_n];
+}*/
 
 /**
  * go to root
  */
+ /*
 inline void goRoot()
 {
-  CurNodePtr = RootPtr;
-}
+  curNodePtr = rootPtr;
+}*/
 
 /**
  * setup coordinates and cell size as child _n
  */
-void setupCoordinates(const size_t _n)
+/*void setupCoordinates(const size_t _n)
 {
-  if (CurNodePtr->parent != NULL)
+  if (curNodePtr->parent != NULL)
     {
-      CurNodePtr->cellSize = CurNodePtr->parent->cellSize / 2.;
-      CurNodePtr->xCenter = ((_n) % 2) ?
-                            CurNodePtr->parent->xCenter
-                            + 0.5 * CurNodePtr->cellSize :
-                            CurNodePtr->parent->xCenter
-                            - 0.5 * CurNodePtr->cellSize;
-      CurNodePtr->yCenter = ((_n >> 1) % 2) ?
-                            CurNodePtr->parent->yCenter
-                            + 0.5 * CurNodePtr->cellSize :
-                            CurNodePtr->parent->yCenter
-                            - 0.5 * CurNodePtr->cellSize;
-      CurNodePtr->zCenter = ((_n >> 2) % 2) ?
-                            CurNodePtr->parent->zCenter
-                            + 0.5 * CurNodePtr->cellSize :
-                            CurNodePtr->parent->zCenter
-                            - 0.5 * CurNodePtr->cellSize;
+      curNodePtr->cellSize = curNodePtr->parent->cellSize / 2.;
+      curNodePtr->xCenter = ((_n) % 2) ?
+                            curNodePtr->parent->xCenter
+                            + 0.5 * curNodePtr->cellSize :
+                            curNodePtr->parent->xCenter
+                            - 0.5 * curNodePtr->cellSize;
+      curNodePtr->yCenter = ((_n >> 1) % 2) ?
+                            curNodePtr->parent->yCenter
+                            + 0.5 * curNodePtr->cellSize :
+                            curNodePtr->parent->yCenter
+                            - 0.5 * curNodePtr->cellSize;
+      curNodePtr->zCenter = ((_n >> 2) % 2) ?
+                            curNodePtr->parent->zCenter
+                            + 0.5 * curNodePtr->cellSize :
+                            curNodePtr->parent->zCenter
+                            - 0.5 * curNodePtr->cellSize;
     }
 }
-
+*/
 /**
  * create a new child in octant _n
- */
+ *//*
 void newChild(const size_t _n)
 {
-  if (CurNodePtr->child[_n] == NULL)
+  if (curNodePtr->child[_n] == NULL)
     {
       //GenericOctNodePtr NewNodePtr = new GenericOctNode<T>;
       GenericOctNodePtr NewNodePtr =
-        new GenericOctNode<NodeProxyPtrType>;
+        new GenericOctNode<NodeProxyPtrType>; // replace by asLeaf().allocate ...
 
-      NewNodePtr->parent = CurNodePtr;
-      CurNodePtr->child[_n] = NewNodePtr;
+      NewNodePtr->parent = curNodePtr;
+      curNodePtr->child[_n] = NewNodePtr;
 
       goChild(_n);
 
-      CurNodePtr->child[0] = NULL;
-      CurNodePtr->child[1] = NULL;
-      CurNodePtr->child[2] = NULL;
-      CurNodePtr->child[3] = NULL;
-      CurNodePtr->child[4] = NULL;
-      CurNodePtr->child[5] = NULL;
-      CurNodePtr->child[6] = NULL;
-      CurNodePtr->child[7] = NULL;
+      curNodePtr->child[0] = NULL;
+      curNodePtr->child[1] = NULL;
+      curNodePtr->child[2] = NULL;
+      curNodePtr->child[3] = NULL;
+      curNodePtr->child[4] = NULL;
+      curNodePtr->child[5] = NULL;
+      curNodePtr->child[6] = NULL;
+      curNodePtr->child[7] = NULL;
 
-      CurNodePtr->depth = CurNodePtr->parent->depth + 1;
+      curNodePtr->depth = curNodePtr->parent->depth + 1;
 
       setupCoordinates(_n);
 
       goUp();
     }
-}
+}*/
 
 /**
  * convert current node to cell, if current node is a particle
- */
+ *//*
 void converttoCell(const size_t _n)
 {
-  if (CurNodePtr->isParticle)
+  if (curNodePtr->isParticle)
     {
       setupCoordinates(_n);
 
-      CurNodePtr->payload = NULL;
+      curNodePtr->payload = NULL;
 
-      CurNodePtr->ident =
+      curNodePtr->ident =
         static_cast<identType>(-cellCounter - 1);
 
-      CurNodePtr->isParticle = false;
-      CurNodePtr->isEmpty = true;
+      curNodePtr->isParticle = false;
+      curNodePtr->isEmpty = true;
 
-      CurNodePtr->isLocal = false;
+      curNodePtr->isLocal = false;
 
       cellCounter++;
     }
-};
+};*/
 // end of little helpers
 
 
@@ -264,7 +267,7 @@ void converttoCell(const size_t _n)
 private:
 /**
  * recursor to build toptree
- */
+ *//*
 void buildToptreeRecursor(void)
 {
   if (atToptreeStop())
@@ -275,7 +278,7 @@ void buildToptreeRecursor(void)
       makeEmptyCells();
       for (size_t i = 0; i < 8; i++)  // try without loop
         {
-          if (CurNodePtr->child[i] != NULL)
+          if (curNodePtr->child[i] != NULL)
             {
               goChild(i);
               buildToptreeRecursor();
@@ -283,11 +286,11 @@ void buildToptreeRecursor(void)
             }
         }
     }
-}
+}*/
 
 /**
  * make empty cell nodes for the toptree
- */
+ *//*
 void makeEmptyCells(void)
 {
   for (size_t i = 0; i < 8; i++)
@@ -295,28 +298,28 @@ void makeEmptyCells(void)
       newChild(i);
       goChild(i);
 
-      CurNodePtr->payload = NULL;
-      CurNodePtr->ident =
+      curNodePtr->payload = NULL;
+      curNodePtr->ident =
         static_cast<identType>(-cellCounter - 1);
 
-      CurNodePtr->isParticle = false;
-      CurNodePtr->isEmpty = true;
+      curNodePtr->isParticle = false;
+      curNodePtr->isEmpty = true;
 
-      CurNodePtr->isLocal = false;
+      curNodePtr->isLocal = false;
 
       cellCounter++;
       goUp();
     }
-}
+}*/
 
 /**
  * stop recursion if:
  * - depth of current node is below toptreeDepth
- */
+ *//*
 bool atToptreeStop(void)
 {
-  return(CurNodePtr->depth >= toptreeDepth);
-};
+  return(curNodePtr->depth >= toptreeDepth);
+};*/
 // end of top tree stuff
 
 
@@ -326,14 +329,14 @@ public:
  * method to insert particle:
  *  - go to root
  *  - call the insertion recursor
- */
+ *//*
 void insertParticle(NodeProxyType* _newPayload,
                     bool _newIsLocal)
 {
   goRoot();
   insertParticleRecursor(_newPayload, _newIsLocal);
   partCounter++;
-}
+}*/
 
 private:
 /**
@@ -346,75 +349,75 @@ private:
  *	  call recursor for existing and new
  *	  particle.
  */
-void insertParticleRecursor(NodeProxyType* _newPayload,
+/*void insertParticleRecursor(NodeProxyType* _newPayload,
                             bool _newIsLocal)
 {
   size_t targetOctant = 0;
 
-  targetOctant += ((*_newPayload)(X) < CurNodePtr->xCenter) ? 0 : 1;
-  targetOctant += ((*_newPayload)(Y) < CurNodePtr->yCenter) ? 0 : 2;
-  targetOctant += ((*_newPayload)(Z) < CurNodePtr->zCenter) ? 0 : 4;
-
+  targetOctant += ((*_newPayload)(X) < curNodePtr->xCenter) ? 0 : 1;
+  targetOctant += ((*_newPayload)(Y) < curNodePtr->yCenter) ? 0 : 2;
+  targetOctant += ((*_newPayload)(Z) < curNodePtr->zCenter) ? 0 : 4;
+*/
   /**
    * If targeted child is empty, place the particle there
-   **/
-  if (CurNodePtr->child[targetOctant] == NULL)
+   **//*
+  if (curNodePtr->child[targetOctant] == NULL)
     {
-      CurNodePtr->isEmpty = false;
+      curNodePtr->isEmpty = false;
 
       newChild(targetOctant);
       goChild(targetOctant);
 
-      CurNodePtr->payload = _newPayload;
-      CurNodePtr->isParticle = true;
-      CurNodePtr->isEmpty = true;
-      CurNodePtr->isLocal = _newIsLocal;
-
+      curNodePtr->payload = _newPayload;
+      curNodePtr->isParticle = true;
+      curNodePtr->isEmpty = true;
+      curNodePtr->isLocal = _newIsLocal;
+*/
       /* particle saves its position to node directly */
-      CurNodePtr->xCom = (*_newPayload)(X);
-      CurNodePtr->yCom = (*_newPayload)(Y);
-      CurNodePtr->zCom = (*_newPayload)(Z);
-      CurNodePtr->q000 = (*_newPayload)(M);
+/*      curNodePtr->xCom = (*_newPayload)(X);
+      curNodePtr->yCom = (*_newPayload)(Y);
+      curNodePtr->zCom = (*_newPayload)(Z);
+      curNodePtr->q000 = (*_newPayload)(M);
 
-      CurNodePtr->ident =
-        static_cast<identType>((*_newPayload)(PID));
-
+      curNodePtr->ident =
+      static_cast<identType>((*_newPayload)(PID));
+*/
       /**
        * don't forget to wire the nodePtr of the
        * NodeProxy back to the node
        */
-      CurNodePtr->payload->nodePtr = CurNodePtr;
+/*      curNodePtr->payload->nodePtr = curNodePtr;
 
       goUp();
     }
-
+*/
   /**
    * ... or if existing child is a node, then try to place the particle
    * as a child of this node
    */
-  else if (!CurNodePtr->child[targetOctant]->isParticle)
+/*  else if (!curNodePtr->child[targetOctant]->isParticle)
     {
-      CurNodePtr->isEmpty = false;
+      curNodePtr->isEmpty = false;
       goChild(targetOctant);
       insertParticleRecursor(_newPayload, _newIsLocal);
       goUp();
     }
-
+*/
   /**
    * ... or if existing child is a particle (ghost/nonghost), then
    * replace it by a new node and try to place the existing two
    * particles as childs of this node
    */
-  else if (CurNodePtr->child[targetOctant]->isParticle)
-    {
+/*  else if (curNodePtr->child[targetOctant]->isParticle)
+    {*/
       /**
        * goto child, save resident particle
        * and convert it to a node
        */
-      goChild(targetOctant);
+/*      goChild(targetOctant);
 
-      NodeProxyType*  residentPayload = CurNodePtr->payload;
-      bool residentIsLocal = CurNodePtr->isLocal;
+      NodeProxyType*  residentPayload = curNodePtr->payload;
+      bool residentIsLocal = curNodePtr->isLocal;
 
       converttoCell(targetOctant);
 
@@ -422,10 +425,10 @@ void insertParticleRecursor(NodeProxyType* _newPayload,
       insertParticleRecursor(_newPayload, _newIsLocal);
     }
   else
-    {
+    {*/
       /* this never happens */
-    }
-}
+    /*}
+}*/
 // end of insertParticle() stuff
 
 
@@ -436,7 +439,7 @@ public:
  *  - go to root
  *  - call the multipole recursor
  *  - exchange toptrees
- */
+ *//*
 void calcMultipoles(void)
 {
   goRoot();
@@ -444,11 +447,11 @@ void calcMultipoles(void)
 
   globalSumupMultipoles();
 }
-
+*/
 private:
 /**
  * recursor for multipole calculation
- */
+ *//*
 void calcMultipoleRecursor(void)
 {
   if (calcMultipoleStop())
@@ -458,7 +461,7 @@ void calcMultipoleRecursor(void)
     {
       for (size_t i = 0; i < 8; i++) // try without loop
         {
-          if (CurNodePtr->child[i] != NULL)
+          if (curNodePtr->child[i] != NULL)
             {
               goChild(i);
               calcMultipoleRecursor();
@@ -467,112 +470,112 @@ void calcMultipoleRecursor(void)
         }
       calcMultipole();
     }
-};
+};*/
 
 /**
  * stop recursion if:
  * - current node is empty
  * - current node is a particle
- */
+ *//*
 bool calcMultipoleStop(void)
 {
-  return CurNodePtr->isEmpty; // particles are per definition
+  return curNodePtr->isEmpty; // particles are per definition
                               // empty, so we omit this check
-};
+};*/
 
 /**
  * calculate multipole from children
  */
-valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
+/*valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
 void calcMultipole()
 {
   monopolCM = 0.;
   monopolCXM = 0.;
   monopolCYM = 0.;
   monopolCZM = 0.;
-  /**
-   * check locality of current cell node:
-   *  - if node is in the toptree, the node is local
-   *  - if node is below toptree, the parent node is local if
-   *    any child is local ( ... or ... or ... or ... )
-   *
-   * to check the proper working together of the costzone and
-   * the toptree would be to check, that cells below toptreeDepth
-   * either have only local or only non-local children, but never
-   * both.
-   */
-  if ((CurNodePtr->depth) > toptreeDepth)
+  //
+  // check locality of current cell node:
+  // - if node is in the toptree, the node is local
+  // - if node is below toptree, the parent node is local if
+  // any child is local ( ... or ... or ... or ... )
+  //
+  // to check the proper working together of the costzone and
+  // the toptree would be to check, that cells below toptreeDepth
+  // either have only local or only non-local children, but never
+  // both.
+  //
+  if ((curNodePtr->depth) > toptreeDepth)
     {
       for (size_t i = 0; i < 8; i++)
         {
-          if (CurNodePtr->child[i] != NULL)
+          if (curNodePtr->child[i] != NULL)
             {
-              (CurNodePtr->isLocal) |= CurNodePtr->child[i]->isLocal;
+              (curNodePtr->isLocal) |= curNodePtr->child[i]->isLocal;
             }
         }
     }
   else
     {
-      CurNodePtr->isLocal = true;
+      curNodePtr->isLocal = true;
     }
 
-  /**
-   * add up the contributions from the children with
-   * the same locality as the current node.
-   * all this locality business guarantees, that every particle
-   * contributes only ONCE to the multipole moments of the global tree
-   * but "ghost" cells still contain the multipoles contributed by
-   * their ghost children.
-   *
-   * a special case are the deepest toptree cells which are per
-   * definition local. if all children are ghosts, none of if contri-
-   * butes anything so monopolCM gets 0 and fucks up the center of mass
-   * of the cell. so if nobody contributes anything, omit the addition
-   * to the cell.
-   */
+  //
+  // add up the contributions from the children with
+  // the same locality as the current node.
+  // all this locality business guarantees, that every particle
+  // contributes only ONCE to the multipole moments of the global tree
+  // but "ghost" cells still contain the multipoles contributed by
+  // their ghost children.
+  //
+  // a special case are the deepest toptree cells which are per
+  // definition local. if all children are ghosts, none of if contri-
+  // butes anything so monopolCM gets 0 and fucks up the center of mass
+  // of the cell. so if nobody contributes anything, omit the addition
+  // to the cell.
+  //
   for (size_t i = 0; i < 8; i++)
     {
-      if (CurNodePtr->child[i] != NULL)
+      if (curNodePtr->child[i] != NULL)
         {
-          if (CurNodePtr->child[i]->isLocal
-              == CurNodePtr->isLocal)
+          if (curNodePtr->child[i]->isLocal
+              == curNodePtr->isLocal)
             {
               goChild(i);
-              monopolCM += CurNodePtr->q000;
-              monopolCXM += (CurNodePtr->xCom) *
-                            (CurNodePtr->q000);
-              monopolCYM += (CurNodePtr->yCom) *
-                            (CurNodePtr->q000);
-              monopolCZM += (CurNodePtr->zCom) *
-                            (CurNodePtr->q000);
+              monopolCM += curNodePtr->q000;
+              monopolCXM += (curNodePtr->xCom) *
+                            (curNodePtr->q000);
+              monopolCYM += (curNodePtr->yCom) *
+                            (curNodePtr->q000);
+              monopolCZM += (curNodePtr->zCom) *
+                            (curNodePtr->q000);
               goUp();
             }
         }
     }
 
-  /* copy data to node itself ... */
+  // copy data to node itself ...
   if (monopolCM > 0.)
     {
-      CurNodePtr->q000 = monopolCM;
-      CurNodePtr->xCom = monopolCXM / monopolCM;
-      CurNodePtr->yCom = monopolCYM / monopolCM;
-      CurNodePtr->zCom = monopolCZM / monopolCM;
+      curNodePtr->q000 = monopolCM;
+      curNodePtr->xCom = monopolCXM / monopolCM;
+      curNodePtr->yCom = monopolCYM / monopolCM;
+      curNodePtr->zCom = monopolCZM / monopolCM;
     }
   else
     {
-      CurNodePtr->q000 = 0.;
-      CurNodePtr->xCom = 0.;
-      CurNodePtr->yCom = 0.;
-      CurNodePtr->zCom = 0.;
+      curNodePtr->q000 = 0.;
+      curNodePtr->xCom = 0.;
+      curNodePtr->yCom = 0.;
+      curNodePtr->zCom = 0.;
     }
-}
+}*/
 
 /**
  * sum up the multipole cellData matrix globally
  * and distribute it again to each node. if MPI is not
  * defined, nothing is done here.
  */
-void globalSumupMultipoles()
+/*void globalSumupMultipoles()
 {
 #ifdef SPHLATCH_MPI
   const size_t RANK = MPI::COMM_WORLD.Get_rank();
@@ -597,11 +600,11 @@ void globalSumupMultipoles()
   std::queue<size_t> sumUpSend, sumUpRecv;
   std::stack<size_t> distrSend, distrRecv;
 
-  /**
-   * magic algorithm which prepares sending and receiving queues
-   * for the summing up step and sending and receiving stacks for
-   * the distributing step.
-   */
+  // 
+  // magic algorithm which prepares sending and receiving queues
+  // for the summing up step and sending and receiving stacks for
+  // the distributing step.
+  // 
   while (remNodes > 1)
     {
       size_t noPairs = lrint(floor(remNodes / 2.));
@@ -649,10 +652,10 @@ void globalSumupMultipoles()
           << " binary exchange tree up\n" << std::flush;
 #endif
 
-  /**
-   * receive multipoles from other nodes and add
-   * them to local value
-   */
+  // 
+  // receive multipoles from other nodes and add
+  // them to local value
+  // 
   while (!sumUpRecv.empty())
     {
       size_t recvFrom = sumUpRecv.front();
@@ -691,11 +694,11 @@ void globalSumupMultipoles()
                   oldQ000 = localCells(i, Q000);
                   newQ000 = oldQ000 + remoteCells(i, Q000);
 
-                  /**
-                   * newQ000 may be zero for non-empty cells. this
-                   * happens when all children are ghosts and do not
-                   * contribute to the local toptree
-                   */
+                  // 
+                  // newQ000 may be zero for non-empty cells. this
+                  // happens when all children are ghosts and do not
+                  // contribute to the local toptree
+                  // 
                   if (newQ000 > 0.)
                     {
                       localCells(i, Q000) = newQ000;
@@ -727,9 +730,9 @@ void globalSumupMultipoles()
       localIsFilled |= remoteIsFilled;
     }
 
-  /**
-   * send local value to another node
-   */
+  // 
+  // send local value to another node
+  // 
   while (!sumUpSend.empty())
     {
       size_t sendTo = sumUpSend.front();
@@ -749,11 +752,11 @@ void globalSumupMultipoles()
               << " send cells to " << sendTo << "\n" << std::flush;
 #endif
 
-      /**
-       * do a synchronous send, which is non-blocking but
-       * still prevents the receiving node from getting
-       * bombarded by multiple sends
-       * */
+      // 
+      // do a synchronous send, which is non-blocking but
+      // still prevents the receiving node from getting
+      // bombarded by multiple sends
+      // 
       MPI::COMM_WORLD.Send(&localCells(0, 0), noCellBytes,
                            MPI_BYTE, sendTo, sendTo);
 
@@ -772,9 +775,9 @@ void globalSumupMultipoles()
           << " binary excghange tree down\n" << std::flush;
 #endif
 
-  /**
-   * receive global result
-   */
+  // 
+  // receive global result
+  // 
   while (!distrRecv.empty())
     {
       size_t recvFrom = distrRecv.top();
@@ -804,9 +807,9 @@ void globalSumupMultipoles()
 #endif
     }
 
-  /**
-   * ... and distribute it to other nodes
-   */
+  // 
+  // ... and distribute it to other nodes
+  // 
   while (!distrSend.empty())
     {
       size_t sendTo = distrSend.top();
@@ -826,11 +829,11 @@ void globalSumupMultipoles()
               << " send cells to " << sendTo << "\n" << std::flush;
 #endif
 
-      /**
-       * do a synchronous send, which is non-blocking but
-       * still prevents the receiving node from getting
-       * bombarded by multiple sends
-       * */
+      // 
+      // do a synchronous send, which is non-blocking but
+      // still prevents the receiving node from getting
+      // bombarded by multiple sends
+      // 
       MPI::COMM_WORLD.Send(&localCells(0, 0), noCellBytes,
                            MPI_BYTE, sendTo, sendTo);
 
@@ -861,32 +864,32 @@ void globalSumupMultipoles()
 #endif
 #endif
 }
-
+*/
 #ifdef SPHLATCH_MPI
-/**
- * preorder recursive function to connect
- * cells to a matrix row
- */
+// 
+// preorder recursive function to connect
+// cells to a matrix row
+// 
 size_t toptreeCounter;
-void toptreeToBuffersRecursor(void)
+/*void toptreeToBuffersRecursor(void)
 {
   if (belowToptreeStop())
     {
     }
   else
     {
-      localIsFilled[toptreeCounter] = !(CurNodePtr->isEmpty);
+      localIsFilled[toptreeCounter] = !(curNodePtr->isEmpty);
 
-      localCells(toptreeCounter, CX) = CurNodePtr->xCom;
-      localCells(toptreeCounter, CY) = CurNodePtr->yCom;
-      localCells(toptreeCounter, CZ) = CurNodePtr->zCom;
-      localCells(toptreeCounter, Q000) = CurNodePtr->q000;
+      localCells(toptreeCounter, CX) = curNodePtr->xCom;
+      localCells(toptreeCounter, CY) = curNodePtr->yCom;
+      localCells(toptreeCounter, CZ) = curNodePtr->zCom;
+      localCells(toptreeCounter, Q000) = curNodePtr->q000;
 
       toptreeCounter++;
 
       for (size_t i = 0; i < 8; i++)             // try without loop
         {
-          if (CurNodePtr->child[i] != NULL)
+          if (curNodePtr->child[i] != NULL)
             {
               goChild(i);
               toptreeToBuffersRecursor();
@@ -894,27 +897,27 @@ void toptreeToBuffersRecursor(void)
             }
         }
     }
-}
+}*/
 
-void buffersToToptreeRecursor(void)
+/*void buffersToToptreeRecursor(void)
 {
   if (belowToptreeStop())
     {
     }
   else
     {
-      CurNodePtr->isEmpty = !localIsFilled[toptreeCounter];
+      curNodePtr->isEmpty = !localIsFilled[toptreeCounter];
 
-      CurNodePtr->xCom = localCells(toptreeCounter, CX);
-      CurNodePtr->yCom = localCells(toptreeCounter, CY);
-      CurNodePtr->zCom = localCells(toptreeCounter, CZ);
-      CurNodePtr->q000 = localCells(toptreeCounter, Q000);
+      curNodePtr->xCom = localCells(toptreeCounter, CX);
+      curNodePtr->yCom = localCells(toptreeCounter, CY);
+      curNodePtr->zCom = localCells(toptreeCounter, CZ);
+      curNodePtr->q000 = localCells(toptreeCounter, Q000);
 
       toptreeCounter++;
 
       for (size_t i = 0; i < 8; i++)             // try without loop
         {
-          if (CurNodePtr->child[i] != NULL)
+          if (curNodePtr->child[i] != NULL)
             {
               goChild(i);
               buffersToToptreeRecursor();
@@ -922,22 +925,22 @@ void buffersToToptreeRecursor(void)
             }
         }
     }
-}
+}*/
 
 /**
  * stop recursion if:
  * - depth of current node is below toptreeDepth
  */
-bool belowToptreeStop(void)
+/*bool belowToptreeStop(void)
 {
-  return(CurNodePtr->depth > toptreeDepth);
-}
+  return(curNodePtr->depth > toptreeDepth);
+}*/
 
 /**
  * little comm helper
  * \todo move to comm_manager later on
  */
-void recvBitset(bitsetRefType _bitSet, size_t _sendRank)
+/*void recvBitset(bitsetRefType _bitSet, size_t _sendRank)
 {
   // prepare buffer
   const size_t RANK = MPI::COMM_WORLD.Get_rank();
@@ -954,9 +957,9 @@ void recvBitset(bitsetRefType _bitSet, size_t _sendRank)
   // copy back to bitset
   boost::from_block_range(recvBuff.begin(), recvBuff.end(),
                           _bitSet);
-}
+}*/
 
-void sendBitset(bitsetRefType _bitSet, size_t _recvRank)
+/*void sendBitset(bitsetRefType _bitSet, size_t _recvRank)
 {
   // prepare buffer
   //const size_t RANK = MPI::COMM_WORLD.Get_rank();
@@ -972,20 +975,20 @@ void sendBitset(bitsetRefType _bitSet, size_t _recvRank)
   // send
   MPI::COMM_WORLD.Send(&(sendBuff[0]), noBsBytes,
                        MPI_BYTE, _recvRank, _recvRank + 255);
-}
+}*/
 #endif
 // end of multipole stuff
 
 
 // calcGravity() stuff
-private:
+/*private:
 NodeProxyType* curGravNodeProxy;
 valueType curGravParticleX, curGravParticleY, curGravParticleZ;
 valueType curGravParticleAX, curGravParticleAY, curGravParticleAZ;
 valueType thetaMAC, gravConst;
 valueType epsilonSquare;
 size_t calcGravityCellsCounter, calcGravityPartsCounter;
-
+*/
 public:
 /**
  * calculate gravitation for a particle:
@@ -994,7 +997,7 @@ public:
  *  - call the gravity calculation recursor
  *  - write back resulting acceleration
  */
-void calcGravity(NodeProxyType* _curParticle)
+/*void calcGravity(NodeProxyType* _curParticle)
 {
   curGravNodeProxy = _curParticle;
 
@@ -1012,11 +1015,11 @@ void calcGravity(NodeProxyType* _curParticle)
   calcGravityCellsCounter = 0;
 #endif
 
-  /**
-   * trick: hide the current particle by letting it look like
-   * an empty cell node, so that it doesn't gravitate with
-   * itself. btw: a particle is always empty.
-   */
+  // 
+  // trick: hide the current particle by letting it look like
+  // an empty cell node, so that it doesn't gravitate with
+  // itself. btw: a particle is always empty.
+  // 
   curGravNodeProxy->nodePtr->isParticle = false;
 
   goRoot();
@@ -1026,21 +1029,21 @@ void calcGravity(NodeProxyType* _curParticle)
   (*curGravNodeProxy)(AY) += gravConst * curGravParticleAY;
   (*curGravNodeProxy)(AZ) += gravConst * curGravParticleAZ;
 
-  /**
-   * undo the trick above
-   */
+  // 
+  // undo the trick above
+  // 
   curGravNodeProxy->nodePtr->isParticle = true;
-}
+}*/
 
 private:
-void calcGravityRecursor(void)
+/*void calcGravityRecursor(void)
 {
-  if (CurNodePtr->isParticle)
+  if (curNodePtr->isParticle)
     {
       calcGravParticle();
     }
   else
-  if (CurNodePtr->isEmpty)
+  if (curNodePtr->isEmpty)
     {
     }
   else
@@ -1052,7 +1055,7 @@ void calcGravityRecursor(void)
     {
       for (size_t i = 0; i < 8; i++)
         {
-          if (CurNodePtr->child[i] != NULL)
+          if (curNodePtr->child[i] != NULL)
             {
               goChild(i);
               calcGravityRecursor();
@@ -1060,42 +1063,42 @@ void calcGravityRecursor(void)
             }
         }
     }
-}
+}*/
 
 /**
  * stop recursion if:
  * - current node is empty << ??
  * - MAC is fulfilled
  */
-valueType cellPartDist;
+/*valueType cellPartDist;
 bool calcGravMAC(void)
 {
   cellPartDist = sqrt(
-    (CurNodePtr->xCom - curGravParticleX) *
-    (CurNodePtr->xCom - curGravParticleX) +
-    (CurNodePtr->yCom - curGravParticleY) *
-    (CurNodePtr->yCom - curGravParticleY) +
-    (CurNodePtr->zCom - curGravParticleZ) *
-    (CurNodePtr->zCom - curGravParticleZ)
+    (curNodePtr->xCom - curGravParticleX) *
+    (curNodePtr->xCom - curGravParticleX) +
+    (curNodePtr->yCom - curGravParticleY) *
+    (curNodePtr->yCom - curGravParticleY) +
+    (curNodePtr->zCom - curGravParticleZ) *
+    (curNodePtr->zCom - curGravParticleZ)
     );
-  return(((CurNodePtr->cellSize) / cellPartDist) < thetaMAC);
-}
+  return(((curNodePtr->cellSize) / cellPartDist) < thetaMAC);
+}*/
 
 /**
  * calculate acceleration due to a particle
  * todo: add grav-const
  */
-valueType partGravPartnerX, partGravPartnerY, partGravPartnerZ,
+/*valueType partGravPartnerX, partGravPartnerY, partGravPartnerZ,
           partGravPartnerM;
 void calcGravParticle()
 {
 #ifdef SPHLATCH_TREE_PROFILE
   calcGravityPartsCounter++;
 #endif
-  partGravPartnerX = CurNodePtr->xCom;
-  partGravPartnerY = CurNodePtr->yCom;
-  partGravPartnerZ = CurNodePtr->zCom;
-  partGravPartnerM = CurNodePtr->q000;
+  partGravPartnerX = curNodePtr->xCom;
+  partGravPartnerY = curNodePtr->yCom;
+  partGravPartnerZ = curNodePtr->zCom;
+  partGravPartnerM = curNodePtr->q000;
 
   cellPartDist = sqrt((partGravPartnerX - curGravParticleX) *
                       (partGravPartnerX - curGravParticleX) +
@@ -1106,8 +1109,8 @@ void calcGravParticle()
                       );
 
   // todo: include spline softening
-  /*cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist
-   + cellPartDist * epsilonSquare;*/
+  // cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist
+  // + cellPartDist * epsilonSquare;
 
   cellPartDistPow3 = static_cast<valueType>(
     pow(cellPartDist * cellPartDist + epsilonSquare, 3. / 2.));
@@ -1121,13 +1124,13 @@ void calcGravParticle()
   curGravParticleAZ -= partGravPartnerM *
                        (curGravParticleZ - partGravPartnerZ) /
                        cellPartDistPow3;
-}
+}*/
 
 /**
  * calculate acceleration due to a cell
  * todo: add grav-const
  */
-valueType cellPartDistPow3;
+/*valueType cellPartDistPow3;
 void calcGravCell()
 {
 #ifdef SPHLATCH_TREE_PROFILE
@@ -1136,20 +1139,20 @@ void calcGravCell()
   // cellPartDist is already set by the MAC function
   
   // no softening for cells
-  /*cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist
-                     + cellPartDist * epsilonSquare;*/
+  // cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist
+  //                    + cellPartDist * epsilonSquare;
   cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
 
-  curGravParticleAX -= (CurNodePtr->q000) *
-                       (curGravParticleX - CurNodePtr->xCom) /
+  curGravParticleAX -= (curNodePtr->q000) *
+                       (curGravParticleX - curNodePtr->xCom) /
                        cellPartDistPow3;
-  curGravParticleAY -= (CurNodePtr->q000) *
-                       (curGravParticleY - CurNodePtr->yCom) /
+  curGravParticleAY -= (curNodePtr->q000) *
+                       (curGravParticleY - curNodePtr->yCom) /
                        cellPartDistPow3;
-  curGravParticleAZ -= (CurNodePtr->q000) *
-                       (curGravParticleZ - CurNodePtr->zCom) /
+  curGravParticleAZ -= (curNodePtr->q000) *
+                       (curGravParticleZ - curNodePtr->zCom) /
                        cellPartDistPow3;
-}
+}*/
 // end of calcGravity() stuff
 
 // neighbour search stuff
@@ -1167,11 +1170,11 @@ public:
  *  - return neighbours
  */
 /*somecontainer_type findNeighbours(
-                const GenericOctNodePtr _curParticle,
+                const genericNodeType* _curParticle,
                 const valueRefType _search_radius) {
-        CurNodePtr = _curParticle;
+        curNodePtr = _curParticle;
         size_t topDepth = <crazyformula>
-        while ( CurNodePtr->depth > topDepth ) {
+        while ( curNodePtr->depth > topDepth ) {
                 goUp();
         }
         neighbourFindRecursor(_curParticle);
@@ -1187,7 +1190,7 @@ public:
  * dump the tree as a
  * dot file
  */
-std::fstream dumpFile;
+/*std::fstream dumpFile;
 void treeDOTDump(std::string _dumpFileName)
 {
   dumpFile.open(_dumpFileName.c_str(), std::ios::out);
@@ -1197,18 +1200,18 @@ void treeDOTDump(std::string _dumpFileName)
   treeDOTDumpRecursor();
   dumpFile << "}\n";
   dumpFile.close();
-}
+}*/
 
 private:
 /**
  * treeDOTDump() recursor
  */
-void treeDOTDumpRecursor()
+/*void treeDOTDumpRecursor()
 {
-  dumpFile << CurNodePtr->ident
+  dumpFile << curNodePtr->ident
            << " [label=\"\" ";
 
-  if (CurNodePtr->isParticle)
+  if (curNodePtr->isParticle)
     {
       dumpFile << ",shape=circle";
     }
@@ -1217,23 +1220,23 @@ void treeDOTDumpRecursor()
       dumpFile << ",shape=box";
     }
 
-  if ((!CurNodePtr->isEmpty) or
-      CurNodePtr->isParticle)
+  if ((!curNodePtr->isEmpty) or
+      curNodePtr->isParticle)
     {
       dumpFile << ",style=filled";
     }
 
-  if (CurNodePtr->isLocal)
+  if (curNodePtr->isLocal)
     {
       // local particle
-      if (CurNodePtr->isParticle)
+      if (curNodePtr->isParticle)
         {
           dumpFile << ",color=green";
         }
       else
         {
           // local cell
-          if (CurNodePtr->depth <= toptreeDepth)
+          if (curNodePtr->depth <= toptreeDepth)
             {
               dumpFile << ",color=blue";
             }
@@ -1253,34 +1256,34 @@ void treeDOTDumpRecursor()
 
   for (size_t i = 0; i < 8; i++)                         // try without loop
     {
-      if (CurNodePtr->child[i] != NULL)
+      if (curNodePtr->child[i] != NULL)
         {
-          dumpFile << CurNodePtr->ident
+          dumpFile << curNodePtr->ident
                    << " -> "
-                   << CurNodePtr->child[i]->ident
+                   << curNodePtr->child[i]->ident
                    << "\n";
           goChild(i);
           treeDOTDumpRecursor();
           goUp();
         }
     }
-}
+}*/
 // end of treeDOTDump() stuff
 
 // treeDump() stuff
-public:
+/*public:
 void treeDump(std::string _dumpFileName)
 {
   dumpFile.open(_dumpFileName.c_str(), std::ios::out);
   goRoot();
   treeDumpRecursor();
   dumpFile.close();
-}
+}*/
 
-private:
+/*private:
 void treeDumpRecursor()
 {
-  if (CurNodePtr->isParticle)
+  if (curNodePtr->isParticle)
     {
       dumpFile << "P";
     }
@@ -1288,7 +1291,7 @@ void treeDumpRecursor()
     {
       dumpFile << "N";
     }
-  if (CurNodePtr->isEmpty)
+  if (curNodePtr->isEmpty)
     {
       dumpFile << "E";
     }
@@ -1296,7 +1299,7 @@ void treeDumpRecursor()
     {
       dumpFile << "F";
     }
-  if (CurNodePtr->isLocal)
+  if (curNodePtr->isLocal)
     {
       dumpFile << "L";
     }
@@ -1306,36 +1309,36 @@ void treeDumpRecursor()
     }
   dumpFile << "   ";
 
-  dumpFile << CurNodePtr->ident;
+  dumpFile << curNodePtr->ident;
   dumpFile << "   ";
 
-  if (CurNodePtr->isParticle)
+  if (curNodePtr->isParticle)
     {
-      dumpFile << CurNodePtr->xCom << "   ";
-      dumpFile << CurNodePtr->yCom << "   ";
-      dumpFile << CurNodePtr->zCom << "   ";
-      dumpFile << CurNodePtr->q000;
+      dumpFile << curNodePtr->xCom << "   ";
+      dumpFile << curNodePtr->yCom << "   ";
+      dumpFile << curNodePtr->zCom << "   ";
+      dumpFile << curNodePtr->q000;
     }
   else
     {
-      dumpFile << CurNodePtr->xCenter << "   ";
-      dumpFile << CurNodePtr->yCenter << "   ";
-      dumpFile << CurNodePtr->zCenter << "   ";
-      dumpFile << CurNodePtr->cellSize;
+      dumpFile << curNodePtr->xCenter << "   ";
+      dumpFile << curNodePtr->yCenter << "   ";
+      dumpFile << curNodePtr->zCenter << "   ";
+      dumpFile << curNodePtr->cellSize;
     }
 
   dumpFile << "\n";
 
   for (size_t i = 0; i < 8; i++)                         // try without loop
     {
-      if (CurNodePtr->child[i] != NULL)
+      if (curNodePtr->child[i] != NULL)
         {
           goChild(i);
           treeDumpRecursor();
           goUp();
         }
     }
-}
+}*/
 // end of treeDump() stuff
 
 // toptreeDump() stuff
@@ -1343,7 +1346,7 @@ public:
 /**
  * dump the toptree
  */
-void toptreeDump(std::string _dumpFileName)
+/*void toptreeDump(std::string _dumpFileName)
 {
   dumpFile.open(_dumpFileName.c_str(), std::ios::out);
 
@@ -1355,22 +1358,22 @@ void toptreeDump(std::string _dumpFileName)
   goRoot();
   toptreeDumpRecursor();
   dumpFile.close();
-}
+}*/
 
 private:
 /**
  * toptreeDump() recursor
  */
-void toptreeDumpRecursor()
+/*void toptreeDumpRecursor()
 {
   dumpFile << std::scientific << std::setprecision(8);
-  dumpFile << CurNodePtr->xCom << "   "
-           << CurNodePtr->yCom << "   "
-           << CurNodePtr->zCom << "   "
-           << CurNodePtr->q000 << "   ";
+  dumpFile << curNodePtr->xCom << "   "
+           << curNodePtr->yCom << "   "
+           << curNodePtr->zCom << "   "
+           << curNodePtr->q000 << "   ";
   dumpFile << std::dec
-           << CurNodePtr->depth << "   "
-           << static_cast<int>(CurNodePtr->isEmpty) << "\n";
+           << curNodePtr->depth << "   "
+           << static_cast<int>(curNodePtr->isEmpty) << "\n";
 
   if (atToptreeStop())
     {
@@ -1379,7 +1382,7 @@ void toptreeDumpRecursor()
     {
       for (size_t i = 0; i < 8; i++)             // try without loop
         {
-          if (CurNodePtr->child[i] != NULL)
+          if (curNodePtr->child[i] != NULL)
             {
               goChild(i);
               toptreeDumpRecursor();
@@ -1387,40 +1390,43 @@ void toptreeDumpRecursor()
             }
         }
     }
-}
+}*/
 // end of toptreeDump() stuff
 
 // empty() stuff
 /**
  * deletes the current subtree
  */
-private:
+/*private:
 void empty(void)
 {
   emptyRecursor();
-}
+}*/
 
 /**
  * recursor for emptying the
  * tree
  */
-void emptyRecursor()
+/*void emptyRecursor()
 {
   for (size_t i = 0; i < 8; i++)                         // try without loop
     {
-      if (CurNodePtr->child[i] != NULL)
+      if (curNodePtr->child[i] != NULL)
         {
           goChild(i);
           emptyRecursor();
           goUp();
 
-          delete CurNodePtr->child[i];
-          CurNodePtr->child[i] = NULL;
+          delete curNodePtr->child[i];
+          curNodePtr->child[i] = NULL;
         }
     }
-};
+};*/
 // end of empty() stuff
 };
+
+
+
 };
 #endif
 

@@ -18,12 +18,10 @@ namespace sphlatch {
  */
 
 struct genericNode {
-  typedef genericNode* genericNodePtrType;
-
   /**
    * pointer to parent
    */
-  genericNodePtrType parent;
+  genericNode* parent; 
 
   /**
    * the root node has depth = 0, its
@@ -37,13 +35,6 @@ struct genericNode {
    * each local tree.
    */
   identType ident;
-
-  /**
-   * payload of the node
-   */
-  T payload;
-
-  valueType xCom, yCom, zCom, q000;
 
   /**
    * isParticle:    is a particle

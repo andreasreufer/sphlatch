@@ -11,19 +11,20 @@
  */
 
 #include "typedefs.h"
-
-#include "particle_node.h"
+#include "bhtree_particle_node.h"
 
 namespace sphlatch {
 struct particleProxy {
-
-  typedef particleProxy*      particleProxyPtrType;
-  typedef particleNode*       particleNodePtrType;
-
+  // pointer to the particle node in the tree
+  
+  //particleNode* nodePtr; << does not work?
+  genericNode* nodePtr;
+  
+  // pointer to matrix and matrix index
   matrixPtrType matrixPtr;
   size_t rowIndex;
 
-  particleProxy(particleProxymatrixPtrType _matrixPtr, size_t const _rowIndex)
+  particleProxy(matrixType* _matrixPtr, size_t const _rowIndex)
   {
     matrixPtr = _matrixPtr;
     rowIndex = _rowIndex;

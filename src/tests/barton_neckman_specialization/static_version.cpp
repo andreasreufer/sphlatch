@@ -96,11 +96,11 @@ int main(int argc, char* argv[])
   TimeStart = microsec_clock::local_time();
   
   valvectType universeCenter(3);
-  universeCenter(0) = 0.5;
-  universeCenter(1) = 0.5;
-  universeCenter(2) = 0.5;
+  universeCenter(0) = 0.0;
+  universeCenter(1) = 0.0;
+  universeCenter(2) = 0.0;
   
-  valueType universeSize = 1., theta = 0.6;
+  valueType universeSize = 10., theta = 0.6;
   size_t costzoneDepth = 4;
   
   sphlatch::OctTree BarnesHutTree(theta, 1.0,
@@ -135,53 +135,6 @@ int main(int argc, char* argv[])
     }
   TimeStop = microsec_clock::local_time();
   std::cout << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
-
-  //const value_type epsilonSquare = 0.0025;
-  const value_type epsilonSquare = 0.0000;
-
-  show_progress.restart(noParts * (noParts - 1));
-  TimeStart = microsec_clock::local_time();
-
-  for (size_t i = 0; i < noParts; i++)
-    {
-      value_type partDist, partDistPow3;
-      Data(i, AX) = 0.;
-      Data(i, AY) = 0.;
-      Data(i, AZ) = 0.;
-
-      for (size_t j = 0; j < noParts; j++)
-        {
-          if (i != j)
-            {
-              partDist = sqrt((Data(i, X) - Data(j, X)) *
-                              (Data(i, X) - Data(j, X)) +
-                              (Data(i, Y) - Data(j, Y)) *
-                              (Data(i, Y) - Data(j, Y)) +
-                              (Data(i, Z) - Data(j, Z)) *
-                              (Data(i, Z) - Data(j, Z)));
-              // partDistPow3 = partDist*partDist*partDist; // unsoftened
-              partDistPow3 = partDist * partDist * partDist +
-                             partDist * epsilonSquare;
-
-              Data(i, AX) -= Data(j, M) * (Data(i, X) - Data(j, X))
-                             / partDistPow3;
-              Data(i, AY) -= Data(j, M) * (Data(i, Y) - Data(j, Y))
-                             / partDistPow3;
-              Data(i, AZ) -= Data(j, M) * (Data(i, Z) - Data(j, Z))
-                             / partDistPow3;
-              ++show_progress;
-            }
-        }
-    }
-  TimeStop = microsec_clock::local_time();
-  std::cerr << "Gravity BF calc time    " << (TimeStop - TimeStart) << "\n";
-
-  // save particles
-  std::vector<int> outputAttrSet;
-  std::string outFilename;
-  outFilename += "outBF.cdat";
-  outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
-  IOManager.SaveCDAT(outFilename, outputAttrSet);
 
   return EXIT_SUCCESS;
 }
