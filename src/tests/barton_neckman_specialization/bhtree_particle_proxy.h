@@ -14,11 +14,13 @@
 #include "bhtree_particle_node.h"
 
 namespace sphlatch {
+
+struct particleNode;
+
 struct particleProxy {
-  // pointer to the particle node in the tree
-  
-  //particleNode* nodePtr; << does not work?
-  genericNode* nodePtr;
+
+  // pointer to the particle node in the tree  
+  particleNode* nodePtr;
   
   // pointer to matrix and matrix index
   matrixPtrType matrixPtr;

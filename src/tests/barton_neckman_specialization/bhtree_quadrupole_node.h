@@ -11,16 +11,16 @@
  */
 
 #include "typedefs.h"
-#include "monopole_node.h"
+#include "bhtree_monopole_node.h"
 
 namespace sphlatch {
-/** \brief quadrupole cell node
- */
-
+///
+/// \brief quadrupole cell node
+///
 struct quadrupoleCellNode : public monopoleCellNode {
-  /**
-   * quadrupole terms
-   */
+///
+/// quadrupole moments
+///
   valueType q11, q22, q33, q12, q13, q23;
 };
 };

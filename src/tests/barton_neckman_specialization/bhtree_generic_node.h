@@ -61,20 +61,6 @@ struct genericNode {
   }
 };
 
-struct genericCellNode : public genericNode {
-  typedef genericNode* genericNodePtrType;
-
-  /**
-   * pointers to children
-   */
-  genericNodePtrType child[8];
-
-  /**
-   * center and size of the cell
-   */
-  valueType xCenter, yCenter, zCenter;
-  valueType cellSize;
-};
 };
 
 #endif

@@ -92,9 +92,9 @@ int main(int argc, char* argv[])
   for (size_t i = 0; i < noParts; i++)
     {
       (partProxies[i]).setup(&Data, i);
-    }
+    }*/
 
-  TimeStart = microsec_clock::local_time();*/
+  TimeStart = microsec_clock::local_time();
   
   valvectType universeCenter(3);
   universeCenter(0) = 0.0;
@@ -108,11 +108,13 @@ int main(int argc, char* argv[])
                                             costzoneDepth,
                                             universeCenter,
                                             universeSize);
-  
+                                              
   TimeStop = microsec_clock::local_time();
   std::cerr << "Tree prepare time       " << (TimeStop - TimeStart) << "\n";
 
   sleep(1);
+  BarnesHutTree.calcGravCell();
+
   /*TimeStart = microsec_clock::local_time();
   for (size_t i = 0; i < noParts; i++)
     {

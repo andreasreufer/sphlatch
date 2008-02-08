@@ -11,16 +11,16 @@
  */
 
 #include "typedefs.h"
-#include "quadrupole_node.h"
+#include "bhtree_quadrupole_node.h"
 
 namespace sphlatch {
-/** \brief octupole cell node
- */
-
+///
+/// \brief octupole cell node
+///
 struct octupoleCellNode : public quadrupoleCellNode {
-  /**
-   * octupole terms
-   */
+///
+/// octupole moments
+///
   valueType s11, s22, s33, s12, s21, s13, s31, s23, s32, s123;
 };
 };

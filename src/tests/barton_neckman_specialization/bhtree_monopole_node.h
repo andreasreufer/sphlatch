@@ -11,16 +11,16 @@
  */
 
 #include "typedefs.h"
-#include "bhtree_generic_node.h"
+#include "bhtree_cell_node.h"
 
 namespace sphlatch {
-/** \brief monopole cell node
- */
-
+///
+/// \brief monopole cell node
+///
 struct monopoleCellNode : public genericCellNode {
-  /**
-   * center of mass and monopole
-   */
+///
+/// center of mass and mass
+///
   valueType xCom, yCom, zCom;
   valueType mass;
 };

@@ -15,6 +15,9 @@
 #include "bhtree_particle_proxy.h"
 
 namespace sphlatch {
+
+struct particleProxy;
+
 struct particleNode : public genericNode {
   
   // pointer to particle proxy
