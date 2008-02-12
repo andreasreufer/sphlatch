@@ -45,6 +45,9 @@ using namespace boost::assign;
 int main(int argc, char* argv[])
 {
   sleep(1);
+#ifdef SPHLATCH_MPI
+  MPI::Init(argc, argv);
+#endif
   po::options_description Options("Global Options");
   Options.add_options() ("help,h", "Produces this Help blabla...")
   ("input-file,i", po::value<std::string>(), "InputFile");
@@ -102,7 +105,7 @@ int main(int argc, char* argv[])
   universeCenter(2) = 0.0;
   
   valueType universeSize = 10., theta = 0.6;
-  size_t costzoneDepth = 1;
+  size_t costzoneDepth = 4;
 
   sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
                                             costzoneDepth,
@@ -113,33 +116,53 @@ int main(int argc, char* argv[])
   std::cerr << "Tree prepare time       " << (TimeStop - TimeStart) << "\n";
 
   TimeStart = microsec_clock::local_time();
+  bool locality;
   for (size_t i = 0; i < noParts; i++)
   //for (size_t i = 0; i < 500; i++)
     {
-      BarnesHutTree.insertParticle(*(partProxies[i]), true);
+      /*if ( Data(i, X) < 0. )
+      {
+        locality = false;
+      } else {
+        locality = true;
+      }*/
+      locality = true;
+      BarnesHutTree.insertParticle(*(partProxies[i]), locality);
     }
   TimeStop = microsec_clock::local_time();
   std::cerr << "Tree populate time      " << (TimeStop - TimeStart) << "\n";
 
-  BarnesHutTree.treeDOTDump("dump.dot");
 
-  /*std::string treeDumpFilename;
+  std::string treeDumpFilename;
 
   TimeStart = microsec_clock::local_time();
   BarnesHutTree.calcMultipoles();
   TimeStop = microsec_clock::local_time();
   std::cerr << "Calc. multipoles time   " << (TimeStop - TimeStart) << "\n";
-
+  
+  BarnesHutTree.treeDOTDump("dump.dot");
+  
+  BarnesHutTree.treeDump("dump.txt");
+  
   boost::progress_display show_progress(noParts, std::cout);
   TimeStart = microsec_clock::local_time();
   for (size_t i = 0; i < noParts; i++)
+  //for (size_t i = 0; i < 500; i++)
     {
       BarnesHutTree.calcGravity(*(partProxies[i]));
       ++show_progress;
     }
   TimeStop = microsec_clock::local_time();
-  std::cout << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";*/
+  std::cout << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
   }
+  
+  std::vector<int> outputAttrSet;
+  outputAttrSet += ID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, GRAVEPS;
+  IOManager.SaveCDAT("out.cdat", outputAttrSet);
+  
   sleep(1);
+  #ifdef SPHLATCH_MPI
+  MPI::Finalize();
+  #endif
   return EXIT_SUCCESS;
 }

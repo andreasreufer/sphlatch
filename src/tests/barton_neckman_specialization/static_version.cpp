@@ -136,5 +136,9 @@ int main(int argc, char* argv[])
   TimeStop = microsec_clock::local_time();
   std::cout << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
 
+  std::vector<int> outputAttrSet;
+  outputAttrSet += ID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, GRAVEPS;
+  IOManager.SaveCDAT("out_static.cdat", outputAttrSet);
+
   return EXIT_SUCCESS;
 }

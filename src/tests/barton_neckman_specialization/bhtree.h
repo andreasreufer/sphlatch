@@ -31,7 +31,6 @@ namespace sphlatch {
 enum ParticleIndex { PID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M,
                      H, DHDT, RHO, E, P, POW, DIV_V,
                      ROTX_V, ROTY_V, ROTZ_V, Q, GRAVEPS };
-enum MonopolIndex { CX, CY, CZ, Q000, MSIZE }; // get rid of that
 }
 
 // generic BHtree methods
