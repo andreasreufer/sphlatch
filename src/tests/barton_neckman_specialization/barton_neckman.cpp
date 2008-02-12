@@ -41,7 +41,6 @@ using namespace boost::assign;
 
 // tree stuff
 #include "bhtree.h"
-#include "bhtree_monopoles.h"
 
 int main(int argc, char* argv[])
 {
@@ -69,7 +68,7 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
     }
 
-  /*io_type& IOManager(io_type::Instance());
+  io_type& IOManager(io_type::Instance());
   mem_type& MemManager(mem_type::Instance());
 
   SimTrait::matrix_reference Data(MemManager.Data);
@@ -77,22 +76,23 @@ int main(int argc, char* argv[])
   std::string InputFileName = VMap["input-file"].as<std::string>();
 
   Data.resize(Data.size1(), oosph::SIZE);
-
+  
   IOManager.LoadCDAT(InputFileName);
 
-  const size_t noParts = Data.size1();*/
+  const size_t noParts = Data.size1();
 
   // particles are all distributed now
   using namespace boost::posix_time;
   ptime TimeStart, TimeStop;
 
-  /*std::vector<sphlatch::particleProxy> partProxies;
+  {
+  std::vector<sphlatch::particleProxy> partProxies;
 
   partProxies.resize(noParts);
   for (size_t i = 0; i < noParts; i++)
     {
       (partProxies[i]).setup(&Data, i);
-    }*/
+    }
 
   TimeStart = microsec_clock::local_time();
   
@@ -102,8 +102,8 @@ int main(int argc, char* argv[])
   universeCenter(2) = 0.0;
   
   valueType universeSize = 10., theta = 0.6;
-  size_t costzoneDepth = 4;
-  
+  size_t costzoneDepth = 1;
+
   sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
                                             costzoneDepth,
                                             universeCenter,
@@ -112,18 +112,18 @@ int main(int argc, char* argv[])
   TimeStop = microsec_clock::local_time();
   std::cerr << "Tree prepare time       " << (TimeStop - TimeStart) << "\n";
 
-  sleep(1);
-  BarnesHutTree.calcGravCell();
-
-  /*TimeStart = microsec_clock::local_time();
+  TimeStart = microsec_clock::local_time();
   for (size_t i = 0; i < noParts; i++)
+  //for (size_t i = 0; i < 500; i++)
     {
       BarnesHutTree.insertParticle(*(partProxies[i]), true);
     }
   TimeStop = microsec_clock::local_time();
   std::cerr << "Tree populate time      " << (TimeStop - TimeStart) << "\n";
 
-  std::string treeDumpFilename;
+  BarnesHutTree.treeDOTDump("dump.dot");
+
+  /*std::string treeDumpFilename;
 
   TimeStart = microsec_clock::local_time();
   BarnesHutTree.calcMultipoles();
@@ -139,6 +139,7 @@ int main(int argc, char* argv[])
     }
   TimeStop = microsec_clock::local_time();
   std::cout << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";*/
-
+  }
+  sleep(1);
   return EXIT_SUCCESS;
 }

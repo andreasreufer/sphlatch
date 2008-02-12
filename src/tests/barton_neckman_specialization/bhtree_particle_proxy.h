@@ -20,7 +20,7 @@ struct particleNode;
 struct particleProxy {
 
   // pointer to the particle node in the tree  
-  particleNode* nodePtr;
+  genericNode* nodePtr;
   
   // pointer to matrix and matrix index
   matrixPtrType matrixPtr;

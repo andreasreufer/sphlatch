@@ -16,15 +16,34 @@ namespace sphlatch {
 class Monopoles : public BHtree<Monopoles>
 {
 
+typedef genericNode* nodePtrT;
+typedef particleNode* partPtrT;
+typedef genericCellNode* cellPtrT;
+typedef particleProxy* partProxyPtrT;
+
 public:
 
+///
+/// allocates the root monopole cell node
+///
 void allocRootNode(void)
 {
   rootPtr = new monopoleCellNode;
 }
 
-void allocNewChildNode(const size_t _n)
+///
+/// allocates a new monopole cell node and connects it as child _n
+/// no check is performed, whether curNodePtr points to a cell node!
+///
+void allocNewCellChild(const size_t _n)
 {
+  // allocate new cell node
+  monopoleCellNode* newNodePtr =
+    new monopoleCellNode;
+  
+  // connect the new cell node to curNodePtr
+  newNodePtr->parent = curNodePtr;
+  static_cast<cellPtrT>(curNodePtr)->child[_n] = newNodePtr;
 }
 
 void calcGravCell()
