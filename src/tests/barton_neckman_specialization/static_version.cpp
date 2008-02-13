@@ -40,11 +40,13 @@ using namespace boost::assign;
 #include <vector>
 
 // tree stuff
-
 #include "static_headers/bhtree.h"
 
 int main(int argc, char* argv[])
 {
+#ifdef SPHLATCH_MPI
+  MPI::Init(argc, argv);
+#endif
   po::options_description Options("Global Options");
   Options.add_options() ("help,h", "Produces this Help blabla...")
   ("input-file,i", po::value<std::string>(), "InputFile");
@@ -86,59 +88,66 @@ int main(int argc, char* argv[])
   ptime TimeStart, TimeStop;
 
   std::vector<sphlatch::NodeProxy> partProxies;
-
   partProxies.resize(noParts);
   for (size_t i = 0; i < noParts; i++)
     {
       (partProxies[i]).setup(&Data, i);
     }
 
-  TimeStart = microsec_clock::local_time();
-  
   valvectType universeCenter(3);
   universeCenter(0) = 0.0;
   universeCenter(1) = 0.0;
   universeCenter(2) = 0.0;
-  
-  valueType universeSize = 10., theta = 0.6;
-  size_t costzoneDepth = 4;
-  
-  sphlatch::OctTree BarnesHutTree(theta, 1.0,
-                                  costzoneDepth,
-                                  universeCenter,
-                                  universeSize);
-  
-  TimeStop = microsec_clock::local_time();
-  std::cerr << "Tree prepare time       " << (TimeStop - TimeStart) << "\n";
 
-  TimeStart = microsec_clock::local_time();
-  for (size_t i = 0; i < noParts; i++)
+  valueType universeSize = 10., theta = 0.60;
+  size_t costzoneDepth = 3;
+
+  for (size_t i = 0; i < 16; i++)
     {
-      BarnesHutTree.insertParticle(*(partProxies[i]), true);
+      TimeStart = microsec_clock::local_time();
+      sphlatch::OctTree BarnesHutTree(theta, 1.0,
+                                      costzoneDepth,
+                                      universeCenter,
+                                      universeSize);
+
+      TimeStop = microsec_clock::local_time();
+      std::cerr << "Tree prepare time       " << (TimeStop - TimeStart) << "\n";
+
+      TimeStart = microsec_clock::local_time();
+      bool locality = true;
+      for (size_t i = 0; i < noParts; i++)
+        {
+          BarnesHutTree.insertParticle(*(partProxies[i]), locality);
+        }
+      TimeStop = microsec_clock::local_time();
+      std::cerr << "Tree populate time      " << (TimeStop - TimeStart) << "\n";
+
+      TimeStart = microsec_clock::local_time();
+      BarnesHutTree.calcMultipoles();
+      TimeStop = microsec_clock::local_time();
+      std::cerr << "Calc. multipoles time   " << (TimeStop - TimeStart) << "\n";
+
+      //BarnesHutTree.treeDOTDump("dump.dot");
+      //BarnesHutTree.treeDump("dump.txt");
+
+      //boost::progress_display show_progress(noParts, std::cout);
+      TimeStart = microsec_clock::local_time();
+      for (size_t i = 0; i < noParts; i++)
+        {
+          BarnesHutTree.calcGravity(*(partProxies[i]));
+          //++show_progress;
+        }
+      TimeStop = microsec_clock::local_time();
+      std::cout << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
+      std::cout << "\n";
     }
-  TimeStop = microsec_clock::local_time();
-  std::cerr << "Tree populate time      " << (TimeStop - TimeStart) << "\n";
-
-  std::string treeDumpFilename;
-
-  TimeStart = microsec_clock::local_time();
-  BarnesHutTree.calcMultipoles();
-  TimeStop = microsec_clock::local_time();
-  std::cerr << "Calc. multipoles time   " << (TimeStop - TimeStart) << "\n";
-
-  boost::progress_display show_progress(noParts, std::cout);
-  TimeStart = microsec_clock::local_time();
-  for (size_t i = 0; i < noParts; i++)
-    {
-      BarnesHutTree.calcGravity(*(partProxies[i]));
-      ++show_progress;
-    }
-  TimeStop = microsec_clock::local_time();
-  std::cout << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
 
   std::vector<int> outputAttrSet;
   outputAttrSet += ID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, GRAVEPS;
   IOManager.SaveCDAT("out_static.cdat", outputAttrSet);
 
+  #ifdef SPHLATCH_MPI
+  MPI::Finalize();
+  #endif
   return EXIT_SUCCESS;
 }

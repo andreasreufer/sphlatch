@@ -262,10 +262,15 @@ void calcGravCell()
                        (curGravParticleZ -
                         static_cast<monoPtrT>(curNodePtr)->zCom) /
                        cellPartDistPow3;
+  /*std::cout << "CELL "
+            << static_cast<monoPtrT>(curNodePtr)->xCom << " "
+            << static_cast<monoPtrT>(curNodePtr)->yCom << " "
+            << static_cast<monoPtrT>(curNodePtr)->zCom << " "
+            << static_cast<monoPtrT>(curNodePtr)->mass << "\n";*/
 }
 
 private:
-enum MonopolIndex { CX, CY, CZ, MASS, MSIZE };
+enum MonopoleIndex { CX, CY, CZ, MASS, MSIZE };
 };
 };
 

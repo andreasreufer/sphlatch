@@ -99,11 +99,12 @@ BHtree(valueType _thetaMAC,
 
   buildToptreeRecursor();
   noToptreeCells = cellCounter;
-  std::cout << toptreeDepth << " " << noToptreeCells << "\n";
 
-   #ifdef SPHLATCH_MPI
+#ifdef SPHLATCH_MPI
   asLeaf().prepareBuffers();
-   #endif
+#endif
+  cellsCount = 0;
+  partsCount = 0;
 };
 
 ///
@@ -112,6 +113,7 @@ BHtree(valueType _thetaMAC,
 ///
 ~BHtree(void)
 {
+  std::cout << cellsCount << "\t" << partsCount << "\n";
   goRoot();
   empty();
   delete curNodePtr;                             // Seppuku!
@@ -739,6 +741,9 @@ valueType cellPartDist, cellPartDistPow3;
 valueType thetaMAC, gravConst;
 valueType epsilonSquare;
 size_t calcGravityCellsCounter, calcGravityPartsCounter;
+size_t cellsCount, partsCount;
+
+#define SPHLATCH_TREE_PROFILE
 
 public:
 ///
@@ -784,6 +789,8 @@ void calcGravity(partProxyPtrT _curParticle)
   // undo the trick above
   //
   curGravNodeProxy->nodePtr->isParticle = true;
+  cellsCount += calcGravityCellsCounter;
+  partsCount += calcGravityPartsCounter;
 }
 
 private:
@@ -831,6 +838,12 @@ void calcGravParticle()
   partGravPartnerY = static_cast<partPtrT>(curNodePtr)->yPos;
   partGravPartnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
   partGravPartnerM = static_cast<partPtrT>(curNodePtr)->mass;
+
+  /*std::cout << "PART "
+            << static_cast<partPtrT>(curNodePtr)->xPos << " "
+            << static_cast<partPtrT>(curNodePtr)->yPos << " "
+            << static_cast<partPtrT>(curNodePtr)->zPos << " "
+            << static_cast<partPtrT>(curNodePtr)->mass << "\n";*/
 
   cellPartDist = sqrt((partGravPartnerX - curGravParticleX) *
                       (partGravPartnerX - curGravParticleX) +

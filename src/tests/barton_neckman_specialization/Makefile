@@ -1,4 +1,4 @@
-all: bartonneckman
+all: bartonneckman static
 	
 static:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lboost_program_options -o static_version static_version.cpp
