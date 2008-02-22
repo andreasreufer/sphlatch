@@ -56,6 +56,12 @@ void allocNewCellChild(const size_t _n)
   // connect the new cell node to curNodePtr
   newNodePtr->parent = curNodePtr;
   static_cast<cellPtrT>(curNodePtr)->child[_n] = newNodePtr;
+  
+  // set cell vars to zero
+  static_cast<monopoleCellNode*>(newNodePtr)->mass = 0.;
+  static_cast<monopoleCellNode*>(newNodePtr)->xCom = 0.;
+  static_cast<monopoleCellNode*>(newNodePtr)->yCom = 0.;
+  static_cast<monopoleCellNode*>(newNodePtr)->zCom = 0.;
 }
 
 ///
@@ -262,11 +268,6 @@ void calcGravCell()
                        (curGravParticleZ -
                         static_cast<monoPtrT>(curNodePtr)->zCom) /
                        cellPartDistPow3;
-  /*std::cout << "CELL "
-            << static_cast<monoPtrT>(curNodePtr)->xCom << " "
-            << static_cast<monoPtrT>(curNodePtr)->yCom << " "
-            << static_cast<monoPtrT>(curNodePtr)->zCom << " "
-            << static_cast<monoPtrT>(curNodePtr)->mass << "\n";*/
 }
 
 private:

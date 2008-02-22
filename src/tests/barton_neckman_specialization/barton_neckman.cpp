@@ -6,12 +6,12 @@
 #define OOSPH_SINGLE_PRECISION
 #define SPHLATCH_SINGLEPREC
 
-#include <boost/program_options/option.hpp>
+/*#include <boost/program_options/option.hpp>
 #include <boost/program_options/cmdline.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
-#include <boost/program_options/positional_options.hpp>
+#include <boost/program_options/positional_options.hpp>*/
 
 #include <boost/assign/std/vector.hpp>
 
@@ -19,7 +19,7 @@
 
 #include "particle.h"
 
-namespace po = boost::program_options;
+//namespace po = boost::program_options;
 namespace mpl = boost::mpl;
 
 #include "simulation_trait.h"
@@ -44,10 +44,11 @@ using namespace boost::assign;
 
 int main(int argc, char* argv[])
 {
+  sleep(1);
 #ifdef SPHLATCH_MPI
   MPI::Init(argc, argv);
 #endif
-  po::options_description Options("Global Options");
+  /*po::options_description Options("Global Options");
   Options.add_options() ("help,h", "Produces this Help blabla...")
   ("input-file,i", po::value<std::string>(), "InputFile");
 
@@ -68,19 +69,19 @@ int main(int argc, char* argv[])
     {
       std::cout << Options << std::endl;
       return EXIT_FAILURE;
-    }
+    }*/
 
   io_type& IOManager(io_type::Instance());
   mem_type& MemManager(mem_type::Instance());
 
   SimTrait::matrix_reference Data(MemManager.Data);
 
-  std::string InputFileName = VMap["input-file"].as<std::string>();
+  //std::string InputFileName = VMap["input-file"].as<std::string>();
+  std::string InputFileName = "random.cdat";
 
   Data.resize(Data.size1(), oosph::SIZE);
-
   IOManager.LoadCDAT(InputFileName);
-
+  
   const size_t noParts = Data.size1();
 
   // particles are all distributed now
@@ -98,14 +99,17 @@ int main(int argc, char* argv[])
   universeCenter(0) = 0.0;
   universeCenter(1) = 0.0;
   universeCenter(2) = 0.0;
+  valueType universeSize = 10.;
+    
+  valueType theta = 0.60;
+  size_t costzoneDepth = 2;
 
-  valueType universeSize = 10., theta = 0.60;
-  size_t costzoneDepth = 3;
-
-  for (size_t i = 0; i < 16; i++)
+  //for (size_t i = 0; i < 16; i++)
+  for (size_t i = 0; i < 1; i++)
     {
       TimeStart = microsec_clock::local_time();
-      sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
+      //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
+      sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(theta, 1.0,
                                                           costzoneDepth,
                                                           universeCenter,
                                                           universeSize);
@@ -142,6 +146,8 @@ int main(int argc, char* argv[])
       TimeStop = microsec_clock::local_time();
       std::cerr << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
       std::cerr << "\n";
+        return EXIT_SUCCESS;
+
     }
 
   std::vector<int> outputAttrSet;
@@ -151,5 +157,6 @@ int main(int argc, char* argv[])
   #ifdef SPHLATCH_MPI
   MPI::Finalize();
   #endif
+
   return EXIT_SUCCESS;
 }
