@@ -13,11 +13,11 @@
 #include "bhtree_generic_node.h"
 #include "bhtree_particle_node.h"
 #include "bhtree_particle_proxy.h"
+#include "bhtree_cell_node.h"
 
 #include "particle.h"
 
 namespace sphlatch {
-
 template<class T_leaftype>
 class BHtree {
 typedef genericNode nodeT;
@@ -830,7 +830,6 @@ void calcGravParticle()
   partGravPartnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
   partGravPartnerM = static_cast<partPtrT>(curNodePtr)->mass;
 
-  /// \todo: sqrt() not necessary!
   cellPartDist = sqrt((partGravPartnerX - curGravParticleX) *
                       (partGravPartnerX - curGravParticleX) +
                       (partGravPartnerY - curGravParticleY) *

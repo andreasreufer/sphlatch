@@ -1,8 +1,8 @@
-#ifndef BHTREE_NODE_PROXY_H
-#define BHTREE_NODE_PROXY_H
+#ifndef BHTREE_PARTICLE_PROXY_H
+#define BHTREE_PARTICLE_PROXY_H
 
 /*
- *  bhtree_node_proxy.h
+ *  bhtree_particle_proxy.h
  *
  *
  *  Created by Andreas Reufer on 15.11.07.
@@ -11,28 +11,32 @@
  */
 
 #include "typedefs.h"
-
-#include "bhtree_node.h"
+#include "bhtree_particle_node.h"
 
 namespace sphlatch {
-struct NodeProxy {
-  typedef NodeProxy*      NodeProxyTypePtr;
-  GenericOctNode<NodeProxyTypePtr>*       nodePtr;
 
+struct particleNode;
+
+struct particleProxy {
+
+  // pointer to the particle node in the tree  
+  genericNode* nodePtr;
+  
+  // pointer to matrix and matrix index
   matrixPtrType matrixPtr;
   size_t rowIndex;
 
-  NodeProxy(matrixPtrType _matrixPtr, size_t const _rowIndex)
+  particleProxy(matrixType* _matrixPtr, size_t const _rowIndex)
   {
     matrixPtr = _matrixPtr;
     rowIndex = _rowIndex;
   }
 
-  NodeProxy(void)
+  particleProxy(void)
   {
   }
 
-  NodeProxy* operator*()
+  particleProxy* operator*()
   {
     return this;
   }

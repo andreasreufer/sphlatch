@@ -40,9 +40,10 @@ typedef NodeProxy&      NodeProxyRefType;
 typedef GenericOctNode<NodeProxyPtrType>* GenericOctNodePtr;
 
 // hack
-enum ParticleIndex { PID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M,
-                     H, DHDT, RHO, E, P, POW, DIV_V,
-                     ROTX_V, ROTY_V, ROTZ_V, Q, GRAVEPS };
+enum AltParticleIndex { PID };
+//enum ParticleIndex { PID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M,
+//                     H, DHDT, RHO, E, P, POW, DIV_V,
+//                     ROTX_V, ROTY_V, ROTZ_V, Q, GRAVEPS };
 enum MonopolIndex { CX, CY, CZ, Q000, MSIZE };
 //enum QuadrupolIndex  { CX, CY, CZ, Q000, Q001, Q002, Q010, Q011, MSIZE};
 

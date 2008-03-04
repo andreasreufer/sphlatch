@@ -1,1 +1,1 @@
-../../oosph_headers/memorymanager.h
+../../memorymanager.h

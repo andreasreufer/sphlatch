@@ -7,12 +7,10 @@
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include <boost/numeric/ublas/io.hpp>
 
-//#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_SINGLEPREC
 #define SPHLATCH_MPI
 
-#ifdef SPHLATCH_MPI
 #include <mpi.h>
-#endif
 
 #include "bhtree.h"
 
@@ -22,78 +20,96 @@
 //#define NPARTS	50
 //#define NPARTS	200
 //#define NPARTS	500
-#define NPARTS	5000
+#define NPARTS  5000
 //#define NPARTS	10000
 //#define NPARTS	100000
 //#define NPARTS	300000
 
-int main(int argc, char* argv[]) {
-	
-	MPI::Init(argc, argv);
-	
-    using namespace boost::posix_time;
-    using namespace sphlatch;
-    
-	ptime TimeStart, TimeStop;
-	
-	matrixType Data(NPARTS, PSIZE);
+int main(int argc, char* argv[])
+{
+  MPI::Init(argc, argv);
 
-	valueType CenterX = 0;
-	valueType CenterY = 0;
-	for (size_t i = 0; i < NPARTS; i++) {
-		Data(i, PID) = i;
-		Data(i, X) = ( (valueType)rand() ) / RAND_MAX;
-		Data(i, Y) = ( (valueType)rand() ) / RAND_MAX;
-		Data(i, Z) = ( (valueType)rand() ) / RAND_MAX;
-		//Data(i, Z) = 0.;
-		Data(i, M) = 1.;
-		CenterX += Data(i, X);
-		CenterY += Data(i, Y);
-	}
-		
-	std::vector<sphlatch::NodeProxy> DataProxies;
-	DataProxies.resize(NPARTS);
-	
-	for (size_t i = 0; i < NPARTS; i++) {
-		( DataProxies[i] ).setup(&Data, i);
-	}
+  using namespace boost::posix_time;
+  using namespace sphlatch;
 
-	// start tree context
-	TimeStart = microsec_clock::local_time();	
-	sphlatch::OctTree BarnesHutTree;
+  ptime TimeStart, TimeStop;
 
-	TimeStop  = microsec_clock::local_time();
-	std::cerr << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
-	
-	//boost::progress_display show_progress( NPARTS , std::cout);
-	TimeStart = microsec_clock::local_time();	
-	for (size_t i = 0; i < NPARTS; i++) {
-        if ( Data(i, Z ) < 0.625 ) {
-            BarnesHutTree.insertParticle( *(DataProxies[i]), true);
-        } else {
-            BarnesHutTree.insertParticle( *(DataProxies[i]), false);
+  matrixType Data(NPARTS, SIZE);
+
+  valueType CenterX = 0;
+  valueType CenterY = 0;
+  for (size_t i = 0; i < NPARTS; i++)
+    {
+      Data(i, PID) = i;
+      Data(i, X) = ((valueType)rand()) / RAND_MAX;
+      Data(i, Y) = ((valueType)rand()) / RAND_MAX;
+      Data(i, Z) = ((valueType)rand()) / RAND_MAX;
+      //Data(i, Z) = 0.;
+      Data(i, M) = 1.;
+      CenterX += Data(i, X);
+      CenterY += Data(i, Y);
+    }
+
+  std::vector<sphlatch::particleProxy> partProxies;
+  partProxies.resize(NPARTS);
+
+  for (size_t i = 0; i < NPARTS; i++)
+    {
+      (partProxies[i]).setup(&Data, i);
+    }
+  
+  valvectType universeCenter(3);
+  universeCenter(0) = 0.5;
+  universeCenter(1) = 0.5;
+  universeCenter(2) = 0.5;
+  sphlatch::valueType universeSize = 1., theta = 0.60;
+  size_t costzoneDepth = 4;
+
+  // start tree context
+  TimeStart = microsec_clock::local_time();
+  //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
+  sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(theta, 1.0,
+                                                        costzoneDepth,
+                                                        universeCenter,
+                                                        universeSize);
+
+  TimeStop = microsec_clock::local_time();
+  std::cout << "Tree prepare time       " << (TimeStop - TimeStart) << "\n";
+
+  //boost::progress_display show_progress( NPARTS , std::cout);
+  TimeStart = microsec_clock::local_time();
+  for (size_t i = 0; i < NPARTS; i++)
+    {
+      if (Data(i, Z) < 0.625)
+        {
+          BarnesHutTree.insertParticle(*(partProxies[i]), true);
         }
-		//++show_progress;
-	}
-	TimeStop  = microsec_clock::local_time();
-	std::cerr << "Tree populate time      " << ( TimeStop - TimeStart ) << "\n";
-	
-	TimeStart = microsec_clock::local_time();	
-	BarnesHutTree.calcMultipoles();
-	TimeStop  = microsec_clock::local_time();
-	std::cerr << "Calc. multipoles time   " << ( TimeStop - TimeStart ) << "\n";
+      else
+        {
+          BarnesHutTree.insertParticle(*(partProxies[i]), false);
+        }
+      //++show_progress;
+    }
+  TimeStop = microsec_clock::local_time();
+  std::cerr << "Tree populate time      " << (TimeStop - TimeStart) << "\n";
 
-	//show_progress.restart(NPARTS);
-	TimeStart = microsec_clock::local_time();	
-	for (size_t i = 0; i < NPARTS; i++) {
-		BarnesHutTree.calcGravity(*(DataProxies[i]) );
-		//++show_progress;
-	}
-	TimeStop  = microsec_clock::local_time();
-	std::cout << "Gravity calc time       " << ( TimeStop - TimeStart ) << "\n";
-	
-    BarnesHutTree.treeDOTDump("treedump.dot");
-    
-	MPI::Finalize();
-	return EXIT_SUCCESS;
+  TimeStart = microsec_clock::local_time();
+  BarnesHutTree.calcMultipoles();
+  TimeStop = microsec_clock::local_time();
+  std::cerr << "Calc. multipoles time   " << (TimeStop - TimeStart) << "\n";
+
+  //show_progress.restart(NPARTS);
+  TimeStart = microsec_clock::local_time();
+  for (size_t i = 0; i < NPARTS; i++)
+    {
+      BarnesHutTree.calcGravity(*(partProxies[i]));
+      //++show_progress;
+    }
+  TimeStop = microsec_clock::local_time();
+  std::cout << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
+
+  BarnesHutTree.treeDOTDump("treedump.dot");
+
+  MPI::Finalize();
+  return EXIT_SUCCESS;
 }

@@ -1,10 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
-
-#define OOSPH_STANDALONE
-#define OOSPH_SINGLE_PRECISION
-#define SPHLATCH_SINGLEPREC
+#include <vector>
 
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/cmdline.hpp>
@@ -12,40 +9,28 @@
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/positional_options.hpp>
+namespace po = boost::program_options;
 
 #include <boost/assign/std/vector.hpp>
+using namespace boost::assign;
 
-#include <boost/mpl/vector_c.hpp>
+#define SPHLATCH_SINGLEPREC
 
 #include "particle.h"
-
-namespace po = boost::program_options;
-namespace mpl = boost::mpl;
-
-#include "simulation_trait.h"
-typedef oosph::SimulationTrait<> SimTrait;
-typedef SimTrait::value_type value_type;
-
 #include "iomanager.h"
-typedef oosph::IOManager<SimTrait> io_type;
-
+typedef sphlatch::IOManager io_type;
 #include "memorymanager.h"
-typedef oosph::MemoryManager<SimTrait> mem_type;
-
-using namespace oosph;
-using namespace boost::assign;
+typedef sphlatch::MemoryManager mem_type;
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/progress.hpp>
-#include <vector>
-
-// tree stuff
 
 #include "bhtree.h"
 
 int main(int argc, char* argv[])
 {
   po::options_description Options("Global Options");
+
   Options.add_options() ("help,h", "Produces this Help blabla...")
   ("input-file,i", po::value<std::string>(), "InputFile");
 
@@ -68,16 +53,15 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
     }
 
-  io_type& IOManager(io_type::Instance());
-  mem_type& MemManager(mem_type::Instance());
+  io_type& IOManager(io_type::instance());
+  mem_type& MemManager(mem_type::instance());
 
-  SimTrait::matrix_reference Data(MemManager.Data);
+  sphlatch::matrixRefType Data(MemManager.Data);
 
-  std::string InputFileName = VMap["input-file"].as<std::string>();
+  std::string InputFileName = "random.cdat";
 
-  Data.resize(Data.size1(), oosph::SIZE);
-
-  IOManager.LoadCDAT(InputFileName);
+  Data.resize(Data.size1(), sphlatch::SIZE);
+  IOManager.loadCDAT(InputFileName);
 
   const size_t noParts = Data.size1();
 
@@ -85,38 +69,37 @@ int main(int argc, char* argv[])
   using namespace boost::posix_time;
   ptime TimeStart, TimeStop;
 
-  std::vector<sphlatch::NodeProxy> partProxies;
-
+  std::vector<sphlatch::particleProxy> partProxies;
   partProxies.resize(noParts);
   for (size_t i = 0; i < noParts; i++)
     {
       (partProxies[i]).setup(&Data, i);
     }
+  sphlatch::valvectType universeCenter(3);
+  universeCenter(0) = 0.0;
+  universeCenter(1) = 0.0;
+  universeCenter(2) = 0.0;
+  sphlatch::valueType universeSize = 10., theta = 0.60;
+  size_t costzoneDepth = 4;
 
   TimeStart = microsec_clock::local_time();
-  
-  valvectType universeCenter(3);
-  universeCenter(0) = 0.5;
-  universeCenter(1) = 0.5;
-  universeCenter(2) = 0.5;
-  
-  valueType universeSize = 1., theta = 0.6;
-  size_t costzoneDepth = 4;
-  
-  sphlatch::OctTree BarnesHutTree(theta, 1.0, costzoneDepth, universeCenter, universeSize);
-  
+  //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
+  sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(theta, 1.0,
+                                                        costzoneDepth,
+                                                        universeCenter,
+                                                        universeSize);
+
   TimeStop = microsec_clock::local_time();
   std::cerr << "Tree prepare time       " << (TimeStop - TimeStart) << "\n";
 
   TimeStart = microsec_clock::local_time();
+  bool locality = true;
   for (size_t i = 0; i < noParts; i++)
     {
-      BarnesHutTree.insertParticle(*(partProxies[i]), true);
+      BarnesHutTree.insertParticle(*(partProxies[i]), locality);
     }
   TimeStop = microsec_clock::local_time();
   std::cerr << "Tree populate time      " << (TimeStop - TimeStart) << "\n";
-
-  std::string treeDumpFilename;
 
   TimeStart = microsec_clock::local_time();
   BarnesHutTree.calcMultipoles();
@@ -131,17 +114,20 @@ int main(int argc, char* argv[])
       ++show_progress;
     }
   TimeStop = microsec_clock::local_time();
-  std::cout << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
+  std::cerr << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
+  std::cerr << "\n";
 
-  //const value_type epsilonSquare = 0.0025;
-  const value_type epsilonSquare = 0.0000;
+  using namespace sphlatch;
+  std::vector<int> outputAttrSet;
+  outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
+  IOManager.saveCDAT("outBH.cdat", outputAttrSet);
 
   show_progress.restart(noParts * (noParts - 1));
   TimeStart = microsec_clock::local_time();
 
   for (size_t i = 0; i < noParts; i++)
     {
-      value_type partDist, partDistPow3;
+      sphlatch::valueType partDistPow2, partDistPow3, epsilonPow2;
       Data(i, AX) = 0.;
       Data(i, AY) = 0.;
       Data(i, AZ) = 0.;
@@ -150,15 +136,14 @@ int main(int argc, char* argv[])
         {
           if (i != j)
             {
-              partDist = sqrt((Data(i, X) - Data(j, X)) *
-                              (Data(i, X) - Data(j, X)) +
-                              (Data(i, Y) - Data(j, Y)) *
-                              (Data(i, Y) - Data(j, Y)) +
-                              (Data(i, Z) - Data(j, Z)) *
-                              (Data(i, Z) - Data(j, Z)));
-              // partDistPow3 = partDist*partDist*partDist; // unsoftened
-              partDistPow3 = partDist * partDist * partDist +
-                             partDist * epsilonSquare;
+              partDistPow2 = (Data(i, X) - Data(j, X)) *
+                             (Data(i, X) - Data(j, X)) +
+                             (Data(i, Y) - Data(j, Y)) *
+                             (Data(i, Y) - Data(j, Y)) +
+                             (Data(i, Z) - Data(j, Z)) *
+                             (Data(i, Z) - Data(j, Z));
+              epsilonPow2 = Data(i, GRAVEPS) * Data(i, GRAVEPS);
+              partDistPow3 = pow(partDistPow2 + epsilonPow2, 3. / 2.);
 
               Data(i, AX) -= Data(j, M) * (Data(i, X) - Data(j, X))
                              / partDistPow3;
@@ -174,11 +159,7 @@ int main(int argc, char* argv[])
   std::cerr << "Gravity BF calc time    " << (TimeStop - TimeStart) << "\n";
 
   // save particles
-  std::vector<int> outputAttrSet;
-  std::string outFilename;
-  outFilename += "outBF.cdat";
-  outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
-  IOManager.SaveCDAT(outFilename, outputAttrSet);
+  IOManager.saveCDAT("outBF.cdat", outputAttrSet);
 
   return EXIT_SUCCESS;
 }

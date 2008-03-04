@@ -22,7 +22,7 @@ int main() {
     
 	ptime TimeStart, TimeStop;
 	
-	matrixType Data(NPARTS, PSIZE);
+	matrixType Data(NPARTS, SIZE);
 
 	valueType CenterX = 0;
 	valueType CenterY = 0;
@@ -37,25 +37,36 @@ int main() {
 		CenterY += Data(i, Y);
 	}
 		
-	std::vector<sphlatch::NodeProxy> DataProxies;
-	DataProxies.resize(NPARTS);
+	std::vector<sphlatch::particleProxy> partProxies;
+	partProxies.resize(NPARTS);
 	
 	for (size_t i = 0; i < NPARTS; i++) {
-		( DataProxies[i] ).setup(&Data, i);
+		( partProxies[i] ).setup(&Data, i);
 	}
 
 	// start tree context
-	{
-	TimeStart = microsec_clock::local_time();	
-	sphlatch::OctTree BarnesHutTree;
+	{  
+  valvectType universeCenter(3);
+  universeCenter(0) = 0.5;
+  universeCenter(1) = 0.5;
+  universeCenter(2) = 0.5;
+  sphlatch::valueType universeSize = 1., theta = 0.60;
+  size_t costzoneDepth = 4;
 
-	TimeStop  = microsec_clock::local_time();
-	std::cerr << "Tree prepare time       " << ( TimeStop - TimeStart ) << "\n";
+  TimeStart = microsec_clock::local_time();
+  sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
+  //sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(theta, 1.0,
+                                                        costzoneDepth,
+                                                        universeCenter,
+                                                        universeSize);
+
+  TimeStop = microsec_clock::local_time();
+  std::cout << "Tree prepare time       " << (TimeStop - TimeStart) << "\n";
 	
 	boost::progress_display show_progress( NPARTS , std::cerr);
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < NPARTS; i++) {
-		BarnesHutTree.insertParticle( *(DataProxies[i]), true);
+		BarnesHutTree.insertParticle( *(partProxies[i]), true);
 		++show_progress;
 	}
 	TimeStop  = microsec_clock::local_time();
@@ -69,7 +80,7 @@ int main() {
 	show_progress.restart(NPARTS);
 	TimeStart = microsec_clock::local_time();	
 	for (size_t i = 0; i < NPARTS; i++) {
-		BarnesHutTree.calcGravity(*(DataProxies[i]) );
+		BarnesHutTree.calcGravity(*(partProxies[i]) );
 		++show_progress;
 	}
 	TimeStop  = microsec_clock::local_time();

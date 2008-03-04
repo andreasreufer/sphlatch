@@ -1,45 +1,31 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 
-#define OOSPH_STANDALONE
-#define OOSPH_SINGLE_PRECISION
-#define SPHLATCH_SINGLEPREC
-
-/*#include <boost/program_options/option.hpp>
+#include <boost/program_options/option.hpp>
 #include <boost/program_options/cmdline.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
-#include <boost/program_options/positional_options.hpp>*/
+#include <boost/program_options/positional_options.hpp>
+namespace po = boost::program_options;
 
 #include <boost/assign/std/vector.hpp>
+using namespace boost::assign;
 
-#include <boost/mpl/vector_c.hpp>
+#define SPHLATCH_SINGLEPREC
+//#define SPHLATCH_MPI
 
 #include "particle.h"
-
-//namespace po = boost::program_options;
-namespace mpl = boost::mpl;
-
-#include "simulation_trait.h"
-typedef oosph::SimulationTrait<> SimTrait;
-typedef SimTrait::value_type value_type;
-
 #include "iomanager.h"
-typedef oosph::IOManager<SimTrait> io_type;
-
+typedef sphlatch::IOManager io_type;
 #include "memorymanager.h"
-typedef oosph::MemoryManager<SimTrait> mem_type;
-
-using namespace oosph;
-using namespace boost::assign;
+typedef sphlatch::MemoryManager mem_type;
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/progress.hpp>
-#include <vector>
 
-// tree stuff
 #include "bhtree.h"
 
 int main(int argc, char* argv[])
@@ -48,7 +34,7 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_MPI
   MPI::Init(argc, argv);
 #endif
-  /*po::options_description Options("Global Options");
+  po::options_description Options("Global Options");
   Options.add_options() ("help,h", "Produces this Help blabla...")
   ("input-file,i", po::value<std::string>(), "InputFile");
 
@@ -69,18 +55,17 @@ int main(int argc, char* argv[])
     {
       std::cout << Options << std::endl;
       return EXIT_FAILURE;
-    }*/
+    }
+    
+  io_type& IOManager(io_type::instance());
+  mem_type& MemManager(mem_type::instance());
 
-  io_type& IOManager(io_type::Instance());
-  mem_type& MemManager(mem_type::Instance());
+  sphlatch::matrixRefType Data(MemManager.Data);
 
-  SimTrait::matrix_reference Data(MemManager.Data);
-
-  //std::string InputFileName = VMap["input-file"].as<std::string>();
   std::string InputFileName = "random.cdat";
-
-  Data.resize(Data.size1(), oosph::SIZE);
-  IOManager.LoadCDAT(InputFileName);
+  
+  Data.resize(Data.size1(), sphlatch::SIZE);
+  IOManager.loadCDAT(InputFileName);
   
   const size_t noParts = Data.size1();
 
@@ -94,18 +79,15 @@ int main(int argc, char* argv[])
     {
       (partProxies[i]).setup(&Data, i);
     }
-
-  valvectType universeCenter(3);
+  sphlatch::valvectType universeCenter(3);
   universeCenter(0) = 0.0;
   universeCenter(1) = 0.0;
   universeCenter(2) = 0.0;
-  valueType universeSize = 10.;
-    
-  valueType theta = 0.60;
-  size_t costzoneDepth = 2;
+  sphlatch::valueType universeSize = 10., theta = 0.60;
+  size_t costzoneDepth = 4;
 
-  //for (size_t i = 0; i < 16; i++)
-  for (size_t i = 0; i < 1; i++)
+  //for (size_t i = 0; i < 256; i++)
+  for (size_t i = 0; i < 4; i++)
     {
       TimeStart = microsec_clock::local_time();
       //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
@@ -120,7 +102,6 @@ int main(int argc, char* argv[])
       TimeStart = microsec_clock::local_time();
       bool locality = true;
       for (size_t i = 0; i < noParts; i++)
-      //for (size_t i = 0; i < 16; i++)
         {
           BarnesHutTree.insertParticle(*(partProxies[i]), locality);
         }
@@ -132,27 +113,25 @@ int main(int argc, char* argv[])
       TimeStop = microsec_clock::local_time();
       std::cerr << "Calc. multipoles time   " << (TimeStop - TimeStart) << "\n";
 
-      //BarnesHutTree.treeDOTDump("dump.dot");
       //BarnesHutTree.treeDump("dump.txt");
+      //BarnesHutTree.treeDOTDump("dump.dot");
 
       //boost::progress_display show_progress(noParts, std::cout);
       TimeStart = microsec_clock::local_time();
       for (size_t i = 0; i < noParts; i++)
-      //for (size_t i = 0; i < 10000; i++)
         {
           BarnesHutTree.calcGravity(*(partProxies[i]));
-          //++show_progress;
         }
       TimeStop = microsec_clock::local_time();
       std::cerr << "Gravity calc time       " << (TimeStop - TimeStart) << "\n";
       std::cerr << "\n";
-        return EXIT_SUCCESS;
 
-    }
+  }
 
+  using namespace sphlatch;
   std::vector<int> outputAttrSet;
   outputAttrSet += ID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, GRAVEPS;
-  IOManager.SaveCDAT("out.cdat", outputAttrSet);
+  IOManager.saveCDAT("out.cdat", outputAttrSet);
 
   #ifdef SPHLATCH_MPI
   MPI::Finalize();

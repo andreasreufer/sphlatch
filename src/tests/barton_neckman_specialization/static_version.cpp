@@ -1,9 +1,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 
-#define OOSPH_STANDALONE
-#define OOSPH_SINGLE_PRECISION
 #define SPHLATCH_SINGLEPREC
 
 #include <boost/program_options/option.hpp>
@@ -12,34 +11,20 @@
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/positional_options.hpp>
+namespace po = boost::program_options;
 
 #include <boost/assign/std/vector.hpp>
-
-#include <boost/mpl/vector_c.hpp>
+using namespace boost::assign;
 
 #include "particle.h"
-
-namespace po = boost::program_options;
-namespace mpl = boost::mpl;
-
-#include "simulation_trait.h"
-typedef oosph::SimulationTrait<> SimTrait;
-typedef SimTrait::value_type value_type;
-
 #include "iomanager.h"
-typedef oosph::IOManager<SimTrait> io_type;
-
+typedef sphlatch::IOManager io_type;
 #include "memorymanager.h"
-typedef oosph::MemoryManager<SimTrait> mem_type;
-
-using namespace oosph;
-using namespace boost::assign;
+typedef sphlatch::MemoryManager mem_type;
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/progress.hpp>
-#include <vector>
 
-// tree stuff
 #include "static_headers/bhtree.h"
 
 int main(int argc, char* argv[])
@@ -69,20 +54,18 @@ int main(int argc, char* argv[])
       std::cout << Options << std::endl;
       return EXIT_FAILURE;
     }
+    
+  io_type& IOManager(io_type::instance());
+  mem_type& MemManager(mem_type::instance());
 
-  io_type& IOManager(io_type::Instance());
-  mem_type& MemManager(mem_type::Instance());
-
-  SimTrait::matrix_reference Data(MemManager.Data);
+  sphlatch::matrixRefType Data(MemManager.Data);
 
   std::string InputFileName = VMap["input-file"].as<std::string>();
-
-  Data.resize(Data.size1(), oosph::SIZE);
-
-  IOManager.LoadCDAT(InputFileName);
-
+  Data.resize(Data.size1(), sphlatch::SIZE);
+  IOManager.loadCDAT(InputFileName);
+  
   const size_t noParts = Data.size1();
-
+  
   // particles are all distributed now
   using namespace boost::posix_time;
   ptime TimeStart, TimeStop;
@@ -103,7 +86,7 @@ int main(int argc, char* argv[])
   size_t costzoneDepth = 4;
 
   //for (size_t i = 0; i < 16; i++)
-  for (size_t i = 0; i < 1; i++)
+  for (size_t i = 0; i < 4; i++)
     {
       TimeStart = microsec_clock::local_time();
       sphlatch::OctTree BarnesHutTree(theta, 1.0,
@@ -143,9 +126,10 @@ int main(int argc, char* argv[])
       std::cout << "\n";
     }
 
+  using namespace sphlatch;
   std::vector<int> outputAttrSet;
   outputAttrSet += ID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, GRAVEPS;
-  IOManager.SaveCDAT("out_static.cdat", outputAttrSet);
+  IOManager.saveCDAT("out.cdat", outputAttrSet);
 
   #ifdef SPHLATCH_MPI
   MPI::Finalize();
