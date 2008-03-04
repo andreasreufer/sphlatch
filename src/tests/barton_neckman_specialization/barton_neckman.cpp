@@ -30,7 +30,6 @@ typedef sphlatch::MemoryManager mem_type;
 
 int main(int argc, char* argv[])
 {
-  sleep(1);
 #ifdef SPHLATCH_MPI
   MPI::Init(argc, argv);
 #endif
@@ -62,7 +61,7 @@ int main(int argc, char* argv[])
 
   sphlatch::matrixRefType Data(MemManager.Data);
 
-  std::string InputFileName = "random.cdat";
+  std::string InputFileName = VMap["input-file"].as<std::string>();
   
   Data.resize(Data.size1(), sphlatch::SIZE);
   IOManager.loadCDAT(InputFileName);

@@ -364,12 +364,13 @@ bool calcGravMAC(void)
 ///
 void calcGravCell()
 {
- #ifdef SPHLATCH_TREE_PROFILE
+#ifdef SPHLATCH_TREE_PROFILE
   calcGravityCellsCounter++;
- #endif
+#endif
   // cellPartDist is already set by the MAC function
 
   // no softening for cells
+  valueType cellPartDistPow3;
   cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
 
   curGravParticleAX -= (static_cast<quadPtrT>(curNodePtr)->mass) *

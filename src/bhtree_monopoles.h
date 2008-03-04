@@ -70,7 +70,7 @@ void allocNewCellChild(const size_t _n)
 ///
 void calcMultipole()
 {
-  static valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
+  valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
   monopolCM = 0.;
   monopolCXM = 0.;
   monopolCYM = 0.;
@@ -250,9 +250,10 @@ void calcGravCell()
  #ifdef SPHLATCH_TREE_PROFILE
   calcGravityCellsCounter++;
  #endif
+ 
   // cellPartDist is already set by the MAC function
-
   // no softening for cells
+  valueType cellPartDistPow3; // non-static seems to be faster!
   cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
 
   curGravParticleAX -= (static_cast<monoPtrT>(curNodePtr)->mass) *
@@ -270,7 +271,7 @@ void calcGravCell()
 }
 
 private:
-enum MonopoleIndex { CX, CY, CZ, MASS, MSIZE };
+enum monopoleIndex { CX, CY, CZ, MASS, MSIZE };
 };
 };
 

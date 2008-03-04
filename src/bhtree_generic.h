@@ -734,7 +734,7 @@ void sendBitset(bitsetRefType _bitSet, size_t _recvRank)
 protected:
 valueType curGravParticleX, curGravParticleY, curGravParticleZ;
 valueType curGravParticleAX, curGravParticleAY, curGravParticleAZ;
-valueType cellPartDist, cellPartDistPow3;
+valueType cellPartDist;//, cellPartDistPow3;
 valueType thetaMAC, gravConst;
 valueType epsilonSquare;
 size_t calcGravityCellsCounter, calcGravityPartsCounter;
@@ -818,29 +818,31 @@ void calcGravityRecursor(void)
 /// calculate acceleration due to a particle
 /// no check whether current node is actually a particle!
 ///
-valueType partGravPartnerX, partGravPartnerY, partGravPartnerZ,
-          partGravPartnerM;
 void calcGravParticle()
 {
  #ifdef SPHLATCH_TREE_PROFILE
   calcGravityPartsCounter++;
  #endif
+  // strangely in this routine "static" temp. variables seem to be faster
+  static valueType partGravPartnerX, partGravPartnerY,
+                   partGravPartnerZ, partGravPartnerM;
   partGravPartnerX = static_cast<partPtrT>(curNodePtr)->xPos;
   partGravPartnerY = static_cast<partPtrT>(curNodePtr)->yPos;
   partGravPartnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
   partGravPartnerM = static_cast<partPtrT>(curNodePtr)->mass;
 
-  cellPartDist = sqrt((partGravPartnerX - curGravParticleX) *
+  static valueType partPartDistPow2;
+  partPartDistPow2 =  (partGravPartnerX - curGravParticleX) *
                       (partGravPartnerX - curGravParticleX) +
                       (partGravPartnerY - curGravParticleY) *
                       (partGravPartnerY - curGravParticleY) +
                       (partGravPartnerZ - curGravParticleZ) *
-                      (partGravPartnerZ - curGravParticleZ)
-                      );
+                      (partGravPartnerZ - curGravParticleZ);
 
-  // todo: include spline softening
+  /// \todo: include spline softening
+  static valueType cellPartDistPow3;
   cellPartDistPow3 = static_cast<valueType>(
-    pow(cellPartDist * cellPartDist + epsilonSquare, 3. / 2.));
+    pow( partPartDistPow2 + epsilonSquare, 3. / 2.));
 
   curGravParticleAX -= partGravPartnerM *
                        (curGravParticleX - partGravPartnerX) /
@@ -852,7 +854,6 @@ void calcGravParticle()
                        (curGravParticleZ - partGravPartnerZ) /
                        cellPartDistPow3;
 }
-
 // end of calcGravity() stuff
 
 // neighbour search stuff
