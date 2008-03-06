@@ -14,7 +14,7 @@ namespace po = boost::program_options;
 #include <boost/assign/std/vector.hpp>
 using namespace boost::assign;
 
-#define SPHLATCH_SINGLEPREC
+//#define SPHLATCH_SINGLEPREC
 //#define SPHLATCH_MPI
 
 #include "particle.h"
@@ -79,18 +79,24 @@ int main(int argc, char* argv[])
       (partProxies[i]).setup(&Data, i);
     }
   sphlatch::valvectType universeCenter(3);
-  universeCenter(0) = 0.0;
+  /*universeCenter(0) = 0.0;
   universeCenter(1) = 0.0;
   universeCenter(2) = 0.0;
   sphlatch::valueType universeSize = 10., theta = 0.60;
+  size_t costzoneDepth = 1;*/
+  universeCenter(0) = 0.5;
+  universeCenter(1) = 0.5;
+  universeCenter(2) = 0.5;
+  sphlatch::valueType universeSize = 1., theta = 0.60;
   size_t costzoneDepth = 4;
 
   //for (size_t i = 0; i < 256; i++)
-  for (size_t i = 0; i < 4; i++)
+  for (size_t i = 0; i < 1; i++)
     {
       TimeStart = microsec_clock::local_time();
       //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
-      sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(theta, 1.0,
+      //sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(theta, 1.0,
+      sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(theta, 1.0,
                                                           costzoneDepth,
                                                           universeCenter,
                                                           universeSize);
@@ -112,8 +118,8 @@ int main(int argc, char* argv[])
       TimeStop = microsec_clock::local_time();
       std::cerr << "Calc. multipoles time   " << (TimeStop - TimeStart) << "\n";
 
-      //BarnesHutTree.treeDump("dump.txt");
-      //BarnesHutTree.treeDOTDump("dump.dot");
+      BarnesHutTree.treeDump("dump.txt");
+      BarnesHutTree.treeDOTDump("dump.dot");
 
       //boost::progress_display show_progress(noParts, std::cout);
       TimeStart = microsec_clock::local_time();
@@ -129,7 +135,7 @@ int main(int argc, char* argv[])
 
   using namespace sphlatch;
   std::vector<int> outputAttrSet;
-  outputAttrSet += ID, X, Y, Z, VX, VY, VZ, AX, AY, AZ, M, GRAVEPS;
+  outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
   IOManager.saveCDAT("out.cdat", outputAttrSet);
 
   #ifdef SPHLATCH_MPI

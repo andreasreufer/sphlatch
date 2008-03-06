@@ -14,7 +14,7 @@ namespace po = boost::program_options;
 #include <boost/assign/std/vector.hpp>
 using namespace boost::assign;
 
-#define SPHLATCH_SINGLEPREC
+//#define SPHLATCH_SINGLEPREC
 
 #include "particle.h"
 #include "iomanager.h"
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 
   sphlatch::matrixRefType Data(MemManager.Data);
 
-  std::string InputFileName = "random.cdat";
+  std::string InputFileName = VMap["input-file"].as<std::string>();
 
   Data.resize(Data.size1(), sphlatch::SIZE);
   IOManager.loadCDAT(InputFileName);

@@ -334,7 +334,7 @@ void insertParticleRecursor(partProxyPtrT _newPayload,
       static_cast<partPtrT>(curNodePtr)->mass = (*_newPayload)(M);
 
       curNodePtr->ident =
-        static_cast<identType>((*_newPayload)(PID));
+        static_cast<identType>((*_newPayload)(ID));
 
 ///
 /// don't forget to wire the nodePtr of the
@@ -1019,14 +1019,25 @@ void treeDumpRecursor()
   dumpFile << "   ";
   dumpFile << curNodePtr->depth;
   dumpFile << "   ";
-  dumpFile << std::setprecision(9);
+  dumpFile << std::setprecision(9) << std::setw(15);
+  dumpFile << std::scientific;
 
   if (curNodePtr->isParticle)
     {
+      for (size_t i = 0; i < 4; i++)
+        {
+          dumpFile << 0. << "   ";
+        }          
+      
       dumpFile << static_cast<partPtrT>(curNodePtr)->xPos << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->yPos << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->zPos << "   ";
-      dumpFile << static_cast<partPtrT>(curNodePtr)->mass;
+      dumpFile << static_cast<partPtrT>(curNodePtr)->mass << "   ";
+      
+      for (size_t i = 0; i < 6; i++) // 6 is no of >monopole terms
+        {
+          dumpFile << 0. << "   ";
+        }          
     }
   else
     {

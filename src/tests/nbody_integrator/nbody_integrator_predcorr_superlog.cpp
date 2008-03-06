@@ -340,7 +340,7 @@ BarnesHutTree.calcMultipoles();
       AccInt.Corrector(dt);
       logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6) << MPI_Wtime() - logStartTime << "    integrator corrected\n" << std::flush;
       
-      if ((step % 10) == 0)
+      if ((step % 100) == 0)
         {
           std::vector<int> outputAttrSet;
 

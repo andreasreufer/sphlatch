@@ -1007,7 +1007,7 @@ void calcGravity(NodeProxyType* _curParticle)
   curGravParticleAZ = 0.;
 
   epsilonSquare = (*curGravNodeProxy)(GRAVEPS)*(*curGravNodeProxy)(GRAVEPS);
-
+#define SPHLATCH_TREE_PROFILE
 #ifdef SPHLATCH_TREE_PROFILE
   calcGravityPartsCounter = 0;
   calcGravityCellsCounter = 0;

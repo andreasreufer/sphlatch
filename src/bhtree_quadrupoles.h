@@ -61,6 +61,7 @@ void allocNewCellChild(const size_t _n)
   static_cast<quadPtrT>(newNodePtr)->xCom = 0.;
   static_cast<quadPtrT>(newNodePtr)->yCom = 0.;
   static_cast<quadPtrT>(newNodePtr)->zCom = 0.;
+  
   static_cast<quadPtrT>(newNodePtr)->q11 = 0.;
   static_cast<quadPtrT>(newNodePtr)->q22 = 0.;
   static_cast<quadPtrT>(newNodePtr)->q33 = 0.;
@@ -85,21 +86,22 @@ void calcMultipole()
   //
   // a special case are the deepest toptree cells which are per
   // definition local. if all children are ghosts, none of if contri-
-  // butes anything so monopolCM gets 0 and fucks up the center of mass
+  // butes anything so cm gets 0 and fucks up the center of mass
   // of the cell. so if nobody contributes anything, omit the addition
   // to the cell.
   //
-  static valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
-  monopolCM = 0.;  
-  monopolCXM = 0.;
-  monopolCYM = 0.;
-  monopolCZM = 0.;
+  static valueType cm, cxm, cym, czm;
 
-  static valueType childDX, childDY, childDZ, childDD;  
-  childDX = 0.;
-  childDY = 0.;
-  childDZ = 0.;
-  childDD = 0.;
+  cm = 0.;
+  cxm = 0.;
+  cym = 0.;
+  czm = 0.;
+
+  static valueType rx, ry, rz, rr;
+  rx = 0.;
+  ry = 0.;
+  rz = 0.;
+  rr = 0.;
 
   // first calculate center of mass
   for (size_t i = 0; i < 8; i++)
@@ -112,114 +114,121 @@ void calcMultipole()
               goChild(i);
               if (curNodePtr->isParticle == true)
                 {
-                  monopolCM += static_cast<partPtrT>(curNodePtr)->mass;
-                  monopolCXM += (static_cast<partPtrT>(curNodePtr)->xPos) *
-                                (static_cast<partPtrT>(curNodePtr)->mass);
-                  monopolCYM += (static_cast<partPtrT>(curNodePtr)->yPos) *
-                                (static_cast<partPtrT>(curNodePtr)->mass);
-                  monopolCZM += (static_cast<partPtrT>(curNodePtr)->zPos) *
-                                (static_cast<partPtrT>(curNodePtr)->mass);
+                  cm += static_cast<partPtrT>(curNodePtr)->mass;
+                  cxm += (static_cast<partPtrT>(curNodePtr)->xPos) *
+                         (static_cast<partPtrT>(curNodePtr)->mass);
+                  cym += (static_cast<partPtrT>(curNodePtr)->yPos) *
+                         (static_cast<partPtrT>(curNodePtr)->mass);
+                  czm += (static_cast<partPtrT>(curNodePtr)->zPos) *
+                         (static_cast<partPtrT>(curNodePtr)->mass);
                 }
               else
                 {
-                  monopolCM += static_cast<quadPtrT>(curNodePtr)->mass;
-                  monopolCXM += (static_cast<quadPtrT>(curNodePtr)->xCom) *
-                                (static_cast<quadPtrT>(curNodePtr)->mass);
-                  monopolCYM += (static_cast<quadPtrT>(curNodePtr)->yCom) *
-                                (static_cast<quadPtrT>(curNodePtr)->mass);
-                  monopolCZM += (static_cast<quadPtrT>(curNodePtr)->zCom) *
-                                (static_cast<quadPtrT>(curNodePtr)->mass);
+                  cm += static_cast<quadPtrT>(curNodePtr)->mass;
+                  cxm += (static_cast<quadPtrT>(curNodePtr)->xCom) *
+                         (static_cast<quadPtrT>(curNodePtr)->mass);
+                  cym += (static_cast<quadPtrT>(curNodePtr)->yCom) *
+                         (static_cast<quadPtrT>(curNodePtr)->mass);
+                  czm += (static_cast<quadPtrT>(curNodePtr)->zCom) *
+                         (static_cast<quadPtrT>(curNodePtr)->mass);
                 }
               goUp();
             }
         }
     }
-  
-  static valueType quadQ11, quadQ22, quadQ33, quadQ12, quadQ13, quadQ23;
-  quadQ11 = 0.;
-  quadQ22 = 0.;
-  quadQ33 = 0.;
-  quadQ12 = 0.;
-  quadQ13 = 0.;
-  quadQ23 = 0.;
-    
-  for (size_t i = 0; i < 8; i++)
+
+  static valueType q11, q22, q33, q12, q13, q23;
+  q11 = 0.;
+  q22 = 0.;
+  q33 = 0.;
+  q12 = 0.;
+  q13 = 0.;
+  q23 = 0.;
+
+  if (cm > 0.)
     {
-      if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
+      for (size_t i = 0; i < 8; i++)
         {
-          if (static_cast<cellPtrT>(curNodePtr)->child[i]->isLocal
-              == curNodePtr->isLocal)
+          if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
             {
-              goChild(i);
-              if (curNodePtr->isParticle == true)
+              if (static_cast<cellPtrT>(curNodePtr)->child[i]->isLocal
+                  == curNodePtr->isLocal)
                 {
-                  childDX = static_cast<partPtrT>(curNodePtr)->xPos
-                            - (monopolCXM / monopolCM);
-                  childDY = static_cast<partPtrT>(curNodePtr)->yPos
-                            - (monopolCYM / monopolCM);
-                  childDZ = static_cast<partPtrT>(curNodePtr)->zPos
-                            - (monopolCZM / monopolCM);
-                  childDD = childDX * childDX +
-                    childDY * childDY + childDZ * childDZ;
+                  goChild(i);
+                  if (curNodePtr->isParticle == true)
+                    {
+                      rx = static_cast<partPtrT>(curNodePtr)->xPos
+                           - (cxm / cm);
+                      ry = static_cast<partPtrT>(curNodePtr)->yPos
+                           - (cym / cm);
+                      rz = static_cast<partPtrT>(curNodePtr)->zPos
+                           - (czm / cm);
+                      rr = rx * rx + ry * ry + rz * rz;
 
-                  quadQ11 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * childDX * childDX - childDD);
-                  quadQ22 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * childDY * childDY - childDD);
-                  quadQ33 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * childDZ * childDZ - childDD);
+                      q11 += static_cast<partPtrT>(curNodePtr)->mass *
+                             (3 * rx * rx - rr);
+                      q22 += static_cast<partPtrT>(curNodePtr)->mass *
+                             (3 * ry * ry - rr);
+                      q33 += static_cast<partPtrT>(curNodePtr)->mass *
+                             (3 * rz * rz - rr);
 
-                  quadQ12 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * childDX * childDY);
-                  quadQ13 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * childDX * childDZ);
-                  quadQ23 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * childDY * childDZ);
-                }
-              else
-                {
-                  childDX = ( static_cast<quadPtrT>(curNodePtr)->xCom )
-                            - (monopolCXM / monopolCM);
-                  childDY = ( static_cast<quadPtrT>(curNodePtr)->yCom )
-                            - (monopolCYM / monopolCM);
-                  childDZ = ( static_cast<quadPtrT>(curNodePtr)->zCom )
-                            - (monopolCZM / monopolCM);
+                      q12 += static_cast<partPtrT>(curNodePtr)->mass *
+                             (3 * rx * ry);
+                      q13 += static_cast<partPtrT>(curNodePtr)->mass *
+                             (3 * rx * rz);
+                      q23 += static_cast<partPtrT>(curNodePtr)->mass *
+                             (3 * ry * rz);
+                    }
+                  else
+                    {
+                      rx = (static_cast<quadPtrT>(curNodePtr)->xCom)
+                           - (cxm / cm);
+                      ry = (static_cast<quadPtrT>(curNodePtr)->yCom)
+                           - (cym / cm);
+                      rz = (static_cast<quadPtrT>(curNodePtr)->zCom)
+                           - (czm / cm);
 
-                  childDD = childDX * childDX +
-                    childDY * childDY + childDZ * childDZ;
+                      rr = rx * rx + ry * ry + rz * rz;
 
-                  quadQ11 += static_cast<quadPtrT>(curNodePtr)->mass *
-                             (3 * childDX * childDX - childDD) +
+                      q11 += (static_cast<quadPtrT>(curNodePtr)->mass *
+                              (3 * rx * rx - rr)) +
                              static_cast<quadPtrT>(curNodePtr)->q11;
-                  quadQ22 += static_cast<quadPtrT>(curNodePtr)->mass *
-                             (3 * childDY * childDY - childDD) +
+                      q22 += (static_cast<quadPtrT>(curNodePtr)->mass *
+                              (3 * ry * ry - rr)) +
                              static_cast<quadPtrT>(curNodePtr)->q22;
-                  quadQ33 += static_cast<quadPtrT>(curNodePtr)->mass *
-                             (3 * childDZ * childDZ - childDD) +
+                      q33 += (static_cast<quadPtrT>(curNodePtr)->mass *
+                              (3 * rz * rz - rr)) +
                              static_cast<quadPtrT>(curNodePtr)->q33;
 
-                  quadQ12 += static_cast<quadPtrT>(curNodePtr)->mass *
-                             (3 * childDX * childDY) +
+                      q12 += static_cast<quadPtrT>(curNodePtr)->mass *
+                             (3 * rx * ry) +
                              static_cast<quadPtrT>(curNodePtr)->q12;
-                  quadQ13 += static_cast<quadPtrT>(curNodePtr)->mass *
-                             (3 * childDX * childDZ) +
+                      q13 += static_cast<quadPtrT>(curNodePtr)->mass *
+                             (3 * rx * rz) +
                              static_cast<quadPtrT>(curNodePtr)->q13;
-                  quadQ23 += static_cast<quadPtrT>(curNodePtr)->mass *
-                             (3 * childDY * childDZ) +
+                      q23 += static_cast<quadPtrT>(curNodePtr)->mass *
+                             (3 * ry * rz) +
                              static_cast<quadPtrT>(curNodePtr)->q23;
+                    }
+                  goUp();
                 }
-              goUp();
             }
         }
     }
- 
+
   // copy data to node itself ...
-  if (monopolCM > 0.)
+  if (cm > 0.)
     {
-      static_cast<quadPtrT>(curNodePtr)->mass = monopolCM;
-      static_cast<quadPtrT>(curNodePtr)->xCom = monopolCXM / monopolCM;
-      static_cast<quadPtrT>(curNodePtr)->yCom = monopolCYM / monopolCM;
-      static_cast<quadPtrT>(curNodePtr)->zCom = monopolCZM / monopolCM;
+      static_cast<quadPtrT>(curNodePtr)->mass = cm;
+      static_cast<quadPtrT>(curNodePtr)->xCom = cxm / cm;
+      static_cast<quadPtrT>(curNodePtr)->yCom = cym / cm;
+      static_cast<quadPtrT>(curNodePtr)->zCom = czm / cm;
+      static_cast<quadPtrT>(curNodePtr)->q11 = q11;
+      static_cast<quadPtrT>(curNodePtr)->q22 = q22;
+      static_cast<quadPtrT>(curNodePtr)->q33 = q33;
+      static_cast<quadPtrT>(curNodePtr)->q12 = q12;
+      static_cast<quadPtrT>(curNodePtr)->q13 = q13;
+      static_cast<quadPtrT>(curNodePtr)->q23 = q23;
     }
   else
     {
@@ -227,14 +236,13 @@ void calcMultipole()
       static_cast<quadPtrT>(curNodePtr)->xCom = 0.;
       static_cast<quadPtrT>(curNodePtr)->yCom = 0.;
       static_cast<quadPtrT>(curNodePtr)->zCom = 0.;
+      static_cast<quadPtrT>(curNodePtr)->q11 = 0.;
+      static_cast<quadPtrT>(curNodePtr)->q22 = 0.;
+      static_cast<quadPtrT>(curNodePtr)->q33 = 0.;
+      static_cast<quadPtrT>(curNodePtr)->q12 = 0.;
+      static_cast<quadPtrT>(curNodePtr)->q13 = 0.;
+      static_cast<quadPtrT>(curNodePtr)->q23 = 0.;
     }
-    
-    static_cast<quadPtrT>(curNodePtr)->q11 = quadQ11;
-    static_cast<quadPtrT>(curNodePtr)->q22 = quadQ22;
-    static_cast<quadPtrT>(curNodePtr)->q33 = quadQ33;
-    static_cast<quadPtrT>(curNodePtr)->q12 = quadQ12;
-    static_cast<quadPtrT>(curNodePtr)->q13 = quadQ13;
-    static_cast<quadPtrT>(curNodePtr)->q23 = quadQ23;
 }
 
 ///
@@ -373,18 +381,47 @@ void calcGravCell()
   valueType cellPartDistPow3;
   cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
 
-  curGravParticleAX -= (static_cast<quadPtrT>(curNodePtr)->mass) *
-                       (curGravParticleX -
-                        static_cast<quadPtrT>(curNodePtr)->xCom) /
-                       cellPartDistPow3;
-  curGravParticleAY -= (static_cast<quadPtrT>(curNodePtr)->mass) *
-                       (curGravParticleY -
-                        static_cast<quadPtrT>(curNodePtr)->yCom) /
-                       cellPartDistPow3;
-  curGravParticleAZ -= (static_cast<quadPtrT>(curNodePtr)->mass) *
-                       (curGravParticleZ -
-                        static_cast<quadPtrT>(curNodePtr)->zCom) /
-                       cellPartDistPow3;
+  valueType rx, ry, rz, mass;
+  rx = curGravParticleX - static_cast<quadPtrT>(curNodePtr)->xCom;
+  ry = curGravParticleY - static_cast<quadPtrT>(curNodePtr)->yCom;
+  rz = curGravParticleZ - static_cast<quadPtrT>(curNodePtr)->zCom;
+  mass = static_cast<quadPtrT>(curNodePtr)->mass;
+
+  // gravity due to monopole term
+  curGravParticleAX -= mass * rx / cellPartDistPow3;
+  curGravParticleAY -= mass * ry / cellPartDistPow3;
+  curGravParticleAZ -= mass * rz / cellPartDistPow3;
+
+  valueType cellPartDistPow5, cellPartDistPow7;
+  cellPartDistPow5 = cellPartDistPow3 * cellPartDist * cellPartDist;
+  cellPartDistPow7 = cellPartDistPow5 * cellPartDist * cellPartDist;
+
+  valueType q11, q22, q33, q12, q13, q23;
+  q11 = static_cast<quadPtrT>(curNodePtr)->q11;
+  q22 = static_cast<quadPtrT>(curNodePtr)->q22;
+  q33 = static_cast<quadPtrT>(curNodePtr)->q33;
+  q12 = static_cast<quadPtrT>(curNodePtr)->q12;
+  q13 = static_cast<quadPtrT>(curNodePtr)->q13;
+  q23 = static_cast<quadPtrT>(curNodePtr)->q23;
+
+  valueType q1jrj, q2jrj, q3jrj, qijrirj;
+  q1jrj = q11 * rx + q12 * ry + q13 * rz;
+  q2jrj = q12 * rx + q22 * ry + q23 * rz;
+  q3jrj = q13 * rx + q23 * ry + q33 * rz;
+  qijrirj = q11 * rx * rx +
+            q22 * ry * ry +
+            q33 * rz * rz +
+            2. * q12 * rx * ry +
+            2. * q13 * rx * rz +
+            2. * q23 * ry * rz;
+
+  // gravity due to quadrupole term
+  curGravParticleX -= (0.5 * q1jrj / cellPartDistPow5)
+                      + (2.5 * qijrirj * rx / cellPartDistPow7);
+  curGravParticleY -= (0.5 * q2jrj / cellPartDistPow5)
+                      + (2.5 * qijrirj * ry / cellPartDistPow7);
+  curGravParticleZ -= (0.5 * q3jrj / cellPartDistPow5)
+                      + (2.5 * qijrirj * rz / cellPartDistPow7);
 }
 
 private:
