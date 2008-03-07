@@ -61,7 +61,7 @@ void allocNewCellChild(const size_t _n)
   static_cast<quadPtrT>(newNodePtr)->xCom = 0.;
   static_cast<quadPtrT>(newNodePtr)->yCom = 0.;
   static_cast<quadPtrT>(newNodePtr)->zCom = 0.;
-  
+
   static_cast<quadPtrT>(newNodePtr)->q11 = 0.;
   static_cast<quadPtrT>(newNodePtr)->q22 = 0.;
   static_cast<quadPtrT>(newNodePtr)->q33 = 0.;
@@ -90,18 +90,13 @@ void calcMultipole()
   // of the cell. so if nobody contributes anything, omit the addition
   // to the cell.
   //
+
   static valueType cm, cxm, cym, czm;
 
   cm = 0.;
   cxm = 0.;
   cym = 0.;
   czm = 0.;
-
-  static valueType rx, ry, rz, rr;
-  rx = 0.;
-  ry = 0.;
-  rz = 0.;
-  rr = 0.;
 
   // first calculate center of mass
   for (size_t i = 0; i < 8; i++)
@@ -144,6 +139,12 @@ void calcMultipole()
   q12 = 0.;
   q13 = 0.;
   q23 = 0.;
+
+  static valueType rx, ry, rz, rr;
+  rx = 0.;
+  ry = 0.;
+  rz = 0.;
+  rr = 0.;
 
   if (cm > 0.)
     {
@@ -378,50 +379,45 @@ void calcGravCell()
   // cellPartDist is already set by the MAC function
 
   // no softening for cells
-  valueType cellPartDistPow3;
-  cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
+  const valueType cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
 
-  valueType rx, ry, rz, mass;
-  rx = curGravParticleX - static_cast<quadPtrT>(curNodePtr)->xCom;
-  ry = curGravParticleY - static_cast<quadPtrT>(curNodePtr)->yCom;
-  rz = curGravParticleZ - static_cast<quadPtrT>(curNodePtr)->zCom;
-  mass = static_cast<quadPtrT>(curNodePtr)->mass;
+  const valueType rx = curGravParticleX - static_cast<quadPtrT>(curNodePtr)->xCom;
+  const valueType ry = curGravParticleY - static_cast<quadPtrT>(curNodePtr)->yCom;
+  const valueType rz = curGravParticleZ - static_cast<quadPtrT>(curNodePtr)->zCom;
+  const valueType mass = static_cast<quadPtrT>(curNodePtr)->mass;
 
   // gravity due to monopole term
   curGravParticleAX -= mass * rx / cellPartDistPow3;
   curGravParticleAY -= mass * ry / cellPartDistPow3;
   curGravParticleAZ -= mass * rz / cellPartDistPow3;
 
-  valueType cellPartDistPow5, cellPartDistPow7;
-  cellPartDistPow5 = cellPartDistPow3 * cellPartDist * cellPartDist;
-  cellPartDistPow7 = cellPartDistPow5 * cellPartDist * cellPartDist;
+  const valueType cellPartDistPow5 = cellPartDistPow3 * cellPartDist * cellPartDist;
+  const valueType cellPartDistPow7 = cellPartDistPow5 * cellPartDist * cellPartDist;
 
-  valueType q11, q22, q33, q12, q13, q23;
-  q11 = static_cast<quadPtrT>(curNodePtr)->q11;
-  q22 = static_cast<quadPtrT>(curNodePtr)->q22;
-  q33 = static_cast<quadPtrT>(curNodePtr)->q33;
-  q12 = static_cast<quadPtrT>(curNodePtr)->q12;
-  q13 = static_cast<quadPtrT>(curNodePtr)->q13;
-  q23 = static_cast<quadPtrT>(curNodePtr)->q23;
+  const valueType q11 = static_cast<quadPtrT>(curNodePtr)->q11;
+  const valueType q22 = static_cast<quadPtrT>(curNodePtr)->q22;
+  const valueType q33 = static_cast<quadPtrT>(curNodePtr)->q33;
+  const valueType q12 = static_cast<quadPtrT>(curNodePtr)->q12;
+  const valueType q13 = static_cast<quadPtrT>(curNodePtr)->q13;
+  const valueType q23 = static_cast<quadPtrT>(curNodePtr)->q23;
 
-  valueType q1jrj, q2jrj, q3jrj, qijrirj;
-  q1jrj = q11 * rx + q12 * ry + q13 * rz;
-  q2jrj = q12 * rx + q22 * ry + q23 * rz;
-  q3jrj = q13 * rx + q23 * ry + q33 * rz;
-  qijrirj = q11 * rx * rx +
-            q22 * ry * ry +
-            q33 * rz * rz +
-            2. * q12 * rx * ry +
-            2. * q13 * rx * rz +
-            2. * q23 * ry * rz;
+  const valueType q1jrj = q11 * rx + q12 * ry + q13 * rz;
+  const valueType q2jrj = q12 * rx + q22 * ry + q23 * rz;
+  const valueType q3jrj = q13 * rx + q23 * ry + q33 * rz;
+  const valueType qijrirj = q11 * rx * rx +
+                            q22 * ry * ry +
+                            q33 * rz * rz +
+                            2. * q12 * rx * ry +
+                            2. * q13 * rx * rz +
+                            2. * q23 * ry * rz;
 
   // gravity due to quadrupole term
-  curGravParticleX -= (0.5 * q1jrj / cellPartDistPow5)
-                      + (2.5 * qijrirj * rx / cellPartDistPow7);
-  curGravParticleY -= (0.5 * q2jrj / cellPartDistPow5)
-                      + (2.5 * qijrirj * ry / cellPartDistPow7);
-  curGravParticleZ -= (0.5 * q3jrj / cellPartDistPow5)
-                      + (2.5 * qijrirj * rz / cellPartDistPow7);
+  curGravParticleAX -= (-1.0 * q1jrj / cellPartDistPow5)
+                       + (2.5 * qijrirj * rx / cellPartDistPow7);
+  curGravParticleAY -= (-1.0 * q2jrj / cellPartDistPow5)
+                       + (2.5 * qijrirj * ry / cellPartDistPow7);
+  curGravParticleAZ -= (-1.0 * q3jrj / cellPartDistPow5)
+                       + (2.5 * qijrirj * rz / cellPartDistPow7);
 }
 
 private:

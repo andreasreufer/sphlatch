@@ -22,11 +22,10 @@ typedef monopoleCellNode* monoPtrT;
 typedef particleProxy* partProxyPtrT;
 
 public:
-
 ///
 /// allocates the root monopole cell node
 ///
-void allocRootNode(void)
+void allocRootNode()
 {
   rootPtr = new monopoleCellNode;
 }
@@ -50,18 +49,18 @@ void prepareBuffers()
 void allocNewCellChild(const size_t _n)
 {
   // allocate new cell node
-  monopoleCellNode* newNodePtr =
+  monoPtrT newNodePtr =
     new monopoleCellNode;
 
   // connect the new cell node to curNodePtr
   newNodePtr->parent = curNodePtr;
   static_cast<cellPtrT>(curNodePtr)->child[_n] = newNodePtr;
-  
+
   // set cell vars to zero
-  static_cast<monopoleCellNode*>(newNodePtr)->mass = 0.;
-  static_cast<monopoleCellNode*>(newNodePtr)->xCom = 0.;
-  static_cast<monopoleCellNode*>(newNodePtr)->yCom = 0.;
-  static_cast<monopoleCellNode*>(newNodePtr)->zCom = 0.;
+  static_cast<monoPtrT>(newNodePtr)->mass = 0.;
+  static_cast<monoPtrT>(newNodePtr)->xCom = 0.;
+  static_cast<monoPtrT>(newNodePtr)->yCom = 0.;
+  static_cast<monoPtrT>(newNodePtr)->zCom = 0.;
 }
 
 ///
@@ -70,12 +69,6 @@ void allocNewCellChild(const size_t _n)
 ///
 void calcMultipole()
 {
-  valueType monopolCM, monopolCXM, monopolCYM, monopolCZM;
-  monopolCM = 0.;
-  monopolCXM = 0.;
-  monopolCYM = 0.;
-  monopolCZM = 0.;
-
   //
   // add up the contributions from the children with
   // the same locality as the current node.
@@ -86,10 +79,24 @@ void calcMultipole()
   //
   // a special case are the deepest toptree cells which are per
   // definition local. if all children are ghosts, none of if contri-
-  // butes anything so monopolCM gets 0 and fucks up the center of mass
+  // butes anything so cm gets 0 and fucks up the center of mass
   // of the cell. so if nobody contributes anything, omit the addition
   // to the cell.
   //
+  static valueType cm, cxm, cym, czm;
+
+  cm = 0.;
+  cxm = 0.;
+  cym = 0.;
+  czm = 0.;
+
+  static valueType rx, ry, rz, rr;
+  rx = 0.;
+  ry = 0.;
+  rz = 0.;
+  rr = 0.;
+
+  // first calculate center of mass
   for (size_t i = 0; i < 8; i++)
     {
       if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
@@ -100,35 +107,36 @@ void calcMultipole()
               goChild(i);
               if (curNodePtr->isParticle == true)
                 {
-                  monopolCM += static_cast<partPtrT>(curNodePtr)->mass;
-                  monopolCXM += (static_cast<partPtrT>(curNodePtr)->xPos) *
-                                (static_cast<partPtrT>(curNodePtr)->mass);
-                  monopolCYM += (static_cast<partPtrT>(curNodePtr)->yPos) *
-                                (static_cast<partPtrT>(curNodePtr)->mass);
-                  monopolCZM += (static_cast<partPtrT>(curNodePtr)->zPos) *
-                                (static_cast<partPtrT>(curNodePtr)->mass);
+                  cm += static_cast<partPtrT>(curNodePtr)->mass;
+                  cxm += (static_cast<partPtrT>(curNodePtr)->xPos) *
+                         (static_cast<partPtrT>(curNodePtr)->mass);
+                  cym += (static_cast<partPtrT>(curNodePtr)->yPos) *
+                         (static_cast<partPtrT>(curNodePtr)->mass);
+                  czm += (static_cast<partPtrT>(curNodePtr)->zPos) *
+                         (static_cast<partPtrT>(curNodePtr)->mass);
                 }
               else
                 {
-                  monopolCM += static_cast<monoPtrT>(curNodePtr)->mass;
-                  monopolCXM += (static_cast<monoPtrT>(curNodePtr)->xCom) *
-                                (static_cast<monoPtrT>(curNodePtr)->mass);
-                  monopolCYM += (static_cast<monoPtrT>(curNodePtr)->yCom) *
-                                (static_cast<monoPtrT>(curNodePtr)->mass);
-                  monopolCZM += (static_cast<monoPtrT>(curNodePtr)->zCom) *
-                                (static_cast<monoPtrT>(curNodePtr)->mass);
+                  cm += static_cast<monoPtrT>(curNodePtr)->mass;
+                  cxm += (static_cast<monoPtrT>(curNodePtr)->xCom) *
+                         (static_cast<monoPtrT>(curNodePtr)->mass);
+                  cym += (static_cast<monoPtrT>(curNodePtr)->yCom) *
+                         (static_cast<monoPtrT>(curNodePtr)->mass);
+                  czm += (static_cast<monoPtrT>(curNodePtr)->zCom) *
+                         (static_cast<monoPtrT>(curNodePtr)->mass);
                 }
               goUp();
             }
         }
     }
+
   // copy data to node itself ...
-  if (monopolCM > 0.)
+  if (cm > 0.)
     {
-      static_cast<monoPtrT>(curNodePtr)->mass = monopolCM;
-      static_cast<monoPtrT>(curNodePtr)->xCom = monopolCXM / monopolCM;
-      static_cast<monoPtrT>(curNodePtr)->yCom = monopolCYM / monopolCM;
-      static_cast<monoPtrT>(curNodePtr)->zCom = monopolCZM / monopolCM;
+      static_cast<monoPtrT>(curNodePtr)->mass = cm;
+      static_cast<monoPtrT>(curNodePtr)->xCom = cxm / cm;
+      static_cast<monoPtrT>(curNodePtr)->yCom = cym / cm;
+      static_cast<monoPtrT>(curNodePtr)->zCom = czm / cm;
     }
   else
     {
@@ -221,6 +229,7 @@ void reportMultipoles()
   dumpFile << static_cast<monoPtrT>(curNodePtr)->mass << "   ";
 }
 
+// why is this here?
 ///
 /// stop recursion if:
 /// - current node is empty << ??
@@ -237,7 +246,7 @@ bool calcGravMAC(void)
     (static_cast<monoPtrT>(curNodePtr)->zCom - curGravParticleZ)
     );
   return(((static_cast<monoPtrT>(curNodePtr)->cellSize)
-    / cellPartDist) < thetaMAC);
+          / cellPartDist) < thetaMAC);
 }
 
 
@@ -247,31 +256,29 @@ bool calcGravMAC(void)
 ///
 void calcGravCell()
 {
- #ifdef SPHLATCH_TREE_PROFILE
+#ifdef SPHLATCH_TREE_PROFILE
   calcGravityCellsCounter++;
- #endif
- 
+#endif
   // cellPartDist is already set by the MAC function
-  // no softening for cells
-  valueType cellPartDistPow3; // non-static seems to be faster!
-  cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
 
-  curGravParticleAX -= (static_cast<monoPtrT>(curNodePtr)->mass) *
-                       (curGravParticleX -
-                        static_cast<monoPtrT>(curNodePtr)->xCom) /
-                       cellPartDistPow3;
-  curGravParticleAY -= (static_cast<monoPtrT>(curNodePtr)->mass) *
-                       (curGravParticleY -
-                        static_cast<monoPtrT>(curNodePtr)->yCom) /
-                       cellPartDistPow3;
-  curGravParticleAZ -= (static_cast<monoPtrT>(curNodePtr)->mass) *
-                       (curGravParticleZ -
-                        static_cast<monoPtrT>(curNodePtr)->zCom) /
-                       cellPartDistPow3;
+  // no softening for cells
+  const valueType cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
+
+  const valueType rx = curGravParticleX - static_cast<monoPtrT>(curNodePtr)->xCom;
+  const valueType ry = curGravParticleY - static_cast<monoPtrT>(curNodePtr)->yCom;
+  const valueType rz = curGravParticleZ - static_cast<monoPtrT>(curNodePtr)->zCom;
+  const valueType mass = static_cast<monoPtrT>(curNodePtr)->mass;
+
+  // gravity due to monopole term
+  curGravParticleAX -= mass * rx / cellPartDistPow3;
+  curGravParticleAY -= mass * ry / cellPartDistPow3;
+  curGravParticleAZ -= mass * rz / cellPartDistPow3;
 }
 
 private:
 enum monopoleIndex { CX, CY, CZ, MASS, MSIZE };
+
+private:
 };
 };
 

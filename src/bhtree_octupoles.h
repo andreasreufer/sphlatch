@@ -61,14 +61,14 @@ void allocNewCellChild(const size_t _n)
   static_cast<octuPtrT>(newNodePtr)->xCom = 0.;
   static_cast<octuPtrT>(newNodePtr)->yCom = 0.;
   static_cast<octuPtrT>(newNodePtr)->zCom = 0.;
-  
+
   static_cast<octuPtrT>(newNodePtr)->q11 = 0.;
   static_cast<octuPtrT>(newNodePtr)->q22 = 0.;
   static_cast<octuPtrT>(newNodePtr)->q33 = 0.;
   static_cast<octuPtrT>(newNodePtr)->q12 = 0.;
   static_cast<octuPtrT>(newNodePtr)->q13 = 0.;
   static_cast<octuPtrT>(newNodePtr)->q23 = 0.;
-  
+
   static_cast<octuPtrT>(newNodePtr)->s11 = 0.;
   static_cast<octuPtrT>(newNodePtr)->s22 = 0.;
   static_cast<octuPtrT>(newNodePtr)->s33 = 0.;
@@ -142,6 +142,12 @@ void calcMultipole()
         }
     }
 
+  static valueType rx, ry, rz, rr;
+  rx = 0.;
+  ry = 0.;
+  rz = 0.;
+  rr = 0.;
+
   static valueType q11, q22, q33, q12, q13, q23;
   q11 = 0.;
   q22 = 0.;
@@ -150,11 +156,17 @@ void calcMultipole()
   q13 = 0.;
   q23 = 0.;
 
-  static valueType rx, ry, rz, rr;
-  rx = 0.;
-  ry = 0.;
-  rz = 0.;
-  rr = 0.;
+  static valueType s11, s22, s33, s12, s21, s13, s31, s23, s32, s123;
+  s11 = 0.;
+  s22 = 0.;
+  s33 = 0.;
+  s12 = 0.;
+  s21 = 0.;
+  s13 = 0.;
+  s31 = 0.;
+  s23 = 0.;
+  s32 = 0.;
+  s123 = 0.;
 
   if (cm > 0.)
     {
@@ -189,6 +201,9 @@ void calcMultipole()
                              (3 * rx * rz);
                       q23 += static_cast<partPtrT>(curNodePtr)->mass *
                              (3 * ry * rz);
+
+
+
                     }
                   else
                     {
@@ -243,16 +258,6 @@ void calcMultipole()
     }
   else
     {
-      static_cast<octuPtrT>(curNodePtr)->mass = 0.;
-      static_cast<octuPtrT>(curNodePtr)->xCom = 0.;
-      static_cast<octuPtrT>(curNodePtr)->yCom = 0.;
-      static_cast<octuPtrT>(curNodePtr)->zCom = 0.;
-      static_cast<octuPtrT>(curNodePtr)->q11 = 0.;
-      static_cast<octuPtrT>(curNodePtr)->q22 = 0.;
-      static_cast<octuPtrT>(curNodePtr)->q33 = 0.;
-      static_cast<octuPtrT>(curNodePtr)->q12 = 0.;
-      static_cast<octuPtrT>(curNodePtr)->q13 = 0.;
-      static_cast<octuPtrT>(curNodePtr)->q23 = 0.;
     }
 }
 
@@ -314,12 +319,24 @@ void cellToBuffer()
   localCells(toptreeCounter, CY) = static_cast<octuPtrT>(curNodePtr)->yCom;
   localCells(toptreeCounter, CZ) = static_cast<octuPtrT>(curNodePtr)->zCom;
   localCells(toptreeCounter, MASS) = static_cast<octuPtrT>(curNodePtr)->mass;
+  
   localCells(toptreeCounter, Q11) = static_cast<octuPtrT>(curNodePtr)->q11;
   localCells(toptreeCounter, Q22) = static_cast<octuPtrT>(curNodePtr)->q22;
   localCells(toptreeCounter, Q33) = static_cast<octuPtrT>(curNodePtr)->q33;
   localCells(toptreeCounter, Q12) = static_cast<octuPtrT>(curNodePtr)->q12;
   localCells(toptreeCounter, Q13) = static_cast<octuPtrT>(curNodePtr)->q13;
   localCells(toptreeCounter, Q23) = static_cast<octuPtrT>(curNodePtr)->q23;
+  
+  localCells(toptreeCounter, S11) = static_cast<octuPtrT>(curNodePtr)->s11;
+  localCells(toptreeCounter, S22) = static_cast<octuPtrT>(curNodePtr)->s22;
+  localCells(toptreeCounter, S33) = static_cast<octuPtrT>(curNodePtr)->s33;
+  localCells(toptreeCounter, S12) = static_cast<octuPtrT>(curNodePtr)->s12;
+  localCells(toptreeCounter, S21) = static_cast<octuPtrT>(curNodePtr)->s21;
+  localCells(toptreeCounter, S13) = static_cast<octuPtrT>(curNodePtr)->s13;
+  localCells(toptreeCounter, S31) = static_cast<octuPtrT>(curNodePtr)->s31;
+  localCells(toptreeCounter, S23) = static_cast<octuPtrT>(curNodePtr)->s23;
+  localCells(toptreeCounter, S32) = static_cast<octuPtrT>(curNodePtr)->s32;
+  localCells(toptreeCounter, S123) = static_cast<octuPtrT>(curNodePtr)->s123;
 }
 
 ///
@@ -331,12 +348,24 @@ void bufferToCell()
   static_cast<octuPtrT>(curNodePtr)->yCom = localCells(toptreeCounter, CY);
   static_cast<octuPtrT>(curNodePtr)->zCom = localCells(toptreeCounter, CZ);
   static_cast<octuPtrT>(curNodePtr)->mass = localCells(toptreeCounter, MASS);
+  
   static_cast<octuPtrT>(curNodePtr)->q11 = localCells(toptreeCounter, Q11);
   static_cast<octuPtrT>(curNodePtr)->q22 = localCells(toptreeCounter, Q22);
   static_cast<octuPtrT>(curNodePtr)->q33 = localCells(toptreeCounter, Q33);
   static_cast<octuPtrT>(curNodePtr)->q12 = localCells(toptreeCounter, Q12);
   static_cast<octuPtrT>(curNodePtr)->q13 = localCells(toptreeCounter, Q13);
   static_cast<octuPtrT>(curNodePtr)->q23 = localCells(toptreeCounter, Q23);
+  
+  static_cast<octuPtrT>(curNodePtr)->s11 = localCells(toptreeCounter, S11);
+  static_cast<octuPtrT>(curNodePtr)->s22 = localCells(toptreeCounter, S22);
+  static_cast<octuPtrT>(curNodePtr)->s33 = localCells(toptreeCounter, S33);
+  static_cast<octuPtrT>(curNodePtr)->s12 = localCells(toptreeCounter, S12);
+  static_cast<octuPtrT>(curNodePtr)->s21 = localCells(toptreeCounter, S21);
+  static_cast<octuPtrT>(curNodePtr)->s13 = localCells(toptreeCounter, S13);
+  static_cast<octuPtrT>(curNodePtr)->s31 = localCells(toptreeCounter, S31);
+  static_cast<octuPtrT>(curNodePtr)->s23 = localCells(toptreeCounter, S23);
+  static_cast<octuPtrT>(curNodePtr)->s32 = localCells(toptreeCounter, S32);
+  static_cast<octuPtrT>(curNodePtr)->s123 = localCells(toptreeCounter, S123);
 }
 
 ///
@@ -348,12 +377,24 @@ void reportMultipoles()
   dumpFile << static_cast<octuPtrT>(curNodePtr)->yCom << "   ";
   dumpFile << static_cast<octuPtrT>(curNodePtr)->zCom << "   ";
   dumpFile << static_cast<octuPtrT>(curNodePtr)->mass << "   ";
+ 
   dumpFile << static_cast<octuPtrT>(curNodePtr)->q11 << "   ";
   dumpFile << static_cast<octuPtrT>(curNodePtr)->q22 << "   ";
   dumpFile << static_cast<octuPtrT>(curNodePtr)->q33 << "   ";
   dumpFile << static_cast<octuPtrT>(curNodePtr)->q12 << "   ";
   dumpFile << static_cast<octuPtrT>(curNodePtr)->q13 << "   ";
   dumpFile << static_cast<octuPtrT>(curNodePtr)->q23 << "   ";
+  
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s11 << "   ";
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s22 << "   ";
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s33 << "   ";
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s12 << "   ";
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s21 << "   ";
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s13 << "   ";
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s31 << "   ";
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s23 << "   ";
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s32 << "   ";
+  dumpFile << static_cast<octuPtrT>(curNodePtr)->s123 << "   ";
 }
 
 // why is this here?
@@ -389,55 +430,50 @@ void calcGravCell()
   // cellPartDist is already set by the MAC function
 
   // no softening for cells
-  valueType cellPartDistPow3;
-  cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
+  const valueType cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
 
-  valueType rx, ry, rz, mass;
-  rx = curGravParticleX - static_cast<octuPtrT>(curNodePtr)->xCom;
-  ry = curGravParticleY - static_cast<octuPtrT>(curNodePtr)->yCom;
-  rz = curGravParticleZ - static_cast<octuPtrT>(curNodePtr)->zCom;
-  mass = static_cast<octuPtrT>(curNodePtr)->mass;
+  const valueType rx = curGravParticleX - static_cast<octuPtrT>(curNodePtr)->xCom;
+  const valueType ry = curGravParticleY - static_cast<octuPtrT>(curNodePtr)->yCom;
+  const valueType rz = curGravParticleZ - static_cast<octuPtrT>(curNodePtr)->zCom;
+  const valueType mass = static_cast<octuPtrT>(curNodePtr)->mass;
 
   // gravity due to monopole term
-  /*curGravParticleAX -= mass * rx / cellPartDistPow3;
+  curGravParticleAX -= mass * rx / cellPartDistPow3;
   curGravParticleAY -= mass * ry / cellPartDistPow3;
-  curGravParticleAZ -= mass * rz / cellPartDistPow3;*/
+  curGravParticleAZ -= mass * rz / cellPartDistPow3;
 
-  valueType cellPartDistPow5, cellPartDistPow7;
-  cellPartDistPow5 = cellPartDistPow3 * cellPartDist * cellPartDist;
-  cellPartDistPow7 = cellPartDistPow5 * cellPartDist * cellPartDist;
+  const valueType cellPartDistPow5 = cellPartDistPow3 * cellPartDist * cellPartDist;
+  const valueType cellPartDistPow7 = cellPartDistPow5 * cellPartDist * cellPartDist;
 
-  valueType q11, q22, q33, q12, q13, q23;
-  q11 = static_cast<octuPtrT>(curNodePtr)->q11;
-  q22 = static_cast<octuPtrT>(curNodePtr)->q22;
-  q33 = static_cast<octuPtrT>(curNodePtr)->q33;
-  q12 = static_cast<octuPtrT>(curNodePtr)->q12;
-  q13 = static_cast<octuPtrT>(curNodePtr)->q13;
-  q23 = static_cast<octuPtrT>(curNodePtr)->q23;
+  const valueType q11 = static_cast<octuPtrT>(curNodePtr)->q11;
+  const valueType q22 = static_cast<octuPtrT>(curNodePtr)->q22;
+  const valueType q33 = static_cast<octuPtrT>(curNodePtr)->q33;
+  const valueType q12 = static_cast<octuPtrT>(curNodePtr)->q12;
+  const valueType q13 = static_cast<octuPtrT>(curNodePtr)->q13;
+  const valueType q23 = static_cast<octuPtrT>(curNodePtr)->q23;
 
-  valueType q1jrj, q2jrj, q3jrj, qijrirj;
-  q1jrj = q11 * rx + q12 * ry + q13 * rz;
-  q2jrj = q12 * rx + q22 * ry + q23 * rz;
-  q3jrj = q13 * rx + q23 * ry + q33 * rz;
-  qijrirj = q11 * rx * rx +
-            q22 * ry * ry +
-            q33 * rz * rz +
-            2. * q12 * rx * ry +
-            2. * q13 * rx * rz +
-            2. * q23 * ry * rz;
+  const valueType q1jrj = q11 * rx + q12 * ry + q13 * rz;
+  const valueType q2jrj = q12 * rx + q22 * ry + q23 * rz;
+  const valueType q3jrj = q13 * rx + q23 * ry + q33 * rz;
+  const valueType qijrirj = q11 * rx * rx +
+                            q22 * ry * ry +
+                            q33 * rz * rz +
+                            2. * q12 * rx * ry +
+                            2. * q13 * rx * rz +
+                            2. * q23 * ry * rz;
 
-  // gravity due to qquadruupole term
-  curGravParticleX -= (0.5 * q1jrj / cellPartDistPow5)
-                      + (2.5 * qijrirj * rx / cellPartDistPow7);
-  curGravParticleY -= (0.5 * q2jrj / cellPartDistPow5)
-                      + (2.5 * qijrirj * ry / cellPartDistPow7);
-  curGravParticleZ -= (0.5 * q3jrj / cellPartDistPow5)
-                      + (2.5 * qijrirj * rz / cellPartDistPow7);
+  // gravity due to octupole term
+  curGravParticleAX -= (-1.0 * q1jrj / cellPartDistPow5)
+                       + (2.5 * qijrirj * rx / cellPartDistPow7);
+  curGravParticleAY -= (-1.0 * q2jrj / cellPartDistPow5)
+                       + (2.5 * qijrirj * ry / cellPartDistPow7);
+  curGravParticleAZ -= (-1.0 * q3jrj / cellPartDistPow5)
+                       + (2.5 * qijrirj * rz / cellPartDistPow7);
 }
 
 private:
-enum octupoleIndex { CX, CY, CZ, MASS, Q11, Q22, Q33, Q12, Q13, Q23, 
-                     S11, S22, S33, S12, S21, S13, S31, S23, S123, OSIZE };
+enum octupoleIndex { CX, CY, CZ, MASS, Q11, Q22, Q33, Q12, Q13, Q23,
+                     S11, S22, S33, S12, S21, S13, S31, S23, S32, S123, OSIZE };
 
 private:
 };
