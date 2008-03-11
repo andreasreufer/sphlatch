@@ -39,7 +39,7 @@ Q_{ij} = \sum_{c} m_c \big( 3 r_{i, c} r_{j, c} - \rvec_{c}^2 \delta_{i j} \big)
 
 and the rank-3 octupole tensor which can be reduced to a rank-2 tensor
 \begin{equation}
-S_{ij}  = \sum_{k} m_c \big[ 5 \big( 3 - 2  \delta_{i j} \big) r_{i, c}^2 - 3 \rvec_{k}^2 \big] r_{j, c}\\
+S_{ij}  = \sum_{c} m_c \big[ 5 \big( 3 - 2  \delta_{i j} \big) r_{i, c}^2 - 3 \rvec_{c}^2 \big] r_{j, c}\\
 \end{equation}
 
 and a rank-0 tensor component yield
@@ -65,7 +65,7 @@ the octupole tensor components yields
 \label{eq_octupole}
 S_{ij} = \sum_{c}&  M_{c} \big[ 5 \big( 3 - 2 \delta_{i,j} \big) r_{i, c}^{2} - 3 \rvec_{c}^2 \big] r_{j, c} 
 + 5 \big( 1 - \delta_{i j} \big) r_{i, c} Q_{i j, c} \nonumber \\
-&+ \frac{5}{2} r_{j, c} Q_{i j, c} - \sum_{l} \big[ r_{l, c} Q_{j l, c} \big] + S_{i j, c} \\
+&+ \frac{5}{2} r_{j, c} Q_{i i, c} - \sum_{l} \big[ r_{l, c} Q_{j l, c} \big] + S_{i j, c} \\
 S_{1 2 3} =& 15 \sum_{c} M_{c} r_{1, c} r_{2, c} r_{3, c} + \frac{5}{3} \big( r_{1, c} Q_{2 3, c} + r_{2, c} Q_{3 1, c} + r_{3, c} Q_{1 2, c} \big) + S_{1 2 3, c }
 \end{align}
 
@@ -91,7 +91,7 @@ and so the acceleration for a point mass at $\rvec$ in this potential yields
 a_{k} &= - \nabla_{k} \phi(\rvec) \approx - G \bigg(
 \underbrace{ \frac{M}{r^{2}} \frac{r_{k}}{r} }_{monopole}+ 
 \underbrace{ \frac{Q_{i j}}{r^{4}}
-\big( \frac{\delta_{i k} r_{j} }{2r} + \frac{5 r_{i} r_{j} r_{k} }{2r^{3}} \big)
+\big( \frac{\delta_{i k} r_{j} }{r} + \frac{5 r_{i} r_{j} r_{k} }{2r^{3}} \big)
 }_{quadrupole} \nonumber \\
 &+ \underbrace{ \frac{S_{i j}}{r^{5}}
 \big( \frac{ \delta_{i k} r_{i} r_{j} }{r^{2}}

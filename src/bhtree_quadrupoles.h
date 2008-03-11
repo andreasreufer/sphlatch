@@ -167,18 +167,18 @@ void calcMultipole()
                       rr = rx * rx + ry * ry + rz * rz;
 
                       q11 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * rx * rx - rr);
+                             (3. * rx * rx - rr);
                       q22 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * ry * ry - rr);
+                             (3. * ry * ry - rr);
                       q33 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * rz * rz - rr);
+                             (3. * rz * rz - rr);
 
                       q12 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * rx * ry);
+                             (3. * rx * ry);
                       q13 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * rx * rz);
+                             (3. * rx * rz);
                       q23 += static_cast<partPtrT>(curNodePtr)->mass *
-                             (3 * ry * rz);
+                             (3. * ry * rz);
                     }
                   else
                     {
@@ -192,23 +192,23 @@ void calcMultipole()
                       rr = rx * rx + ry * ry + rz * rz;
 
                       q11 += (static_cast<quadPtrT>(curNodePtr)->mass *
-                              (3 * rx * rx - rr)) +
+                              (3. * rx * rx - rr)) +
                              static_cast<quadPtrT>(curNodePtr)->q11;
                       q22 += (static_cast<quadPtrT>(curNodePtr)->mass *
-                              (3 * ry * ry - rr)) +
+                              (3. * ry * ry - rr)) +
                              static_cast<quadPtrT>(curNodePtr)->q22;
                       q33 += (static_cast<quadPtrT>(curNodePtr)->mass *
-                              (3 * rz * rz - rr)) +
+                              (3. * rz * rz - rr)) +
                              static_cast<quadPtrT>(curNodePtr)->q33;
 
                       q12 += static_cast<quadPtrT>(curNodePtr)->mass *
-                             (3 * rx * ry) +
+                             (3. * rx * ry) +
                              static_cast<quadPtrT>(curNodePtr)->q12;
                       q13 += static_cast<quadPtrT>(curNodePtr)->mass *
-                             (3 * rx * rz) +
+                             (3. * rx * rz) +
                              static_cast<quadPtrT>(curNodePtr)->q13;
                       q23 += static_cast<quadPtrT>(curNodePtr)->mass *
-                             (3 * ry * rz) +
+                             (3. * ry * rz) +
                              static_cast<quadPtrT>(curNodePtr)->q23;
                     }
                   goUp();

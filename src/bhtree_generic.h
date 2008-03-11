@@ -911,15 +911,16 @@ private:
 void treeDOTDumpRecursor()
 {
   dumpFile << curNodePtr->ident
-           << " [label=\"\" ";
+           << " [";
+           //<< "label=\"\",";
 
   if (curNodePtr->isParticle)
     {
-      dumpFile << ",shape=circle";
+      dumpFile << "shape=circle";
     }
   else
     {
-      dumpFile << ",shape=box";
+      dumpFile << "shape=box";
     }
 
   if ((!curNodePtr->isEmpty) or
@@ -1034,7 +1035,8 @@ void treeDumpRecursor()
       dumpFile << static_cast<partPtrT>(curNodePtr)->zPos << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->mass << "   ";
       
-      for (size_t i = 0; i < 6; i++) // 6 is no of >monopole terms
+      //for (size_t i = 0; i < 6; i++) // 6 is no of >monopole terms
+      for (size_t i = 0; i < 16; i++) // 16 is no of >monopole terms
         {
           dumpFile << 0. << "   ";
         }          

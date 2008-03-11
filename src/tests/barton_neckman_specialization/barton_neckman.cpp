@@ -82,8 +82,8 @@ int main(int argc, char* argv[])
   universeCenter(0) = 0.0;
   universeCenter(1) = 0.0;
   universeCenter(2) = 0.0;
-  sphlatch::valueType universeSize = 10., theta = 0.60;
-  size_t costzoneDepth = 1;
+  sphlatch::valueType universeSize = 10., theta = 0.75;
+  size_t costzoneDepth = 0;
 
   //for (size_t i = 0; i < 256; i++)
   //for (size_t i = 0; i < 16; i++)
@@ -114,8 +114,8 @@ int main(int argc, char* argv[])
       TimeStop = microsec_clock::local_time();
       std::cerr << "Calc. multipoles time   " << (TimeStop - TimeStart) << "\n";
 
-      //BarnesHutTree.treeDump("dump.txt");
-      //BarnesHutTree.treeDOTDump("dump.dot");
+      BarnesHutTree.treeDump("dump.txt");
+      BarnesHutTree.treeDOTDump("dump.dot");
 
       //boost::progress_display show_progress(noParts, std::cout);
       TimeStart = microsec_clock::local_time();
