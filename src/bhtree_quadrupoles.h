@@ -379,7 +379,7 @@ void calcGravCell()
   // cellPartDist is already set by the MAC function
 
   // no softening for cells
-  const valueType cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
+  const valueType rInvPow3 = 1.0 / ( cellPartDist * cellPartDist * cellPartDist );
 
   const valueType rx = curGravParticleX - static_cast<quadPtrT>(curNodePtr)->xCom;
   const valueType ry = curGravParticleY - static_cast<quadPtrT>(curNodePtr)->yCom;
@@ -387,12 +387,12 @@ void calcGravCell()
   const valueType mass = static_cast<quadPtrT>(curNodePtr)->mass;
 
   // gravity due to monopole term
-  curGravParticleAX -= mass * rx / cellPartDistPow3;
-  curGravParticleAY -= mass * ry / cellPartDistPow3;
-  curGravParticleAZ -= mass * rz / cellPartDistPow3;
+  curGravParticleAX -= mass * rx * rInvPow3;
+  curGravParticleAY -= mass * ry * rInvPow3;
+  curGravParticleAZ -= mass * rz * rInvPow3;
 
-  const valueType cellPartDistPow5 = cellPartDistPow3 * cellPartDist * cellPartDist;
-  const valueType cellPartDistPow7 = cellPartDistPow5 * cellPartDist * cellPartDist;
+  const valueType rInvPow5 = rInvPow3 / ( cellPartDist * cellPartDist );
+  const valueType rInvPow7 = rInvPow5 / ( cellPartDist * cellPartDist );
 
   const valueType q11 = static_cast<quadPtrT>(curNodePtr)->q11;
   const valueType q22 = static_cast<quadPtrT>(curNodePtr)->q22;
@@ -412,12 +412,12 @@ void calcGravCell()
                             2. * q23 * ry * rz;
 
   // gravity due to quadrupole term
-  curGravParticleAX -= (-1.0 * q1jrj / cellPartDistPow5)
-                       + (2.5 * qijrirj * rx / cellPartDistPow7);
-  curGravParticleAY -= (-1.0 * q2jrj / cellPartDistPow5)
-                       + (2.5 * qijrirj * ry / cellPartDistPow7);
-  curGravParticleAZ -= (-1.0 * q3jrj / cellPartDistPow5)
-                       + (2.5 * qijrirj * rz / cellPartDistPow7);
+  curGravParticleAX += ( q1jrj * rInvPow5)
+                       - (2.5 * qijrirj * rx * rInvPow7);
+  curGravParticleAY += ( q2jrj * rInvPow5)
+                       - (2.5 * qijrirj * ry * rInvPow7);
+  curGravParticleAZ += ( q3jrj * rInvPow5)
+                       - (2.5 * qijrirj * rz * rInvPow7);
 }
 
 private:

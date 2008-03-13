@@ -88,7 +88,7 @@ BHtree(valueType _thetaMAC,
   gravConst = _gravConst;
   toptreeDepth = std::max(_czDepth,
                           _czDepth +
-                          static_cast<size_t>(ceil(-log(thetaMAC) /
+                          lrint(ceil(-log(thetaMAC) /
                                                    log(2.0))));
 
   if (toptreeDepth > 6)

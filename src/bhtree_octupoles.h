@@ -43,6 +43,15 @@ void prepareBuffers()
 }
 
 ///
+/// report number of multipole moments
+/// (includes center of mass and mass)
+///
+size_t noMultipoleMoments()
+{
+  return 20; // 4 + 6 + 10
+}
+
+///
 /// allocates a new monopole cell node and connects it as child _n
 /// no check is performed, whether curNodePtr points to a cell node!
 ///
@@ -101,8 +110,14 @@ void calcMultipole()
   // of the cell. so if nobody contributes anything, omit the addition
   // to the cell.
   //
-  static valueType cm, cxm, cym, czm;
+  static valvectType curCell(OSIZE);
 
+  for (size_t i = 0; i < OSIZE; i++)
+    {
+      curCell[i] = 0.;
+    }
+
+  static valueType cm, cxm, cym, czm;
   cm = 0.;
   cxm = 0.;
   cym = 0.;
@@ -126,6 +141,13 @@ void calcMultipole()
                          (static_cast<partPtrT>(curNodePtr)->mass);
                   czm += (static_cast<partPtrT>(curNodePtr)->zPos) *
                          (static_cast<partPtrT>(curNodePtr)->mass);
+                  curCell[MASS] += static_cast<partPtrT>(curNodePtr)->mass;
+                  curCell[CX] += (static_cast<partPtrT>(curNodePtr)->xPos) *
+                                 (static_cast<partPtrT>(curNodePtr)->mass);
+                  curCell[CY] += (static_cast<partPtrT>(curNodePtr)->yPos) *
+                                 (static_cast<partPtrT>(curNodePtr)->mass);
+                  curCell[CZ] += (static_cast<partPtrT>(curNodePtr)->zPos) *
+                                 (static_cast<partPtrT>(curNodePtr)->mass);
                 }
               else
                 {
@@ -216,10 +238,10 @@ void calcMultipole()
                            - (czm / cm);
                       massC = static_cast<partPtrT>(curNodePtr)->mass;
 
-                      rr = rx * rx + ry * ry + rz * rz;
                       rxrx = rx * rx;
                       ryry = ry * ry;
                       rzrz = rz * rz;
+                      rr = rxrx + ryry + rzrz;
 
                       q11 += ((3. * rx * rx - rr) * massC);
                       q22 += ((3. * ry * ry - rr) * massC);
@@ -254,10 +276,10 @@ void calcMultipole()
                            - (czm / cm);
                       massC = static_cast<octuPtrT>(curNodePtr)->mass;
 
-                      rr = rx * rx + ry * ry + rz * rz;
                       rxrx = rx * rx;
                       ryry = ry * ry;
                       rzrz = rz * rz;
+                      rr = rxrx + ryry + rzrz;
 
                       q11C = static_cast<octuPtrT>(curNodePtr)->q11;
                       q22C = static_cast<octuPtrT>(curNodePtr)->q22;
@@ -321,7 +343,7 @@ void calcMultipole()
 
                       s123 += 15. * rx * ry * rz * massC
                               + 25. * (q12C * rz + q13C * ry + q23C * rx)
-                              + 15. * s123C;
+                              + s123C;
                     }
                   goUp();
                 }
@@ -330,34 +352,34 @@ void calcMultipole()
     }
 
   // copy data to node itself ...
-  if (cm > 0.)
-    {
-      static_cast<octuPtrT>(curNodePtr)->mass = cm;
-      static_cast<octuPtrT>(curNodePtr)->xCom = cxm / cm;
-      static_cast<octuPtrT>(curNodePtr)->yCom = cym / cm;
-      static_cast<octuPtrT>(curNodePtr)->zCom = czm / cm;
+  //if (cm > 0.)
+  {
+    static_cast<octuPtrT>(curNodePtr)->mass = cm;
+    static_cast<octuPtrT>(curNodePtr)->xCom = cxm / cm;
+    static_cast<octuPtrT>(curNodePtr)->yCom = cym / cm;
+    static_cast<octuPtrT>(curNodePtr)->zCom = czm / cm;
 
-      static_cast<octuPtrT>(curNodePtr)->q11 = q11;
-      static_cast<octuPtrT>(curNodePtr)->q22 = q22;
-      static_cast<octuPtrT>(curNodePtr)->q33 = q33;
-      static_cast<octuPtrT>(curNodePtr)->q12 = q12;
-      static_cast<octuPtrT>(curNodePtr)->q13 = q13;
-      static_cast<octuPtrT>(curNodePtr)->q23 = q23;
+    static_cast<octuPtrT>(curNodePtr)->q11 = q11;
+    static_cast<octuPtrT>(curNodePtr)->q22 = q22;
+    static_cast<octuPtrT>(curNodePtr)->q33 = q33;
+    static_cast<octuPtrT>(curNodePtr)->q12 = q12;
+    static_cast<octuPtrT>(curNodePtr)->q13 = q13;
+    static_cast<octuPtrT>(curNodePtr)->q23 = q23;
 
-      static_cast<octuPtrT>(curNodePtr)->s11 = s11;
-      static_cast<octuPtrT>(curNodePtr)->s22 = s22;
-      static_cast<octuPtrT>(curNodePtr)->s33 = s33;
-      static_cast<octuPtrT>(curNodePtr)->s12 = s12;
-      static_cast<octuPtrT>(curNodePtr)->s21 = s21;
-      static_cast<octuPtrT>(curNodePtr)->s13 = s13;
-      static_cast<octuPtrT>(curNodePtr)->s31 = s31;
-      static_cast<octuPtrT>(curNodePtr)->s23 = s23;
-      static_cast<octuPtrT>(curNodePtr)->s32 = s32;
-      static_cast<octuPtrT>(curNodePtr)->s123 = s123;
-    }
-  else
-    {
-    }
+    static_cast<octuPtrT>(curNodePtr)->s11 = s11;
+    static_cast<octuPtrT>(curNodePtr)->s22 = s22;
+    static_cast<octuPtrT>(curNodePtr)->s33 = s33;
+    static_cast<octuPtrT>(curNodePtr)->s12 = s12;
+    static_cast<octuPtrT>(curNodePtr)->s21 = s21;
+    static_cast<octuPtrT>(curNodePtr)->s13 = s13;
+    static_cast<octuPtrT>(curNodePtr)->s31 = s31;
+    static_cast<octuPtrT>(curNodePtr)->s23 = s23;
+    static_cast<octuPtrT>(curNodePtr)->s32 = s32;
+    static_cast<octuPtrT>(curNodePtr)->s123 = s123;
+  }
+  //else
+  {
+  }
 }
 
 ///
@@ -529,7 +551,7 @@ void calcGravCell()
   // cellPartDist is already set by the MAC function
 
   // no softening for cells
-  const valueType cellPartDistPow3 = cellPartDist * cellPartDist * cellPartDist;
+  const valueType rInvPow3 = 1. / (cellPartDist * cellPartDist * cellPartDist);
 
   const valueType rx = curGravParticleX - static_cast<octuPtrT>(curNodePtr)->xCom;
   const valueType ry = curGravParticleY - static_cast<octuPtrT>(curNodePtr)->yCom;
@@ -537,13 +559,13 @@ void calcGravCell()
   const valueType mass = static_cast<octuPtrT>(curNodePtr)->mass;
 
   // gravity due to monopole term
-  curGravParticleAX -= mass * rx / cellPartDistPow3;
-  curGravParticleAY -= mass * ry / cellPartDistPow3;
-  curGravParticleAZ -= mass * rz / cellPartDistPow3;
+  curGravParticleAX -= (rInvPow3) * mass * rx;
+  curGravParticleAY -= (rInvPow3) * mass * ry;
+  curGravParticleAZ -= (rInvPow3) * mass * rz;
 
   // intermediate results for quadrupole term
-  const valueType cellPartDistPow5 = cellPartDistPow3 * cellPartDist * cellPartDist;
-  const valueType cellPartDistPow7 = cellPartDistPow5 * cellPartDist * cellPartDist;
+  const valueType rInvPow5 = rInvPow3 / (cellPartDist * cellPartDist);
+  const valueType rInvPow7 = rInvPow5 / (cellPartDist * cellPartDist);
 
   const valueType q11 = static_cast<octuPtrT>(curNodePtr)->q11;
   const valueType q22 = static_cast<octuPtrT>(curNodePtr)->q22;
@@ -552,31 +574,23 @@ void calcGravCell()
   const valueType q13 = static_cast<octuPtrT>(curNodePtr)->q13;
   const valueType q23 = static_cast<octuPtrT>(curNodePtr)->q23;
 
-  // less calcs, more mem access. good idea? do some benchmarking
-  const valueType rxrx = rx * rx;
-  const valueType ryry = ry * ry;
-  const valueType rzrz = rz * rz;
-
   const valueType q1jrj = q11 * rx + q12 * ry + q13 * rz;
   const valueType q2jrj = q12 * rx + q22 * ry + q23 * rz;
   const valueType q3jrj = q13 * rx + q23 * ry + q33 * rz;
-  const valueType qijrirj = q11 * rxrx +
-                            q22 * ryry +
-                            q33 * rzrz +
+  const valueType qijrirj = q11 * rx * rx +
+                            q22 * ry * ry +
+                            q33 * rz * rz +
                             2. * q12 * rx * ry +
                             2. * q13 * rx * rz +
                             2. * q23 * ry * rz;
 
   // gravity due to octupole term
-  curGravParticleAX -= (-1.0 * q1jrj / cellPartDistPow5)
-                       + (2.5 * qijrirj * rx / cellPartDistPow7);
-  curGravParticleAY -= (-1.0 * q2jrj / cellPartDistPow5)
-                       + (2.5 * qijrirj * ry / cellPartDistPow7);
-  curGravParticleAZ -= (-1.0 * q3jrj / cellPartDistPow5)
-                       + (2.5 * qijrirj * rz / cellPartDistPow7);
+  curGravParticleAX += (rInvPow5) * (q1jrj) - (rInvPow7) * (2.5 * qijrirj * rx);
+  curGravParticleAY += (rInvPow5) * (q2jrj) - (rInvPow7) * (2.5 * qijrirj * ry);
+  curGravParticleAZ += (rInvPow5) * (q3jrj) - (rInvPow7) * (2.5 * qijrirj * rz);
 
   // intermediate results for octupole term
-  const valueType cellPartDistPow9 = cellPartDistPow7 * cellPartDist * cellPartDist;
+  const valueType rInvPow9 = rInvPow7 / (cellPartDist * cellPartDist);
 
   const valueType s11 = static_cast<octuPtrT>(curNodePtr)->s11;
   const valueType s22 = static_cast<octuPtrT>(curNodePtr)->s22;
@@ -593,21 +607,19 @@ void calcGravCell()
   const valueType s2jrj = s21 * rx + s22 * ry + s23 * rz;
   const valueType s3jrj = s31 * rx + s32 * ry + s33 * rz;
 
-  const valueType si1riri = s11 * rxrx + s21 * ryry + s31 * rzrz;
-  const valueType si2riri = s12 * rxrx + s22 * ryry + s32 * rzrz;
-  const valueType si3riri = s13 * rxrx + s23 * ryry + s33 * rzrz;
+  const valueType si1riri = s11 * rx * rx + s21 * ry * ry + s31 * rz * rz;
+  const valueType si2riri = s12 * rx * rx + s22 * ry * ry + s32 * rz * rz;
+  const valueType si3riri = s13 * rx * rx + s23 * ry * ry + s33 * rz * rz;
 
   const valueType sijririrj = si1riri * rx + si2riri * ry + si3riri * rz;
 
-  const valueType rxryrz = rx * ry * rz;
-
   // gravity due to octupole terms
-  /*curGravParticleAX -= (1. / cellPartDistPow7) * (-s1jrj * rx - 0.5 * si1riri - 0.5 * s123 * ry * rz)
-                       + (1. / cellPartDistPow9) * (7.0 * sijririrj * rx + 3.5 * s123 * rxryrz * rx);*/
-  /*curGravParticleAY -= (1. / cellPartDistPow7) * (-s2jrj * ry - 0.5 * si2riri - 0.5 * s123 * rz * rx)
-                       + (1. / cellPartDistPow9) * (7.0 * sijririrj * ry + 3.5 * s123 * rxryrz * ry);*/
-  curGravParticleAZ -= (1. / cellPartDistPow7) * (-s3jrj * rz - 0.5 * si3riri - 0.5 * s123 * rx * ry)
-                       + (1. / cellPartDistPow9) * (7.0 * sijririrj * rz + 3.5 * s123 * rxryrz * rz);
+  curGravParticleAX += (rInvPow7) * (s1jrj * rx + 0.5 * si1riri + 0.5 * s123 * ry * rz)
+                       - (3.5 * rInvPow9) * (sijririrj * rx + s123 * rx * ry * rz * rx);
+  curGravParticleAY += (rInvPow7) * (s2jrj * ry + 0.5 * si2riri + 0.5 * s123 * rz * rx)
+                       - (3.5 * rInvPow9) * (sijririrj * ry + s123 * rx * ry * rz * ry);
+  curGravParticleAZ += (rInvPow7) * (s3jrj * rz + 0.5 * si3riri + 0.5 * s123 * rx * ry)
+                       - (3.5 * rInvPow9) * (sijririrj * rz + s123 * rx * ry * rz * rz);
 }
 
 private:

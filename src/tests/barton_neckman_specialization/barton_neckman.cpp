@@ -14,7 +14,7 @@ namespace po = boost::program_options;
 #include <boost/assign/std/vector.hpp>
 using namespace boost::assign;
 
-//#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_SINGLEPREC
 //#define SPHLATCH_MPI
 
 #include "particle.h"
@@ -82,17 +82,17 @@ int main(int argc, char* argv[])
   universeCenter(0) = 0.0;
   universeCenter(1) = 0.0;
   universeCenter(2) = 0.0;
-  sphlatch::valueType universeSize = 10., theta = 0.75;
+  sphlatch::valueType universeSize = 10., theta = 0.51;
   size_t costzoneDepth = 0;
 
   //for (size_t i = 0; i < 256; i++)
-  //for (size_t i = 0; i < 16; i++)
-  for (size_t i = 0; i < 1; i++)
+  for (size_t i = 0; i < 16; i++)
+  //for (size_t i = 0; i < 1; i++)
     {
       TimeStart = microsec_clock::local_time();
       //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(theta, 1.0,
-      sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(theta, 1.0,
-      //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(theta, 1.0,
+      //sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(theta, 1.0,
+      sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(theta, 1.0,
                                                           costzoneDepth,
                                                           universeCenter,
                                                           universeSize);
@@ -114,8 +114,8 @@ int main(int argc, char* argv[])
       TimeStop = microsec_clock::local_time();
       std::cerr << "Calc. multipoles time   " << (TimeStop - TimeStart) << "\n";
 
-      BarnesHutTree.treeDump("dump.txt");
-      BarnesHutTree.treeDOTDump("dump.dot");
+      //BarnesHutTree.treeDump("dump.txt");
+      //BarnesHutTree.treeDOTDump("dump.dot");
 
       //boost::progress_display show_progress(noParts, std::cout);
       TimeStart = microsec_clock::local_time();
