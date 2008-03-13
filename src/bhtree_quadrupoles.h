@@ -381,30 +381,30 @@ void calcGravCell()
   // no softening for cells
   const valueType rInvPow3 = 1.0 / ( cellPartDist * cellPartDist * cellPartDist );
 
-  const valueType rx = curGravParticleX - static_cast<quadPtrT>(curNodePtr)->xCom;
-  const valueType ry = curGravParticleY - static_cast<quadPtrT>(curNodePtr)->yCom;
-  const valueType rz = curGravParticleZ - static_cast<quadPtrT>(curNodePtr)->zCom;
-  const valueType mass = static_cast<quadPtrT>(curNodePtr)->mass;
+  const static valueType rx = curGravParticleX - static_cast<quadPtrT>(curNodePtr)->xCom;
+  const static valueType ry = curGravParticleY - static_cast<quadPtrT>(curNodePtr)->yCom;
+  const static valueType rz = curGravParticleZ - static_cast<quadPtrT>(curNodePtr)->zCom;
+  const static valueType mass = static_cast<quadPtrT>(curNodePtr)->mass;
 
   // gravity due to monopole term
   curGravParticleAX -= mass * rx * rInvPow3;
   curGravParticleAY -= mass * ry * rInvPow3;
   curGravParticleAZ -= mass * rz * rInvPow3;
 
-  const valueType rInvPow5 = rInvPow3 / ( cellPartDist * cellPartDist );
-  const valueType rInvPow7 = rInvPow5 / ( cellPartDist * cellPartDist );
+  const static valueType rInvPow5 = rInvPow3 / ( cellPartDist * cellPartDist );
+  const static valueType rInvPow7 = rInvPow5 / ( cellPartDist * cellPartDist );
 
-  const valueType q11 = static_cast<quadPtrT>(curNodePtr)->q11;
-  const valueType q22 = static_cast<quadPtrT>(curNodePtr)->q22;
-  const valueType q33 = static_cast<quadPtrT>(curNodePtr)->q33;
-  const valueType q12 = static_cast<quadPtrT>(curNodePtr)->q12;
-  const valueType q13 = static_cast<quadPtrT>(curNodePtr)->q13;
-  const valueType q23 = static_cast<quadPtrT>(curNodePtr)->q23;
+  const static valueType q11 = static_cast<quadPtrT>(curNodePtr)->q11;
+  const static valueType q22 = static_cast<quadPtrT>(curNodePtr)->q22;
+  const static valueType q33 = static_cast<quadPtrT>(curNodePtr)->q33;
+  const static valueType q12 = static_cast<quadPtrT>(curNodePtr)->q12;
+  const static valueType q13 = static_cast<quadPtrT>(curNodePtr)->q13;
+  const static valueType q23 = static_cast<quadPtrT>(curNodePtr)->q23;
 
-  const valueType q1jrj = q11 * rx + q12 * ry + q13 * rz;
-  const valueType q2jrj = q12 * rx + q22 * ry + q23 * rz;
-  const valueType q3jrj = q13 * rx + q23 * ry + q33 * rz;
-  const valueType qijrirj = q11 * rx * rx +
+  const static valueType q1jrj = q11 * rx + q12 * ry + q13 * rz;
+  const static valueType q2jrj = q12 * rx + q22 * ry + q23 * rz;
+  const static valueType q3jrj = q13 * rx + q23 * ry + q33 * rz;
+  const static valueType qijrirj = q11 * rx * rx +
                             q22 * ry * ry +
                             q33 * rz * rz +
                             2. * q12 * rx * ry +

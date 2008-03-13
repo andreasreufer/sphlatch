@@ -262,12 +262,12 @@ void calcGravCell()
   // cellPartDist is already set by the MAC function
 
   // no softening for cells
-  const valueType rInvPow3 = 1.0 / ( cellPartDist * cellPartDist * cellPartDist );
+  const static valueType rInvPow3 = 1.0 / ( cellPartDist * cellPartDist * cellPartDist );
 
-  const valueType rx = curGravParticleX - static_cast<monoPtrT>(curNodePtr)->xCom;
-  const valueType ry = curGravParticleY - static_cast<monoPtrT>(curNodePtr)->yCom;
-  const valueType rz = curGravParticleZ - static_cast<monoPtrT>(curNodePtr)->zCom;
-  const valueType mass = static_cast<monoPtrT>(curNodePtr)->mass;
+  const static valueType rx = curGravParticleX - static_cast<monoPtrT>(curNodePtr)->xCom;
+  const static valueType ry = curGravParticleY - static_cast<monoPtrT>(curNodePtr)->yCom;
+  const static valueType rz = curGravParticleZ - static_cast<monoPtrT>(curNodePtr)->zCom;
+  const static valueType mass = static_cast<monoPtrT>(curNodePtr)->mass;
 
   // gravity due to monopole term
   curGravParticleAX -= mass * rx * rInvPow3;

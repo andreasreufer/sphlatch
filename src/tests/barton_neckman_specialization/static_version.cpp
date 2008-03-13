@@ -82,11 +82,11 @@ int main(int argc, char* argv[])
   universeCenter(1) = 0.0;
   universeCenter(2) = 0.0;
 
-  valueType universeSize = 10., theta = 0.60;
+  valueType universeSize = 10., theta = 0.7500;
   size_t costzoneDepth = 4;
 
-  //for (size_t i = 0; i < 16; i++)
-  for (size_t i = 0; i < 1; i++)
+  for (size_t i = 0; i < 16; i++)
+  //for (size_t i = 0; i < 1; i++)
     {
       TimeStart = microsec_clock::local_time();
       sphlatch::OctTree BarnesHutTree(theta, 1.0,
