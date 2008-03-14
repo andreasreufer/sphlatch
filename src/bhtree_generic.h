@@ -81,15 +81,13 @@ BHtree(valueType _thetaMAC,
 
   curNodePtr = rootPtr;
 
-  cellCounter = 1;  // we now have the root cell and no particles
-  partCounter = 0;
+  cellCounter = 1;  // we now have the root cell
+  partCounter = 0;  // ... and no particles
 
   thetaMAC = _thetaMAC;
   gravConst = _gravConst;
   toptreeDepth = std::max(_czDepth,
-                          _czDepth +
-                          lrint(ceil(-log(thetaMAC) /
-                                                   log(2.0))));
+                          _czDepth + lrint(ceil(-log(thetaMAC) / log(2.0))));
 
   if (toptreeDepth > 6)
     {
@@ -113,7 +111,7 @@ BHtree(valueType _thetaMAC,
 {
   goRoot();
   empty();
-  delete curNodePtr;                             // Seppuku!
+  delete curNodePtr; // Seppuku!
 }
 
 protected:
@@ -219,8 +217,7 @@ void newCellChild(const size_t _n)
 ///
 void newPartChild(const size_t _n)
 {
-  particleNode* newNodePtr =
-    new particleNode;
+  particleNode* newNodePtr = new particleNode;
 
   newNodePtr->parent = curNodePtr;
   static_cast<cellPtrT>(curNodePtr)->child[_n] = newNodePtr;
@@ -365,21 +362,19 @@ void insertParticleRecursor(partProxyPtrT _newPayload,
 /// particles as childs of this node
   else if (static_cast<cellPtrT>(curNodePtr)->child[targetOctant]->isParticle)
     {
-///
-/// goto child, save resident particle
-/// and convert it to a node
-
+      /// goto child, save resident particle
       goChild(targetOctant);
       partProxyPtrT residentPayload =
         static_cast<partPtrT>(curNodePtr)->partProxyPtr;
       bool residentIsLocal = curNodePtr->isLocal;
       goUp();
 
-      // replace particle by cell node
+      /// replace particle by cell node
       delete static_cast<cellPtrT>(curNodePtr)->child[targetOctant];
       static_cast<cellPtrT>(curNodePtr)->child[targetOctant] = NULL;
       newCellChild(targetOctant);
-      
+
+      /// and try to insert both particles again
       goChild(targetOctant);
       insertParticleRecursor(residentPayload, residentIsLocal);
       insertParticleRecursor(_newPayload, _newIsLocal);
@@ -430,7 +425,9 @@ void calcMultipoleRecursor(void)
                   goUp();
                 }
             }
+          /// determine locality of current node
           detLocality();
+          /// calculate multipole moments (delegated to specialization)
           asLeaf().calcMultipole();
         }
     }
@@ -444,8 +441,7 @@ void calcMultipoleRecursor(void)
 ///
 bool calcMultipoleStop(void)
 {
-  return curNodePtr->isEmpty;                                                                                           // particles are per definition
-  // particles are always empty, so we can omit this check
+  return curNodePtr->isEmpty; /// particles are always empty, so we can omit this check
 };
 
 
@@ -495,7 +491,7 @@ size_t toptreeCounter;
 private:
 void globalSumupMultipoles()
 {
- #ifdef SPHLATCH_MPI
+#ifdef SPHLATCH_MPI
   const size_t RANK = MPI::COMM_WORLD.Get_rank();
   const size_t SIZE = MPI::COMM_WORLD.Get_size();
 
@@ -614,7 +610,7 @@ void globalSumupMultipoles()
   toptreeCounter = 0;
 
   buffersToToptreeRecursor();
- #endif
+#endif
 }
 
 #ifdef SPHLATCH_MPI
@@ -734,7 +730,7 @@ void sendBitset(bitsetRefType _bitSet, size_t _recvRank)
 protected:
 valueType curGravParticleX, curGravParticleY, curGravParticleZ;
 valueType curGravParticleAX, curGravParticleAY, curGravParticleAZ;
-valueType cellPartDist;//, cellPartDistPow3;
+valueType cellPartDist; //, cellPartDistPow3;
 valueType thetaMAC, gravConst;
 valueType epsilonSquare;
 size_t calcGravityCellsCounter, calcGravityPartsCounter;
@@ -748,21 +744,21 @@ public:
 /// - write back resulting acceleration
 ///
 void calcGravity(partProxyPtrT _curParticle)
-{  
+{
   curGravParticleX = (*_curParticle)(X);
   curGravParticleY = (*_curParticle)(Y);
   curGravParticleZ = (*_curParticle)(Z);
-  
+
   curGravParticleAX = 0.;
   curGravParticleAY = 0.;
   curGravParticleAZ = 0.;
 
   epsilonSquare = (*_curParticle)(GRAVEPS)*(*_curParticle)(GRAVEPS);
 
- #ifdef SPHLATCH_TREE_PROFILE
+#ifdef SPHLATCH_TREE_PROFILE
   calcGravityPartsCounter = 0;
   calcGravityCellsCounter = 0;
- #endif
+#endif
 
   //
   // trick: hide the current particle by letting it look like
@@ -790,6 +786,9 @@ void calcGravityRecursor(void)
   if (curNodePtr->isParticle)
     {
       calcGravParticle();
+#ifdef SPHLATCH_TREE_PROFILE
+      calcGravityPartsCounter++;
+#endif
     }
   else
   if (curNodePtr->isEmpty)
@@ -799,6 +798,9 @@ void calcGravityRecursor(void)
   if (asLeaf().calcGravMAC())
     {
       asLeaf().calcGravCell();
+#ifdef SPHLATCH_TREE_PROFILE
+      calcGravityCellsCounter++;
+#endif
     }
   else
     {
@@ -820,29 +822,27 @@ void calcGravityRecursor(void)
 ///
 void calcGravParticle()
 {
- #ifdef SPHLATCH_TREE_PROFILE
-  calcGravityPartsCounter++;
- #endif
   // strangely in this routine "static" temp. variables seem to be faster
   static valueType partGravPartnerX, partGravPartnerY,
                    partGravPartnerZ, partGravPartnerM;
+
   partGravPartnerX = static_cast<partPtrT>(curNodePtr)->xPos;
   partGravPartnerY = static_cast<partPtrT>(curNodePtr)->yPos;
   partGravPartnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
   partGravPartnerM = static_cast<partPtrT>(curNodePtr)->mass;
 
   static valueType partPartDistPow2;
-  partPartDistPow2 =  (partGravPartnerX - curGravParticleX) *
-                      (partGravPartnerX - curGravParticleX) +
-                      (partGravPartnerY - curGravParticleY) *
-                      (partGravPartnerY - curGravParticleY) +
-                      (partGravPartnerZ - curGravParticleZ) *
-                      (partGravPartnerZ - curGravParticleZ);
+  partPartDistPow2 = (partGravPartnerX - curGravParticleX) *
+                     (partGravPartnerX - curGravParticleX) +
+                     (partGravPartnerY - curGravParticleY) *
+                     (partGravPartnerY - curGravParticleY) +
+                     (partGravPartnerZ - curGravParticleZ) *
+                     (partGravPartnerZ - curGravParticleZ);
 
   /// \todo: include spline softening
   static valueType cellPartDistPow3;
   cellPartDistPow3 = static_cast<valueType>(
-    pow( partPartDistPow2 + epsilonSquare, 3. / 2.));
+    pow(partPartDistPow2 + epsilonSquare, 3. / 2.));
 
   curGravParticleAX -= partGravPartnerM *
                        (curGravParticleX - partGravPartnerX) /
@@ -912,7 +912,7 @@ void treeDOTDumpRecursor()
 {
   dumpFile << curNodePtr->ident
            << " [";
-           //<< "label=\"\",";
+  //<< "label=\"\",";
 
   if (curNodePtr->isParticle)
     {
@@ -1028,18 +1028,18 @@ void treeDumpRecursor()
       for (size_t i = 0; i < 4; i++)
         {
           dumpFile << 0. << "   ";
-        }          
-      
+        }
+
       dumpFile << static_cast<partPtrT>(curNodePtr)->xPos << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->yPos << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->zPos << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->mass << "   ";
-      
+
       //for (size_t i = 0; i < 6; i++) // 6 is no of >monopole terms
       for (size_t i = 0; i < 16; i++) // 16 is no of >monopole terms
         {
           dumpFile << 0. << "   ";
-        }          
+        }
     }
   else
     {
