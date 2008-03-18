@@ -82,19 +82,30 @@ int main(int argc, char* argv[])
       (partsDomainMapping[sendtoRank]).push_back(i);
     }
 
-  std::cout << "RANK " << RANK << ":     " << Data(0, sphlatch::ID) << "\n";
-
-  for (size_t i = 0; i < SIZE; i++)
-    {
-      CommManager.exchange(Data, partsDomainMapping, Data);
-      std::cout << "RANK " << RANK << ":     " << Data(0, sphlatch::ID) << "\n";
-    }
-
 
   // particles are all distributed now
   using namespace boost::posix_time;
   ptime TimeStart, TimeStop;
+  // set up logging stuff
+  std::string logFilename = "logRank000";
+  std::string rankString = boost::lexical_cast<std::string>(RANK);
+  logFilename.replace(logFilename.size() - 0 - rankString.size(),
+                      rankString.size(), rankString);
 
+  std::fstream logFile;
+  logFile.open(logFilename.c_str(), std::ios::out);
+  //logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+  //        << MPI_Wtime() - logStartTime << "    start log\n";
+
+  for (size_t i = 0; i < 4 * SIZE; i++)
+    {
+      TimeStart = microsec_clock::local_time();
+      CommManager.exchange(Data, partsDomainMapping, Data);
+      TimeStop = microsec_clock::local_time();
+      logFile << "communication " << (TimeStop - TimeStart) << "\n";
+    }
+
+  logFile.close();
 
   using namespace sphlatch;
   std::vector<int> outputAttrSet;
