@@ -1,8 +1,8 @@
 // some defs
 
 // uncomment for single-precision calculation
-//#define OOSPH_SINGLE_PRECISION
-//#define SPHLATCH_SINGLEPREC
+#define OOSPH_SINGLE_PRECISION
+#define SPHLATCH_SINGLEPREC
 
 // enable load-balancing (fishy!)
 //#define OOSPH_LOADBALANCE

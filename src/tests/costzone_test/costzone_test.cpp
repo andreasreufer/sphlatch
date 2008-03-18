@@ -1,0 +1,109 @@
+#include <cstdlib>
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include <boost/program_options/option.hpp>
+#include <boost/program_options/cmdline.hpp>
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/variables_map.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/positional_options.hpp>
+namespace po = boost::program_options;
+
+#include <boost/assign/std/vector.hpp>
+using namespace boost::assign;
+
+#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_MPI
+
+#include "particle.h"
+#include "iomanager.h"
+typedef sphlatch::IOManager io_type;
+#include "memorymanager.h"
+typedef sphlatch::MemoryManager mem_type;
+#include "communicationmanager.h"
+typedef sphlatch::CommunicationManager comm_type;
+
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/progress.hpp>
+
+int main(int argc, char* argv[])
+{
+#ifdef SPHLATCH_MPI
+  MPI::Init(argc, argv);
+#endif
+  po::options_description Options("Global Options");
+  Options.add_options() ("help,h", "Produces this Help blabla...")
+  ("input-file,i", po::value<std::string>(), "InputFile");
+
+  po::positional_options_description POD;
+  POD.add("input-file", 1);
+
+  po::variables_map VMap;
+  po::store(po::command_line_parser(argc, argv).options(Options).positional(POD).run(), VMap);
+  po::notify(VMap);
+
+  if (VMap.count("help"))
+    {
+      std::cout << Options << std::endl;
+      return EXIT_FAILURE;
+    }
+
+  if (!VMap.count("input-file"))
+    {
+      std::cout << Options << std::endl;
+      return EXIT_FAILURE;
+    }
+
+  io_type& IOManager(io_type::instance());
+  mem_type& MemManager(mem_type::instance());
+  comm_type& CommManager(comm_type::instance());
+
+  sphlatch::matrixRefType Data(MemManager.Data);
+
+  std::string InputFileName = VMap["input-file"].as<std::string>();
+
+  Data.resize(Data.size1(), sphlatch::SIZE);
+  IOManager.loadCDAT(InputFileName);
+
+  const size_t RANK = MPI::COMM_WORLD.Get_rank();
+  const size_t SIZE = MPI::COMM_WORLD.Get_size();
+  const size_t noParts = Data.size1();
+
+  sphlatch::domainPartsIndexType partsDomainMapping;
+
+  size_t sendtoRank = (RANK + 1) % SIZE; // send to next rank
+
+  partsDomainMapping.resize(SIZE);
+
+  for (size_t i = 0; i < noParts; i++)
+    {
+      (partsDomainMapping[sendtoRank]).push_back(i);
+    }
+
+  std::cout << "RANK " << RANK << ":     " << Data(0, sphlatch::ID) << "\n";
+
+  for (size_t i = 0; i < SIZE; i++)
+    {
+      CommManager.exchange(Data, partsDomainMapping, Data);
+      std::cout << "RANK " << RANK << ":     " << Data(0, sphlatch::ID) << "\n";
+    }
+
+
+  // particles are all distributed now
+  using namespace boost::posix_time;
+  ptime TimeStart, TimeStop;
+
+
+  using namespace sphlatch;
+  std::vector<int> outputAttrSet;
+  outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
+  IOManager.saveCDAT("out.cdat", outputAttrSet);
+
+  #ifdef SPHLATCH_MPI
+  MPI::Finalize();
+  #endif
+
+  return EXIT_SUCCESS;
+}

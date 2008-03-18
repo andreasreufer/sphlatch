@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
   universeCenter(1) = 0.0;
   universeCenter(2) = 0.0;
   sphlatch::valueType universeSize = 10., theta = 0.75;
-  size_t costzoneDepth = 4;
+  size_t costzoneDepth = 0;
 
   //for (size_t i = 0; i < 256; i++)
   //for (size_t i = 0; i < 16; i++)

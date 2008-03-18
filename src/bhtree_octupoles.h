@@ -30,6 +30,7 @@ void allocRootNode()
   rootPtr = new octupoleCellNode;
 }
 
+//deprecated
 ///
 /// resize buffers for communication
 ///
@@ -48,7 +49,7 @@ void prepareBuffers()
 ///
 size_t noMultipoleMoments()
 {
-  return 20; // 4 + 6 + 10
+  return 20; // 3 center of mass + 1 monopole + 6 quadrupoles + 10 octupoles = 20 multipoles
 }
 
 ///
@@ -128,20 +129,15 @@ void calcMultipole()
               goChild(i);
               if (curNodePtr->isParticle == true)
                 {
-                  childCell[CX] = static_cast<partPtrT>(curNodePtr)->xPos;
-                  childCell[CY] = static_cast<partPtrT>(curNodePtr)->yPos;
-                  childCell[CZ] = static_cast<partPtrT>(curNodePtr)->zPos;
-                  childCell[MASS] = static_cast<partPtrT>(curNodePtr)->mass;
+                  partToVect(childCell);
                 }
               else
                 {
-                  childCell[CX] = static_cast<octuPtrT>(curNodePtr)->xCom;
-                  childCell[CY] = static_cast<octuPtrT>(curNodePtr)->yCom;
-                  childCell[CZ] = static_cast<octuPtrT>(curNodePtr)->zCom;
-                  childCell[MASS] = static_cast<octuPtrT>(curNodePtr)->mass;
+                  cellToVect(childCell);
                 }
-              addCOM(curCell, childCell);
               goUp();
+
+              addCOM(curCell, childCell);
             }
         }
     }
@@ -158,56 +154,15 @@ void calcMultipole()
                   goChild(i);
                   if (curNodePtr->isParticle == true)
                     {
-                      childCell[CX] = static_cast<partPtrT>(curNodePtr)->xPos;
-                      childCell[CY] = static_cast<partPtrT>(curNodePtr)->yPos;
-                      childCell[CZ] = static_cast<partPtrT>(curNodePtr)->zPos;
-                      childCell[MASS] = static_cast<partPtrT>(curNodePtr)->mass;
-
-                      childCell[Q11] = 0.;
-                      childCell[Q22] = 0.;
-                      childCell[Q33] = 0.;
-                      childCell[Q12] = 0.;
-                      childCell[Q13] = 0.;
-                      childCell[Q23] = 0.;
-
-                      childCell[S11] = 0.;
-                      childCell[S22] = 0.;
-                      childCell[S33] = 0.;
-                      childCell[S12] = 0.;
-                      childCell[S21] = 0.;
-                      childCell[S13] = 0.;
-                      childCell[S31] = 0.;
-                      childCell[S23] = 0.;
-                      childCell[S32] = 0.;
-                      childCell[S123] = 0.;
+                      partToVect(childCell);
                     }
                   else
                     {
-                      childCell[CX] = static_cast<octuPtrT>(curNodePtr)->xCom;
-                      childCell[CY] = static_cast<octuPtrT>(curNodePtr)->yCom;
-                      childCell[CZ] = static_cast<octuPtrT>(curNodePtr)->zCom;
-                      childCell[MASS] = static_cast<octuPtrT>(curNodePtr)->mass;
-
-                      childCell[Q11] = static_cast<octuPtrT>(curNodePtr)->q11;
-                      childCell[Q22] = static_cast<octuPtrT>(curNodePtr)->q22;
-                      childCell[Q33] = static_cast<octuPtrT>(curNodePtr)->q33;
-                      childCell[Q12] = static_cast<octuPtrT>(curNodePtr)->q12;
-                      childCell[Q13] = static_cast<octuPtrT>(curNodePtr)->q13;
-                      childCell[Q23] = static_cast<octuPtrT>(curNodePtr)->q23;
-
-                      childCell[S11] = static_cast<octuPtrT>(curNodePtr)->s11;
-                      childCell[S22] = static_cast<octuPtrT>(curNodePtr)->s22;
-                      childCell[S33] = static_cast<octuPtrT>(curNodePtr)->s33;
-                      childCell[S12] = static_cast<octuPtrT>(curNodePtr)->s12;
-                      childCell[S21] = static_cast<octuPtrT>(curNodePtr)->s21;
-                      childCell[S13] = static_cast<octuPtrT>(curNodePtr)->s13;
-                      childCell[S31] = static_cast<octuPtrT>(curNodePtr)->s31;
-                      childCell[S23] = static_cast<octuPtrT>(curNodePtr)->s23;
-                      childCell[S32] = static_cast<octuPtrT>(curNodePtr)->s32;
-                      childCell[S123] = static_cast<octuPtrT>(curNodePtr)->s123;
+                      cellToVect(childCell);
                     }
-                  addMP(curCell, childCell);
                   goUp();
+
+                  addMP(curCell, childCell);
                 }
             }
         }
@@ -216,28 +171,7 @@ void calcMultipole()
 // copy data to node itself ...
   if (curCell[MASS] > 0.)
     {
-      static_cast<octuPtrT>(curNodePtr)->mass = curCell[MASS];
-      static_cast<octuPtrT>(curNodePtr)->xCom = curCell[CX];
-      static_cast<octuPtrT>(curNodePtr)->yCom = curCell[CY];
-      static_cast<octuPtrT>(curNodePtr)->zCom = curCell[CZ];
-
-      static_cast<octuPtrT>(curNodePtr)->q11 = curCell[Q11];
-      static_cast<octuPtrT>(curNodePtr)->q22 = curCell[Q22];
-      static_cast<octuPtrT>(curNodePtr)->q33 = curCell[Q33];
-      static_cast<octuPtrT>(curNodePtr)->q12 = curCell[Q12];
-      static_cast<octuPtrT>(curNodePtr)->q13 = curCell[Q13];
-      static_cast<octuPtrT>(curNodePtr)->q23 = curCell[Q23];
-
-      static_cast<octuPtrT>(curNodePtr)->s11 = curCell[S11];
-      static_cast<octuPtrT>(curNodePtr)->s22 = curCell[S22];
-      static_cast<octuPtrT>(curNodePtr)->s33 = curCell[S33];
-      static_cast<octuPtrT>(curNodePtr)->s12 = curCell[S12];
-      static_cast<octuPtrT>(curNodePtr)->s21 = curCell[S21];
-      static_cast<octuPtrT>(curNodePtr)->s13 = curCell[S13];
-      static_cast<octuPtrT>(curNodePtr)->s31 = curCell[S31];
-      static_cast<octuPtrT>(curNodePtr)->s23 = curCell[S23];
-      static_cast<octuPtrT>(curNodePtr)->s32 = curCell[S32];
-      static_cast<octuPtrT>(curNodePtr)->s123 = curCell[S123];
+      vectToCell(curCell);
     }
 }
 
@@ -331,15 +265,18 @@ void addMP(valvectRefType _target, const valvectRefType _source)
                    + _source[S123];
 }
 
+//deprecated
 ///
 /// merge multipole moments in remote and local buffers
 ///
 void mergeRemoteCells()
 {
-  valueType oldMass, newMass;
+  static valvectType localCell, remoteCell;
 
-  for (size_t i = 0; i < noToptreeCells; i++)
-    {
+  /*
+     valueType oldMass, newMass;
+     for (size_t i = 0; i < noToptreeCells; i++)
+     {
       if (remoteIsFilled[i])
         {
           if (localIsFilled[i])
@@ -357,16 +294,17 @@ void mergeRemoteCells()
                   localCells(i, MASS) = newMass;
                   localCells(i, CX) = ((oldMass / newMass) *
                                        localCells(i, CX))
-                                      + ((remoteCells(i, MASS) / newMass) *
+   + ((remoteCells(i, MASS) / newMass) *
                                          remoteCells(i, CX));
                   localCells(i, CY) = ((oldMass / newMass) *
                                        localCells(i, CY))
-                                      + ((remoteCells(i, MASS) / newMass) *
+   + ((remoteCells(i, MASS) / newMass) *
                                          remoteCells(i, CY));
                   localCells(i, CZ) = ((oldMass / newMass) *
                                        localCells(i, CZ))
-                                      + ((remoteCells(i, MASS) / newMass) *
+   + ((remoteCells(i, MASS) / newMass) *
                                          remoteCells(i, CZ));
+
                 }
             }
           else
@@ -377,9 +315,37 @@ void mergeRemoteCells()
               localCells(i, CZ) = remoteCells(i, CZ);
             }
         }
+     }*/
+
+  for (size_t i = 0; i < noToptreeCells; i++)
+    {
+      if (remoteIsFilled[i])
+        {
+          localCell = particleRowType(localCells, i);
+          remoteCell = particleRowType(remoteCells, i);
+
+          if (localIsFilled[i])
+            {
+              ///
+              /// newMass may be zero for non-empty cells. this
+              /// happens when all children are ghosts and do not
+              /// contribute to the local toptree. this is handled
+              /// by addCOM()
+              ///
+              addCOM(localCell, remoteCell);
+
+              /// now add up multipoles relative to new COM
+              addMP(localCell, remoteCell);
+            }
+          else
+            {
+              localCell = remoteCell;
+            }
+        }
     }
 }
 
+//deprecated
 ///
 /// copy the current cell node to buffer
 ///
@@ -409,6 +375,7 @@ void cellToBuffer()
   localCells(toptreeCounter, S123) = static_cast<octuPtrT>(curNodePtr)->s123;
 }
 
+//deprecated
 ///
 /// copy buffer to current cell node
 ///
@@ -437,6 +404,100 @@ void bufferToCell()
   static_cast<octuPtrT>(curNodePtr)->s32 = localCells(toptreeCounter, S32);
   static_cast<octuPtrT>(curNodePtr)->s123 = localCells(toptreeCounter, S123);
 }
+
+///
+/// copy current cell node to a vector
+/// no checks are performed, whether current node is a
+/// cell nor if vector has the right size
+///
+void cellToVect(valvectRefType _vect)
+{
+  _vect[CX] = static_cast<octuPtrT>(curNodePtr)->xCom;
+  _vect[CY] = static_cast<octuPtrT>(curNodePtr)->yCom;
+  _vect[CZ] = static_cast<octuPtrT>(curNodePtr)->zCom;
+  _vect[MASS] = static_cast<octuPtrT>(curNodePtr)->mass;
+
+  _vect[Q11] = static_cast<octuPtrT>(curNodePtr)->q11;
+  _vect[Q22] = static_cast<octuPtrT>(curNodePtr)->q22;
+  _vect[Q33] = static_cast<octuPtrT>(curNodePtr)->q33;
+  _vect[Q12] = static_cast<octuPtrT>(curNodePtr)->q12;
+  _vect[Q13] = static_cast<octuPtrT>(curNodePtr)->q13;
+  _vect[Q23] = static_cast<octuPtrT>(curNodePtr)->q23;
+
+  _vect[S11] = static_cast<octuPtrT>(curNodePtr)->s11;
+  _vect[S22] = static_cast<octuPtrT>(curNodePtr)->s22;
+  _vect[S33] = static_cast<octuPtrT>(curNodePtr)->s33;
+  _vect[S12] = static_cast<octuPtrT>(curNodePtr)->s12;
+  _vect[S21] = static_cast<octuPtrT>(curNodePtr)->s21;
+  _vect[S13] = static_cast<octuPtrT>(curNodePtr)->s13;
+  _vect[S31] = static_cast<octuPtrT>(curNodePtr)->s31;
+  _vect[S23] = static_cast<octuPtrT>(curNodePtr)->s23;
+  _vect[S32] = static_cast<octuPtrT>(curNodePtr)->s32;
+  _vect[S123] = static_cast<octuPtrT>(curNodePtr)->s123;
+}
+
+///
+/// copy current particle node to a vector
+/// no checks are performed, whether current node is a
+/// particle nor if vector has the right size
+///
+void partToVect(valvectRefType _vect)
+{
+  _vect[CX] = static_cast<partPtrT>(curNodePtr)->xPos;
+  _vect[CY] = static_cast<partPtrT>(curNodePtr)->yPos;
+  _vect[CZ] = static_cast<partPtrT>(curNodePtr)->zPos;
+  _vect[MASS] = static_cast<partPtrT>(curNodePtr)->mass;
+
+  _vect[Q11] = 0.;
+  _vect[Q22] = 0.;
+  _vect[Q33] = 0.;
+  _vect[Q12] = 0.;
+  _vect[Q13] = 0.;
+  _vect[Q23] = 0.;
+
+  _vect[S11] = 0.;
+  _vect[S22] = 0.;
+  _vect[S33] = 0.;
+  _vect[S12] = 0.;
+  _vect[S21] = 0.;
+  _vect[S13] = 0.;
+  _vect[S31] = 0.;
+  _vect[S23] = 0.;
+  _vect[S32] = 0.;
+  _vect[S123] = 0.;
+}
+
+///
+/// copy vector to current cell node
+/// no checks are performed, whether current node is a
+/// cell nor if vector has the right size
+///
+void vectToCell(valvectRefType _vect)
+{
+  static_cast<octuPtrT>(curNodePtr)->xCom = _vect[CX];
+  static_cast<octuPtrT>(curNodePtr)->yCom = _vect[CY];
+  static_cast<octuPtrT>(curNodePtr)->zCom = _vect[CZ];
+  static_cast<octuPtrT>(curNodePtr)->mass = _vect[MASS];
+
+  static_cast<octuPtrT>(curNodePtr)->q11 = _vect[Q11];
+  static_cast<octuPtrT>(curNodePtr)->q22 = _vect[Q22];
+  static_cast<octuPtrT>(curNodePtr)->q33 = _vect[Q33];
+  static_cast<octuPtrT>(curNodePtr)->q12 = _vect[Q12];
+  static_cast<octuPtrT>(curNodePtr)->q13 = _vect[Q13];
+  static_cast<octuPtrT>(curNodePtr)->q23 = _vect[Q23];
+
+  static_cast<octuPtrT>(curNodePtr)->s11 = _vect[S11];
+  static_cast<octuPtrT>(curNodePtr)->s22 = _vect[S22];
+  static_cast<octuPtrT>(curNodePtr)->s33 = _vect[S33];
+  static_cast<octuPtrT>(curNodePtr)->s12 = _vect[S12];
+  static_cast<octuPtrT>(curNodePtr)->s21 = _vect[S21];
+  static_cast<octuPtrT>(curNodePtr)->s13 = _vect[S13];
+  static_cast<octuPtrT>(curNodePtr)->s31 = _vect[S31];
+  static_cast<octuPtrT>(curNodePtr)->s23 = _vect[S23];
+  static_cast<octuPtrT>(curNodePtr)->s32 = _vect[S32];
+  static_cast<octuPtrT>(curNodePtr)->s123 = _vect[S123];
+}
+
 
 ///
 /// report current cell node to dumpFile stream

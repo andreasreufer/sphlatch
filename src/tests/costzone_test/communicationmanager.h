@@ -1,0 +1,1 @@
+../../communicationmanager.h
