@@ -86,11 +86,20 @@ typedef blas::vector<identType>& idvectRefType;
 typedef blas::vector<identType>* idvectPtrType;
 
 ///
-/// a vector of particle indices (indices of a matrix)
+/// a vector of (particle) indices
 ///
 typedef std::vector<size_t> partsIndexVectType;
 typedef std::vector<size_t>& partsIndexVectRefType;
 typedef std::vector<size_t>* partsIndexVectPtrType;
+
+///
+/// a vector of counts
+/// countsType has to be compatible with MPI_INT
+///
+typedef int countsType;
+typedef std::vector<countsType> countsVectType;
+typedef std::vector<countsType>& countsVectRefType;
+typedef std::vector<countsType>* countsVectPtrType;
 
 ///
 /// a vector of particle indices vectors

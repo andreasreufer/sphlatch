@@ -14,7 +14,7 @@ namespace po = boost::program_options;
 #include <boost/assign/std/vector.hpp>
 using namespace boost::assign;
 
-#define SPHLATCH_SINGLEPREC
+//#define SPHLATCH_SINGLEPREC
 #define SPHLATCH_MPI
 
 #include "particle.h"
@@ -97,13 +97,38 @@ int main(int argc, char* argv[])
   //logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
   //        << MPI_Wtime() - logStartTime << "    start log\n";
 
-  for (size_t i = 0; i < 4 * SIZE; i++)
+  std::cout << "RANK " << RANK << ": " << Data(0,0) << "   " << Data(0,1) << "\n\n\n";
+  for (size_t i = 0; i < SIZE; i++)
     {
       TimeStart = microsec_clock::local_time();
       CommManager.exchange(Data, partsDomainMapping, Data);
       TimeStop = microsec_clock::local_time();
       logFile << "communication " << (TimeStop - TimeStart) << "\n";
+      std::cout << "RANK " << RANK << ": " << Data(0,0) << "   " << Data(0,1) << "\n";
     }
+
+  sphlatch::countsVectType counts;
+  counts.resize(32768);
+
+  long int locCounter = 0;
+  for (size_t i = 0; i < counts.size(); i++)
+  {
+    counts[i] = ( rand() / 32768 ) % ( 7*(RANK+3) ) ;
+    locCounter += counts[i];
+  }
+  std::cout << "RANK " << RANK << ": " << locCounter << "\n";
+  
+  TimeStart = microsec_clock::local_time();
+  CommManager.sumUpCounts(counts);
+  TimeStop = microsec_clock::local_time();
+  logFile << "summing up " << (TimeStop - TimeStart) << "\n";
+
+  locCounter = 0;
+  for (size_t i = 0; i < counts.size(); i++)
+  {
+    locCounter += counts[i];
+  }
+  std::cout << "RANK " << RANK << ": " << locCounter << "\n";
 
   logFile.close();
 
