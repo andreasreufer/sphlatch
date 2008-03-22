@@ -130,8 +130,41 @@ int main(int argc, char* argv[])
   }
   std::cout << "RANK " << RANK << ": " << locCounter << "\n";
 
-  logFile.close();
+  TimeStart = microsec_clock::local_time();
+  if ( RANK % 2 == 0 )
+  {
+    CommManager.sendMatrix(Data, RANK+1);
+  } else {
+    CommManager.recvMatrix(Data, RANK-1);
+  }
+  TimeStop = microsec_clock::local_time();
+  logFile << "exchange matrices " << (TimeStop - TimeStart) << "\n";
+  
 
+  std::vector<long double> intVect(500000);
+  TimeStart = microsec_clock::local_time();
+  if ( RANK % 2 == 0 )
+  {
+    CommManager.sendVector<long double>(intVect, RANK+1);
+  } else {
+    CommManager.recvVector<long double>(intVect, RANK-1);
+  }
+  TimeStop = microsec_clock::local_time();
+  logFile << "exchange vects " << (TimeStop - TimeStart) << "\n";
+  
+  sphlatch::bitsetType myBitset(3000000);
+  TimeStart = microsec_clock::local_time();
+  if ( RANK % 2 == 0 )
+  {
+    CommManager.sendBitset(myBitset, RANK+1);
+  } else {
+    CommManager.recvBitset(myBitset, RANK-1);
+  }
+  TimeStop = microsec_clock::local_time();
+  logFile << "exchange bitsets " << (TimeStop - TimeStart) << "\n";
+
+  logFile.close();
+  
   using namespace sphlatch;
   std::vector<int> outputAttrSet;
   outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;

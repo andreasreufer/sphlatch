@@ -35,6 +35,8 @@ typedef valueType&              valueRefType;
 
 ///
 /// a valueType matrix
+/// please note that the communication manager
+/// assumes this type to have continuous storge
 ///
 typedef blas::matrix<valueType>        matrixType;
 typedef blas::matrix<valueType>&       matrixRefType;

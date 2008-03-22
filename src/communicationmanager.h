@@ -24,11 +24,14 @@ void exchange(matrixRefType _dataSource,
               domainPartsIndexRefType domainIndices,
               matrixRefType _dataTarget);
 
-void sendBitSet(bitsetRefType _bitset, size_t _recvRank);
-void recvBitSet(bitsetRefType _bitset, size_t _sendRank);
+void sendBitset(bitsetRefType _bitset, size_t _recvRank);
+void recvBitset(bitsetRefType _bitset, size_t _sendRank);
 
-void sendMatrix(matrixRefType _bitset, size_t _recvRank);
-void recvMatrix(matrixRefType _bitset, size_t _sendRank);
+void sendMatrix(matrixRefType _matrix, size_t _recvRank);
+void recvMatrix(matrixRefType _matrix, size_t _sendRank);
+
+template<class T> void sendVector(std::vector<T>& _vector, size_t _recvRank);
+template<class T> void recvVector(std::vector<T>& _vector, size_t _sendRank);
 
 void sumUpCounts(countsVectRefType _indexVect);
 
@@ -80,8 +83,8 @@ CommunicationManager::~CommunicationManager(void)
 ///
 /// buffer size in bytes, MPI transfers will have on average this size
 ///
-size_t CommunicationManager::commBuffSize = 131072; //  128 kByte
-//size_t CommunicationManager::commBuffSize = 1048576; // 1024 kByte
+//size_t CommunicationManager::commBuffSize = 131072; //  128 kByte
+size_t CommunicationManager::commBuffSize = 1048576; // 1024 kByte
 
 /*
    template <int N>
@@ -315,29 +318,203 @@ void CommunicationManager::sumUpCounts(countsVectRefType _indexVect)
     {
       noCurElems = std::min(noRemElems, noBuffElems);
       ///
-      /// ugly, but actually legal:
+      /// check whether this MPI implementation supports 
+      /// the faster MPI_IN_PLACE method
+      ///
+#ifdef MPI_IN_PLACE
+      ///
+      /// the vector cast is ugly, but actually legal:
       /// http://www.parashift.com/c++-faq-lite/containers.html#faq-34.3
       ///
-      MPI::COMM_WORLD.Allreduce(&_indexVect[round*noBuffElems],
+      MPI::COMM_WORLD.Allreduce( MPI_IN_PLACE ,
                                 &_indexVect[round*noBuffElems],
                                 noCurElems, MPI::INT, MPI::SUM);
+#else
+      ///
+      /// slower without MPI_IN_PLACE
+      ///
+      static countsVectType recvBuffer;
+      recvBuffer.resize(noCurElems);
+      MPI::COMM_WORLD.Allreduce(&_indexVect[round*noBuffElems],
+                                &recvBuffer[0],
+                                noCurElems, MPI::INT, MPI::SUM);
+      const size_t offset = round*noBuffElems;
+      for (size_t i = 0; i < noCurElems; i++)
+      {
+        _indexVect[i + offset] = recvBuffer[i];
+      }
+#endif
       noRemElems -= noCurElems;
       round++;
     }
 }
 
-void CommunicationManager::sendBitSet(bitsetRefType _bitset, size_t _recvRank)
+void CommunicationManager::sendBitset(bitsetRefType _bitset, size_t _recvRank)
 {
-}
-void CommunicationManager::recvBitSet(bitsetRefType _bitset, size_t _sendRank)
-{
+  /// noBlock = no. of bits / no. of bits per bitsetBlockType
+  size_t noBlocks = lrint(
+                      ceil(static_cast<double>(_bitset.size())
+                      / static_cast<double>(sizeof(bitsetBlockType) * 8.)) );
+
+  ///
+  /// allocate buffer and fill it
+  ///
+  std::vector<bitsetBlockType> sendBuff(noBlocks);
+  boost::to_block_range(_bitset, sendBuff.begin());
+  
+  ///
+  /// send it
+  ///
+  sendVector<bitsetBlockType>(sendBuff, _recvRank);
 }
 
-void CommunicationManager::sendMatrix(matrixRefType _bitset, size_t _recvRank)
+void CommunicationManager::recvBitset(bitsetRefType _bitset, size_t _sendRank)
 {
+  /// noBlock = no. of bits / no. of bits per bitsetBlockType
+  size_t noBlocks = lrint(
+                      ceil(static_cast<double>(_bitset.size())
+                      / static_cast<double>(sizeof(bitsetBlockType) * 8.)) );
+
+  ///
+  /// allocate buffer
+  ///
+  std::vector<bitsetBlockType> recvBuff(noBlocks);
+  
+  ///
+  /// send it
+  ///
+  recvVector<bitsetBlockType>(recvBuff, _sendRank);
+  
+  ///
+  /// copy buffer to bitset
+  ///
+  boost::from_block_range(recvBuff.begin(), recvBuff.end(), _bitset);
 }
-void CommunicationManager::recvMatrix(matrixRefType _bitset, size_t _sendRank)
+
+void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvRank)
 {
+  static size_t noRemElems, noCurElems, noCurBytes, round;
+  const size_t noBuffElems = commBuffSize / sizeof(valueType);
+
+  const size_t RANK = MPI::COMM_WORLD.Get_rank();
+  
+  ///
+  /// no checks are performed whether the matrix
+  /// on the receiving side actually matches the amount
+  /// of incoming data!
+  ///
+  noRemElems = _matrix.size1()*_matrix.size2();
+  round = 0;
+
+  while (noRemElems > 0)
+    {
+      noCurElems = std::min(noRemElems, noBuffElems);
+      noCurBytes = noCurElems * sizeof(valueType);
+
+      ///
+      /// this pointer arithmetics stuff assumes continous
+      /// storage for matrixType
+      ///
+      MPI::COMM_WORLD.Send((&_matrix(0,0) + round*noBuffElems),
+                           noCurBytes, MPI_BYTE, _recvRank, RANK + round);
+      noRemElems -= noCurElems;
+      round++;
+    }
+}
+
+void CommunicationManager::recvMatrix(matrixRefType _matrix, size_t _sendRank)
+{
+  static size_t noRemElems, noCurElems, noCurBytes, round;
+  const size_t noBuffElems = commBuffSize / sizeof(valueType);
+
+  ///
+  /// no checks are performed whether the matrix
+  /// on the receiving side actually matches the amount
+  /// of incoming data!
+  ///
+  noRemElems = _matrix.size1()*_matrix.size2();
+  round = 0;
+
+  while (noRemElems > 0)
+    {
+      noCurElems = std::min(noRemElems, noBuffElems);
+      noCurBytes = noCurElems * sizeof(valueType);
+
+      ///
+      /// this pointer arithmetics stuff assumes continous
+      /// storage for matrixType
+      ///
+      MPI::COMM_WORLD.Recv((&_matrix(0,0) + round*noBuffElems),
+                           noCurBytes, MPI_BYTE, _sendRank, _sendRank + round);
+      noRemElems -= noCurElems;
+      round++;
+    }
+}
+
+template<class T>
+void CommunicationManager::sendVector(std::vector<T>& _vector, size_t _recvRank)
+{
+  static size_t noRemElems, noCurElems, noCurBytes, round;
+  const size_t noBuffElems = commBuffSize / sizeof(T);
+
+  const size_t RANK = MPI::COMM_WORLD.Get_rank();
+  
+  ///
+  /// no checks are performed whether the vector
+  /// on the receiving side actually matches the amount
+  /// of incoming data!
+  ///
+  noRemElems = _vector.size();
+  round = 0;
+
+  while (noRemElems > 0)
+    {
+      noCurElems = std::min(noRemElems, noBuffElems);
+      noCurBytes = noCurElems * sizeof(T);
+
+      ///
+      /// this pointer arithmetics stuff assumes continous
+      /// storage for std::vector<T>
+      ///
+      /// does not work for std::vector<bool> !
+      ///
+      MPI::COMM_WORLD.Send((&_vector[0] + round*noBuffElems),
+                           noCurBytes, MPI_BYTE, _recvRank, RANK + 255 + round);
+      noRemElems -= noCurElems;
+      round++;
+    }
+}
+
+template<class T>
+void CommunicationManager::recvVector(std::vector<T>& _vector, size_t _sendRank)
+{
+  static size_t noRemElems, noCurElems, noCurBytes, round;
+  const size_t noBuffElems = commBuffSize / sizeof(T);
+
+  ///
+  /// no checks are performed whether the vector
+  /// on the receiving side actually matches the amount
+  /// of incoming data!
+  ///
+  noRemElems = _vector.size();
+  round = 0;
+
+  while (noRemElems > 0)
+    {
+      noCurElems = std::min(noRemElems, noBuffElems);
+      noCurBytes = noCurElems * sizeof(T);
+
+      ///
+      /// this pointer arithmetics stuff assumes continous
+      /// storage for std::vector<T>
+      ///
+      /// does not work for std::vector<bool> !
+      ///
+      MPI::COMM_WORLD.Recv((&_vector[0] + round*noBuffElems),
+                           noCurBytes, MPI_BYTE, _sendRank, _sendRank + 255 + round);
+      noRemElems -= noCurElems;
+      round++;
+    }
 }
 
 
