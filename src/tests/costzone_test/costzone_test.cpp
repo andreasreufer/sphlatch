@@ -164,6 +164,10 @@ int main(int argc, char* argv[])
   logFile << "exchange bitsets " << (TimeStop - TimeStart) << "\n";
 
   logFile.close();
+
+  sphlatch::valueType myRank = RANK;
+  CommManager.sum(myRank);
+  std::cout << myRank << "\n";
   
   using namespace sphlatch;
   std::vector<int> outputAttrSet;

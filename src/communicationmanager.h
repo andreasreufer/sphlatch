@@ -16,24 +16,27 @@ typedef CommunicationManager self_type;
 typedef CommunicationManager& self_reference;
 typedef CommunicationManager* self_pointer;
 
-//typedef MPI_SingleCom < typename SimulationTrait::value_type > single_com_type;
-
 static self_reference instance(void);
 
 void exchange(matrixRefType _dataSource,
               domainPartsIndexRefType domainIndices,
               matrixRefType _dataTarget);
 
+void sendMatrix(matrixRefType _matrix, size_t _recvRank);
+void recvMatrix(matrixRefType _matrix, size_t _sendRank);
+
 void sendBitset(bitsetRefType _bitset, size_t _recvRank);
 void recvBitset(bitsetRefType _bitset, size_t _sendRank);
 
-void sendMatrix(matrixRefType _matrix, size_t _recvRank);
-void recvMatrix(matrixRefType _matrix, size_t _sendRank);
+void sumUpCounts(countsVectRefType _indexVect);
+
+void max(valueRefType _val);
+void min(valueRefType _val);
+void sum(valueRefType _val);
 
 template<class T> void sendVector(std::vector<T>& _vector, size_t _recvRank);
 template<class T> void recvVector(std::vector<T>& _vector, size_t _sendRank);
 
-void sumUpCounts(countsVectRefType _indexVect);
 
 protected:
 
@@ -43,8 +46,6 @@ CommunicationManager(void);
 private:
 
 static self_pointer _instance;
-//static single_com_type SingleCom;
-
 static size_t commBuffSize;
 
 std::vector<matrixType> composeBuffers;
@@ -70,8 +71,6 @@ CommunicationManager::self_reference CommunicationManager::instance(void)
     }
 }
 
-//typename CommunicationManager<SimTraitType>::single_com_type CommunicationManager<SimTraitType>::SingleCom;
-
 CommunicationManager::CommunicationManager(void)
 {
 }
@@ -85,31 +84,6 @@ CommunicationManager::~CommunicationManager(void)
 ///
 //size_t CommunicationManager::commBuffSize = 131072; //  128 kByte
 size_t CommunicationManager::commBuffSize = 1048576; // 1024 kByte
-
-/*
-   template <int N>
-   typename CommunicationManager<SimTraitType>::value_type CommunicationManager<SimTraitType>::Min(void)
-   {
-   static const matrix_column Column(Data, N);
-   value_type local = *std::min_element(Column.begin(), Column.end());
-   value_type global;
-
-   SingleCom.min(local, global);
-   return global;
-   };
-
-   template <int N>
-   typename CommunicationManager<SimTraitType>::value_type
-   CommunicationManager<SimTraitType>::Max(void)
-   {
-   static const matrix_column Column(Data, N);
-   value_type local = *std::max_element(Column.begin(), Column.end());
-   value_type global;
-
-   SingleCom.max(local, global);
-   return global;
-   }
- */
 
 void CommunicationManager::exchange(matrixRefType _dataSource,
                                     domainPartsIndexRefType domainIndices,
@@ -304,93 +278,6 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
   return;
 }
 
-void CommunicationManager::sumUpCounts(countsVectRefType _indexVect)
-{
-  static size_t noRemElems, noCurElems, round;
-  const size_t noBuffElems = commBuffSize / sizeof(countsType);
-
-  static countsVectType rootBuff;
-
-  noRemElems = _indexVect.size();
-  round = 0;
-
-  while (noRemElems > 0)
-    {
-      noCurElems = std::min(noRemElems, noBuffElems);
-      ///
-      /// check whether this MPI implementation supports 
-      /// the faster MPI_IN_PLACE method
-      ///
-#ifdef MPI_IN_PLACE
-      ///
-      /// the vector cast is ugly, but actually legal:
-      /// http://www.parashift.com/c++-faq-lite/containers.html#faq-34.3
-      ///
-      MPI::COMM_WORLD.Allreduce( MPI_IN_PLACE ,
-                                &_indexVect[round*noBuffElems],
-                                noCurElems, MPI::INT, MPI::SUM);
-#else
-      ///
-      /// slower without MPI_IN_PLACE
-      ///
-      static countsVectType recvBuffer;
-      recvBuffer.resize(noCurElems);
-      MPI::COMM_WORLD.Allreduce(&_indexVect[round*noBuffElems],
-                                &recvBuffer[0],
-                                noCurElems, MPI::INT, MPI::SUM);
-      const size_t offset = round*noBuffElems;
-      for (size_t i = 0; i < noCurElems; i++)
-      {
-        _indexVect[i + offset] = recvBuffer[i];
-      }
-#endif
-      noRemElems -= noCurElems;
-      round++;
-    }
-}
-
-void CommunicationManager::sendBitset(bitsetRefType _bitset, size_t _recvRank)
-{
-  /// noBlock = no. of bits / no. of bits per bitsetBlockType
-  size_t noBlocks = lrint(
-                      ceil(static_cast<double>(_bitset.size())
-                      / static_cast<double>(sizeof(bitsetBlockType) * 8.)) );
-
-  ///
-  /// allocate buffer and fill it
-  ///
-  std::vector<bitsetBlockType> sendBuff(noBlocks);
-  boost::to_block_range(_bitset, sendBuff.begin());
-  
-  ///
-  /// send it
-  ///
-  sendVector<bitsetBlockType>(sendBuff, _recvRank);
-}
-
-void CommunicationManager::recvBitset(bitsetRefType _bitset, size_t _sendRank)
-{
-  /// noBlock = no. of bits / no. of bits per bitsetBlockType
-  size_t noBlocks = lrint(
-                      ceil(static_cast<double>(_bitset.size())
-                      / static_cast<double>(sizeof(bitsetBlockType) * 8.)) );
-
-  ///
-  /// allocate buffer
-  ///
-  std::vector<bitsetBlockType> recvBuff(noBlocks);
-  
-  ///
-  /// send it
-  ///
-  recvVector<bitsetBlockType>(recvBuff, _sendRank);
-  
-  ///
-  /// copy buffer to bitset
-  ///
-  boost::from_block_range(recvBuff.begin(), recvBuff.end(), _bitset);
-}
-
 void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvRank)
 {
   static size_t noRemElems, noCurElems, noCurBytes, round;
@@ -449,6 +336,138 @@ void CommunicationManager::recvMatrix(matrixRefType _matrix, size_t _sendRank)
       noRemElems -= noCurElems;
       round++;
     }
+}
+
+void CommunicationManager::sendBitset(bitsetRefType _bitset, size_t _recvRank)
+{
+  /// noBlock = no. of bits / no. of bits per bitsetBlockType
+  size_t noBlocks = lrint(
+                      ceil(static_cast<double>(_bitset.size())
+                      / static_cast<double>(sizeof(bitsetBlockType) * 8.)) );
+
+  ///
+  /// allocate buffer and fill it
+  ///
+  std::vector<bitsetBlockType> sendBuff(noBlocks);
+  boost::to_block_range(_bitset, sendBuff.begin());
+  
+  ///
+  /// send it
+  ///
+  sendVector<bitsetBlockType>(sendBuff, _recvRank);
+}
+
+void CommunicationManager::recvBitset(bitsetRefType _bitset, size_t _sendRank)
+{
+  /// noBlock = no. of bits / no. of bits per bitsetBlockType
+  size_t noBlocks = lrint(
+                      ceil(static_cast<double>(_bitset.size())
+                      / static_cast<double>(sizeof(bitsetBlockType) * 8.)) );
+
+  ///
+  /// allocate buffer
+  ///
+  std::vector<bitsetBlockType> recvBuff(noBlocks);
+  
+  ///
+  /// send it
+  ///
+  recvVector<bitsetBlockType>(recvBuff, _sendRank);
+  
+  ///
+  /// copy buffer to bitset
+  ///
+  boost::from_block_range(recvBuff.begin(), recvBuff.end(), _bitset);
+}
+
+void CommunicationManager::sumUpCounts(countsVectRefType _indexVect)
+{
+  static size_t noRemElems, noCurElems, round;
+  const size_t noBuffElems = commBuffSize / sizeof(countsType);
+
+  static countsVectType rootBuff;
+
+  noRemElems = _indexVect.size();
+  round = 0;
+
+  while (noRemElems > 0)
+    {
+      noCurElems = std::min(noRemElems, noBuffElems);
+      ///
+      /// check whether this MPI implementation supports 
+      /// the faster MPI_IN_PLACE method
+      ///
+#ifdef MPI_IN_PLACE
+      ///
+      /// the vector cast is ugly, but actually legal:
+      /// http://www.parashift.com/c++-faq-lite/containers.html#faq-34.3
+      ///
+      MPI::COMM_WORLD.Allreduce( MPI_IN_PLACE ,
+                                &_indexVect[round*noBuffElems],
+                                noCurElems, MPI::INT, MPI::SUM);
+#else
+      ///
+      /// slower without MPI_IN_PLACE
+      ///
+      static countsVectType recvBuffer;
+      recvBuffer.resize(noCurElems);
+      MPI::COMM_WORLD.Allreduce(&_indexVect[round*noBuffElems],
+                                &recvBuffer[0],
+                                noCurElems, MPI::INT, MPI::SUM);
+      const size_t offset = round*noBuffElems;
+      for (size_t i = 0; i < noCurElems; i++)
+      {
+        _indexVect[i + offset] = recvBuffer[i];
+      }
+#endif
+      noRemElems -= noCurElems;
+      round++;
+    }
+}
+
+void CommunicationManager::max(valueRefType _val)
+{
+  static double doubleBuff;
+  doubleBuff = static_cast<double>(_val);
+
+#ifdef MPI_IN_PLACE
+  MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE , &doubleBuff, 1, MPI::DOUBLE, MPI::MAX);
+#else
+  static recvDoubleBuff;
+  MPI::COMM_WORLD.Allreduce(&doubleBuff, &recvDoubleBuff, 1, MPI::DOUBLE, MPI::MAX);
+  doubleBuff = recvDoubleBuff;
+#endif
+  _val = static_cast<valueType>( doubleBuff );
+}
+
+void CommunicationManager::min(valueRefType _val)
+{
+  static double doubleBuff;
+  doubleBuff = static_cast<double>(_val);
+
+#ifdef MPI_IN_PLACE
+  MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE , &doubleBuff, 1, MPI::DOUBLE, MPI::MIN);
+#else
+  static recvDoubleBuff;
+  MPI::COMM_WORLD.Allreduce(&doubleBuff, &recvDoubleBuff, 1, MPI::DOUBLE, MPI::MIN);
+  doubleBuff = recvDoubleBuff;
+#endif
+  _val = static_cast<valueType>( doubleBuff );
+}
+
+void CommunicationManager::sum(valueRefType _val)
+{
+  static double doubleBuff;
+  doubleBuff = static_cast<double>(_val);
+
+#ifdef MPI_IN_PLACE
+  MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE , &doubleBuff, 1, MPI::DOUBLE, MPI::SUM);
+#else
+  static recvDoubleBuff;
+  MPI::COMM_WORLD.Allreduce(&doubleBuff, &recvDoubleBuff, 1, MPI::DOUBLE, MPI::SUM);
+  doubleBuff = recvDoubleBuff;
+#endif
+  _val = static_cast<valueType>( doubleBuff );
 }
 
 template<class T>
@@ -517,52 +536,6 @@ void CommunicationManager::recvVector(std::vector<T>& _vector, size_t _sendRank)
     }
 }
 
-
-/*template <typename T>
-   struct MPI_SingleCom {
-   void min(T& t1, T& t2)
-   {
-    MPI::COMM_WORLD.Reduce(&t1, &t2, sizeof(T), MPI::BYTE, MPI::MIN, 0);
-    MPI::COMM_WORLD.Bcast(&t1, sizeof(T), MPI::BYTE, 0);
-   }
-   void max(T& t1, T& t2)
-   {
-    MPI::COMM_WORLD.Reduce(&t1, &t2, sizeof(T), MPI::BYTE, MPI::MAX, 0);
-    MPI::COMM_WORLD.Bcast(&t2, sizeof(T), MPI::BYTE, 0);
-   }
-   }
-   ;
-
-   template <>
-   struct MPI_SingleCom<float>{
-   void min(float& t1, float& t2)
-   {
-    MPI::COMM_WORLD.Reduce(&t1, &t2, 1, MPI::FLOAT, MPI::MIN, 0);
-    MPI::COMM_WORLD.Bcast(&t2, 1, MPI::FLOAT, 0);
-   }
-
-   void max(float& t1, float& t2)
-   {
-    MPI::COMM_WORLD.Reduce(&t1, &t2, 1, MPI::FLOAT, MPI::MAX, 0);
-    MPI::COMM_WORLD.Bcast(&t2, 1, MPI::FLOAT, 0);
-   }
-   };
-
-   template <>
-   struct MPI_SingleCom<double>{
-   void min(double& t1, double& t2)
-   {
-    MPI::COMM_WORLD.Reduce(&t1, &t2, 1, MPI::DOUBLE, MPI::MIN, 0);
-    MPI::COMM_WORLD.Bcast(&t2, 1, MPI::DOUBLE, 0);
-   }
-
-   void max(double& t1, double& t2)
-   {
-    MPI::COMM_WORLD.Reduce(&t1, &t2, 1, MPI::DOUBLE, MPI::MAX, 0);
-    MPI::COMM_WORLD.Bcast(&t2, 1, MPI::DOUBLE, 0);
-   }
-   };*/
-}
-;
+};
 
 #endif
