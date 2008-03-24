@@ -24,6 +24,9 @@ typedef sphlatch::IOManager io_type;
 typedef sphlatch::MemoryManager mem_type;
 #include "communicationmanager.h"
 typedef sphlatch::CommunicationManager comm_type;
+#include "costzone.h"
+typedef sphlatch::CostZone costzone_type;
+#include "spacefillingcurve.h"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/progress.hpp>
@@ -59,6 +62,7 @@ int main(int argc, char* argv[])
   io_type& IOManager(io_type::instance());
   mem_type& MemManager(mem_type::instance());
   comm_type& CommManager(comm_type::instance());
+  costzone_type& CostZone(costzone_type::instance());
 
   sphlatch::matrixRefType Data(MemManager.Data);
 
@@ -87,7 +91,7 @@ int main(int argc, char* argv[])
   using namespace boost::posix_time;
   ptime TimeStart, TimeStop;
   // set up logging stuff
-  std::string logFilename = "logRank000";
+  /*std::string logFilename = "logRank000";
   std::string rankString = boost::lexical_cast<std::string>(RANK);
   logFilename.replace(logFilename.size() - 0 - rankString.size(),
                       rankString.size(), rankString);
@@ -163,12 +167,22 @@ int main(int argc, char* argv[])
   TimeStop = microsec_clock::local_time();
   logFile << "exchange bitsets " << (TimeStop - TimeStart) << "\n";
 
-  logFile.close();
+  logFile.close();*/
 
   sphlatch::valueType myRank = RANK;
   CommManager.sum(myRank);
   std::cout << myRank << "\n";
+  TimeStart = microsec_clock::local_time();
+  sphlatch::SpaceFillingCurve<sphlatch::Hilbert3D> MyCurve(2);
+  TimeStop = microsec_clock::local_time();
+  for (size_t i = 0; i < 64; i++)
+  {
+    //std::cout << MyCurve.cartIndexToCurveIndex(i) << " ";
+    std::cout << MyCurve.curveIndexToCartIndex(i) << " ";
+  }
+  std::cout << "curve setup " << (TimeStop - TimeStart) << "\n";
   
+
   using namespace sphlatch;
   std::vector<int> outputAttrSet;
   outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
