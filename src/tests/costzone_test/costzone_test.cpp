@@ -14,7 +14,7 @@ namespace po = boost::program_options;
 #include <boost/assign/std/vector.hpp>
 using namespace boost::assign;
 
-//#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_SINGLEPREC
 #define SPHLATCH_MPI
 
 #include "particle.h"
@@ -26,6 +26,7 @@ typedef sphlatch::MemoryManager mem_type;
 typedef sphlatch::CommunicationManager comm_type;
 #include "costzone.h"
 typedef sphlatch::CostZone costzone_type;
+
 #include "spacefillingcurve.h"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -91,7 +92,7 @@ int main(int argc, char* argv[])
   using namespace boost::posix_time;
   ptime TimeStart, TimeStop;
   // set up logging stuff
-  /*std::string logFilename = "logRank000";
+  std::string logFilename = "logRank000";
   std::string rankString = boost::lexical_cast<std::string>(RANK);
   logFilename.replace(logFilename.size() - 0 - rankString.size(),
                       rankString.size(), rankString);
@@ -101,7 +102,7 @@ int main(int argc, char* argv[])
   //logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
   //        << MPI_Wtime() - logStartTime << "    start log\n";
 
-  std::cout << "RANK " << RANK << ": " << Data(0,0) << "   " << Data(0,1) << "\n\n\n";
+  /*std::cout << "RANK " << RANK << ": " << Data(0,0) << "   " << Data(0,1) << "\n\n\n";
   for (size_t i = 0; i < SIZE; i++)
     {
       TimeStart = microsec_clock::local_time();
@@ -132,9 +133,9 @@ int main(int argc, char* argv[])
   {
     locCounter += counts[i];
   }
-  std::cout << "RANK " << RANK << ": " << locCounter << "\n";
+  std::cout << "RANK " << RANK << ": " << locCounter << "\n";*/
 
-  TimeStart = microsec_clock::local_time();
+  /*TimeStart = microsec_clock::local_time();
   if ( RANK % 2 == 0 )
   {
     CommManager.sendMatrix(Data, RANK+1);
@@ -169,19 +170,16 @@ int main(int argc, char* argv[])
 
   logFile.close();*/
 
-  sphlatch::valueType myRank = RANK;
-  CommManager.sum(myRank);
-  std::cout << myRank << "\n";
   TimeStart = microsec_clock::local_time();
-  sphlatch::SpaceFillingCurve<sphlatch::Hilbert3D> MyCurve(2);
+  CommManager.exchange(Data, CostZone.createDomainPartsIndex(), Data);
   TimeStop = microsec_clock::local_time();
-  for (size_t i = 0; i < 64; i++)
-  {
-    //std::cout << MyCurve.cartIndexToCurveIndex(i) << " ";
-    std::cout << MyCurve.curveIndexToCartIndex(i) << " ";
-  }
-  std::cout << "curve setup " << (TimeStop - TimeStart) << "\n";
+  std::cout << "costzone setup " << (TimeStop - TimeStart) << "\n";
   
+  const size_t myDomain = CommManager.getMyDomain();
+  if ( myDomain != 6 )
+  {
+    Data.resize(0, Data.size2());
+  }
 
   using namespace sphlatch;
   std::vector<int> outputAttrSet;

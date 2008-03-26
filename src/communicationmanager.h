@@ -22,11 +22,11 @@ void exchange(matrixRefType _dataSource,
               domainPartsIndexRefType domainIndices,
               matrixRefType _dataTarget);
 
-void sendMatrix(matrixRefType _matrix, size_t _recvRank);
-void recvMatrix(matrixRefType _matrix, size_t _sendRank);
+void sendMatrix(matrixRefType _matrix, size_t _recvDomain);
+void recvMatrix(matrixRefType _matrix, size_t _sendDomain);
 
-void sendBitset(bitsetRefType _bitset, size_t _recvRank);
-void recvBitset(bitsetRefType _bitset, size_t _sendRank);
+void sendBitset(bitsetRefType _bitset, size_t _recvDomain);
+void recvBitset(bitsetRefType _bitset, size_t _sendDomain);
 
 void sumUpCounts(countsVectRefType _indexVect);
 
@@ -34,19 +34,23 @@ void max(valueRefType _val);
 void min(valueRefType _val);
 void sum(valueRefType _val);
 
-template<class T> void sendVector(std::vector<T>& _vector, size_t _recvRank);
-template<class T> void recvVector(std::vector<T>& _vector, size_t _sendRank);
+template<class T> void sendVector(std::vector<T>& _vector, size_t _recvDomain);
+template<class T> void recvVector(std::vector<T>& _vector, size_t _sendDomain);
 
+size_t getMyDomain();
+size_t getNoDomains();
+
+size_t domainToMPIrank(size_t _domain);
+size_t MPIrankToDomain(size_t _rank);
 
 protected:
-
 CommunicationManager(void);
 ~CommunicationManager(void);
 
 private:
-
 static self_pointer _instance;
 static size_t commBuffSize;
+size_t myDomain, noDomains;
 
 std::vector<matrixType> composeBuffers;
 std::vector<matrixType> recvBuffers;
@@ -54,6 +58,9 @@ matrixType sendBuffer;
 
 std::vector<size_t> sendNoPart;
 std::vector<size_t> recvNoPart;
+
+std::vector<size_t> domainToRank;
+std::vector<size_t> rankToDomain;
 
 std::queue< std::pair<size_t, std::vector<size_t> > > sendQueue;
 };
@@ -73,6 +80,20 @@ CommunicationManager::self_reference CommunicationManager::instance(void)
 
 CommunicationManager::CommunicationManager(void)
 {
+  noDomains = MPI::COMM_WORLD.Get_size();
+  domainToRank.resize( noDomains );
+  rankToDomain.resize( noDomains );
+  
+  ///
+  /// insert mapping here
+  ///
+  for (size_t i = 0; i < noDomains; i++ )
+  {
+    domainToRank[i] = i;
+    rankToDomain[i] = i;
+  }
+
+  myDomain = rankToDomain[ MPI::COMM_WORLD.Get_rank() ];
 }
 
 CommunicationManager::~CommunicationManager(void)
@@ -89,9 +110,6 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
                                     domainPartsIndexRefType domainIndices,
                                     matrixRefType _dataTarget)
 {
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
-  const size_t SIZE = MPI::COMM_WORLD.Get_size();
-
   /// Only common range will be exchanged,
   /// _dataTarget will be resized to that size
   const size_t partSize = std::min(_dataSource.size2(), _dataTarget.size2());
@@ -106,11 +124,11 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
   sliceType partSlice(0, 1, partSize);
 
   /// Exchange knowledge about who is sending whom how much
-  sendNoPart.resize(SIZE);
-  recvNoPart.resize(SIZE);
+  sendNoPart.resize(noDomains);
+  recvNoPart.resize(noDomains);
 
-  assert(domainIndices.size() == SIZE);
-  for (size_t i = 0; i < SIZE; i++)
+  assert(domainIndices.size() == noDomains);
+  for (size_t i = 0; i < noDomains; i++)
     {
       sendNoPart[i] = domainIndices[i].size();
     }
@@ -119,10 +137,10 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
                            &recvNoPart[0], 1, MPI::UNSIGNED_LONG);
 
   /// Fill up send queue
-  for (size_t t = 1; t < SIZE; t++)
+  for (size_t t = 1; t < noDomains; t++)
     {
-      const size_t curSendRank = (RANK + t) % SIZE;
-      const size_t noSendParts = domainIndices[curSendRank].size();
+      const size_t curSendDomain = (myDomain + t) % noDomains;
+      const size_t noSendParts = domainIndices[curSendDomain].size();
 
       using namespace boost::assign;
       std::vector<size_t> curIndices;
@@ -131,47 +149,48 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
         {
           // terribly slow to assign
           // make static
-          curIndices += domainIndices[curSendRank][i];
+          curIndices += domainIndices[curSendDomain][i];
           if (curIndices.size() == noBuffParts || i == noSendParts - 1)
             {
-              std::pair<size_t, std::vector<size_t> > rankIndicesPair;
-              rankIndicesPair.first = curSendRank;
-              rankIndicesPair.second = curIndices;
-              sendQueue.push(rankIndicesPair);
+              std::pair<size_t, std::vector<size_t> > domainIndicesPair;
+              domainIndicesPair.first = curSendDomain;
+              domainIndicesPair.second = curIndices;
+              sendQueue.push(domainIndicesPair);
               curIndices.resize(0);
             }
         }
     }
 
   /// Prepare composeBuffers
-  composeBuffers.resize(SIZE);
-  for (size_t i = 0; i < SIZE; i++)
+  composeBuffers.resize(noDomains);
+  for (size_t i = 0; i < noDomains; i++)
     {
       composeBuffers[i].resize(recvNoPart[i], partSize);
     }
 
   /// Copy particles staying on node to ComposeBuffer
-  for (size_t i = 0; i < domainIndices[RANK].size(); i++)
+  for (size_t i = 0; i < domainIndices[myDomain].size(); i++)
     {
-      matrixRowType(composeBuffers[RANK], i) =
+      matrixRowType(composeBuffers[myDomain], i) =
         constMatrixVectorSliceType(_dataSource,
-                                   sliceType(domainIndices[RANK][i], 0, partSize),
+                                   sliceType(domainIndices[myDomain][i], 0, partSize),
                                    partSlice);
     }
-  recvNoPart[RANK] = 0;
+  recvNoPart[myDomain] = 0;
 
   /// Prepare Communication
   std::vector<MPI::Request> recvReq;
-  recvReq.resize(SIZE);
-  recvBuffers.resize(SIZE);
+  recvReq.resize(noDomains);
+  recvBuffers.resize(noDomains);
 
-  for (size_t i = 0; i < SIZE; i++)
+  for (size_t i = 0; i < noDomains; i++)
     {
       if (recvNoPart[i] > 0)
         {
+          const size_t recvRank = domainToRank[i];
           (recvBuffers[i]).resize(noBuffParts, partSize);
           recvReq[i] = MPI::COMM_WORLD.Irecv(&recvBuffers[i](0, 0),
-                                             commBuffByteEffSize, MPI::BYTE, i, i);
+                                             commBuffByteEffSize, MPI::BYTE, recvRank, recvRank);
         }
     }
 
@@ -180,8 +199,8 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
   /// Start Communication!
   bool commFinished = false;
 
-  std::vector<size_t> noPartsRecvd(SIZE);
-  for (size_t i = 0; i < SIZE; i++)
+  std::vector<size_t> noPartsRecvd(noDomains);
+  for (size_t i = 0; i < noDomains; i++)
     {
       noPartsRecvd[i] = 0;
     }
@@ -192,7 +211,7 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
       commFinished = true;
 
       /// Check every receiver for arrived particles
-      for (size_t i = 0; i < SIZE; i++)
+      for (size_t i = 0; i < noDomains; i++)
         {
           /// Still expecting particles and buffer is filled
           if (recvNoPart[i] > 0 && recvReq[i].Test())
@@ -210,8 +229,9 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
               /// ... and setup new Receiver if there's more to come
               if (recvNoPart[i] > 0)
                 {
+                  const size_t recvRank = domainToRank[i];
                   recvReq[i] = MPI::COMM_WORLD.Irecv(&recvBuffers[i](0, 0),
-                                                     commBuffByteEffSize, MPI::BYTE, i, i);
+                                                     commBuffByteEffSize, MPI::BYTE, recvRank, recvRank);
                 }
             }
         }
@@ -223,7 +243,8 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
           // make this stuff static!
           std::pair<size_t, std::vector<size_t> > sendPair = sendQueue.front();
           sendQueue.pop();
-          const size_t sendRank = sendPair.first;
+          const size_t sendRank = domainToRank[ sendPair.first ];
+          const size_t myRank = domainToRank[myDomain];
           std::vector<size_t> sendIndices = sendPair.second;
           const size_t noSends = sendIndices.size();
 
@@ -235,12 +256,12 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
             }
 
           /// Fire the buffer! (Synchronous send)
-          MPI::COMM_WORLD.Ssend(&sendBuffer(0, 0), commBuffByteEffSize, MPI::BYTE, sendRank, RANK);
+          MPI::COMM_WORLD.Ssend(&sendBuffer(0, 0), commBuffByteEffSize, MPI::BYTE, sendRank, myRank);
           commFinished = false;
         }
 
       /// Check whether communication has finished
-      for (size_t i = 0; i < SIZE; i++)
+      for (size_t i = 0; i < noDomains; i++)
         {
           if (recvNoPart[i] > 0)
             {
@@ -251,7 +272,7 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
 
   /// Determine number of particles in ComposeBuffer
   size_t noCompParts = 0;
-  for (size_t i = 0; i < SIZE; i++)
+  for (size_t i = 0; i < noDomains; i++)
     {
       noCompParts += composeBuffers[i].size1();
     }
@@ -261,7 +282,7 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
 
   /// Flush composeBuffers
   size_t partCounter = 0;
-  for (size_t i = 0; i < SIZE; i++)
+  for (size_t i = 0; i < noDomains; i++)
     {
       const size_t noCurBuffParts = composeBuffers[i].size1();
       for (size_t j = 0; j < noCurBuffParts; j++)
@@ -278,13 +299,14 @@ void CommunicationManager::exchange(matrixRefType _dataSource,
   return;
 }
 
-void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvRank)
+void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvDomain)
 {
   static size_t noRemElems, noCurElems, noCurBytes, round;
   const size_t noBuffElems = commBuffSize / sizeof(valueType);
 
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
-  
+  const size_t recvRank = domainToRank[_recvDomain];
+  const size_t myRank = domainToRank[myDomain];
+
   ///
   /// no checks are performed whether the matrix
   /// on the receiving side actually matches the amount
@@ -303,17 +325,18 @@ void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvRank)
       /// storage for matrixType
       ///
       MPI::COMM_WORLD.Send((&_matrix(0,0) + round*noBuffElems),
-                           noCurBytes, MPI_BYTE, _recvRank, RANK + round);
+                           noCurBytes, MPI_BYTE, recvRank, myRank + round);
       noRemElems -= noCurElems;
       round++;
     }
 }
 
-void CommunicationManager::recvMatrix(matrixRefType _matrix, size_t _sendRank)
+void CommunicationManager::recvMatrix(matrixRefType _matrix, size_t _sendDomain)
 {
   static size_t noRemElems, noCurElems, noCurBytes, round;
   const size_t noBuffElems = commBuffSize / sizeof(valueType);
 
+  const size_t sendRank = domainToRank[_sendDomain];
   ///
   /// no checks are performed whether the matrix
   /// on the receiving side actually matches the amount
@@ -332,7 +355,7 @@ void CommunicationManager::recvMatrix(matrixRefType _matrix, size_t _sendRank)
       /// storage for matrixType
       ///
       MPI::COMM_WORLD.Recv((&_matrix(0,0) + round*noBuffElems),
-                           noCurBytes, MPI_BYTE, _sendRank, _sendRank + round);
+                           noCurBytes, MPI_BYTE, sendRank, sendRank + round);
       noRemElems -= noCurElems;
       round++;
     }
@@ -357,7 +380,7 @@ void CommunicationManager::sendBitset(bitsetRefType _bitset, size_t _recvRank)
   sendVector<bitsetBlockType>(sendBuff, _recvRank);
 }
 
-void CommunicationManager::recvBitset(bitsetRefType _bitset, size_t _sendRank)
+void CommunicationManager::recvBitset(bitsetRefType _bitset, size_t _sendDomain)
 {
   /// noBlock = no. of bits / no. of bits per bitsetBlockType
   size_t noBlocks = lrint(
@@ -372,7 +395,7 @@ void CommunicationManager::recvBitset(bitsetRefType _bitset, size_t _sendRank)
   ///
   /// send it
   ///
-  recvVector<bitsetBlockType>(recvBuff, _sendRank);
+  recvVector<bitsetBlockType>(recvBuff, _sendDomain);
   
   ///
   /// copy buffer to bitset
@@ -471,13 +494,14 @@ void CommunicationManager::sum(valueRefType _val)
 }
 
 template<class T>
-void CommunicationManager::sendVector(std::vector<T>& _vector, size_t _recvRank)
+void CommunicationManager::sendVector(std::vector<T>& _vector, size_t _recvDomain)
 {
   static size_t noRemElems, noCurElems, noCurBytes, round;
   const size_t noBuffElems = commBuffSize / sizeof(T);
 
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
-  
+  const size_t recvRank = domainToRank[_recvDomain];
+  const size_t myRank = domainToRank[myDomain];
+
   ///
   /// no checks are performed whether the vector
   /// on the receiving side actually matches the amount
@@ -498,18 +522,19 @@ void CommunicationManager::sendVector(std::vector<T>& _vector, size_t _recvRank)
       /// does not work for std::vector<bool> !
       ///
       MPI::COMM_WORLD.Send((&_vector[0] + round*noBuffElems),
-                           noCurBytes, MPI_BYTE, _recvRank, RANK + 255 + round);
+                           noCurBytes, MPI_BYTE, recvRank, myRank + 255 + round);
       noRemElems -= noCurElems;
       round++;
     }
 }
 
 template<class T>
-void CommunicationManager::recvVector(std::vector<T>& _vector, size_t _sendRank)
+void CommunicationManager::recvVector(std::vector<T>& _vector, size_t _sendDomain)
 {
   static size_t noRemElems, noCurElems, noCurBytes, round;
   const size_t noBuffElems = commBuffSize / sizeof(T);
 
+  const size_t sendRank = domainToRank[_sendDomain];
   ///
   /// no checks are performed whether the vector
   /// on the receiving side actually matches the amount
@@ -530,10 +555,28 @@ void CommunicationManager::recvVector(std::vector<T>& _vector, size_t _sendRank)
       /// does not work for std::vector<bool> !
       ///
       MPI::COMM_WORLD.Recv((&_vector[0] + round*noBuffElems),
-                           noCurBytes, MPI_BYTE, _sendRank, _sendRank + 255 + round);
+                           noCurBytes, MPI_BYTE, sendRank, sendRank + 255 + round);
       noRemElems -= noCurElems;
       round++;
     }
+}
+
+size_t CommunicationManager::getMyDomain()
+{
+  return myDomain;
+}
+size_t CommunicationManager::getNoDomains()
+{
+  return noDomains;
+}
+
+size_t CommunicationManager::domainToMPIrank(size_t _domain)
+{
+  return domainToRank[_domain];
+}
+size_t CommunicationManager::MPIrankToDomain(size_t _rank)
+{
+  return rankToDomain[_rank];
 }
 
 };

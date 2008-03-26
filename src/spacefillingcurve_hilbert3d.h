@@ -1,16 +1,14 @@
-#ifndef HILBERT3D_H
-#define HILBERT3D_H
+#ifndef SPACEFILLINGCURVE_HILBERT3D_H
+#define SPACEFILLINGCURVE_HILBERT3D_H
 
 /*
- *  hilbert3d.h
+ *  spacefillingcurve_hilbert3d.h
  *
  *
  *  Created by Andreas Reufer on 23.03.08.
  *  Copyright 2008 University of Berne. All rights reserved.
  *
  */
-
-#include "typedefs.h"
 
 namespace sphlatch {
 class Hilbert3D : public SpaceFillingCurve<Hilbert3D>
