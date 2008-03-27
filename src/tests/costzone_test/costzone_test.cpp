@@ -66,10 +66,12 @@ int main(int argc, char* argv[])
   costzone_type& CostZone(costzone_type::instance());
 
   sphlatch::matrixRefType Data(MemManager.Data);
+  sphlatch::matrixRefType GData(MemManager.GData);
 
   std::string InputFileName = VMap["input-file"].as<std::string>();
 
   Data.resize(Data.size1(), sphlatch::SIZE);
+  GData.resize(0, sphlatch::SIZE);
   IOManager.loadCDAT(InputFileName);
 
   const size_t RANK = MPI::COMM_WORLD.Get_rank();
@@ -173,12 +175,23 @@ int main(int argc, char* argv[])
   TimeStart = microsec_clock::local_time();
   CommManager.exchange(Data, CostZone.createDomainPartsIndex(), Data);
   TimeStop = microsec_clock::local_time();
-  std::cout << "costzone setup " << (TimeStop - TimeStart) << "\n";
+  logFile << "exchange particles " << (TimeStop - TimeStart) << "\n";
+  
+  TimeStart = microsec_clock::local_time();
+  CostZone.createDomainGhostIndex();
+  TimeStop = microsec_clock::local_time();
+  logFile << "determine ghost    " << (TimeStop - TimeStart) << "\n";
+  
+  TimeStart = microsec_clock::local_time();
+  CommManager.exchange(Data, CostZone.domainGhostIndex, GData);
+  TimeStop = microsec_clock::local_time();
+  logFile << "distribute ghosts  " << (TimeStop - TimeStart) << "   " << GData.size1() << " " << Data.size1() << "\n";
   
   const size_t myDomain = CommManager.getMyDomain();
-  if ( myDomain != 6 )
+
+  for (size_t i = 0; i < Data.size1(); i++)
   {
-    Data.resize(0, Data.size2());
+    Data(i, sphlatch::ID) = myDomain;
   }
 
   using namespace sphlatch;

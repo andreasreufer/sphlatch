@@ -20,7 +20,7 @@ typedef MemoryManager* self_pointer;
 
 typedef std::map<std::string, valueType> strValMapType;
 
-matrixType Data;
+matrixType Data, GData;
 
 std::string simName;
 

@@ -36,21 +36,18 @@ typedef SpaceFillingCurve<CartesianYZX> sfcurveType;
 typedef SpaceFillingCurve<CartesianZXY> sfcurveType;
 #endif
 #ifdef SPHLATCH_HILBERT2D_XY
-
 #endif
 #ifdef SPHLATCH_HILBERT2D_XZ
-
 #endif
 #ifdef SPHLATCH_HILBERT2D_YZ
-
 #endif
 #ifdef SPHLATCH_HILBERT3D
 typedef SpaceFillingCurve<Hilbert3D> sfcurveType;
 #endif
 
 private:
-
 void centerOfTheUniverse();
+void fillCostzoneCells();
 
 static self_pointer _instance;
 commManagerType& CommManager;
@@ -82,6 +79,7 @@ CostZone();
 private:
 static domainPartsIndexType costzoneCells;
 static countsVectType partsPerCell;
+static countsVectType domainMap;
 valueType xCenter, yCenter, zCenter, sidelength;
 size_t depth, noCells1D, noCells2D, noCells3D;
 size_t myFirstWalkIndex, myLastWalkIndex;
@@ -93,6 +91,7 @@ domainPartsIndexType CostZone::domainPartsIndex;
 domainPartsIndexType CostZone::domainGhostIndex;
 domainPartsIndexType CostZone::costzoneCells;
 countsVectType CostZone::partsPerCell;
+countsVectType CostZone::domainMap;
 
 CostZone::self_reference CostZone::instance(void)
 {
@@ -109,12 +108,16 @@ CostZone::CostZone(void) :
   CommManager(commManagerType::instance()),
   MemManager(memoryManagerType::instance())
 {
-///
-/// standard costzone depth
-///
-  //resize(3);
-  resize(5);
-  //resize(6);
+  ///
+  /// standard costzone depth
+  ///
+  //const size_t defaultDepth = 1;
+  //const size_t defaultDepth = 3;
+  const size_t defaultDepth = 4;
+  //const size_t defaultDepth = 5;
+
+
+  resize(defaultDepth);
 }
 
 CostZone::~CostZone(void)
@@ -133,74 +136,44 @@ void CostZone::resize(size_t _depth)
   ///
   costzoneCells.resize(noCells3D);
   partsPerCell.resize(noCells3D);
+  domainMap.resize(noCells3D);
 
   spaceCurve.init(depth);
 }
 
 ///
-/// returns a vector of index lists (vector) of the particles
-/// belonging to each domain
+/// returns a vector of domains, containing all the indices of the
+/// locally residing particles, which are assigned to the corresponding
+/// domain
+///
 /// note that the domain numbers do not have to coincidence
 /// with the MPI rank
 ///
 domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
 {
-  matrixRefType Data(MemManager.Data);
-
   const size_t noDomains = CommManager.getNoDomains();
   const size_t myDomain = CommManager.getMyDomain();
-  const size_t noParts = Data.size1();
 
   domainPartsIndex.resize(noDomains);
 
+  ///
+  /// determine the size of the universe
+  /// and fill the costzone cells
+  ///
   centerOfTheUniverse();
-
-  ///
-  /// prepare the costzone cells
-  ///
-  for (size_t i = 0; i < noCells3D; i++)
-    {
-      costzoneCells[i].resize(0);
-      partsPerCell[i] = 0;
-    }
-
-  ///
-  /// define the position corresponding to index 0
-  ///
-  const valueType xMin = xCenter - 0.5 * sidelength;
-  const valueType yMin = yCenter - 0.5 * sidelength;
-  const valueType zMin = zCenter - 0.5 * sidelength;
-  ///
-  /// this factor translates distance to cell index
-  ///
-  const valueType lengthToIndex = static_cast<valueType>(noCells1D - 1) / sidelength;
-
-  ///
-  /// put the local particles in the corresponding costzone cells
-  ///
-  for (size_t i = 0; i < noParts; i++)
-    {
-      const size_t xIndex = lrint((Data(i, X) - xMin) * lengthToIndex);
-      const size_t yIndex = lrint((Data(i, Y) - yMin) * lengthToIndex);
-      const size_t zIndex = lrint((Data(i, Z) - zMin) * lengthToIndex);
-
-      const size_t cartIndex = xIndex + yIndex * noCells1D + zIndex * noCells2D;
-
-      costzoneCells[cartIndex].push_back(i);
-      partsPerCell[cartIndex] += 1;
-    }
+  fillCostzoneCells();
 
   ///
   /// globally sum up partsPerCell and get
   /// the global number of particles
   ///
-  countsVectType locPartPerCell = partsPerCell;
+  countsVectType globPartsPerCell = partsPerCell;
 
-  CommManager.sumUpCounts(partsPerCell);
+  CommManager.sumUpCounts(globPartsPerCell);
   size_t noGlobParts = 0;
   for (size_t i = 0; i < noCells3D; i++)
     {
-      noGlobParts += partsPerCell[i];
+      noGlobParts += globPartsPerCell[i];
     }
 
   ///
@@ -232,38 +205,134 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
       ///    AND the current domain already has particles
       /// then start filling the next domain
       ///
-      if ((noDistrParts + partsPerCell[cartIndex] == noGlobParts ||
+      if ((noDistrParts + globPartsPerCell[cartIndex] == noGlobParts ||
            noCurDomainParts > static_cast<size_t>(domainSize[curDomain]))
           && curDomain < (noDomains - 1)
           && noCurDomainParts > 0)
         {
+          if (myDomain == curDomain)
+            {
+              myLastWalkIndex = i - 1;
+            }
           curDomain++;
           noCurDomainParts = 0;
+          if (myDomain == curDomain)
+            {
+              myFirstWalkIndex = i;
+            }
         }
 
-      const size_t noCurParts = partsPerCell[cartIndex];
+      const size_t noCurParts = globPartsPerCell[cartIndex];
       noCurDomainParts += noCurParts;
       noDistrParts += noCurParts;
 
-      ///
-      /// use vector iterators
-      for (size_t i = 0; i < costzoneCells[cartIndex].size(); i++)
+      domainMap[cartIndex] = curDomain;
+
+      partsIndexVectType::const_iterator partsItr = (costzoneCells[cartIndex]).begin();
+      const partsIndexVectType::const_iterator lastPart = (costzoneCells[cartIndex]).end();
+      while (partsItr != lastPart)
         {
-          domainPartsIndex[curDomain].push_back(costzoneCells[cartIndex][i]);
+          domainPartsIndex[curDomain].push_back(*partsItr);
+          partsItr++;
         }
     }
+
+  ///
+  /// set myFirstWalkIndex for domain 0 and
+  /// myLastWalkIndex for domain noDomains-1
+  ///
+  if (myDomain == 0)
+    {
+      myFirstWalkIndex = 0;
+    }
+  if (myDomain == noDomains - 1)
+    {
+      myLastWalkIndex = noCells3D - 1;
+    }
+
 
   return domainPartsIndex;
 };
 
 ///
-/// returns a vector of index lists (vector) of the particles
-/// belonging to each domain
+/// returns a vector of local particles indices, which
+/// are ghosts to other domains
+/// this function assumes, that createDomainPartsIndex() has been
+/// executed beforehand and therefore only particles assigned to
+/// the local domain actually reside on the local domain. this also
+/// guarantees, that the domainMap is correctly filled
+///
 /// note that the domain numbers do not have to coincidence
 /// with the MPI rank
 ///
 domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
 {
+  const size_t noDomains = CommManager.getNoDomains();
+  const size_t myDomain = CommManager.getMyDomain();
+
+  domainGhostIndex.resize(noDomains);
+  
+  ///
+  /// fill again the costzone cells
+  ///
+  fillCostzoneCells();
+
+  for (size_t i = myFirstWalkIndex; i <= myLastWalkIndex; i++)
+    {
+      const size_t cartIndex = spaceCurve.curveIndexToCartIndex(i);
+
+      ///
+      /// only check for neighbouring non-local cells, if the
+      /// current cell actually has particles in it
+      ///
+      if (partsPerCell[cartIndex] > 0)
+        {
+          const size_t xCen = cartIndex % noCells1D;
+          const size_t yCen = ((cartIndex - xCen) % noCells2D) / noCells1D;
+          const size_t zCen = (cartIndex - xCen - yCen * noCells1D) / noCells2D;
+
+          const size_t xMin = std::max(static_cast<int>(xCen - 1), 0);
+          const size_t yMin = std::max(static_cast<int>(yCen - 1), 0);
+          const size_t zMin = std::max(static_cast<int>(zCen - 1), 0);
+
+          const size_t xMax = std::min(xCen + 1, noCells1D - 1);
+          const size_t yMax = std::min(yCen + 1, noCells1D - 1);
+          const size_t zMax = std::min(zCen + 1, noCells1D - 1);
+
+          std::set<size_t> domainSet;
+          for (size_t xIndex = xMin; xIndex <= xMax; xIndex++)
+            {
+              for (size_t yIndex = yMin; yIndex <= yMax; yIndex++)
+                {
+                  for (size_t zIndex = zMin; zIndex <= zMax; zIndex++)
+                    {
+                      const size_t remCartIndex = xIndex + yIndex * noCells1D + zIndex * noCells2D;
+                      const size_t remDomain = domainMap[remCartIndex];
+                      if (remDomain != myDomain)
+                        {
+                          domainSet.insert(remDomain);
+                        }
+                    }
+                }
+            }
+
+          partsIndexVectType::const_iterator partsItr = (costzoneCells[cartIndex]).begin();
+          const partsIndexVectType::const_iterator lastPart = (costzoneCells[cartIndex]).end();
+
+          std::set<size_t>::const_iterator domainItr = domainSet.begin();
+          const std::set<size_t>::const_iterator lastDomain = domainSet.end();
+
+          while (domainItr != lastDomain)
+            {
+              while (partsItr != lastPart)
+                {
+                  domainGhostIndex[*domainItr].push_back(*partsItr);
+                  partsItr++;
+                }
+              domainItr++;
+            }
+        }
+    }
   return domainGhostIndex;;
 }
 
@@ -311,6 +380,51 @@ void CostZone::centerOfTheUniverse(void)
   yCenter = (yMin + yMax) / 2.;
   zCenter = (zMin + zMax) / 2.;
 }
+
+///
+/// put the local particles in the costzone cells
+///
+void CostZone::fillCostzoneCells()
+{
+  matrixRefType Data(MemManager.Data);
+  const size_t noParts = Data.size1();
+
+  ///
+  /// prepare the costzone cells
+  ///
+  for (size_t i = 0; i < noCells3D; i++)
+    {
+      costzoneCells[i].resize(0);
+      partsPerCell[i] = 0;
+    }
+
+  ///
+  /// define the position corresponding to index 0
+  ///
+  const valueType xMin = xCenter - 0.5 * sidelength;
+  const valueType yMin = yCenter - 0.5 * sidelength;
+  const valueType zMin = zCenter - 0.5 * sidelength;
+  ///
+  /// this factor translates distance to cell index
+  ///
+  const valueType lengthToIndex = static_cast<valueType>(noCells1D - 1) / sidelength;
+
+  ///
+  /// put the local particles in the corresponding costzone cells
+  ///
+  for (size_t i = 0; i < noParts; i++)
+    {
+      const size_t xIndex = lrint((Data(i, X) - xMin) * lengthToIndex);
+      const size_t yIndex = lrint((Data(i, Y) - yMin) * lengthToIndex);
+      const size_t zIndex = lrint((Data(i, Z) - zMin) * lengthToIndex);
+
+      const size_t cartIndex = xIndex + yIndex * noCells1D + zIndex * noCells2D;
+
+      costzoneCells[cartIndex].push_back(i);
+      partsPerCell[cartIndex] += 1;
+    }
+}
+
 
 valvectType CostZone::getCenter(void)
 {
