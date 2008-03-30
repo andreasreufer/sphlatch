@@ -2,6 +2,7 @@
 #define SPHLATCH_COSTZONE_H
 
 #include <vector>
+#include <set>
 #include <limits>
 
 #include "communicationmanager.h"
@@ -24,7 +25,7 @@ typedef sphlatch::MemoryManager memoryManagerType;
 //#define SPHLATCH_CARTESIAN_XYZ
 //#define SPHLATCH_CARTESIAN_YZX
 //#define SPHLATCH_CARTESIAN_ZXY
-#define SPHLATCH_HILBERT3D
+//#define SPHLATCH_HILBERT3D
 
 #ifdef SPHLATCH_CARTESIAN_XYZ
 typedef SpaceFillingCurve<CartesianXYZ> sfcurveType;
@@ -112,8 +113,8 @@ CostZone::CostZone(void) :
   /// standard costzone depth
   ///
   //const size_t defaultDepth = 1;
-  //const size_t defaultDepth = 3;
-  const size_t defaultDepth = 4;
+  const size_t defaultDepth = 3;
+  //const size_t defaultDepth = 4;
   //const size_t defaultDepth = 5;
 
 
@@ -299,6 +300,7 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
           const size_t yMax = std::min(yCen + 1, noCells1D - 1);
           const size_t zMax = std::min(zCen + 1, noCells1D - 1);
 
+          /// make this set static?
           std::set<size_t> domainSet;
           for (size_t xIndex = xMin; xIndex <= xMax; xIndex++)
             {
@@ -440,6 +442,12 @@ valueType CostZone::getSidelength(void)
 {
   return sidelength;
 }
+
+size_t CostZone::getDepth(void)
+{
+  return depth;
+}
+
 };
 
 #endif

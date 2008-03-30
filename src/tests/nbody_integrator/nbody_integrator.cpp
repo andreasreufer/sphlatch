@@ -35,31 +35,38 @@
 
 #include "particle.h"
 
+/// hack, until we get rid of OOSPH particle.h
+#include "particle_oosph.h"
+
 namespace po = boost::program_options;
 namespace mpl = boost::mpl;
 
+/// obsolete
 #include "simulation_trait.h"
 typedef oosph::SimulationTrait<> SimTrait;
-typedef SimTrait::value_type value_type;
-typedef SimTrait::index_vector_type index_vector_type;
+
+#include "typedefs.h"
+typedef sphlatch::valueType valueType;
+typedef sphlatch::partsIndexVectType partsIndexVectType;
 
 #include "iomanager.h"
-typedef oosph::IOManager<SimTrait> io_type;
+typedef sphlatch::IOManager io_type;
 
 #include "memorymanager.h"
-typedef oosph::MemoryManager<SimTrait> mem_type;
+typedef sphlatch::MemoryManager mem_type;
 
 #include "communicationmanager.h"
-typedef oosph::CommunicationManager<SimTrait> com_type;
+typedef sphlatch::CommunicationManager comm_type;
 
 #include "costzone.h"
-typedef mpl::vector_c<size_t, oosph::X> CostZoneIndex;
-typedef oosph::CostZone<CostZoneIndex, SimTrait> CostZoneType;
+typedef sphlatch::CostZone costzone_type;
 
+/// obsolete
 #include "verlet.h"
 typedef mpl::vector_c<size_t, oosph::X, oosph::VX, oosph::AX, oosph::OAX> AccIntIndices;
 typedef oosph::VecVerlet<AccIntIndices, SimTrait> AccIntType;
 
+/// obsolete
 #include "erazer.h"
 typedef mpl::vector_c<size_t, oosph::AX, oosph::AY, oosph::AZ> ErazerIndices;
 typedef oosph::Erazer<ErazerIndices, SimTrait> ErazerType;
@@ -78,15 +85,15 @@ int main(int argc, char* argv[])
   MPI::Init(argc, argv);
   double stepStartTime, lastStepStartTime, logStartTime = MPI_Wtime();
 
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
+  const size_t myDomain = ComManager.getMyDomain();
 
   po::options_description Options("Global Options");
   Options.add_options() ("help,h", "Produces this Help")
   ("input-file,i", po::value<std::string>(), "input file")
   ("output-tag,o", po::value<std::string>(), "tag for output files")
-  ("time-step,d", po::value<value_type>(), "integration timestep dt")
-  ("save-time,t", po::value<value_type>(), "save a dump every dt_save")
-  ("stop-time,s", po::value<value_type>(), "stop the simulation at stoptime");
+  ("time-step,d", po::value<valueType>(), "integration timestep dt")
+  ("save-time,t", po::value<valueType>(), "save a dump every dt_save")
+  ("stop-time,s", po::value<valueType>(), "stop the simulation at stoptime");
 
 
   po::positional_options_description POD;
@@ -114,19 +121,21 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
     }
 
-  io_type& IOManager(io_type::Instance());
-  mem_type& MemManager(mem_type::Instance());
-  com_type& ComManager(com_type::Instance());
-  CostZoneType& CostZone(CostZoneType::Instance());
+  io_type& IOManager(io_type::instance());
+  mem_type& MemManager(mem_type::instance());
+  com_type& ComManager(com_type::instance());
+  CostZoneType& CostZone(CostZoneType::instance());
 
+  /// obsolete
   ErazerType& Erazer(ErazerType::Instance());
   AccIntType AccInt;
 
-  std::vector<sphlatch::NodeProxy> partProxies, ghostProxies;
+  std::vector<sphlatch::particleProxy> partProxies, ghostProxies;
 
-  SimTrait::matrix_reference Data(MemManager.Data);
-  SimTrait::matrix_reference GData(MemManager.GData);
+  sphlatch::matrixRefType Data(MemManager.Data);
+  sphlatch::matrixRefType GData(MemManager.GData);
 
+  /// only OOSPH knows about integration indices
   Data.resize(Data.size1(), oosph::PX); // Verlet only needs vars up to OAZ
   GData.resize(GData.size1(), oosph::OX);
   size_t noParts, noGhosts;
@@ -134,48 +143,48 @@ int main(int argc, char* argv[])
   std::string inputFileName = VMap["input-file"].as<std::string>();
   std::string outputTag = VMap["output-tag"].as<std::string>();
 
-  IOManager.LoadCDAT(inputFileName);
+  IOManager.loadCDAT(inputFileName);
 
-  value_type gravTheta = MemManager.LoadParameter("GRAVTHETA");
+  valueType gravTheta = MemManager.loadParameter("GRAVTHETA");
   if (gravTheta != gravTheta)
     {
       gravTheta = 0.5;       // standard value for opening angle theta
     }
-  MemManager.SaveParameter("GRAVTHETA", gravTheta, true);
+  MemManager.saveParameter("GRAVTHETA", gravTheta, true);
 
-  value_type gravConst = MemManager.LoadParameter("GRAVCONST");
+  valueType gravConst = MemManager.loadParameter("GRAVCONST");
   if (gravConst != gravConst)
     {
       //gravConst = 1.;       //  G=1 system
       gravConst = 6.67259e-11;       //  SI units
     }
-  MemManager.SaveParameter("GRAVCONST", gravConst, true);
+  MemManager.saveParameter("GRAVCONST", gravConst, true);
 
-  value_type absTime = MemManager.LoadParameter("TIME");
+  valueType absTime = MemManager.loadParameter("TIME");
   if (absTime != absTime)
     {
       absTime = 0.;       // start at t = 0
     }
-  MemManager.SaveParameter("TIME", absTime, true);
+  MemManager.saveParameter("TIME", absTime, true);
 
-  value_type maxRadius = MemManager.LoadParameter("MAXRAD");
+  valueType maxRadius = MemManager.loadParameter("MAXRAD");
   if (maxRadius != maxRadius)
     {
       //maxRadius = 1;
       maxRadius = 6.0e11;  // ~ 4 AU in SI-units
     }
-  MemManager.SaveParameter("MAXRAD", maxRadius, true);
+  MemManager.saveParameter("MAXRAD", maxRadius, true);
 
-  value_type starID = MemManager.LoadParameter("STARID");
+  valueType starID = MemManager.loadParameter("STARID");
   if (starID != starID)
     {
       starID = 1.;
     }
-  MemManager.SaveParameter("STARID", starID, true);
+  MemManager.saveParameter("STARID", starID, true);
 
   // set up logging stuff
   std::string logFilename = "logRank000";
-  std::string rankString = boost::lexical_cast<std::string>(RANK);
+  std::string rankString = boost::lexical_cast<std::string>(myDomain);
   logFilename.replace(logFilename.size() - 0 - rankString.size(),
                       rankString.size(), rankString);
   std::fstream logFile;
@@ -183,11 +192,11 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - logStartTime << "    start log\n";
 
-  value_type saveTimestep, stopTime, dtInput, dtSave, dt, lastSavetime;
+  valueType saveTimestep, stopTime, dtInput, dtSave, dt, lastSavetime;
 
-  saveTimestep = VMap["save-time"].as<value_type>();
-  stopTime = VMap["stop-time"].as<value_type>();
-  dtInput = VMap["time-step"].as<value_type>();
+  saveTimestep = VMap["save-time"].as<valueType>();
+  stopTime = VMap["stop-time"].as<valueType>();
+  dtInput = VMap["time-step"].as<valueType>();
   lastSavetime = absTime - saveTimestep;
 
   size_t step = 0;
@@ -274,7 +283,7 @@ int main(int argc, char* argv[])
               << MPI_Wtime() - logStartTime
               << "a   step " << step << "\n" << std::flush;
       
-      if (RANK == 0)
+      if (myDomain == 0)
         {
           std::cout << std::fixed << std::right << std::setw(15) << std::setprecision(6)
                     << MPI_Wtime() - logStartTime << "   ("
@@ -299,11 +308,11 @@ int main(int argc, char* argv[])
       absTime += dt;
       MemManager.SaveParameter("TIME", absTime, true);
 
-      index_vector_type delParts;
+      partsIndexVectType delParts;
       noParts = Data.size1();
       for (size_t j = 0; j < noParts; j++)
         {
-          value_type curRadius = sqrt(
+          valueType curRadius = sqrt(
             (Data(j, X) - 0.0) * (Data(j, X) - 0.0) +
             (Data(j, Y) - 0.0) * (Data(j, Y) - 0.0) +
             (Data(j, Z) - 0.0) * (Data(j, Z) - 0.0));
@@ -430,7 +439,7 @@ int main(int argc, char* argv[])
           outFilename.replace(outFilename.size() - 5 - stepString.size(),
                               stepString.size(), stepString);
 
-          if (RANK == 0)
+          if (myDomain == 0)
             {
               std::cout << std::fixed << std::right
                         << std::setw(15) << std::setprecision(6)

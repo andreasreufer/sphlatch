@@ -456,7 +456,7 @@ void CommunicationManager::max(valueRefType _val)
 #ifdef MPI_IN_PLACE
   MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE , &doubleBuff, 1, MPI::DOUBLE, MPI::MAX);
 #else
-  static recvDoubleBuff;
+  static double recvDoubleBuff;
   MPI::COMM_WORLD.Allreduce(&doubleBuff, &recvDoubleBuff, 1, MPI::DOUBLE, MPI::MAX);
   doubleBuff = recvDoubleBuff;
 #endif
@@ -471,7 +471,7 @@ void CommunicationManager::min(valueRefType _val)
 #ifdef MPI_IN_PLACE
   MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE , &doubleBuff, 1, MPI::DOUBLE, MPI::MIN);
 #else
-  static recvDoubleBuff;
+  static double recvDoubleBuff;
   MPI::COMM_WORLD.Allreduce(&doubleBuff, &recvDoubleBuff, 1, MPI::DOUBLE, MPI::MIN);
   doubleBuff = recvDoubleBuff;
 #endif
@@ -486,7 +486,7 @@ void CommunicationManager::sum(valueRefType _val)
 #ifdef MPI_IN_PLACE
   MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE , &doubleBuff, 1, MPI::DOUBLE, MPI::SUM);
 #else
-  static recvDoubleBuff;
+  static double recvDoubleBuff;
   MPI::COMM_WORLD.Allreduce(&doubleBuff, &recvDoubleBuff, 1, MPI::DOUBLE, MPI::SUM);
   doubleBuff = recvDoubleBuff;
 #endif

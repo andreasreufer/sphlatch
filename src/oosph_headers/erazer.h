@@ -6,7 +6,7 @@
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/for_each.hpp>
 
-#include "manager.h"
+//#include "manager.h"
 
 namespace oosph
 {
@@ -22,13 +22,22 @@ template <typename SimTrait>
 struct Eraze
 {
 
-    typedef Manager<SimTrait>  manager_type;
+    /*typedef oosph::MemoryManager<SimTrait> mem_manager_type;
+    typedef oosph::MemoryManager<SimTrait>& mem_manager_reference;
+    typedef oosph::MemoryManager<SimTrait>* mem_manager_pointer;*/
+
+    typedef sphlatch::MemoryManager  mem_manager_type;
+    typedef sphlatch::MemoryManager&  mem_manager_reference;
+    typedef sphlatch::MemoryManager*  mem_manager_pointer;
+
+
+    /*typedef Manager<SimTrait>  manager_type;
     typedef Manager<SimTrait>& manager_reference;
     typedef Manager<SimTrait>* manager_pointer;
 
     typedef typename manager_type::mem_manager_type mem_manager_type;
     typedef typename manager_type::mem_manager_reference mem_manager_reference;
-    typedef typename manager_type::mem_manager_pointer mem_manager_pointer;
+    typedef typename manager_type::mem_manager_pointer mem_manager_pointer;*/
     
     typedef typename SimTrait::vector_type vector_type;
     typedef typename SimTrait::zero_vector zero_vector;
@@ -49,7 +58,7 @@ struct Eraze
 // typename Eraze<SimTrait>::manager_reference Eraze<SimTrait>::Manager(manager_type::Instance());
 
 template <typename SimTrait>
-typename Eraze<SimTrait>::mem_manager_reference Eraze<SimTrait>::Mem(mem_manager_type::Instance());
+typename Eraze<SimTrait>::mem_manager_reference Eraze<SimTrait>::Mem(mem_manager_type::instance());
 
 /**
  * \brief Class for Selective Deletion of Values in the Particles

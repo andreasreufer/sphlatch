@@ -3,7 +3,7 @@
 
 #include <cstdlib>
 
-#include "manager.h"
+//#include "manager.h"
 
 namespace oosph
 {
@@ -32,9 +32,9 @@ public:
     static void Corrector(value_type dt);
     static void Step(value_type dt);
 
-    typedef Manager<SimTrait>  manager_type;
+    /*typedef Manager<SimTrait>  manager_type;
     typedef Manager<SimTrait>& manager_reference;
-    typedef Manager<SimTrait>* manager_pointer;
+    typedef Manager<SimTrait>* manager_pointer;*/
 
 protected:
 

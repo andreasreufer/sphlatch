@@ -8,6 +8,7 @@
 
 #include "integrator.h"
 
+
 namespace oosph
 {
 namespace mpl = boost::mpl;
@@ -30,13 +31,9 @@ typedef Integrator<self_type, SimTrait>  parent_type;
 typedef Integrator<self_type, SimTrait>& parent_reference;
 typedef Integrator<self_type, SimTrait>* parent_pointer;
 
-typedef typename parent_type::manager_type manager_type;
-typedef typename parent_type::manager_reference manager_reference;
-typedef typename parent_type::manager_pointer manager_pointer;
-
-typedef typename manager_type::mem_manager_type mem_manager_type;
-typedef typename manager_type::mem_manager_reference mem_manager_reference;
-typedef typename manager_type::mem_manager_pointer mem_manager_pointer;
+typedef sphlatch::MemoryManager  mem_manager_type;
+typedef sphlatch::MemoryManager&  mem_manager_reference;
+typedef sphlatch::MemoryManager*  mem_manager_pointer;
 
 typedef typename SimTrait::matrix_type matrix_type;
 typedef typename SimTrait::matrix_column matrix_column;
@@ -63,7 +60,7 @@ matrix_column oax;
 
 template <typename Indices, typename SimTrait>
 typename Verlet<Indices, SimTrait>::mem_manager_reference
-Verlet<Indices, SimTrait>::Mem(mem_manager_type::Instance());
+Verlet<Indices, SimTrait>::Mem(mem_manager_type::instance());
 
 template <typename Indices, typename SimTrait>
 Verlet<Indices, SimTrait>::Verlet(void) :

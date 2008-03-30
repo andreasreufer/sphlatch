@@ -36,7 +36,7 @@ typedef valueType&              valueRefType;
 ///
 /// a valueType matrix
 /// please note that the communication manager
-/// assumes this type to have continuous storge
+/// assumes this type to have continuous storage
 ///
 typedef blas::matrix<valueType>        matrixType;
 typedef blas::matrix<valueType>&       matrixRefType;
@@ -118,7 +118,7 @@ typedef std::vector<partsIndexVectType>* domainPartsIndexPtrType;
 typedef unsigned long int bitsetBlockType;
 
 ///
-/// a bit set, useful as a bool vector
+/// a bit set, useful as a boolean vector
 ///
 typedef boost::dynamic_bitset<bitsetBlockType> bitsetType;
 typedef boost::dynamic_bitset<bitsetBlockType>& bitsetRefType;
