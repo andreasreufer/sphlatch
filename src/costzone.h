@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <limits>
+#include <cassert>
 
 #include "communicationmanager.h"
 #include "memorymanager.h"
@@ -112,11 +113,11 @@ CostZone::CostZone(void) :
   ///
   /// standard costzone depth
   ///
-  //const size_t defaultDepth = 1;
-  const size_t defaultDepth = 3;
+  const size_t defaultDepth = 1;
+  //const size_t defaultDepth = 2;
+  //const size_t defaultDepth = 3;
   //const size_t defaultDepth = 4;
   //const size_t defaultDepth = 5;
-
 
   resize(defaultDepth);
 }
@@ -188,12 +189,16 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
                             static_cast<double>(noDomains));
     }
 
+  myFirstWalkIndex = noCells3D;
+  myLastWalkIndex = noCells3D - 1;
+  
   ///
   /// now let's walk along the spacefilling curve
   ///
   size_t curDomain = 0;
   size_t noDistrParts = 0;
   size_t noCurDomainParts = 0;
+
   for (size_t i = 0; i < noCells3D; i++)
     {
       const size_t cartIndex = spaceCurve.curveIndexToCartIndex(i);
@@ -240,18 +245,12 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
 
   ///
   /// set myFirstWalkIndex for domain 0 and
-  /// myLastWalkIndex for domain noDomains-1
   ///
   if (myDomain == 0)
     {
       myFirstWalkIndex = 0;
     }
-  if (myDomain == noDomains - 1)
-    {
-      myLastWalkIndex = noCells3D - 1;
-    }
-
-
+  
   return domainPartsIndex;
 };
 
@@ -281,7 +280,7 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
   for (size_t i = myFirstWalkIndex; i <= myLastWalkIndex; i++)
     {
       const size_t cartIndex = spaceCurve.curveIndexToCartIndex(i);
-
+      
       ///
       /// only check for neighbouring non-local cells, if the
       /// current cell actually has particles in it
@@ -318,7 +317,8 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
                 }
             }
 
-          partsIndexVectType::const_iterator partsItr = (costzoneCells[cartIndex]).begin();
+          partsIndexVectType::const_iterator partsItr;
+          const partsIndexVectType::const_iterator firstPart = (costzoneCells[cartIndex]).begin();
           const partsIndexVectType::const_iterator lastPart = (costzoneCells[cartIndex]).end();
 
           std::set<size_t>::const_iterator domainItr = domainSet.begin();
@@ -326,6 +326,7 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
 
           while (domainItr != lastDomain)
             {
+              partsItr = firstPart;
               while (partsItr != lastPart)
                 {
                   domainGhostIndex[*domainItr].push_back(*partsItr);
@@ -335,7 +336,8 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
             }
         }
     }
-  return domainGhostIndex;;
+  
+  return domainGhostIndex;
 }
 
 ///
@@ -376,7 +378,17 @@ void CostZone::centerOfTheUniverse(void)
   CommManager.min(zMin);
   CommManager.max(zMax);
 
-  sidelength = std::max(std::max(xMax - xMin, yMax - yMin), zMax - zMin);
+  ///
+  /// the box size is increased by a small factor, so that the cell
+  /// indices in the calculation below never become negative or >= noCells1D
+  /// due to rounding errors
+  ///
+#ifdef SPHLATCH_SINGLEPREC
+  sidelength = ( 1 + 1e-4 )*
+#else
+  sidelength = ( 1 + 1e-8 )*
+#endif
+               std::max(std::max(xMax - xMin, yMax - yMin), zMax - zMin);
 
   xCenter = (xMin + xMax) / 2.;
   yCenter = (yMin + yMax) / 2.;
@@ -409,17 +421,25 @@ void CostZone::fillCostzoneCells()
   ///
   /// this factor translates distance to cell index
   ///
-  const valueType lengthToIndex = static_cast<valueType>(noCells1D - 1) / sidelength;
+  const valueType lengthToIndex = static_cast<valueType>(noCells1D) / sidelength;
 
   ///
   /// put the local particles in the corresponding costzone cells
   ///
   for (size_t i = 0; i < noParts; i++)
     {
-      const size_t xIndex = lrint((Data(i, X) - xMin) * lengthToIndex);
-      const size_t yIndex = lrint((Data(i, Y) - yMin) * lengthToIndex);
-      const size_t zIndex = lrint((Data(i, Z) - zMin) * lengthToIndex);
+      const size_t xIndex = lrint((Data(i, X) - xMin) * lengthToIndex - 0.5);
+      const size_t yIndex = lrint((Data(i, Y) - yMin) * lengthToIndex - 0.5);
+      const size_t zIndex = lrint((Data(i, Z) - zMin) * lengthToIndex - 0.5);
 
+      ///
+      /// if this assertion fails, increase the factor in front
+      /// of the sidelength calculation above
+      ///
+      assert( xIndex < noCells1D );
+      assert( yIndex < noCells1D );
+      assert( zIndex < noCells1D );
+      
       const size_t cartIndex = xIndex + yIndex * noCells1D + zIndex * noCells2D;
 
       costzoneCells[cartIndex].push_back(i);

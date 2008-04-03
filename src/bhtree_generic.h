@@ -15,6 +15,7 @@
 #include "bhtree_particle_proxy.h"
 #include "bhtree_cell_node.h"
 
+#include "bhtree_monopole_node.h"
 #include "particle.h"
 
 namespace sphlatch {
@@ -398,18 +399,30 @@ public:
 void calcMultipoles(void)
 {
   goRoot();
-  calcMultipoleRecursor();
-
+  calcMPbottomtreeRecursor();
+  
+  /*goRoot();
+  toptreeBottomToBufferRecursor();
+  
+  goRoot();
+  calcMPtoptreeRecursor();
+*/
   globalSumupMultipoles();
 }
 
 private:
 ///
-/// recursor for multipole calculation
+/// recursor for bottomtree multipole calculation
 ///
-void calcMultipoleRecursor(void)
+void calcMPbottomtreeRecursor(void)
 {
-  if (calcMultipoleStop())
+  ///
+  /// stop recursion if:
+  /// - current node is empty
+  /// - current node is a particle
+  ///
+  if ( curNodePtr->isEmpty ) /// particles are always empty, 
+                             /// so we can omit this check
     {
     }
   else
@@ -421,27 +434,21 @@ void calcMultipoleRecursor(void)
               if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
                 {
                   goChild(i);
-                  calcMultipoleRecursor();
+                  calcMPbottomtreeRecursor();
                   goUp();
                 }
             }
+
+          if ( curNodePtr->depth >= toptreeDepth )
+          {
+            //std::cout << curNodePtr->depth << " calc MP " << curNodePtr->ident << "\n";
+          }
           /// determine locality of current node
           detLocality();
           /// calculate multipole moments (delegated to specialization)
           asLeaf().calcMultipole();
         }
     }
-};
-
-
-///
-/// stop recursion if:
-/// - current node is empty
-/// - current node is a particle
-///
-bool calcMultipoleStop(void)
-{
-  return curNodePtr->isEmpty; /// particles are always empty, so we can omit this check
 };
 
 
@@ -479,6 +486,65 @@ void detLocality(void)
     }
 }
 
+///
+/// recursor for bottomtree multipole calculation
+///
+void toptreeBottomToBufferRecursor(void)
+{
+  ///
+  /// stop recursion and copy cell to buffer, if:
+  /// - toptreeDepth is reached
+  ///
+  if ( curNodePtr->depth == toptreeDepth )
+    {
+        //std::cout << curNodePtr->depth << " sync MP " << curNodePtr->ident << "\n";
+    }
+  else
+    {
+          for (size_t i = 0; i < 8; i++)
+            {
+              if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
+                {
+                  goChild(i);
+                  toptreeBottomToBufferRecursor();
+                  goUp();
+                }
+            }
+    }
+};
+
+///
+/// recursor for bottomtree multipole calculation
+///
+void calcMPtoptreeRecursor(void)
+{
+  ///
+  /// stop recursion if:
+  /// - toptreeDepth is reached
+  ///
+  if ( curNodePtr->depth == toptreeDepth )
+    {
+    }
+  else
+    {
+          for (size_t i = 0; i < 8; i++)
+            {
+              if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
+                {
+                  goChild(i);
+                  calcMPtoptreeRecursor();
+                  goUp();
+                }
+            }
+
+          if ( curNodePtr->depth < toptreeDepth )
+          {
+            //std::cout << curNodePtr->depth << " calc MP " << curNodePtr->ident << " (toptree)\n";
+          }
+    }
+};
+
+
 
 ///
 /// sum up the multipole cellData matrix globally
@@ -487,11 +553,11 @@ void detLocality(void)
 ///
 protected:
 size_t toptreeCounter;
-
 private:
 void globalSumupMultipoles()
 {
 #ifdef SPHLATCH_MPI
+  // replace by domain numbers
   const size_t RANK = MPI::COMM_WORLD.Get_rank();
   const size_t SIZE = MPI::COMM_WORLD.Get_size();
 
@@ -627,9 +693,7 @@ void toptreeToBuffersRecursor(void)
   else
     {
       localIsFilled[toptreeCounter] = !(curNodePtr->isEmpty);
-
       asLeaf().cellToBuffer();
-
       toptreeCounter++;
 
       if (curNodePtr->isParticle == false)
@@ -655,7 +719,7 @@ void buffersToToptreeRecursor(void)
   else
     {
       curNodePtr->isEmpty = !localIsFilled[toptreeCounter];
-
+      asLeaf().bufferToCell();
       toptreeCounter++;
 
       if (curNodePtr->isParticle == false)
@@ -912,14 +976,17 @@ void treeDOTDumpRecursor()
 {
   dumpFile << curNodePtr->ident
            << " [";
-  //<< "label=\"\",";
+  dumpFile << "label=\"\",";
 
   if (curNodePtr->isParticle)
     {
+      //dumpFile << "label=\"" << lrint( static_cast<partPtrT>(curNodePtr)->mass ) << "\",";
       dumpFile << "shape=circle";
     }
   else
     {
+      //dumpFile << "label=\"\",";
+      //dumpFile << "label=\"" << lrint( static_cast<monopoleCellNode*>(curNodePtr)->mass)  << "\",";
       dumpFile << "shape=box";
     }
 
@@ -1035,8 +1102,9 @@ void treeDumpRecursor()
       dumpFile << static_cast<partPtrT>(curNodePtr)->zPos << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->mass << "   ";
 
+      for (size_t i = 0; i < 0; i++) // 6 is no of >monopole terms
       //for (size_t i = 0; i < 6; i++) // 6 is no of >monopole terms
-      for (size_t i = 0; i < 16; i++) // 16 is no of >monopole terms
+      //for (size_t i = 0; i < 16; i++) // 16 is no of >monopole terms
         {
           dumpFile << 0. << "   ";
         }
@@ -1072,51 +1140,75 @@ public:
 ///
 /// dump the toptree
 ///
-/*void toptreeDump(std::string _dumpFileName)
-   {
-   dumpFile.open(_dumpFileName.c_str(), std::ios::out);
+void toptreeDump(std::string _dumpFileName)
+{
+  dumpFile.open(_dumpFileName.c_str(), std::ios::out);
 
-   dumpFile << "# toptree depth is " << toptreeDepth
+  dumpFile << "# toptree depth is " << toptreeDepth
            << " which gives us " << noToptreeCells
            << " toptree cells\n"
-           << "#xCom            yCom             zCom"
-           << "             q000           depth isEmpty\n";
-   goRoot();
-   toptreeDumpRecursor();
-   dumpFile.close();
-   }*/
+           << "#ident empty depth       xCenter            yCenter   "
+           << "        zCenter         sidelength            xCom    "
+           << "          yCom              zCom               mass\n";
+  goRoot();
+  toptreeDumpRecursor();
+  dumpFile.close();
+}
 
 private:
 ///
 /// toptreeDump() recursor
 ///
-/*void toptreeDumpRecursor()
-   {
-   dumpFile << std::scientific << std::setprecision(8);
-   dumpFile << curNodePtr->xCom << "   "
-           << curNodePtr->yCom << "   "
-           << curNodePtr->zCom << "   "
-           << curNodePtr->q000 << "   ";
-   dumpFile << std::dec
-           << curNodePtr->depth << "   "
-           << static_cast<int>(curNodePtr->isEmpty) << "\n";
+void toptreeDumpRecursor()
+{
+  dumpFile << std::fixed << std::right << std::setw(6);
+  dumpFile << curNodePtr->ident;
+  dumpFile << "   ";
+  //dumpFile << ! curNodePtr->isEmpty ; 
+  //dumpFile << "   ";
+  dumpFile << curNodePtr->depth;
+  dumpFile << "   ";
+  dumpFile << std::setprecision(15) << std::setw(20);
+  dumpFile << std::scientific;
 
-   if (atToptreeStop())
+  dumpFile << static_cast<cellPtrT>(curNodePtr)->xCenter << "   ";
+  dumpFile << static_cast<cellPtrT>(curNodePtr)->yCenter << "   ";
+  dumpFile << static_cast<cellPtrT>(curNodePtr)->zCenter << "   ";
+  dumpFile << static_cast<cellPtrT>(curNodePtr)->cellSize << "   ";
+  asLeaf().reportMultipoles();
+
+  dumpFile << "\n";
+
+  ///old
+
+  /*dumpFile << std::scientific << std::setprecision(8);
+     dumpFile << curNodePtr->xCom << "   "
+          << curNodePtr->yCom << "   "
+          << curNodePtr->zCom << "   "
+          << curNodePtr->q000 << "   ";
+     dumpFile << std::dec
+          << curNodePtr->depth << "   "
+          << static_cast<int>(curNodePtr->isEmpty) << "\n";*/
+
+  if (atOrBelowToptreeStop())
     {
     }
-   else
+  else
     {
       for (size_t i = 0; i < 8; i++)             // try without loop
         {
-          if (curNodePtr->child[i] != NULL)
+          if (curNodePtr->isParticle == false)
             {
-              goChild(i);
-              toptreeDumpRecursor();
-              goUp();
+              if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
+                {
+                  goChild(i);
+                  toptreeDumpRecursor();
+                  goUp();
+                }
             }
         }
     }
-   }*/
+}
 // end of toptreeDump() stuff
 
 // empty() stuff

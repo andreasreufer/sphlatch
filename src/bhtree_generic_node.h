@@ -21,7 +21,7 @@ struct genericNode {
   /**
    * pointer to parent
    */
-  genericNode* parent; 
+  genericNode* parent;
 
   /**
    * the root node has depth = 0, its
@@ -60,7 +60,6 @@ struct genericNode {
     return this;
   }
 };
-
 };
 
 #endif

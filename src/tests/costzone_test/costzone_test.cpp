@@ -16,6 +16,7 @@ using namespace boost::assign;
 
 #define SPHLATCH_SINGLEPREC
 #define SPHLATCH_MPI
+#define SPHLATCH_HILBERT3D
 
 #include "particle.h"
 #include "iomanager.h"
@@ -78,7 +79,7 @@ int main(int argc, char* argv[])
   const size_t SIZE = MPI::COMM_WORLD.Get_size();
   const size_t noParts = Data.size1();
 
-  sphlatch::domainPartsIndexType partsDomainMapping;
+  /*sphlatch::domainPartsIndexType partsDomainMapping;
 
   size_t sendtoRank = (RANK + 1) % SIZE; // send to next rank
 
@@ -88,7 +89,7 @@ int main(int argc, char* argv[])
     {
       (partsDomainMapping[sendtoRank]).push_back(i);
     }
-
+*/
 
   // particles are all distributed now
   using namespace boost::posix_time;

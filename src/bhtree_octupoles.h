@@ -49,7 +49,8 @@ void prepareBuffers()
 ///
 size_t noMultipoleMoments()
 {
-  return 20; // 3 center of mass + 1 monopole + 6 quadrupoles + 10 octupoles = 20 multipoles
+  return OSIZE; ///  3 center of mass + 1 monopole
+                /// + 6 quadrupoles + 10 octupoles = 20 multipoles
 }
 
 ///
@@ -142,7 +143,8 @@ void calcMultipole()
         }
     }
 
-  if (childCell[MASS] > 0.)
+  if (curCell[MASS] > 0.)
+  //if (childCell[MASS] > 0.)
     {
       for (size_t i = 0; i < 8; i++)
         {
@@ -189,9 +191,12 @@ void addCOM(valvectRefType _target, const valvectRefType _source)
     {
       // const static does not seem to work here
       const valueType newMassInv = (1.0 / _target[MASS]);
-      _target[CX] = newMassInv * (oldMass * _target[CX] + _source[MASS] * _source[CX]);
-      _target[CY] = newMassInv * (oldMass * _target[CY] + _source[MASS] * _source[CY]);
-      _target[CZ] = newMassInv * (oldMass * _target[CZ] + _source[MASS] * _source[CZ]);
+      _target[CX] = newMassInv * (oldMass * _target[CX]
+                                  + _source[MASS] * _source[CX]);
+      _target[CY] = newMassInv * (oldMass * _target[CY]
+                                  + _source[MASS] * _source[CY]);
+      _target[CZ] = newMassInv * (oldMass * _target[CZ]
+                                  + _source[MASS] * _source[CZ]);
     }
 }
 
@@ -235,33 +240,40 @@ void addMP(valvectRefType _target, const valvectRefType _source)
 
   _target[S12] += (15. * rxrx - 3. * rr) * ry * _source[MASS]
                   + (5. / 2.) * _source[Q11] * ry
-                  + 4. * _source[Q12] * rx - _source[Q22] * ry - _source[Q23] * rz
+                  + 4. * _source[Q12] * rx
+                  - _source[Q22] * ry - _source[Q23] * rz
                   + _source[S12];
   _target[S21] += (15. * ryry - 3. * rr) * rx * _source[MASS]
                   + (5. / 2.) * _source[Q22] * rx
-                  - _source[Q11] * rx + 4. * _source[Q12] * ry - _source[Q13] * rz
+                  - _source[Q11] * rx + 4. * _source[Q12] * ry
+                  - _source[Q13] * rz
                   + _source[S21];
 
   _target[S13] += (15. * rxrx - 3. * rr) * rz * _source[MASS]
                   + (5. / 2.) * _source[Q11] * rz
-                  + 4. * _source[Q13] * rx - _source[Q23] * ry - _source[Q33] * rz
+                  + 4. * _source[Q13] * rx - _source[Q23] * ry
+                  - _source[Q33] * rz
                   + _source[S13];
   _target[S31] += (15. * rzrz - 3. * rr) * rx * _source[MASS]
                   + (5. / 2.) * _source[Q33] * rx
-                  - _source[Q11] * rx - _source[Q12] * ry + 4. * _source[Q13] * rz
+                  - _source[Q11] * rx - _source[Q12] * ry
+                  + 4. * _source[Q13] * rz
                   + _source[S31];
 
   _target[S23] += (15. * ryry - 3. * rr) * rz * _source[MASS]
                   + (5. / 2.) * _source[Q22] * rz
-                  - _source[Q13] * rx + 4. * _source[Q23] * ry - _source[Q33] * rz
+                  - _source[Q13] * rx + 4. * _source[Q23] * ry
+                  - _source[Q33] * rz
                   + _source[S23];
   _target[S32] += (15. * rzrz - 3. * rr) * ry * _source[MASS]
                   + (5. / 2.) * _source[Q33] * ry
-                  - _source[Q12] * rx - _source[Q22] * ry + 4. * _source[Q23] * rz
+                  - _source[Q12] * rx - _source[Q22] * ry
+                  + 4. * _source[Q23] * rz
                   + _source[S32];
 
   _target[S123] += 15. * rx * ry * rz * _source[MASS]
-                   + 25. * (_source[Q12] * rz + _source[Q13] * ry + _source[Q23] * rx)
+                   + 25. * (_source[Q12] * rz + _source[Q13] * ry
+                            + _source[Q23] * rx)
                    + _source[S123];
 }
 
@@ -272,53 +284,8 @@ void addMP(valvectRefType _target, const valvectRefType _source)
 void mergeRemoteCells()
 {
   static valvectType localCell, remoteCell;
-
-  /*
-     valueType oldMass, newMass;
-     for (size_t i = 0; i < noToptreeCells; i++)
-     {
-      if (remoteIsFilled[i])
-        {
-          if (localIsFilled[i])
-            {
-              oldMass = localCells(i, MASS);
-              newMass = oldMass + remoteCells(i, MASS);
-
-              //
-              // newMass may be zero for non-empty cells. this
-              // happens when all children are ghosts and do not
-              // contribute to the local toptree
-              //
-              if (newMass > 0.)
-                {
-                  localCells(i, MASS) = newMass;
-                  localCells(i, CX) = ((oldMass / newMass) *
-                                       localCells(i, CX))
-   + ((remoteCells(i, MASS) / newMass) *
-                                         remoteCells(i, CX));
-                  localCells(i, CY) = ((oldMass / newMass) *
-                                       localCells(i, CY))
-   + ((remoteCells(i, MASS) / newMass) *
-                                         remoteCells(i, CY));
-                  localCells(i, CZ) = ((oldMass / newMass) *
-                                       localCells(i, CZ))
-   + ((remoteCells(i, MASS) / newMass) *
-                                         remoteCells(i, CZ));
-
-                }
-            }
-          else
-            {
-              localCells(i, MASS) = remoteCells(i, MASS);
-              localCells(i, CX) = remoteCells(i, CX);
-              localCells(i, CY) = remoteCells(i, CY);
-              localCells(i, CZ) = remoteCells(i, CZ);
-            }
-        }
-     }*/
-
   for (size_t i = 0; i < noToptreeCells; i++)
-    {
+     {
       if (remoteIsFilled[i])
         {
           localCell = particleRowType(localCells, i);
@@ -336,13 +303,17 @@ void mergeRemoteCells()
 
               /// now add up multipoles relative to new COM
               addMP(localCell, remoteCell);
+         
+              /// write vector back to matrix
+              particleRowType(localCells, i) = localCell;
             }
           else
             {
-              localCell = remoteCell;
+              /// write vector back to matrix
+              particleRowType(localCells, i) = remoteCell;
             }
         }
-    }
+     }
 }
 
 //deprecated
@@ -562,9 +533,12 @@ void calcGravCell()
   // intermediate results for monopole term
   const valueType rInvPow3 = 1. / (cellPartDist * cellPartDist * cellPartDist);
 
-  const valueType rx = curGravParticleX - static_cast<octuPtrT>(curNodePtr)->xCom;
-  const valueType ry = curGravParticleY - static_cast<octuPtrT>(curNodePtr)->yCom;
-  const valueType rz = curGravParticleZ - static_cast<octuPtrT>(curNodePtr)->zCom;
+  const valueType rx = curGravParticleX
+                       - static_cast<octuPtrT>(curNodePtr)->xCom;
+  const valueType ry = curGravParticleY
+                       - static_cast<octuPtrT>(curNodePtr)->yCom;
+  const valueType rz = curGravParticleZ
+                       - static_cast<octuPtrT>(curNodePtr)->zCom;
   const valueType mass = static_cast<octuPtrT>(curNodePtr)->mass;
 
   // gravity due to monopole term
@@ -623,12 +597,18 @@ void calcGravCell()
   const valueType sijririrj = si1riri * rx + si2riri * ry + si3riri * rz;
 
   // gravity due to octupole terms
-  curGravParticleAX += (rInvPow7) * (s1jrj * rx + 0.5 * si1riri + 0.5 * s123 * ry * rz)
-                       - (3.5 * rInvPow9) * (sijririrj * rx + s123 * rx * ry * rz * rx);
-  curGravParticleAY += (rInvPow7) * (s2jrj * ry + 0.5 * si2riri + 0.5 * s123 * rz * rx)
-                       - (3.5 * rInvPow9) * (sijririrj * ry + s123 * rx * ry * rz * ry);
-  curGravParticleAZ += (rInvPow7) * (s3jrj * rz + 0.5 * si3riri + 0.5 * s123 * rx * ry)
-                       - (3.5 * rInvPow9) * (sijririrj * rz + s123 * rx * ry * rz * rz);
+  curGravParticleAX += (rInvPow7) * (s1jrj * rx + 0.5 * si1riri
+                                     + 0.5 * s123 * ry * rz)
+                       - (3.5 * rInvPow9) * (sijririrj * rx
+                                             + s123 * rx * ry * rz * rx);
+  curGravParticleAY += (rInvPow7) * (s2jrj * ry + 0.5 * si2riri
+                                     + 0.5 * s123 * rz * rx)
+                       - (3.5 * rInvPow9) * (sijririrj * ry
+                                             + s123 * rx * ry * rz * ry);
+  curGravParticleAZ += (rInvPow7) * (s3jrj * rz + 0.5 * si3riri
+                                     + 0.5 * s123 * rx * ry)
+                       - (3.5 * rInvPow9) * (sijririrj * rz
+                                             + s123 * rx * ry * rz * rz);
 }
 
 private:

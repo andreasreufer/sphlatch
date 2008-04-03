@@ -30,6 +30,7 @@ void allocRootNode()
   rootPtr = new monopoleCellNode;
 }
 
+//deprecated
 ///
 /// resize buffers for communication
 ///
@@ -43,20 +44,29 @@ void prepareBuffers()
 }
 
 ///
+/// report number of multipole moments
+/// (includes center of mass and mass)
+///
+size_t noMultipoleMoments()
+{
+  return 4; // 3 center of mass + 1 monopole = 4 multipoles
+}
+
+///
 /// allocates a new monopole cell node and connects it as child _n
 /// no check is performed, whether curNodePtr points to a cell node!
 ///
 void allocNewCellChild(const size_t _n)
 {
-  // allocate new cell node
+// allocate new cell node
   monoPtrT newNodePtr =
     new monopoleCellNode;
 
-  // connect the new cell node to curNodePtr
+// connect the new cell node to curNodePtr
   newNodePtr->parent = curNodePtr;
   static_cast<cellPtrT>(curNodePtr)->child[_n] = newNodePtr;
 
-  // set cell vars to zero
+// set cell vars to zero
   static_cast<monoPtrT>(newNodePtr)->mass = 0.;
   static_cast<monoPtrT>(newNodePtr)->xCom = 0.;
   static_cast<monoPtrT>(newNodePtr)->yCom = 0.;
@@ -69,34 +79,28 @@ void allocNewCellChild(const size_t _n)
 ///
 void calcMultipole()
 {
-  //
-  // add up the contributions from the children with
-  // the same locality as the current node.
-  // all this locality business guarantees, that every particle
-  // contributes only ONCE to the multipole moments of the global tree
-  // but "ghost" cells still contain the multipoles contributed by
-  // their ghost children.
-  //
-  // a special case are the deepest toptree cells which are per
-  // definition local. if all children are ghosts, none of if contri-
-  // butes anything so cm gets 0 and fucks up the center of mass
-  // of the cell. so if nobody contributes anything, omit the addition
-  // to the cell.
-  //
-  static valueType cm, cxm, cym, czm;
+//
+// add up the contributions from the children with
+// the same locality as the current node.
+// all this locality business guarantees, that every particle
+// contributes only ONCE to the multipole moments of the global tree
+// but "ghost" cells still contain the multipoles contributed by
+// their ghost children.
+//
+// a special case are the deepest toptree cells which are per
+// definition local. if all children are ghosts, none of if contri-
+// butes anything so cm gets 0 and fucks up the center of mass
+// of the cell. so if nobody contributes anything, omit the addition
+// to the cell.
+//
+  static valvectType curCell(MSIZE), childCell(MSIZE);
 
-  cm = 0.;
-  cxm = 0.;
-  cym = 0.;
-  czm = 0.;
+  for (size_t i = 0; i < MSIZE; i++)
+    {
+      curCell[i] = 0.;
+    }
 
-  static valueType rx, ry, rz, rr;
-  rx = 0.;
-  ry = 0.;
-  rz = 0.;
-  rr = 0.;
-
-  // first calculate center of mass
+// first calculate center of mass
   for (size_t i = 0; i < 8; i++)
     {
       if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
@@ -107,51 +111,95 @@ void calcMultipole()
               goChild(i);
               if (curNodePtr->isParticle == true)
                 {
-                  cm += static_cast<partPtrT>(curNodePtr)->mass;
-                  cxm += (static_cast<partPtrT>(curNodePtr)->xPos) *
-                         (static_cast<partPtrT>(curNodePtr)->mass);
-                  cym += (static_cast<partPtrT>(curNodePtr)->yPos) *
-                         (static_cast<partPtrT>(curNodePtr)->mass);
-                  czm += (static_cast<partPtrT>(curNodePtr)->zPos) *
-                         (static_cast<partPtrT>(curNodePtr)->mass);
+                  partToVect(childCell);
                 }
               else
                 {
-                  cm += static_cast<monoPtrT>(curNodePtr)->mass;
-                  cxm += (static_cast<monoPtrT>(curNodePtr)->xCom) *
-                         (static_cast<monoPtrT>(curNodePtr)->mass);
-                  cym += (static_cast<monoPtrT>(curNodePtr)->yCom) *
-                         (static_cast<monoPtrT>(curNodePtr)->mass);
-                  czm += (static_cast<monoPtrT>(curNodePtr)->zCom) *
-                         (static_cast<monoPtrT>(curNodePtr)->mass);
+                  cellToVect(childCell);
                 }
               goUp();
+
+              addCOM(curCell, childCell);
             }
         }
     }
 
-  // copy data to node itself ...
-  if (cm > 0.)
+  /*if (childCell[MASS] > 0.)
+     {
+      for (size_t i = 0; i < 8; i++)
+        {
+          if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
+            {
+              if (static_cast<cellPtrT>(curNodePtr)->child[i]->isLocal
+                  == curNodePtr->isLocal)
+                {
+                  goChild(i);
+                  if (curNodePtr->isParticle == true)
+                    {
+                      partToVect(childCell);
+                    }
+                  else
+                    {
+                      cellToVect(childCell);
+                    }
+                  goUp();
+
+                  addMP(curCell, childCell);
+                }
+            }
+        }
+     }*/
+
+// copy data to node itself ...
+  if (curCell[MASS] > 0.)
     {
-      static_cast<monoPtrT>(curNodePtr)->mass = cm;
-      static_cast<monoPtrT>(curNodePtr)->xCom = cxm / cm;
-      static_cast<monoPtrT>(curNodePtr)->yCom = cym / cm;
-      static_cast<monoPtrT>(curNodePtr)->zCom = czm / cm;
-    }
-  else
-    {
-      static_cast<monoPtrT>(curNodePtr)->mass = 0.;
-      static_cast<monoPtrT>(curNodePtr)->xCom = 0.;
-      static_cast<monoPtrT>(curNodePtr)->yCom = 0.;
-      static_cast<monoPtrT>(curNodePtr)->zCom = 0.;
+      vectToCell(curCell);
     }
 }
 
+///
+/// add center of mass
+///
+void addCOM(valvectRefType _target, const valvectRefType _source)
+{
+  //const static does not seem to work here
+  const valueType oldMass = _target[MASS];
+
+  _target[MASS] += _source[MASS];
+
+  if (_target[MASS] > 0.)
+    {
+      // const static does not seem to work here
+      const valueType newMassInv = (1.0 / _target[MASS]);
+      _target[CX] = newMassInv * (oldMass * _target[CX]
+                                  + _source[MASS] * _source[CX]);
+      _target[CY] = newMassInv * (oldMass * _target[CY]
+                                  + _source[MASS] * _source[CY]);
+      _target[CZ] = newMassInv * (oldMass * _target[CZ]
+                                  + _source[MASS] * _source[CZ]);
+    }
+}
+
+///
+/// add multipole moments
+/// either for a cell by its children multipole moments or to add up
+/// multipoles globally in the top-tree
+///
+void addMP(valvectRefType _target, const valvectRefType _source)
+{
+  ///
+  /// everything is already done in addCOM()
+  ///
+}
+
+//deprecated
 ///
 /// merge multipole moments in remote and local buffers
 ///
 void mergeRemoteCells()
 {
+  static valvectType localCell, remoteCell;
+
   valueType oldMass, newMass;
 
   for (size_t i = 0; i < noToptreeCells; i++)
@@ -194,8 +242,36 @@ void mergeRemoteCells()
             }
         }
     }
+
+  /*for (size_t i = 0; i < noToptreeCells; i++)
+     {
+      if (remoteIsFilled[i])
+        {
+          localCell = particleRowType(localCells, i);
+          remoteCell = particleRowType(remoteCells, i);
+
+          if (localIsFilled[i])
+            {
+              ///
+              /// newMass may be zero for non-empty cells. this
+              /// happens when all children are ghosts and do not
+              /// contribute to the local toptree. this is handled
+              /// by addCOM()
+              ///
+              addCOM(localCell, remoteCell);
+
+              /// now add up multipoles relative to new COM
+              addMP(localCell, remoteCell);
+            }
+          else
+            {
+              localCell = remoteCell;
+            }
+        }
+     }*/
 }
 
+//deprecated
 ///
 /// copy the current cell node to buffer
 ///
@@ -207,6 +283,7 @@ void cellToBuffer()
   localCells(toptreeCounter, MASS) = static_cast<monoPtrT>(curNodePtr)->mass;
 }
 
+//deprecated
 ///
 /// copy buffer to current cell node
 ///
@@ -217,6 +294,46 @@ void bufferToCell()
   static_cast<monoPtrT>(curNodePtr)->zCom = localCells(toptreeCounter, CZ);
   static_cast<monoPtrT>(curNodePtr)->mass = localCells(toptreeCounter, MASS);
 }
+
+///
+/// copy current cell node to a vector
+/// no checks are performed, whether current node is a
+/// cell nor if vector has the right size
+///
+void cellToVect(valvectRefType _vect)
+{
+  _vect[CX] = static_cast<monoPtrT>(curNodePtr)->xCom;
+  _vect[CY] = static_cast<monoPtrT>(curNodePtr)->yCom;
+  _vect[CZ] = static_cast<monoPtrT>(curNodePtr)->zCom;
+  _vect[MASS] = static_cast<monoPtrT>(curNodePtr)->mass;
+}
+
+///
+/// copy current particle node to a vector
+/// no checks are performed, whether current node is a
+/// particle nor if vector has the right size
+///
+void partToVect(valvectRefType _vect)
+{
+  _vect[CX] = static_cast<partPtrT>(curNodePtr)->xPos;
+  _vect[CY] = static_cast<partPtrT>(curNodePtr)->yPos;
+  _vect[CZ] = static_cast<partPtrT>(curNodePtr)->zPos;
+  _vect[MASS] = static_cast<partPtrT>(curNodePtr)->mass;
+}
+
+///
+/// copy vector to current cell node
+/// no checks are performed, whether current node is a
+/// cell nor if vector has the right size
+///
+void vectToCell(valvectRefType _vect)
+{
+  static_cast<monoPtrT>(curNodePtr)->xCom = _vect[CX];
+  static_cast<monoPtrT>(curNodePtr)->yCom = _vect[CY];
+  static_cast<monoPtrT>(curNodePtr)->zCom = _vect[CZ];
+  static_cast<monoPtrT>(curNodePtr)->mass = _vect[MASS];
+}
+
 
 ///
 /// report current cell node to dumpFile stream
@@ -237,6 +354,7 @@ void reportMultipoles()
 ///
 bool calcGravMAC(void)
 {
+  // any way to speed this up?
   cellPartDist = sqrt(
     (static_cast<monoPtrT>(curNodePtr)->xCom - curGravParticleX) *
     (static_cast<monoPtrT>(curNodePtr)->xCom - curGravParticleX) +
@@ -254,25 +372,26 @@ bool calcGravMAC(void)
 /// calculate acceleration due to a cell
 /// no check whether current node is actually a cell!
 ///
+
 void calcGravCell()
 {
-#ifdef SPHLATCH_TREE_PROFILE
-  calcGravityCellsCounter++;
-#endif
   // cellPartDist is already set by the MAC function
 
-  // no softening for cells
-  const static valueType rInvPow3 = 1.0 / ( cellPartDist * cellPartDist * cellPartDist );
+  // intermediate results for monopole term
+  const valueType rInvPow3 = 1. / (cellPartDist * cellPartDist * cellPartDist);
 
-  const static valueType rx = curGravParticleX - static_cast<monoPtrT>(curNodePtr)->xCom;
-  const static valueType ry = curGravParticleY - static_cast<monoPtrT>(curNodePtr)->yCom;
-  const static valueType rz = curGravParticleZ - static_cast<monoPtrT>(curNodePtr)->zCom;
-  const static valueType mass = static_cast<monoPtrT>(curNodePtr)->mass;
+  const valueType rx = curGravParticleX -
+                       static_cast<monoPtrT>(curNodePtr)->xCom;
+  const valueType ry = curGravParticleY -
+                       static_cast<monoPtrT>(curNodePtr)->yCom;
+  const valueType rz = curGravParticleZ -
+                       static_cast<monoPtrT>(curNodePtr)->zCom;
+  const valueType mass = static_cast<monoPtrT>(curNodePtr)->mass;
 
   // gravity due to monopole term
-  curGravParticleAX -= mass * rx * rInvPow3;
-  curGravParticleAY -= mass * ry * rInvPow3;
-  curGravParticleAZ -= mass * rz * rInvPow3;
+  curGravParticleAX -= (rInvPow3) * mass * rx;
+  curGravParticleAY -= (rInvPow3) * mass * ry;
+  curGravParticleAZ -= (rInvPow3) * mass * rz;
 }
 
 private:

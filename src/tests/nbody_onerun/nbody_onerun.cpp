@@ -2,8 +2,8 @@
 
 //#define SPHLATCH_CARTESIAN_XYZ
 //#define SPHLATCH_CARTESIAN_YZX
-//#define SPHLATCH_CARTESIAN_ZXY
-#define SPHLATCH_HILBERT3D
+#define SPHLATCH_CARTESIAN_ZXY
+//#define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
 #define SPHLATCH_SINGLEPREC
@@ -119,15 +119,16 @@ int main(int argc, char* argv[])
   valueType gravTheta = MemManager.loadParameter("GRAVTHETA");
   if (gravTheta != gravTheta)
     {
-      gravTheta = 0.51;       // standard value for opening angle theta
+      //gravTheta = 0.60;       // standard value for opening angle theta
+      gravTheta = 1.00;       // standard value for opening angle theta
     }
   MemManager.saveParameter("GRAVTHETA", gravTheta, true);
 
   valueType gravConst = MemManager.loadParameter("GRAVCONST");
   if (gravConst != gravConst)
     {
-      //gravConst = 1.;       //  G=1 system
-      gravConst = 6.67259e-11;       //  SI units
+      gravConst = 1.;       //  G=1 system
+      //gravConst = 6.67259e-11;       //  SI units
     }
   MemManager.saveParameter("GRAVCONST", gravConst, true);
 
@@ -151,10 +152,13 @@ int main(int argc, char* argv[])
 
   stepStartTime = MPI_Wtime();
   ComManager.exchange(Data, CostZone.createDomainGhostIndex(), GData);
+
+
   noGhosts = GData.size1();
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime
           << "    exchanged ghosts (" << noGhosts << ")\n" << std::flush;
+
 
   stepStartTime = MPI_Wtime();
   partProxies.resize(noParts);
@@ -176,10 +180,12 @@ int main(int argc, char* argv[])
 
   stepStartTime = MPI_Wtime();
   sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
-                                            gravConst,
-                                            CostZone.getDepth(),
-                                            CostZone.getCenter(),
-                                            CostZone.getSidelength() );
+  //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
+                                                      gravConst,
+                                                      CostZone.getDepth(),
+                                                      //0,
+                                                      CostZone.getCenter(),
+                                                      CostZone.getSidelength());
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    constructed tree\n" << std::flush;
 
@@ -191,10 +197,11 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    inserted parts\n" << std::flush;
 
+
   stepStartTime = MPI_Wtime();
   for (size_t i = 0; i < noGhosts; i++)
     {
-      //BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
+      BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
     }
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    inserted ghosts\n" << std::flush;
@@ -203,6 +210,18 @@ int main(int argc, char* argv[])
   BarnesHutTree.calcMultipoles();
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    calculated multipoles\n" << std::flush;
+
+
+  std::string dumpFilename = "toptreeDump000";
+  dumpFilename.replace(dumpFilename.size() - 0 - rankString.size(),
+                      rankString.size(), rankString);
+  BarnesHutTree.toptreeDump(dumpFilename);
+  
+  std::string dotdumpFilename = "treeDump000.dot";
+  dotdumpFilename.replace(dotdumpFilename.size() - 0 - rankString.size() - 4,
+                      rankString.size(), rankString);
+  BarnesHutTree.treeDOTDump(dotdumpFilename);
+
 
   stepStartTime = MPI_Wtime();
   for (size_t i = 0; i < noParts; i++)
@@ -222,7 +241,7 @@ int main(int argc, char* argv[])
 
   using namespace sphlatch;
   std::vector<int> outputAttrSet;
-  outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M, GRAVEPS;
+  outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
   IOManager.saveCDAT(outputFileName, outputAttrSet);
 
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
