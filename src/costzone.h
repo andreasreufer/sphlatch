@@ -157,6 +157,10 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
   const size_t myDomain = CommManager.getMyDomain();
 
   domainPartsIndex.resize(noDomains);
+  for (size_t i = 0; i < noDomains; i++)
+  {
+    domainPartsIndex[i].resize(0);
+  }
 
   ///
   /// determine the size of the universe
@@ -271,6 +275,10 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
   const size_t myDomain = CommManager.getMyDomain();
 
   domainGhostIndex.resize(noDomains);
+  for (size_t i = 0; i < noDomains; i++)
+  {
+    domainGhostIndex[i].resize(0);
+  }
   
   ///
   /// fill again the costzone cells

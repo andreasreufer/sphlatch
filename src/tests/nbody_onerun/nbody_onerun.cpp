@@ -65,7 +65,7 @@ using namespace boost::assign;
 int main(int argc, char* argv[])
 {
   MPI::Init(argc, argv);
-  double stepStartTime, lastStepStartTime, logStartTime = MPI_Wtime();
+  double stepStartTime, logStartTime = MPI_Wtime();
 
 
   po::options_description Options("Global Options");
@@ -142,96 +142,97 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - logStartTime << "    start log\n";
 
-  lastStepStartTime = MPI_Wtime();
-  stepStartTime = MPI_Wtime();
-  ComManager.exchange(Data, CostZone.createDomainPartsIndex(), Data);
-  noParts = Data.size1();
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime
-          << "    exchanged parts  (" << noParts << ")\n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  ComManager.exchange(Data, CostZone.createDomainGhostIndex(), GData);
-
-
-  noGhosts = GData.size1();
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime
-          << "    exchanged ghosts (" << noGhosts << ")\n" << std::flush;
-
-
-  stepStartTime = MPI_Wtime();
-  partProxies.resize(noParts);
-  for (size_t i = 0; i < noParts; i++)
+  for (size_t j = 0; j < 10; j++)
     {
-      (partProxies[i]).setup(&Data, i);
+      stepStartTime = MPI_Wtime();
+      ComManager.exchange(Data, CostZone.createDomainPartsIndex(), Data);
+      noParts = Data.size1();
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime
+              << "    exchanged parts  (" << noParts << ")\n" << std::flush;
+
+      stepStartTime = MPI_Wtime();
+      ComManager.exchange(Data, CostZone.createDomainGhostIndex(), GData);
+
+
+      noGhosts = GData.size1();
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime
+              << "    exchanged ghosts (" << noGhosts << ")\n" << std::flush;
+
+
+      stepStartTime = MPI_Wtime();
+      partProxies.resize(noParts);
+      for (size_t i = 0; i < noParts; i++)
+        {
+          (partProxies[i]).setup(&Data, i);
+        }
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime << "    prepared part proxies\n" << std::flush;
+
+      stepStartTime = MPI_Wtime();
+      ghostProxies.resize(noGhosts);
+      for (size_t i = 0; i < noGhosts; i++)
+        {
+          (ghostProxies[i]).setup(&GData, i);
+        }
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime << "    prepared ghost proxies\n" << std::flush;
+
+      stepStartTime = MPI_Wtime();
+      sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
+      //sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
+      //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
+                                                          gravConst,
+                                                          CostZone.getDepth(),
+                                                          //0,
+                                                          CostZone.getCenter(),
+                                                          CostZone.getSidelength());
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime << "    constructed tree\n" << std::flush;
+
+      stepStartTime = MPI_Wtime();
+      for (size_t i = 0; i < noParts; i++)
+        {
+          BarnesHutTree.insertParticle(*(partProxies[i]), true);
+        }
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime << "    inserted parts\n" << std::flush;
+
+
+      stepStartTime = MPI_Wtime();
+      for (size_t i = 0; i < noGhosts; i++)
+        {
+          BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
+        }
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime << "    inserted ghosts\n" << std::flush;
+
+      stepStartTime = MPI_Wtime();
+      BarnesHutTree.calcMultipoles();
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime << "    calculated multipoles\n" << std::flush;
+
+
+      /*std::string dumpFilename = "toptreeDump000";
+         dumpFilename.replace(dumpFilename.size() - 0 - rankString.size(),
+                          rankString.size(), rankString);
+         BarnesHutTree.toptreeDump(dumpFilename);
+
+         std::string dotdumpFilename = "treeDump000.dot";
+         dotdumpFilename.replace(dotdumpFilename.size() - 0 - rankString.size() - 4,
+                          rankString.size(), rankString);
+         BarnesHutTree.treeDOTDump(dotdumpFilename);*/
+
+
+      stepStartTime = MPI_Wtime();
+      for (size_t i = 0; i < noParts; i++)
+        {
+          BarnesHutTree.calcGravity(*(partProxies[i]));
+        }
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;
     }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    prepared part proxies\n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  ghostProxies.resize(noGhosts);
-  for (size_t i = 0; i < noGhosts; i++)
-    {
-      (ghostProxies[i]).setup(&GData, i);
-    }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    prepared ghost proxies\n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
-  //sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
-  //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
-                                                      gravConst,
-                                                      CostZone.getDepth(),
-                                                      //0,
-                                                      CostZone.getCenter(),
-                                                      CostZone.getSidelength());
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    constructed tree\n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  for (size_t i = 0; i < noParts; i++)
-    {
-      BarnesHutTree.insertParticle(*(partProxies[i]), true);
-    }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    inserted parts\n" << std::flush;
-
-
-  stepStartTime = MPI_Wtime();
-  for (size_t i = 0; i < noGhosts; i++)
-    {
-      BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
-    }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    inserted ghosts\n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  BarnesHutTree.calcMultipoles();
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    calculated multipoles\n" << std::flush;
-
-
-  std::string dumpFilename = "toptreeDump000";
-  dumpFilename.replace(dumpFilename.size() - 0 - rankString.size(),
-                      rankString.size(), rankString);
-  BarnesHutTree.toptreeDump(dumpFilename);
-  
-  std::string dotdumpFilename = "treeDump000.dot";
-  dotdumpFilename.replace(dotdumpFilename.size() - 0 - rankString.size() - 4,
-                      rankString.size(), rankString);
-  BarnesHutTree.treeDOTDump(dotdumpFilename);
-
-
-  stepStartTime = MPI_Wtime();
-  for (size_t i = 0; i < noParts; i++)
-    {
-      BarnesHutTree.calcGravity(*(partProxies[i]));
-    }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;
-
   if (myDomain == 0)
     {
       std::cout << std::fixed << std::right
