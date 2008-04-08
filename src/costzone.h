@@ -113,10 +113,10 @@ CostZone::CostZone(void) :
   ///
   /// standard costzone depth
   ///
-  const size_t defaultDepth = 1;
+  //const size_t defaultDepth = 1;
   //const size_t defaultDepth = 2;
   //const size_t defaultDepth = 3;
-  //const size_t defaultDepth = 4;
+  const size_t defaultDepth = 4;
   //const size_t defaultDepth = 5;
 
   resize(defaultDepth);

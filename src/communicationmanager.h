@@ -40,6 +40,8 @@ template<class T> void recvVector(std::vector<T>& _vector, size_t _sendDomain);
 size_t getMyDomain();
 size_t getNoDomains();
 
+void barrier();
+
 size_t domainToMPIrank(size_t _domain);
 size_t MPIrankToDomain(size_t _rank);
 
@@ -568,6 +570,11 @@ size_t CommunicationManager::getMyDomain()
 size_t CommunicationManager::getNoDomains()
 {
   return noDomains;
+}
+
+void CommunicationManager::barrier()
+{
+  MPI::COMM_WORLD.Barrier();
 }
 
 size_t CommunicationManager::domainToMPIrank(size_t _domain)

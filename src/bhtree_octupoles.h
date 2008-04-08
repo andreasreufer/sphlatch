@@ -30,19 +30,6 @@ void allocRootNode()
   rootPtr = new octupoleCellNode;
 }
 
-//deprecated
-///
-/// resize buffers for communication
-///
-void prepareBuffers()
-{
-  localCells.resize(noToptreeCells, OSIZE);
-  localIsFilled.resize(noToptreeCells);
-
-  remoteCells.resize(noToptreeCells, OSIZE);
-  remoteIsFilled.resize(noToptreeCells);
-}
-
 ///
 /// report number of multipole moments
 /// (includes center of mass and mass)
@@ -144,7 +131,6 @@ void calcMultipole()
     }
 
   if (curCell[MASS] > 0.)
-  //if (childCell[MASS] > 0.)
     {
       for (size_t i = 0; i < 8; i++)
         {
@@ -182,14 +168,14 @@ void calcMultipole()
 ///
 void addCOM(valvectRefType _target, const valvectRefType _source)
 {
-  //const static does not seem to work here
+  /// const static does not seem to work here
   const valueType oldMass = _target[MASS];
 
   _target[MASS] += _source[MASS];
 
   if (_target[MASS] > 0.)
     {
-      // const static does not seem to work here
+      /// const static does not seem to work here
       const valueType newMassInv = (1.0 / _target[MASS]);
       _target[CX] = newMassInv * (oldMass * _target[CX]
                                   + _source[MASS] * _source[CX]);
@@ -275,105 +261,6 @@ void addMP(valvectRefType _target, const valvectRefType _source)
                    + 25. * (_source[Q12] * rz + _source[Q13] * ry
                             + _source[Q23] * rx)
                    + _source[S123];
-}
-
-//deprecated
-///
-/// merge multipole moments in remote and local buffers
-///
-void mergeRemoteCells()
-{
-  static valvectType localCell, remoteCell;
-  for (size_t i = 0; i < noToptreeCells; i++)
-     {
-      if (remoteIsFilled[i])
-        {
-          localCell = particleRowType(localCells, i);
-          remoteCell = particleRowType(remoteCells, i);
-
-          if (localIsFilled[i])
-            {
-              ///
-              /// newMass may be zero for non-empty cells. this
-              /// happens when all children are ghosts and do not
-              /// contribute to the local toptree. this is handled
-              /// by addCOM()
-              ///
-              addCOM(localCell, remoteCell);
-
-              /// now add up multipoles relative to new COM
-              addMP(localCell, remoteCell);
-         
-              /// write vector back to matrix
-              particleRowType(localCells, i) = localCell;
-            }
-          else
-            {
-              /// write vector back to matrix
-              particleRowType(localCells, i) = remoteCell;
-            }
-        }
-     }
-}
-
-//deprecated
-///
-/// copy the current cell node to buffer
-///
-void cellToBuffer()
-{
-  localCells(toptreeCounter, CX) = static_cast<octuPtrT>(curNodePtr)->xCom;
-  localCells(toptreeCounter, CY) = static_cast<octuPtrT>(curNodePtr)->yCom;
-  localCells(toptreeCounter, CZ) = static_cast<octuPtrT>(curNodePtr)->zCom;
-  localCells(toptreeCounter, MASS) = static_cast<octuPtrT>(curNodePtr)->mass;
-
-  localCells(toptreeCounter, Q11) = static_cast<octuPtrT>(curNodePtr)->q11;
-  localCells(toptreeCounter, Q22) = static_cast<octuPtrT>(curNodePtr)->q22;
-  localCells(toptreeCounter, Q33) = static_cast<octuPtrT>(curNodePtr)->q33;
-  localCells(toptreeCounter, Q12) = static_cast<octuPtrT>(curNodePtr)->q12;
-  localCells(toptreeCounter, Q13) = static_cast<octuPtrT>(curNodePtr)->q13;
-  localCells(toptreeCounter, Q23) = static_cast<octuPtrT>(curNodePtr)->q23;
-
-  localCells(toptreeCounter, S11) = static_cast<octuPtrT>(curNodePtr)->s11;
-  localCells(toptreeCounter, S22) = static_cast<octuPtrT>(curNodePtr)->s22;
-  localCells(toptreeCounter, S33) = static_cast<octuPtrT>(curNodePtr)->s33;
-  localCells(toptreeCounter, S12) = static_cast<octuPtrT>(curNodePtr)->s12;
-  localCells(toptreeCounter, S21) = static_cast<octuPtrT>(curNodePtr)->s21;
-  localCells(toptreeCounter, S13) = static_cast<octuPtrT>(curNodePtr)->s13;
-  localCells(toptreeCounter, S31) = static_cast<octuPtrT>(curNodePtr)->s31;
-  localCells(toptreeCounter, S23) = static_cast<octuPtrT>(curNodePtr)->s23;
-  localCells(toptreeCounter, S32) = static_cast<octuPtrT>(curNodePtr)->s32;
-  localCells(toptreeCounter, S123) = static_cast<octuPtrT>(curNodePtr)->s123;
-}
-
-//deprecated
-///
-/// copy buffer to current cell node
-///
-void bufferToCell()
-{
-  static_cast<octuPtrT>(curNodePtr)->xCom = localCells(toptreeCounter, CX);
-  static_cast<octuPtrT>(curNodePtr)->yCom = localCells(toptreeCounter, CY);
-  static_cast<octuPtrT>(curNodePtr)->zCom = localCells(toptreeCounter, CZ);
-  static_cast<octuPtrT>(curNodePtr)->mass = localCells(toptreeCounter, MASS);
-
-  static_cast<octuPtrT>(curNodePtr)->q11 = localCells(toptreeCounter, Q11);
-  static_cast<octuPtrT>(curNodePtr)->q22 = localCells(toptreeCounter, Q22);
-  static_cast<octuPtrT>(curNodePtr)->q33 = localCells(toptreeCounter, Q33);
-  static_cast<octuPtrT>(curNodePtr)->q12 = localCells(toptreeCounter, Q12);
-  static_cast<octuPtrT>(curNodePtr)->q13 = localCells(toptreeCounter, Q13);
-  static_cast<octuPtrT>(curNodePtr)->q23 = localCells(toptreeCounter, Q23);
-
-  static_cast<octuPtrT>(curNodePtr)->s11 = localCells(toptreeCounter, S11);
-  static_cast<octuPtrT>(curNodePtr)->s22 = localCells(toptreeCounter, S22);
-  static_cast<octuPtrT>(curNodePtr)->s33 = localCells(toptreeCounter, S33);
-  static_cast<octuPtrT>(curNodePtr)->s12 = localCells(toptreeCounter, S12);
-  static_cast<octuPtrT>(curNodePtr)->s21 = localCells(toptreeCounter, S21);
-  static_cast<octuPtrT>(curNodePtr)->s13 = localCells(toptreeCounter, S13);
-  static_cast<octuPtrT>(curNodePtr)->s31 = localCells(toptreeCounter, S31);
-  static_cast<octuPtrT>(curNodePtr)->s23 = localCells(toptreeCounter, S23);
-  static_cast<octuPtrT>(curNodePtr)->s32 = localCells(toptreeCounter, S32);
-  static_cast<octuPtrT>(curNodePtr)->s123 = localCells(toptreeCounter, S123);
 }
 
 ///
@@ -471,43 +358,13 @@ void vectToCell(valvectRefType _vect)
 
 
 ///
-/// report current cell node to dumpFile stream
-///
-void reportMultipoles()
-{
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->xCom << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->yCom << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->zCom << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->mass << "   ";
-
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->q11 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->q22 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->q33 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->q12 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->q13 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->q23 << "   ";
-
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s11 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s22 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s33 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s12 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s21 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s13 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s31 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s23 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s32 << "   ";
-  dumpFile << static_cast<octuPtrT>(curNodePtr)->s123 << "   ";
-}
-
-// why is this here?
-///
 /// stop recursion if:
 /// - current node is empty << ??
 /// - MAC is fulfilled
 ///
 bool calcGravMAC(void)
 {
-  // any way to speed this up?
+  /// any way to speed this up?
   cellPartDist = sqrt(
     (static_cast<octuPtrT>(curNodePtr)->xCom - curGravParticleX) *
     (static_cast<octuPtrT>(curNodePtr)->xCom - curGravParticleX) +
@@ -525,12 +382,11 @@ bool calcGravMAC(void)
 /// calculate acceleration due to a cell
 /// no check whether current node is actually a cell!
 ///
-
 void calcGravCell()
 {
-  // cellPartDist is already set by the MAC function
+  /// cellPartDist is already set by the MAC function
 
-  // intermediate results for monopole term
+  /// intermediate results for monopole term
   const valueType rInvPow3 = 1. / (cellPartDist * cellPartDist * cellPartDist);
 
   const valueType rx = curGravParticleX
@@ -541,12 +397,12 @@ void calcGravCell()
                        - static_cast<octuPtrT>(curNodePtr)->zCom;
   const valueType mass = static_cast<octuPtrT>(curNodePtr)->mass;
 
-  // gravity due to monopole term
+  /// gravity due to monopole term
   curGravParticleAX -= (rInvPow3) * mass * rx;
   curGravParticleAY -= (rInvPow3) * mass * ry;
   curGravParticleAZ -= (rInvPow3) * mass * rz;
 
-  // intermediate results for quadrupole term
+  /// intermediate results for quadrupole term
   const valueType rInvPow5 = rInvPow3 / (cellPartDist * cellPartDist);
   const valueType rInvPow7 = rInvPow5 / (cellPartDist * cellPartDist);
 
@@ -567,12 +423,12 @@ void calcGravCell()
                             2. * q13 * rx * rz +
                             2. * q23 * ry * rz;
 
-  // gravity due to quadrupole term
+  /// gravity due to quadrupole term
   curGravParticleAX += (rInvPow5) * (q1jrj) - (rInvPow7) * (2.5 * qijrirj * rx);
   curGravParticleAY += (rInvPow5) * (q2jrj) - (rInvPow7) * (2.5 * qijrirj * ry);
   curGravParticleAZ += (rInvPow5) * (q3jrj) - (rInvPow7) * (2.5 * qijrirj * rz);
 
-  // intermediate results for octupole term
+  /// intermediate results for octupole term
   const valueType rInvPow9 = rInvPow7 / (cellPartDist * cellPartDist);
 
   const valueType s11 = static_cast<octuPtrT>(curNodePtr)->s11;
@@ -596,7 +452,7 @@ void calcGravCell()
 
   const valueType sijririrj = si1riri * rx + si2riri * ry + si3riri * rz;
 
-  // gravity due to octupole terms
+  /// gravity due to octupole terms
   curGravParticleAX += (rInvPow7) * (s1jrj * rx + 0.5 * si1riri
                                      + 0.5 * s123 * ry * rz)
                        - (3.5 * rInvPow9) * (sijririrj * rx

@@ -30,26 +30,13 @@ void allocRootNode()
   rootPtr = new monopoleCellNode;
 }
 
-//deprecated
-///
-/// resize buffers for communication
-///
-void prepareBuffers()
-{
-  localCells.resize(noToptreeCells, MSIZE);
-  localIsFilled.resize(noToptreeCells);
-
-  remoteCells.resize(noToptreeCells, MSIZE);
-  remoteIsFilled.resize(noToptreeCells);
-}
-
 ///
 /// report number of multipole moments
 /// (includes center of mass and mass)
 ///
 size_t noMultipoleMoments()
 {
-  return 4; // 3 center of mass + 1 monopole = 4 multipoles
+  return MSIZE; ///  3 center of mass + 1 monopoles = 4 multipoles
 }
 
 ///
@@ -124,32 +111,6 @@ void calcMultipole()
         }
     }
 
-  /*if (childCell[MASS] > 0.)
-     {
-      for (size_t i = 0; i < 8; i++)
-        {
-          if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
-            {
-              if (static_cast<cellPtrT>(curNodePtr)->child[i]->isLocal
-                  == curNodePtr->isLocal)
-                {
-                  goChild(i);
-                  if (curNodePtr->isParticle == true)
-                    {
-                      partToVect(childCell);
-                    }
-                  else
-                    {
-                      cellToVect(childCell);
-                    }
-                  goUp();
-
-                  addMP(curCell, childCell);
-                }
-            }
-        }
-     }*/
-
 // copy data to node itself ...
   if (curCell[MASS] > 0.)
     {
@@ -162,14 +123,14 @@ void calcMultipole()
 ///
 void addCOM(valvectRefType _target, const valvectRefType _source)
 {
-  //const static does not seem to work here
+  /// const static does not seem to work here
   const valueType oldMass = _target[MASS];
 
   _target[MASS] += _source[MASS];
 
   if (_target[MASS] > 0.)
     {
-      // const static does not seem to work here
+      /// const static does not seem to work here
       const valueType newMassInv = (1.0 / _target[MASS]);
       _target[CX] = newMassInv * (oldMass * _target[CX]
                                   + _source[MASS] * _source[CX]);
@@ -187,112 +148,6 @@ void addCOM(valvectRefType _target, const valvectRefType _source)
 ///
 void addMP(valvectRefType _target, const valvectRefType _source)
 {
-  ///
-  /// everything is already done in addCOM()
-  ///
-}
-
-//deprecated
-///
-/// merge multipole moments in remote and local buffers
-///
-void mergeRemoteCells()
-{
-  static valvectType localCell, remoteCell;
-
-  valueType oldMass, newMass;
-
-  for (size_t i = 0; i < noToptreeCells; i++)
-    {
-      if (remoteIsFilled[i])
-        {
-          if (localIsFilled[i])
-            {
-              oldMass = localCells(i, MASS);
-              newMass = oldMass + remoteCells(i, MASS);
-
-              //
-              // newMass may be zero for non-empty cells. this
-              // happens when all children are ghosts and do not
-              // contribute to the local toptree
-              //
-              if (newMass > 0.)
-                {
-                  localCells(i, MASS) = newMass;
-                  localCells(i, CX) = ((oldMass / newMass) *
-                                       localCells(i, CX))
-                                      + ((remoteCells(i, MASS) / newMass) *
-                                         remoteCells(i, CX));
-                  localCells(i, CY) = ((oldMass / newMass) *
-                                       localCells(i, CY))
-                                      + ((remoteCells(i, MASS) / newMass) *
-                                         remoteCells(i, CY));
-                  localCells(i, CZ) = ((oldMass / newMass) *
-                                       localCells(i, CZ))
-                                      + ((remoteCells(i, MASS) / newMass) *
-                                         remoteCells(i, CZ));
-                }
-            }
-          else
-            {
-              localCells(i, MASS) = remoteCells(i, MASS);
-              localCells(i, CX) = remoteCells(i, CX);
-              localCells(i, CY) = remoteCells(i, CY);
-              localCells(i, CZ) = remoteCells(i, CZ);
-            }
-        }
-    }
-
-  /*for (size_t i = 0; i < noToptreeCells; i++)
-     {
-      if (remoteIsFilled[i])
-        {
-          localCell = particleRowType(localCells, i);
-          remoteCell = particleRowType(remoteCells, i);
-
-          if (localIsFilled[i])
-            {
-              ///
-              /// newMass may be zero for non-empty cells. this
-              /// happens when all children are ghosts and do not
-              /// contribute to the local toptree. this is handled
-              /// by addCOM()
-              ///
-              addCOM(localCell, remoteCell);
-
-              /// now add up multipoles relative to new COM
-              addMP(localCell, remoteCell);
-            }
-          else
-            {
-              localCell = remoteCell;
-            }
-        }
-     }*/
-}
-
-//deprecated
-///
-/// copy the current cell node to buffer
-///
-void cellToBuffer()
-{
-  localCells(toptreeCounter, CX) = static_cast<monoPtrT>(curNodePtr)->xCom;
-  localCells(toptreeCounter, CY) = static_cast<monoPtrT>(curNodePtr)->yCom;
-  localCells(toptreeCounter, CZ) = static_cast<monoPtrT>(curNodePtr)->zCom;
-  localCells(toptreeCounter, MASS) = static_cast<monoPtrT>(curNodePtr)->mass;
-}
-
-//deprecated
-///
-/// copy buffer to current cell node
-///
-void bufferToCell()
-{
-  static_cast<monoPtrT>(curNodePtr)->xCom = localCells(toptreeCounter, CX);
-  static_cast<monoPtrT>(curNodePtr)->yCom = localCells(toptreeCounter, CY);
-  static_cast<monoPtrT>(curNodePtr)->zCom = localCells(toptreeCounter, CZ);
-  static_cast<monoPtrT>(curNodePtr)->mass = localCells(toptreeCounter, MASS);
 }
 
 ///
@@ -336,25 +191,13 @@ void vectToCell(valvectRefType _vect)
 
 
 ///
-/// report current cell node to dumpFile stream
-///
-void reportMultipoles()
-{
-  dumpFile << static_cast<monoPtrT>(curNodePtr)->xCom << "   ";
-  dumpFile << static_cast<monoPtrT>(curNodePtr)->yCom << "   ";
-  dumpFile << static_cast<monoPtrT>(curNodePtr)->zCom << "   ";
-  dumpFile << static_cast<monoPtrT>(curNodePtr)->mass << "   ";
-}
-
-// why is this here?
-///
 /// stop recursion if:
 /// - current node is empty << ??
 /// - MAC is fulfilled
 ///
 bool calcGravMAC(void)
 {
-  // any way to speed this up?
+  /// any way to speed this up?
   cellPartDist = sqrt(
     (static_cast<monoPtrT>(curNodePtr)->xCom - curGravParticleX) *
     (static_cast<monoPtrT>(curNodePtr)->xCom - curGravParticleX) +
@@ -372,23 +215,22 @@ bool calcGravMAC(void)
 /// calculate acceleration due to a cell
 /// no check whether current node is actually a cell!
 ///
-
 void calcGravCell()
 {
-  // cellPartDist is already set by the MAC function
+  /// cellPartDist is already set by the MAC function
 
-  // intermediate results for monopole term
+  /// intermediate results for monopole term
   const valueType rInvPow3 = 1. / (cellPartDist * cellPartDist * cellPartDist);
 
-  const valueType rx = curGravParticleX -
-                       static_cast<monoPtrT>(curNodePtr)->xCom;
-  const valueType ry = curGravParticleY -
-                       static_cast<monoPtrT>(curNodePtr)->yCom;
-  const valueType rz = curGravParticleZ -
-                       static_cast<monoPtrT>(curNodePtr)->zCom;
+  const valueType rx = curGravParticleX
+                       - static_cast<monoPtrT>(curNodePtr)->xCom;
+  const valueType ry = curGravParticleY
+                       - static_cast<monoPtrT>(curNodePtr)->yCom;
+  const valueType rz = curGravParticleZ
+                       - static_cast<monoPtrT>(curNodePtr)->zCom;
   const valueType mass = static_cast<monoPtrT>(curNodePtr)->mass;
 
-  // gravity due to monopole term
+  /// gravity due to monopole term
   curGravParticleAX -= (rInvPow3) * mass * rx;
   curGravParticleAY -= (rInvPow3) * mass * ry;
   curGravParticleAZ -= (rInvPow3) * mass * rz;

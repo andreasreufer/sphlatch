@@ -2,8 +2,8 @@
 
 //#define SPHLATCH_CARTESIAN_XYZ
 //#define SPHLATCH_CARTESIAN_YZX
-#define SPHLATCH_CARTESIAN_ZXY
-//#define SPHLATCH_HILBERT3D
+//#define SPHLATCH_CARTESIAN_ZXY
+#define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
 #define SPHLATCH_SINGLEPREC
@@ -119,8 +119,8 @@ int main(int argc, char* argv[])
   valueType gravTheta = MemManager.loadParameter("GRAVTHETA");
   if (gravTheta != gravTheta)
     {
-      //gravTheta = 0.60;       // standard value for opening angle theta
-      gravTheta = 1.00;       // standard value for opening angle theta
+      gravTheta = 0.75;       // standard value for opening angle theta
+      //gravTheta = 1.00;       // standard value for opening angle theta
     }
   MemManager.saveParameter("GRAVTHETA", gravTheta, true);
 
@@ -179,8 +179,9 @@ int main(int argc, char* argv[])
           << MPI_Wtime() - stepStartTime << "    prepared ghost proxies\n" << std::flush;
 
   stepStartTime = MPI_Wtime();
-  sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
-  //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
+  sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
+  //sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
+  //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
                                                       gravConst,
                                                       CostZone.getDepth(),
                                                       //0,

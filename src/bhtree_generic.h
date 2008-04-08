@@ -15,8 +15,8 @@
 #include "bhtree_particle_proxy.h"
 #include "bhtree_cell_node.h"
 
-#include "bhtree_monopole_node.h"
 #include "particle.h"
+#include "communicationmanager.h"
 
 namespace sphlatch {
 template<class T_leaftype>
@@ -47,7 +47,8 @@ BHtree(valueType _thetaMAC,
        valueType _gravConst,
        size_t _czDepth,
        valvectType _rootCenter,
-       valueType _rootSize)
+       valueType _rootSize) :
+  CommManager(commManagerType::instance())
 {
   if (_thetaMAC < 0.)
     {
@@ -78,7 +79,7 @@ BHtree(valueType _thetaMAC,
 
   rootPtr->isParticle = false;
   rootPtr->isEmpty = true;
-  rootPtr->isLocal = true;
+  rootPtr->isLocal = false;
 
   curNodePtr = rootPtr;
 
@@ -98,9 +99,17 @@ BHtree(valueType _thetaMAC,
 
   buildToptreeRecursor();
   noToptreeCells = cellCounter;
+  noToptreeLeafCells = 1 << (3 * toptreeDepth); // 8^(toptreeDepth)
+  noMultipoleMoments = asLeaf().noMultipoleMoments();
 
 #ifdef SPHLATCH_MPI
-  asLeaf().prepareBuffers();
+  localCells.resize(noToptreeLeafCells, noMultipoleMoments);
+  localIsFilled.resize(noToptreeLeafCells);
+
+  remoteCells.resize(noToptreeLeafCells, noMultipoleMoments);
+  remoteIsFilled.resize(noToptreeLeafCells);
+
+  cellVect.resize(noMultipoleMoments);
 #endif
 };
 
@@ -121,12 +130,19 @@ nodePtrT curNodePtr, rootPtr;
 ///
 /// variables
 ///
-size_t cellCounter, partCounter, toptreeDepth, noToptreeCells;
+size_t cellCounter, partCounter, toptreeDepth,
+       noToptreeCells, noToptreeLeafCells, noMultipoleMoments;
 
 matrixType localCells, remoteCells;
 bitsetType localIsFilled, remoteIsFilled;
+valvectType cellVect;
 
 std::fstream logFile;
+
+protected:
+typedef sphlatch::CommunicationManager commManagerType;
+commManagerType& CommManager;
+
 
 /// little helpers
 protected:
@@ -253,7 +269,11 @@ void buildToptreeRecursor(void)
               newCellChild(i);
 
               goChild(i);
-              curNodePtr->isLocal = true;
+
+              ///
+              /// assume a toptree cell never to be local
+              ///
+              curNodePtr->isLocal = false;
               buildToptreeRecursor();
               goUp();
             }
@@ -387,7 +407,6 @@ void insertParticleRecursor(partProxyPtrT _newPayload,
 }
 // end of insertParticle() stuff
 
-
 // calcMultipoles() stuff
 public:
 ///
@@ -400,14 +419,16 @@ void calcMultipoles(void)
 {
   goRoot();
   calcMPbottomtreeRecursor();
-  
-  /*goRoot();
-  toptreeBottomToBufferRecursor();
-  
+
+  ///
+  /// that's the part syncing the toptree leafs level
+  ///
+#ifdef SPHLATCH_MPI
+  globalCombineToptreeLeafs();
+#endif
+
   goRoot();
   calcMPtoptreeRecursor();
-*/
-  globalSumupMultipoles();
 }
 
 private:
@@ -421,8 +442,8 @@ void calcMPbottomtreeRecursor(void)
   /// - current node is empty
   /// - current node is a particle
   ///
-  if ( curNodePtr->isEmpty ) /// particles are always empty, 
-                             /// so we can omit this check
+  if (curNodePtr->isEmpty) /// particles are always empty,
+                           /// so we can omit this check
     {
     }
   else
@@ -439,14 +460,13 @@ void calcMPbottomtreeRecursor(void)
                 }
             }
 
-          if ( curNodePtr->depth >= toptreeDepth )
-          {
-            //std::cout << curNodePtr->depth << " calc MP " << curNodePtr->ident << "\n";
-          }
-          /// determine locality of current node
-          detLocality();
-          /// calculate multipole moments (delegated to specialization)
-          asLeaf().calcMultipole();
+          if (curNodePtr->depth >= toptreeDepth)
+            {
+              /// determine locality of current node
+              detLocality();
+              /// calculate multipole moments (delegated to specialization)
+              asLeaf().calcMultipole();
+            }
         }
     }
 };
@@ -469,47 +489,71 @@ void detLocality(void)
   // either have only local or only non-local children, but never
   // both.
   //
-  if ((curNodePtr->depth) > toptreeDepth)
+  for (size_t i = 0; i < 8; i++)
     {
-      for (size_t i = 0; i < 8; i++)
+      if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
         {
-          if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
-            {
-              (curNodePtr->isLocal) |=
-                static_cast<cellPtrT>(curNodePtr)->child[i]->isLocal;
-            }
+          (curNodePtr->isLocal) |=
+            static_cast<cellPtrT>(curNodePtr)->child[i]->isLocal;
+
+          (curNodePtr->isEmpty) &=
+            static_cast<cellPtrT>(curNodePtr)->child[i]->isEmpty;
         }
-    }
-  else
-    {
-      curNodePtr->isLocal = true;
     }
 }
 
-///
-/// recursor for bottomtree multipole calculation
-///
-void toptreeBottomToBufferRecursor(void)
+void toptreeLeafsToBufferRecursor(void)
 {
   ///
   /// stop recursion and copy cell to buffer, if:
   /// - toptreeDepth is reached
   ///
-  if ( curNodePtr->depth == toptreeDepth )
+  if (curNodePtr->depth == toptreeDepth)
     {
-        //std::cout << curNodePtr->depth << " sync MP " << curNodePtr->ident << "\n";
+      localIsFilled[toptreeLeafCounter] = (!(curNodePtr->isEmpty) && curNodePtr->isLocal);
+      asLeaf().cellToVect(cellVect);
+      particleRowType(localCells, toptreeLeafCounter) = cellVect;
+      toptreeLeafCounter++;
     }
   else
     {
-          for (size_t i = 0; i < 8; i++)
+      for (size_t i = 0; i < 8; i++)
+        {
+          if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
             {
-              if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
-                {
-                  goChild(i);
-                  toptreeBottomToBufferRecursor();
-                  goUp();
-                }
+              goChild(i);
+              toptreeLeafsToBufferRecursor();
+              goUp();
             }
+        }
+    }
+};
+
+void bufferToToptreeLeafsRecursor(void)
+{
+  ///
+  /// stop recursion and copy buffer to cell, if:
+  /// - toptreeDepth is reached
+  ///
+  if (curNodePtr->depth == toptreeDepth)
+    {
+      curNodePtr->isEmpty = !localIsFilled[toptreeLeafCounter];
+      curNodePtr->isLocal = true;
+      cellVect = particleRowType(localCells, toptreeLeafCounter);
+      asLeaf().vectToCell(cellVect);
+      toptreeLeafCounter++;
+    }
+  else
+    {
+      for (size_t i = 0; i < 8; i++)
+        {
+          if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
+            {
+              goChild(i);
+              bufferToToptreeLeafsRecursor();
+              goUp();
+            }
+        }
     }
 };
 
@@ -522,25 +566,28 @@ void calcMPtoptreeRecursor(void)
   /// stop recursion if:
   /// - toptreeDepth is reached
   ///
-  if ( curNodePtr->depth == toptreeDepth )
+  if (curNodePtr->depth == toptreeDepth)
     {
     }
   else
     {
-          for (size_t i = 0; i < 8; i++)
+      for (size_t i = 0; i < 8; i++)
+        {
+          if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
             {
-              if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
-                {
-                  goChild(i);
-                  calcMPtoptreeRecursor();
-                  goUp();
-                }
+              goChild(i);
+              calcMPtoptreeRecursor();
+              goUp();
             }
+        }
 
-          if ( curNodePtr->depth < toptreeDepth )
-          {
-            //std::cout << curNodePtr->depth << " calc MP " << curNodePtr->ident << " (toptree)\n";
-          }
+      if (curNodePtr->depth < toptreeDepth)
+        {
+          /// determine locality of current node
+          detLocality();
+          /// calculate multipole moments (delegated to specialization)
+          asLeaf().calcMultipole();
+        }
     }
 };
 
@@ -552,29 +599,24 @@ void calcMPtoptreeRecursor(void)
 /// defined, nothing is done here.
 ///
 protected:
-size_t toptreeCounter;
+size_t toptreeLeafCounter;
 private:
-void globalSumupMultipoles()
+void globalCombineToptreeLeafs()
 {
 #ifdef SPHLATCH_MPI
-  // replace by domain numbers
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
-  const size_t SIZE = MPI::COMM_WORLD.Get_size();
+  const size_t myDomain = CommManager.getMyDomain();
+  const size_t noDomains = CommManager.getNoDomains();
 
+  ///
+  /// magic algorithm which prepares sending and receiving queues
+  /// for the summing up step and sending and receiving stacks for
+  /// the distributing step.
+  ///
   size_t round = 0;
-  size_t remNodes = SIZE;
-
-  const size_t noCellBytes
-  = noToptreeCells * localCells.size2() * sizeof(valueType);
+  size_t remNodes = noDomains;
 
   std::queue<size_t> sumUpSend, sumUpRecv;
   std::stack<size_t> distrSend, distrRecv;
-
-  //
-  // magic algorithm which prepares sending and receiving queues
-  // for the summing up step and sending and receiving stacks for
-  // the distributing step.
-  //
   while (remNodes > 1)
     {
       size_t noPairs = lrint(floor(remNodes / 2.));
@@ -583,18 +625,18 @@ void globalSumupMultipoles()
 
       for (size_t i = 0; i < 2 * noPairs; i += 2)
         {
-          size_t sendRank = (SIZE - 1) - stepToNext * (i + 1);
-          size_t recvRank = (SIZE - 1) - stepToNext * i;
+          size_t sendDomain = (noDomains - 1) - stepToNext * (i + 1);
+          size_t recvDomain = (noDomains - 1) - stepToNext * i;
 
-          if (RANK == sendRank)
+          if (myDomain == sendDomain)
             {
-              sumUpSend.push(recvRank);
-              distrRecv.push(recvRank);
+              sumUpSend.push(recvDomain);
+              distrRecv.push(recvDomain);
             }
-          else if (RANK == recvRank)
+          else if (myDomain == recvDomain)
             {
-              sumUpRecv.push(sendRank);
-              distrSend.push(sendRank);
+              sumUpRecv.push(sendDomain);
+              distrSend.push(sendDomain);
             }
           else
             {
@@ -603,47 +645,47 @@ void globalSumupMultipoles()
       round++;
     }
 
-  // toptree to buffers
+  /// toptree bottom to buffers
   goRoot();
-  toptreeCounter = 0;
-  toptreeToBuffersRecursor();
+  toptreeLeafCounter = 0;
+  toptreeLeafsToBufferRecursor();
 
-  MPI::COMM_WORLD.Barrier();
-
-  //
-  // receive multipoles from other nodes and add
-  // them to local value
-  //
+  ///
+  /// receive multipoles from other nodes and add
+  /// them to local value
+  ///
   while (!sumUpRecv.empty())
     {
       size_t recvFrom = sumUpRecv.front();
       sumUpRecv.pop();
 
-      recvBitset(remoteIsFilled, recvFrom);
+      CommManager.recvBitset(remoteIsFilled, recvFrom);
+      CommManager.recvMatrix(remoteCells, recvFrom);
 
-      MPI::COMM_WORLD.Recv(&remoteCells(0, 0), noCellBytes,
-                           MPI_BYTE, recvFrom, RANK);
+      for (size_t i = 0; i < noToptreeLeafCells; i++)
+        {
+          if (remoteIsFilled[i])
+            {
+              particleRowType(localCells, i) = particleRowType(remoteCells, i);
+            }
+        }
 
-      asLeaf().mergeRemoteCells();
-
-      // localIsFilled = localIsFilled or remoteIsFilled
+      /// localIsFilled = localIsFilled or remoteIsFilled
       localIsFilled |= remoteIsFilled;
     }
 
-  //
-  // send local value to another node
-  //
+  ///
+  /// send local value to another node
+  ///
   while (!sumUpSend.empty())
     {
       size_t sendTo = sumUpSend.front();
       sumUpSend.pop();
 
-      sendBitset(localIsFilled, sendTo);
-      MPI::COMM_WORLD.Send(&localCells(0, 0), noCellBytes,
-                           MPI_BYTE, sendTo, sendTo);
+      CommManager.sendBitset(localIsFilled, sendTo);
+      CommManager.sendMatrix(localCells, sendTo);
     }
 
-  MPI::COMM_WORLD.Barrier();
   //
   // receive global result
   //
@@ -652,10 +694,8 @@ void globalSumupMultipoles()
       size_t recvFrom = distrRecv.top();
       distrRecv.pop();
 
-      recvBitset(localIsFilled, recvFrom);
-
-      MPI::COMM_WORLD.Recv(&localCells(0, 0), noCellBytes,
-                           MPI_BYTE, recvFrom, RANK);
+      CommManager.recvBitset(localIsFilled, recvFrom);
+      CommManager.recvMatrix(localCells, recvFrom);
     }
 
   //
@@ -666,127 +706,17 @@ void globalSumupMultipoles()
       size_t sendTo = distrSend.top();
       distrSend.pop();
 
-      sendBitset(localIsFilled, sendTo);
-      MPI::COMM_WORLD.Send(&localCells(0, 0), noCellBytes,
-                           MPI_BYTE, sendTo, sendTo);
+      CommManager.sendBitset(localIsFilled, sendTo);
+      CommManager.sendMatrix(localCells, sendTo);
     }
 
-  // buffers to toptree
+  /// buffers to toptree bottom
   goRoot();
-  toptreeCounter = 0;
-
-  buffersToToptreeRecursor();
+  toptreeLeafCounter = 0;
+  bufferToToptreeLeafsRecursor();
 #endif
 }
 
-#ifdef SPHLATCH_MPI
-///
-/// preorder recursive function to connect
-/// cells to a matrix row
-///
-private:
-void toptreeToBuffersRecursor(void)
-{
-  if (belowToptreeStop())
-    {
-    }
-  else
-    {
-      localIsFilled[toptreeCounter] = !(curNodePtr->isEmpty);
-      asLeaf().cellToBuffer();
-      toptreeCounter++;
-
-      if (curNodePtr->isParticle == false)
-        {
-          for (size_t i = 0; i < 8; i++)
-            {
-              if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
-                {
-                  goChild(i);
-                  toptreeToBuffersRecursor();
-                  goUp();
-                }
-            }
-        }
-    }
-}
-
-void buffersToToptreeRecursor(void)
-{
-  if (belowToptreeStop())
-    {
-    }
-  else
-    {
-      curNodePtr->isEmpty = !localIsFilled[toptreeCounter];
-      asLeaf().bufferToCell();
-      toptreeCounter++;
-
-      if (curNodePtr->isParticle == false)
-        {
-          for (size_t i = 0; i < 8; i++)         // try without loop
-            {
-              if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
-                {
-                  goChild(i);
-                  buffersToToptreeRecursor();
-                  goUp();
-                }
-            }
-        }
-    }
-}
-
-///
-/// stop recursion if:
-///  - depth of current node is below toptreeDepth
-///
-bool belowToptreeStop(void)
-{
-  return(curNodePtr->depth > toptreeDepth);
-}
-
-private:
-///
-/// little comm helper
-/// \todo move to comm_manager later on
-///
-void recvBitset(bitsetRefType _bitSet, size_t _sendRank)
-{
-  // prepare buffer
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
-  size_t noBlocks = lrint(ceil(static_cast<double>(noToptreeCells)
-                               / (sizeof(bitsetBlockType) * 8)));
-  size_t noBsBytes = noBlocks * sizeof(bitsetBlockType);
-
-  std::vector<bitsetBlockType> recvBuff(noBlocks);
-
-  // receive
-  MPI::COMM_WORLD.Recv(&(recvBuff[0]), noBsBytes,
-                       MPI_BYTE, _sendRank, RANK + 255);
-
-  // copy back to bitset
-  boost::from_block_range(recvBuff.begin(), recvBuff.end(),
-                          _bitSet);
-}
-
-void sendBitset(bitsetRefType _bitSet, size_t _recvRank)
-{
-  // prepare buffer
-  size_t noBlocks = lrint(ceil(static_cast<double>(noToptreeCells)
-                               / (sizeof(bitsetBlockType) * 8)));
-  size_t noBsBytes = noBlocks * sizeof(bitsetBlockType);
-
-  std::vector<bitsetBlockType> sendBuff(noBlocks);
-
-  // copy bitset to buffer
-  boost::to_block_range(_bitSet, sendBuff.begin());
-
-  // send
-  MPI::COMM_WORLD.Send(&(sendBuff[0]), noBsBytes,
-                       MPI_BYTE, _recvRank, _recvRank + 255);
-}
-#endif
 // end of multipole stuff
 
 
@@ -824,11 +754,11 @@ void calcGravity(partProxyPtrT _curParticle)
   calcGravityCellsCounter = 0;
 #endif
 
-  //
-  // trick: hide the current particle by letting it look like
-  // an empty cell node, so that it doesn't gravitate with
-  // itself. btw: a particle is always empty.
-  //
+  ///
+  /// trick: hide the current particle by letting it look like
+  /// an empty cell node, so that it doesn't gravitate with
+  /// itself. btw: a particle is always empty.
+  ///
   _curParticle->nodePtr->isParticle = false;
 
   goRoot();
@@ -838,9 +768,9 @@ void calcGravity(partProxyPtrT _curParticle)
   (*_curParticle)(AY) += gravConst * curGravParticleAY;
   (*_curParticle)(AZ) += gravConst * curGravParticleAZ;
 
-  //
-  // undo the trick above
-  //
+  ///
+  /// undo the trick above
+  ///
   _curParticle->nodePtr->isParticle = true;
 }
 
@@ -980,13 +910,17 @@ void treeDOTDumpRecursor()
 
   if (curNodePtr->isParticle)
     {
+      //dumpFile << "label=\"\",";
       //dumpFile << "label=\"" << lrint( static_cast<partPtrT>(curNodePtr)->mass ) << "\",";
       dumpFile << "shape=circle";
     }
   else
     {
       //dumpFile << "label=\"\",";
-      //dumpFile << "label=\"" << lrint( static_cast<monopoleCellNode*>(curNodePtr)->mass)  << "\",";
+      //dumpFile << "label=\"" << lrint( static_cast<monopoleCellNode*>(curNodePtr)->mass) 
+      //         << "\",";
+      //dumpFile << "label=\"" << curNodePtr->ident << ": "
+      //         << lrint( static_cast<monopoleCellNode*>(curNodePtr)->mass)  << "\",";
       dumpFile << "shape=box";
     }
 
@@ -1042,6 +976,7 @@ void treeDOTDumpRecursor()
     }
 }
 // end of treeDOTDump() stuff
+
 
 // treeDump() stuff
 public:
@@ -1100,11 +1035,10 @@ void treeDumpRecursor()
       dumpFile << static_cast<partPtrT>(curNodePtr)->xPos << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->yPos << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->zPos << "   ";
+      dumpFile << 0. << "   ";
       dumpFile << static_cast<partPtrT>(curNodePtr)->mass << "   ";
 
-      for (size_t i = 0; i < 0; i++) // 6 is no of >monopole terms
-      //for (size_t i = 0; i < 6; i++) // 6 is no of >monopole terms
-      //for (size_t i = 0; i < 16; i++) // 16 is no of >monopole terms
+      for (size_t i = 4; i < noMultipoleMoments; i++) // no of >monopole terms
         {
           dumpFile << 0. << "   ";
         }
@@ -1115,7 +1049,12 @@ void treeDumpRecursor()
       dumpFile << static_cast<cellPtrT>(curNodePtr)->yCenter << "   ";
       dumpFile << static_cast<cellPtrT>(curNodePtr)->zCenter << "   ";
       dumpFile << static_cast<cellPtrT>(curNodePtr)->cellSize << "   ";
-      asLeaf().reportMultipoles();
+
+      asLeaf().cellToVect(cellVect);
+      for (size_t i = 0; i < noMultipoleMoments; i++)
+        {
+          dumpFile << cellVect[i] << "   ";
+        }
     }
 
   dumpFile << "\n";
@@ -1164,7 +1103,7 @@ void toptreeDumpRecursor()
   dumpFile << std::fixed << std::right << std::setw(6);
   dumpFile << curNodePtr->ident;
   dumpFile << "   ";
-  //dumpFile << ! curNodePtr->isEmpty ; 
+  //dumpFile << ! curNodePtr->isEmpty ;
   //dumpFile << "   ";
   dumpFile << curNodePtr->depth;
   dumpFile << "   ";
@@ -1175,20 +1114,14 @@ void toptreeDumpRecursor()
   dumpFile << static_cast<cellPtrT>(curNodePtr)->yCenter << "   ";
   dumpFile << static_cast<cellPtrT>(curNodePtr)->zCenter << "   ";
   dumpFile << static_cast<cellPtrT>(curNodePtr)->cellSize << "   ";
-  asLeaf().reportMultipoles();
+
+  asLeaf().cellToVect(cellVect);
+  for (size_t i = 0; i < noMultipoleMoments; i++)
+    {
+      dumpFile << cellVect[i] << "   ";
+    }
 
   dumpFile << "\n";
-
-  ///old
-
-  /*dumpFile << std::scientific << std::setprecision(8);
-     dumpFile << curNodePtr->xCom << "   "
-          << curNodePtr->yCom << "   "
-          << curNodePtr->zCom << "   "
-          << curNodePtr->q000 << "   ";
-     dumpFile << std::dec
-          << curNodePtr->depth << "   "
-          << static_cast<int>(curNodePtr->isEmpty) << "\n";*/
 
   if (atOrBelowToptreeStop())
     {

@@ -71,6 +71,7 @@ typedef matrixRowType* particleRowPtrType;
 ///
 /// a valueType vector
 ///
+/// use valarray instead
 typedef blas::vector<valueType> valvectType;
 typedef blas::vector<valueType>& valvectRefType;
 typedef blas::vector<valueType>* valvectPtrType;
