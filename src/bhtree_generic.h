@@ -821,6 +821,7 @@ void calcGravityRecursor(void)
 void calcGravParticle()
 {
   // strangely in this routine "static" temp. variables seem to be faster
+  // than "const" ones
   static valueType partGravPartnerX, partGravPartnerY,
                    partGravPartnerZ, partGravPartnerM;
 
@@ -857,8 +858,8 @@ void calcGravParticle()
 // neighbour search stuff
 private:
 size_t noNeighbours;
-valueType curNeighParticleX, curNeighParticleY, curNeighParticleZ,
 // cellPartDist already definded (great, feels like FORTRAN :-)
+valueType curNeighParticleX, curNeighParticleY, curNeighParticleZ,
           searchRadius, cellCornerDist;
 
 public:
@@ -878,12 +879,6 @@ partsIndexVectType neighbourList;
 void findNeighbours(const partProxyPtrT _curParticle,
                     const valueRefType _search_radius)
 {
-  /*size_t topDepth = <crazyformula>
-     while ( curNodePtr->depth > topDepth ) {
-          goUp();
-     }
-     neighbourFindRecursor(_curParticle);*/
-
   curNodePtr = _curParticle->nodePtr;
 
   curNeighParticleX = static_cast<partPtrT>(curNodePtr)->xPos;
@@ -891,17 +886,16 @@ void findNeighbours(const partProxyPtrT _curParticle,
   curNeighParticleZ = static_cast<partPtrT>(curNodePtr)->zPos;
 
   searchRadius = _search_radius;
-
-  ///
-  /// zero everything
-  ///
   noNeighbours = 0;
-  for (size_t i = 0; i < 10000; i++)
-    {
-      neighbourList[i] = 0;
-    }
 
-  goRoot();
+  ///
+  /// while the search sphere is not completely inside the cell and
+  /// we still can go up, go up
+  ///
+  while (not sphereTotInsideCell() && curNodePtr->parent != NULL)
+  {
+    goUp();
+  }
   findNeighbourRecursor();
 
   neighbourList[0] = noNeighbours;
@@ -913,7 +907,6 @@ void findNeighbourRecursor()
 {
   if (curNodePtr->isParticle)
     {
-      std::cout << "A ";
       if (sqrt(
             (static_cast<partPtrT>(curNodePtr)->xPos - curNeighParticleX) *
             (static_cast<partPtrT>(curNodePtr)->xPos - curNeighParticleX)
@@ -925,7 +918,6 @@ void findNeighbourRecursor()
           ///
           /// add the particle to the neighbour list
           ///
-          std::cout << "B ";
           noNeighbours++;
           neighbourList[noNeighbours] = static_cast<partPtrT>(curNodePtr)->partProxyPtr->rowIndex;
         }
@@ -933,19 +925,15 @@ void findNeighbourRecursor()
   else
   if (curNodePtr->isEmpty)
     {
-      std::cout << "C ";
     }
   else
   if (cellTotInsideSphere())
     {
-      std::cout << "D ";
       addAllPartsRecursor();
-      // add all parts to list
     }
   else
   if (cellTotOutsideSphere())
-    { // do nothing
-      std::cout << "E ";
+    {
     }
   else
     {
@@ -958,6 +946,46 @@ void findNeighbourRecursor()
               goUp();
             }
         }
+    }
+}
+
+///
+/// is the search sphere completely INSIDE the cell?
+///
+bool sphereTotInsideCell()
+{
+  if ((curNeighParticleX + searchRadius >
+       static_cast<cellPtrT>(curNodePtr)->xCenter +
+       0.5 * (static_cast<cellPtrT>(curNodePtr)->cellSize)) ||
+      (curNeighParticleX - searchRadius <
+       static_cast<cellPtrT>(curNodePtr)->xCenter -
+       0.5 * (static_cast<cellPtrT>(curNodePtr)->cellSize)))
+    {
+      return false;
+    }
+  else
+  if ((curNeighParticleY + searchRadius >
+       static_cast<cellPtrT>(curNodePtr)->yCenter +
+       0.5 * (static_cast<cellPtrT>(curNodePtr)->cellSize)) ||
+      (curNeighParticleY - searchRadius <
+       static_cast<cellPtrT>(curNodePtr)->yCenter -
+       0.5 * (static_cast<cellPtrT>(curNodePtr)->cellSize)))
+    {
+      return false;
+    }
+  else
+  if ((curNeighParticleZ + searchRadius >
+       static_cast<cellPtrT>(curNodePtr)->zCenter +
+       0.5 * (static_cast<cellPtrT>(curNodePtr)->cellSize)) ||
+      (curNeighParticleZ - searchRadius <
+       static_cast<cellPtrT>(curNodePtr)->zCenter -
+       0.5 * (static_cast<cellPtrT>(curNodePtr)->cellSize)))
+    {
+      return false;
+    }
+  else
+    {
+      return true;
     }
 }
 
@@ -984,9 +1012,7 @@ bool cellTotInsideSphere()
 ///
 bool cellTotOutsideSphere()
 {
-  ///
   /// cellPartDist, cellCornerDist already calc. by cellTotInsideSphere()
-  ///
   return(cellPartDist - cellCornerDist > searchRadius);
 }
 
@@ -998,11 +1024,11 @@ void addAllPartsRecursor()
   if (curNodePtr->isParticle)
     {
       noNeighbours++;
-      neighbourList[noNeighbours] = static_cast<partPtrT>(curNodePtr)->partProxyPtr->rowIndex;
+      neighbourList[noNeighbours] = 
+        static_cast<partPtrT>(curNodePtr)->partProxyPtr->rowIndex;
     }
   else
     {
-      std::cout << "F ";
       for (size_t i = 0; i < 8; i++)
         {
           if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)

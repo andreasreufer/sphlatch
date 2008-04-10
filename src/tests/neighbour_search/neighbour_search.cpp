@@ -6,7 +6,7 @@
 #define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
-//#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_SINGLEPREC
 
 // enable parallel tree
 #define SPHLATCH_MPI
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
   valueType gravTheta = MemManager.loadParameter("GRAVTHETA");
   if (gravTheta != gravTheta)
     {
-      gravTheta = 0.75;       // standard value for opening angle theta
+      gravTheta = 0.90;       // standard value for opening angle theta
       //gravTheta = 1.00;       // standard value for opening angle theta
     }
   MemManager.saveParameter("GRAVTHETA", gravTheta, true);
@@ -151,7 +151,6 @@ int main(int argc, char* argv[])
 
   stepStartTime = MPI_Wtime();
   ComManager.exchange(Data, CostZone.createDomainGhostIndex(), GData);
-
   noGhosts = GData.size1();
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime
@@ -177,12 +176,12 @@ int main(int argc, char* argv[])
           << MPI_Wtime() - stepStartTime << "    prepared ghost proxies\n" << std::flush;
 
   stepStartTime = MPI_Wtime();
-  sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
-                                                      //sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
+  //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
+  sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
                                                       //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
                                                       gravConst,
-                                                      CostZone.getDepth(),
-                                                      //0,
+                                                      //CostZone.getDepth(),
+                                                      0,
                                                       CostZone.getCenter(),
                                                       CostZone.getSidelength());
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
@@ -218,91 +217,86 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;
 
-  stepStartTime = MPI_Wtime();
 
   partsIndexVectType neighListBF;
   neighListBF.resize(10000);
 
-  //for (size_t i = 0; i < noParts; i++)
-  //for (size_t i = 0; i < 3; i++)
-  size_t i = 979;
-  {
-    static valueType searchRadius;
+  stepStartTime = MPI_Wtime();
+  for (size_t i = 0; i < noParts; i++)
+  //for (size_t i = 0; i < 33; i++)
+  //size_t i = 979;
+    {
+      static valueType searchRadius;
+      searchRadius = 2. * Data(i, sphlatch::H);
 
-    searchRadius = 2. * Data(i, sphlatch::H);
-
-    size_t noBFneighbours = 0;
-    for (size_t j = 0; j < noParts; j++)
-      {
-        static valueType dist;
-
-        using namespace sphlatch;
-        dist = sqrt((Data(i, X) - Data(j, X)) * (Data(i, X) - Data(j, X))
-                    + (Data(i, Y) - Data(j, Y)) * (Data(i, Y) - Data(j, Y))
-                    + (Data(i, Z) - Data(j, Z)) * (Data(i, Z) - Data(j, Z)));
-        if ( j == 984 )
+      /*size_t noBFneighbours = 0;
+      for (size_t j = 0; j < noParts; j++)
         {
-          std::cout << dist << "  " << searchRadius << "\n";
+          static valueType dist;
+
+          using namespace sphlatch;
+          dist = sqrt((Data(i, X) - Data(j, X)) * (Data(i, X) - Data(j, X))
+                      + (Data(i, Y) - Data(j, Y)) * (Data(i, Y) - Data(j, Y))
+                      + (Data(i, Z) - Data(j, Z)) * (Data(i, Z) - Data(j, Z)));
+          if (dist < searchRadius)
+            {
+              noBFneighbours++;
+              neighListBF[0] = noBFneighbours;
+              neighListBF[noBFneighbours] = j;
+            }
+        }*/
+
+      BarnesHutTree.findNeighbours(*(partProxies[i]), searchRadius);
+
+      /*neighListBF[0] = 999999;
+      std::sort(neighListBF.begin(), neighListBF.end(), std::greater<size_t>());
+      sphlatch::partsIndexVectRefType neighList(BarnesHutTree.neighbourList);
+      size_t noNeighbours = neighList[0];
+      neighList[0] = 999999;
+      std::sort(neighList.begin(), neighList.end(), std::greater<size_t>());*/
+
+      /*std::cout << "brute force found " << noBFneighbours << " neighbours: ";
+         for (size_t j = 1; j <= noBFneighbours; j++)
+         {
+          std::cout << neighListBF[j] << " ";
+         }
+         std::cout << "\n\n";
+
+         std::cout << "tree found search " << noNeighbours << " neighbours: ";
+         for (size_t j = 1; j <= noNeighbours; j++)
+         {
+          std::cout << neighList[j] << " ";
+         }
+         std::cout << "\n\n\n";*/
+
+      /*bool neighboursEqual = true;
+      for (size_t j = 0; j < 10000; j++)
+        {
+          if (neighListBF[j] != neighList[j])
+            {
+              neighboursEqual = false;
+              break;
+            }
         }
-        if (dist < searchRadius)
-          {
-            noBFneighbours++;
-            neighListBF[0] = noBFneighbours;
-            neighListBF[noBFneighbours] = j;
-          }
-      }
 
-    BarnesHutTree.findNeighbours(*(partProxies[i]), searchRadius);
-
-    neighListBF[0] = 999999;
-    std::sort(neighListBF.begin(), neighListBF.end(), std::greater<size_t>());
-    sphlatch::partsIndexVectRefType neighList(BarnesHutTree.neighbourList);
-    size_t noNeighbours = neighList[0];
-    neighList[0] = 999999;
-    std::sort(neighList.begin(), neighList.end(), std::greater<size_t>());
-
-
-    std::cout << "brute force found " << noBFneighbours << " neighbours: ";
-    for (size_t j = 1; j <= noBFneighbours; j++)
-      {
-        std::cout << neighListBF[j] << " ";
-      }
-    std::cout << "\n\n";
-
-    std::cout << "tree found search " << noNeighbours << " neighbours: ";
-    for (size_t j = 1; j <= noNeighbours; j++)
-      {
-        std::cout << neighList[j] << " ";
-      }
-    std::cout << "\n\n\n";
-
-    /*bool neighboursEqual = true;
-       for (size_t j = 0; j < 10000; j++)
-       {
-       if ( neighListBF[j] != neighList[j] )
-       {
-        neighboursEqual = false;
-        break;
-       }
-       }
-
-       if ( !neighboursEqual )
-       {
-       std::cout << " tree search and BF search MISMATCH!!! (" << i << ")\n";
-       std::cout << " BF    vs.     tree \n";
-       for (size_t j = 0; j < 100; j++)
-       {
-       if ( neighListBF[j] != neighList[j] )
-       {
-        std::cout << j << ":  " << neighListBF[j] << "      " << neighList[j] << "\n";
-       }
-       }
-       std::cout << "\n";
-       }*/
-  }
+      if (!neighboursEqual)
+        {
+          std::cout << " tree search and BF search MISMATCH!!! (" << i << ")\n";
+          std::cout << " BF    vs.     tree \n";
+          for (size_t j = 0; j < 60; j++)
+            {
+              if (neighListBF[j] != neighList[j])
+                {
+                  std::cout << j << ":  " << neighListBF[j] << "      " << neighList[j] << "\n";
+                }
+            }
+          std::cout << "\n";
+        }*/
+    }
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    neighbour search\n" << std::flush;
 
+  stepStartTime = MPI_Wtime();
   using namespace sphlatch;
   std::vector<int> outputAttrSet;
   outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
