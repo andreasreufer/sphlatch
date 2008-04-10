@@ -62,6 +62,8 @@ using namespace boost::assign;
 // tree stuff
 #include "bhtree.h"
 
+#include "rankspace.h"
+
 int main(int argc, char* argv[])
 {
   MPI::Init(argc, argv);
@@ -176,12 +178,13 @@ int main(int argc, char* argv[])
           << MPI_Wtime() - stepStartTime << "    prepared ghost proxies\n" << std::flush;
 
   stepStartTime = MPI_Wtime();
+  //sphlatch::BHtree<sphlatch::NoMultipoles> BarnesHutTree(gravTheta,
   //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
   sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
                                                       //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
                                                       gravConst,
-                                                      //CostZone.getDepth(),
-                                                      0,
+                                                      CostZone.getDepth(),
+                                                      //0,
                                                       CostZone.getCenter(),
                                                       CostZone.getSidelength());
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
@@ -208,11 +211,30 @@ int main(int argc, char* argv[])
   BarnesHutTree.calcMultipoles();
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    calculated multipoles\n" << std::flush;
+  //size_t i = 979;
 
+  stepStartTime = MPI_Wtime();
+  sphlatch::Rankspace RankSpace;
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - stepStartTime << "    instantate RankSpace \n" << std::flush;
+
+  stepStartTime = MPI_Wtime();
+  RankSpace.prepare();
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - stepStartTime << "    prepare RankSpace    \n" << std::flush;
+
+  stepStartTime = MPI_Wtime();
+  BarnesHutTree.detParticleOrder();
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - stepStartTime << "    det. part. order\n" << std::flush;
+
+  size_t curIndex = 0;
   stepStartTime = MPI_Wtime();
   for (size_t i = 0; i < noParts; i++)
     {
-      BarnesHutTree.calcGravity(*(partProxies[i]));
+      curIndex = BarnesHutTree.particleOrder[i];
+      //curIndex = i;
+      BarnesHutTree.calcGravity(*(partProxies[curIndex]));
     }
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;
@@ -221,13 +243,14 @@ int main(int argc, char* argv[])
   partsIndexVectType neighListBF;
   neighListBF.resize(10000);
 
+  
   stepStartTime = MPI_Wtime();
   for (size_t i = 0; i < noParts; i++)
-  //for (size_t i = 0; i < 33; i++)
-  //size_t i = 979;
     {
+      curIndex = BarnesHutTree.particleOrder[i];
+      //curIndex = i;
       static valueType searchRadius;
-      searchRadius = 2. * Data(i, sphlatch::H);
+      searchRadius = 2. * Data(curIndex, sphlatch::H);
 
       /*size_t noBFneighbours = 0;
       for (size_t j = 0; j < noParts; j++)
@@ -246,7 +269,7 @@ int main(int argc, char* argv[])
             }
         }*/
 
-      BarnesHutTree.findNeighbours(*(partProxies[i]), searchRadius);
+      BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
 
       /*neighListBF[0] = 999999;
       std::sort(neighListBF.begin(), neighListBF.end(), std::greater<size_t>());

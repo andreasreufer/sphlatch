@@ -23,17 +23,17 @@ struct genericNode {
    */
   genericNode* parent;
 
-  /**
-   * the root node has depth = 0, its
-   * children have depth = 1 and so on
-   */
+  ///
+  /// the root node has depth = 0, its
+  /// children have depth = 1 and so on
+  ///
   size_t depth;
 
-  /**
-   * identifier of the node which is casted from
-   * the ID row for particles. should be unique in
-   * each local tree.
-   */
+  ///
+  /// the cell locally unique identifier:
+  /// - for particles the rowIndex
+  /// - for cells a negative number
+  ///
   identType ident;
 
   /**

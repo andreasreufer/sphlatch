@@ -35,5 +35,12 @@
 #include "bhtree_quadrupoles.h"
 #include "bhtree_octupoles.h"
 
+// a specialization without any
+// multipole moments or gravity
+// functionality
+//
+// useful to use the tree for other purposes
+#include "bhtree_nomultipoles.h"
+
 #endif
 

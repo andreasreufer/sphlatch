@@ -347,14 +347,15 @@ void insertParticleRecursor(partProxyPtrT _newPayload,
       static_cast<partPtrT>(curNodePtr)->partProxyPtr = _newPayload;
       curNodePtr->isLocal = _newIsLocal;
 
-/// particle saves its position to node directly
+      /// particle saves its position to node directly
       static_cast<partPtrT>(curNodePtr)->xPos = (*_newPayload)(X);
       static_cast<partPtrT>(curNodePtr)->yPos = (*_newPayload)(Y);
       static_cast<partPtrT>(curNodePtr)->zPos = (*_newPayload)(Z);
       static_cast<partPtrT>(curNodePtr)->mass = (*_newPayload)(M);
 
+      /// ident saves the rowIndex of the particle
       curNodePtr->ident =
-        static_cast<identType>((*_newPayload)(ID));
+        static_cast<identType>( _newPayload->rowIndex );
 
 ///
 /// don't forget to wire the nodePtr of the
@@ -721,6 +722,45 @@ void globalCombineToptreeLeafs()
 
 // end of multipole stuff
 
+// getParticleOrder() stuff
+
+public:
+partsIndexVectType particleOrder;
+void detParticleOrder()
+{
+  particleOrder.resize(partCounter);
+  partCounter = 0;
+
+  goRoot();
+  particleOrderRecursor();
+}
+
+private:
+void particleOrderRecursor()
+{
+  if ( curNodePtr->isParticle )
+    {
+      particleOrder[partCounter] = curNodePtr->ident;
+      partCounter++;
+    }
+  else
+  if ( curNodePtr->isEmpty )
+  {
+  }
+  else
+    {
+      for (size_t i = 0; i < 8; i++)  // try without loop
+        {
+          if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
+            {
+              goChild(i);
+              particleOrderRecursor();
+              goUp();
+            }
+        }
+    }
+}
+// end of getParticleOrder() stuff
 
 // calcGravity() stuff
 protected:
@@ -913,13 +953,14 @@ void findNeighbourRecursor()
             + (static_cast<partPtrT>(curNodePtr)->yPos - curNeighParticleY) *
             (static_cast<partPtrT>(curNodePtr)->yPos - curNeighParticleY)
             + (static_cast<partPtrT>(curNodePtr)->zPos - curNeighParticleZ) *
-            (static_cast<partPtrT>(curNodePtr)->zPos - curNeighParticleZ)) < searchRadius)
+            (static_cast<partPtrT>(curNodePtr)->zPos - curNeighParticleZ))
+          < searchRadius)
         {
           ///
           /// add the particle to the neighbour list
           ///
           noNeighbours++;
-          neighbourList[noNeighbours] = static_cast<partPtrT>(curNodePtr)->partProxyPtr->rowIndex;
+          neighbourList[noNeighbours] = curNodePtr->ident;
         }
     }
   else
@@ -1024,8 +1065,7 @@ void addAllPartsRecursor()
   if (curNodePtr->isParticle)
     {
       noNeighbours++;
-      neighbourList[noNeighbours] = 
-        static_cast<partPtrT>(curNodePtr)->partProxyPtr->rowIndex;
+      neighbourList[noNeighbours] = curNodePtr->ident;
     }
   else
     {
