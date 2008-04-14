@@ -6,7 +6,7 @@
 #define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
-#define SPHLATCH_SINGLEPREC
+//#define SPHLATCH_SINGLEPREC
 
 // enable parallel tree
 #define SPHLATCH_MPI
@@ -62,7 +62,10 @@ using namespace boost::assign;
 // tree stuff
 #include "bhtree.h"
 
+#include "ranklist.h"
 #include "rankspace.h"
+
+#include "timer.h"
 
 int main(int argc, char* argv[])
 {
@@ -121,7 +124,7 @@ int main(int argc, char* argv[])
   valueType gravTheta = MemManager.loadParameter("GRAVTHETA");
   if (gravTheta != gravTheta)
     {
-      gravTheta = 0.90;       // standard value for opening angle theta
+      gravTheta = 0.70;       // standard value for opening angle theta
       //gravTheta = 1.00;       // standard value for opening angle theta
     }
   MemManager.saveParameter("GRAVTHETA", gravTheta, true);
@@ -181,7 +184,7 @@ int main(int argc, char* argv[])
   //sphlatch::BHtree<sphlatch::NoMultipoles> BarnesHutTree(gravTheta,
   //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
   sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
-                                                      //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
+  //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
                                                       gravConst,
                                                       CostZone.getDepth(),
                                                       //0,
@@ -214,14 +217,24 @@ int main(int argc, char* argv[])
   //size_t i = 979;
 
   stepStartTime = MPI_Wtime();
-  sphlatch::Rankspace RankSpace;
+  sphlatch::Ranklist RLSearch;
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    instantate RankSpace \n" << std::flush;
+          << MPI_Wtime() - stepStartTime << "    instantate RLSearch \n" << std::flush;
 
   stepStartTime = MPI_Wtime();
-  RankSpace.prepare();
+  RLSearch.prepare();
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    prepare RankSpace    \n" << std::flush;
+          << MPI_Wtime() - stepStartTime << "    prepare RLSearch    \n" << std::flush;
+
+  stepStartTime = MPI_Wtime();
+  sphlatch::Rankspace RSSearch;
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - stepStartTime << "    instantate RSSearch \n" << std::flush;
+
+  stepStartTime = MPI_Wtime();
+  RSSearch.prepare();
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - stepStartTime << "    prepare RSSearch    \n" << std::flush;
 
   stepStartTime = MPI_Wtime();
   BarnesHutTree.detParticleOrder();
@@ -229,30 +242,32 @@ int main(int argc, char* argv[])
           << MPI_Wtime() - stepStartTime << "    det. part. order\n" << std::flush;
 
   size_t curIndex = 0;
+/*
   stepStartTime = MPI_Wtime();
   for (size_t i = 0; i < noParts; i++)
+  //for (size_t i = 0; i < 3; i++)
     {
-      curIndex = BarnesHutTree.particleOrder[i];
-      //curIndex = i;
+      //curIndex = BarnesHutTree.particleOrder[i];
+      curIndex = i;
       BarnesHutTree.calcGravity(*(partProxies[curIndex]));
     }
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;
-
-
+*/
   partsIndexVectType neighListBF;
   neighListBF.resize(10000);
-
   
   stepStartTime = MPI_Wtime();
   for (size_t i = 0; i < noParts; i++)
+  //for (size_t i = 0; i < 100; i++)
+  //size_t i = 32768;
     {
-      curIndex = BarnesHutTree.particleOrder[i];
-      //curIndex = i;
+      //curIndex = BarnesHutTree.particleOrder[i];
+      curIndex = i;
       static valueType searchRadius;
       searchRadius = 2. * Data(curIndex, sphlatch::H);
-
-      /*size_t noBFneighbours = 0;
+/*
+      size_t noBFneighbours = 0;
       for (size_t j = 0; j < noParts; j++)
         {
           static valueType dist;
@@ -267,32 +282,24 @@ int main(int argc, char* argv[])
               neighListBF[0] = noBFneighbours;
               neighListBF[noBFneighbours] = j;
             }
-        }*/
+        }
+*/
+      //BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
+      //sphlatch::partsIndexVectRefType neighList(BarnesHutTree.neighbourList);
+      
+      //RLSearch.findNeighbours(curIndex, searchRadius );
+      //sphlatch::partsIndexVectRefType neighList(RLSearch.neighbourList);
 
-      BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
-
-      /*neighListBF[0] = 999999;
+      RSSearch.findNeighbours(curIndex, searchRadius );
+      sphlatch::partsIndexVectRefType neighList(RSSearch.neighbourList);
+  /*    
+      neighListBF[0] = 999999;
       std::sort(neighListBF.begin(), neighListBF.end(), std::greater<size_t>());
-      sphlatch::partsIndexVectRefType neighList(BarnesHutTree.neighbourList);
       size_t noNeighbours = neighList[0];
       neighList[0] = 999999;
-      std::sort(neighList.begin(), neighList.end(), std::greater<size_t>());*/
+      std::sort(neighList.begin(), neighList.end(), std::greater<size_t>());
 
-      /*std::cout << "brute force found " << noBFneighbours << " neighbours: ";
-         for (size_t j = 1; j <= noBFneighbours; j++)
-         {
-          std::cout << neighListBF[j] << " ";
-         }
-         std::cout << "\n\n";
-
-         std::cout << "tree found search " << noNeighbours << " neighbours: ";
-         for (size_t j = 1; j <= noNeighbours; j++)
-         {
-          std::cout << neighList[j] << " ";
-         }
-         std::cout << "\n\n\n";*/
-
-      /*bool neighboursEqual = true;
+      bool neighboursEqual = true;
       for (size_t j = 0; j < 10000; j++)
         {
           if (neighListBF[j] != neighList[j])
@@ -314,7 +321,12 @@ int main(int argc, char* argv[])
                 }
             }
           std::cout << "\n";
-        }*/
+        }
+      else
+      {
+        //std::cout << i << " ";
+      }
+*/
     }
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    neighbour search\n" << std::flush;

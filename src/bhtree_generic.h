@@ -17,6 +17,7 @@
 
 #include "particle.h"
 #include "communicationmanager.h"
+#include "timer.h"
 
 namespace sphlatch {
 template<class T_leaftype>
@@ -140,6 +141,8 @@ bitsetType localIsFilled, remoteIsFilled;
 valvectType cellVect;
 
 std::fstream logFile;
+
+CycleTimer ct;
 
 protected:
 typedef sphlatch::CommunicationManager commManagerType;
@@ -783,6 +786,7 @@ public:
 // what about a ref?
 void calcGravity(const partProxyPtrT _curParticle)
 {
+
   curGravParticleX = (*_curParticle)(X);
   curGravParticleY = (*_curParticle)(Y);
   curGravParticleZ = (*_curParticle)(Z);
@@ -807,6 +811,8 @@ void calcGravity(const partProxyPtrT _curParticle)
 
   goRoot();
   calcGravityRecursor();
+  
+  ct.start();
 
   (*_curParticle)(AX) += gravConst * curGravParticleAX;
   (*_curParticle)(AY) += gravConst * curGravParticleAY;
@@ -816,6 +822,7 @@ void calcGravity(const partProxyPtrT _curParticle)
   /// undo the trick above
   ///
   _curParticle->nodePtr->isParticle = true;
+  
 }
 
 private:
@@ -823,10 +830,12 @@ void calcGravityRecursor(void)
 {
   if (curNodePtr->isParticle)
     {
+      //ct.start();
       calcGravParticle();
 #ifdef SPHLATCH_TREE_PROFILE
       calcGravityPartsCounter++;
 #endif
+      //std::cout << ct.lapse() << " cycles particle \n";
     }
   else
   if (curNodePtr->isEmpty)
@@ -835,10 +844,12 @@ void calcGravityRecursor(void)
   else
   if (asLeaf().calcGravMAC())
     {
+      //ct.start();
       asLeaf().calcGravCell();
 #ifdef SPHLATCH_TREE_PROFILE
       calcGravityCellsCounter++;
 #endif
+      //std::cout << ct.lapse() << " cycles cell \n";
     }
   else
     {
@@ -846,7 +857,9 @@ void calcGravityRecursor(void)
         {
           if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
             {
+              //ct.start();
               goChild(i);
+              //std::cout << ct.lapse() << " cycles go child \n";
               calcGravityRecursor();
               goUp();
             }
@@ -860,18 +873,12 @@ void calcGravityRecursor(void)
 ///
 void calcGravParticle()
 {
-  // strangely in this routine "static" temp. variables seem to be faster
-  // than "const" ones
-  static valueType partGravPartnerX, partGravPartnerY,
-                   partGravPartnerZ, partGravPartnerM;
+  const valueType partGravPartnerX = static_cast<partPtrT>(curNodePtr)->xPos;
+  const valueType partGravPartnerY = static_cast<partPtrT>(curNodePtr)->yPos;
+  const valueType partGravPartnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
+  const valueType partGravPartnerM = static_cast<partPtrT>(curNodePtr)->mass;
 
-  partGravPartnerX = static_cast<partPtrT>(curNodePtr)->xPos;
-  partGravPartnerY = static_cast<partPtrT>(curNodePtr)->yPos;
-  partGravPartnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
-  partGravPartnerM = static_cast<partPtrT>(curNodePtr)->mass;
-
-  static valueType partPartDistPow2;
-  partPartDistPow2 = (partGravPartnerX - curGravParticleX) *
+  const valueType partPartDistPow2 = (partGravPartnerX - curGravParticleX) *
                      (partGravPartnerX - curGravParticleX) +
                      (partGravPartnerY - curGravParticleY) *
                      (partGravPartnerY - curGravParticleY) +
@@ -879,10 +886,15 @@ void calcGravParticle()
                      (partGravPartnerZ - curGravParticleZ);
 
   /// \todo: include spline softening
-  static valueType cellPartDistPow3;
-  cellPartDistPow3 = static_cast<valueType>(
-    pow(partPartDistPow2 + epsilonSquare, 3. / 2.));
-
+#ifdef SPHLATCH_SINGLEPREC
+  const valueType cellPartDistPow3 =
+    (partPartDistPow2 + epsilonSquare)*sqrtf(partPartDistPow2 + epsilonSquare);
+#else
+  const valueType cellPartDistPow3 =
+    (partPartDistPow2 + epsilonSquare)*sqrt(partPartDistPow2 + epsilonSquare);
+#endif
+  //const valueType cellPartDistPow3 = partPartDistPow2 + epsilonSquare;
+  
   curGravParticleAX -= partGravPartnerM *
                        (curGravParticleX - partGravPartnerX) /
                        cellPartDistPow3;
@@ -1043,7 +1055,8 @@ bool cellTotInsideSphere()
     + (static_cast<cellPtrT>(curNodePtr)->zCenter - curNeighParticleZ) *
     (static_cast<cellPtrT>(curNodePtr)->zCenter - curNeighParticleZ)
     );
-  cellCornerDist = (sqrt(3.) / 2.) *
+  // ( sqrt(3) / 2 )*cellSize
+  cellCornerDist = static_cast<valueType>(0.866025403784439) *
                    static_cast<cellPtrT>(curNodePtr)->cellSize;
   return(cellPartDist + cellCornerDist < searchRadius);
 }

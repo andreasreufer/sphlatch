@@ -315,7 +315,8 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
                 {
                   for (size_t zIndex = zMin; zIndex <= zMax; zIndex++)
                     {
-                      const size_t remCartIndex = xIndex + yIndex * noCells1D + zIndex * noCells2D;
+                      const size_t remCartIndex = xIndex + yIndex * noCells1D +
+                                                  zIndex * noCells2D;
                       const size_t remDomain = domainMap[remCartIndex];
                       if (remDomain != myDomain)
                         {
@@ -326,8 +327,10 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
             }
 
           partsIndexVectType::const_iterator partsItr;
-          const partsIndexVectType::const_iterator firstPart = (costzoneCells[cartIndex]).begin();
-          const partsIndexVectType::const_iterator lastPart = (costzoneCells[cartIndex]).end();
+          const partsIndexVectType::const_iterator firstPart =
+            (costzoneCells[cartIndex]).begin();
+          const partsIndexVectType::const_iterator lastPart =
+            (costzoneCells[cartIndex]).end();
 
           std::set<size_t>::const_iterator domainItr = domainSet.begin();
           const std::set<size_t>::const_iterator lastDomain = domainSet.end();
