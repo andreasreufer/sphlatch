@@ -17,6 +17,7 @@
 
 #include "particle.h"
 #include "communicationmanager.h"
+
 #include "timer.h"
 
 namespace sphlatch {
@@ -113,7 +114,8 @@ BHtree(valueType _thetaMAC,
   cellVect.resize(noMultipoleMoments);
 #endif
   /// ugly
-  neighbourList.resize(10000);
+  neighbourList.resize(100);
+  neighDistList.resize(100);
 };
 
 ///
@@ -358,7 +360,7 @@ void insertParticleRecursor(partProxyPtrT _newPayload,
 
       /// ident saves the rowIndex of the particle
       curNodePtr->ident =
-        static_cast<identType>( _newPayload->rowIndex );
+        static_cast<identType>(_newPayload->rowIndex);
 
 ///
 /// don't forget to wire the nodePtr of the
@@ -726,7 +728,6 @@ void globalCombineToptreeLeafs()
 // end of multipole stuff
 
 // getParticleOrder() stuff
-
 public:
 partsIndexVectType particleOrder;
 void detParticleOrder()
@@ -741,15 +742,15 @@ void detParticleOrder()
 private:
 void particleOrderRecursor()
 {
-  if ( curNodePtr->isParticle )
+  if (curNodePtr->isParticle)
     {
       particleOrder[partCounter] = curNodePtr->ident;
       partCounter++;
     }
   else
-  if ( curNodePtr->isEmpty )
-  {
-  }
+  if (curNodePtr->isEmpty)
+    {
+    }
   else
     {
       for (size_t i = 0; i < 8; i++)  // try without loop
@@ -786,7 +787,6 @@ public:
 // what about a ref?
 void calcGravity(const partProxyPtrT _curParticle)
 {
-
   curGravParticleX = (*_curParticle)(X);
   curGravParticleY = (*_curParticle)(Y);
   curGravParticleZ = (*_curParticle)(Z);
@@ -811,7 +811,7 @@ void calcGravity(const partProxyPtrT _curParticle)
 
   goRoot();
   calcGravityRecursor();
-  
+
   ct.start();
 
   (*_curParticle)(AX) += gravConst * curGravParticleAX;
@@ -822,7 +822,6 @@ void calcGravity(const partProxyPtrT _curParticle)
   /// undo the trick above
   ///
   _curParticle->nodePtr->isParticle = true;
-  
 }
 
 private:
@@ -879,22 +878,24 @@ void calcGravParticle()
   const valueType partGravPartnerM = static_cast<partPtrT>(curNodePtr)->mass;
 
   const valueType partPartDistPow2 = (partGravPartnerX - curGravParticleX) *
-                     (partGravPartnerX - curGravParticleX) +
-                     (partGravPartnerY - curGravParticleY) *
-                     (partGravPartnerY - curGravParticleY) +
-                     (partGravPartnerZ - curGravParticleZ) *
-                     (partGravPartnerZ - curGravParticleZ);
+                                     (partGravPartnerX - curGravParticleX) +
+                                     (partGravPartnerY - curGravParticleY) *
+                                     (partGravPartnerY - curGravParticleY) +
+                                     (partGravPartnerZ - curGravParticleZ) *
+                                     (partGravPartnerZ - curGravParticleZ);
 
   /// \todo: include spline softening
 #ifdef SPHLATCH_SINGLEPREC
   const valueType cellPartDistPow3 =
-    (partPartDistPow2 + epsilonSquare)*sqrtf(partPartDistPow2 + epsilonSquare);
+    (partPartDistPow2 + epsilonSquare) *
+    sqrtf(partPartDistPow2 + epsilonSquare);
 #else
   const valueType cellPartDistPow3 =
-    (partPartDistPow2 + epsilonSquare)*sqrt(partPartDistPow2 + epsilonSquare);
+    (partPartDistPow2 + epsilonSquare) *
+    sqrt(partPartDistPow2 + epsilonSquare);
 #endif
   //const valueType cellPartDistPow3 = partPartDistPow2 + epsilonSquare;
-  
+
   curGravParticleAX -= partGravPartnerM *
                        (curGravParticleX - partGravPartnerX) /
                        cellPartDistPow3;
@@ -912,7 +913,8 @@ private:
 size_t noNeighbours;
 // cellPartDist already definded (great, feels like FORTRAN :-)
 valueType curNeighParticleX, curNeighParticleY, curNeighParticleZ,
-          searchRadius, cellCornerDist;
+          searchRadius, searchRadPow2, //cellCornerDist, cellPartDistPow2,
+          partPartDistPow2;
 
 public:
 ///
@@ -928,26 +930,38 @@ public:
 /// - return neighbours
 ///
 partsIndexVectType neighbourList;
+std::valarray<valueType> neighDistList;
+/*void findNeighbours(const partProxyPtrT _curParticle,
+                    const valueRefType _search_radius)*/
 void findNeighbours(const partProxyPtrT _curParticle,
-                    const valueRefType _search_radius)
+                    //const valueRefType _search_radius)
+                    const valueType _search_radius)
 {
+  ///
+  /// go to particles parent cell
+  ///
   curNodePtr = _curParticle->nodePtr;
-
   curNeighParticleX = static_cast<partPtrT>(curNodePtr)->xPos;
   curNeighParticleY = static_cast<partPtrT>(curNodePtr)->yPos;
   curNeighParticleZ = static_cast<partPtrT>(curNodePtr)->zPos;
 
+  ///
+  /// go to parent cell
+  ///
+
   searchRadius = _search_radius;
+  searchRadPow2 = _search_radius * _search_radius;
   noNeighbours = 0;
 
   ///
-  /// while the search sphere is not completely inside the cell and
-  /// we still can go up, go up
+  /// go to parent cell. while the search sphere is not completely
+  /// inside the cell and we still can go up, go up
   ///
+  goUp();
   while (not sphereTotInsideCell() && curNodePtr->parent != NULL)
-  {
-    goUp();
-  }
+    {
+      goUp();
+    }
   findNeighbourRecursor();
 
   neighbourList[0] = noNeighbours;
@@ -959,20 +973,21 @@ void findNeighbourRecursor()
 {
   if (curNodePtr->isParticle)
     {
-      if (sqrt(
-            (static_cast<partPtrT>(curNodePtr)->xPos - curNeighParticleX) *
-            (static_cast<partPtrT>(curNodePtr)->xPos - curNeighParticleX)
-            + (static_cast<partPtrT>(curNodePtr)->yPos - curNeighParticleY) *
-            (static_cast<partPtrT>(curNodePtr)->yPos - curNeighParticleY)
-            + (static_cast<partPtrT>(curNodePtr)->zPos - curNeighParticleZ) *
-            (static_cast<partPtrT>(curNodePtr)->zPos - curNeighParticleZ))
-          < searchRadius)
+      partPartDistPow2 =
+        (static_cast<partPtrT>(curNodePtr)->xPos - curNeighParticleX) *
+        (static_cast<partPtrT>(curNodePtr)->xPos - curNeighParticleX) +
+        (static_cast<partPtrT>(curNodePtr)->yPos - curNeighParticleY) *
+        (static_cast<partPtrT>(curNodePtr)->yPos - curNeighParticleY) +
+        (static_cast<partPtrT>(curNodePtr)->zPos - curNeighParticleZ) *
+        (static_cast<partPtrT>(curNodePtr)->zPos - curNeighParticleZ);
+      if (partPartDistPow2 < searchRadPow2)
         {
           ///
           /// add the particle to the neighbour list
           ///
           noNeighbours++;
           neighbourList[noNeighbours] = curNodePtr->ident;
+          neighDistList[noNeighbours] = sqrt(partPartDistPow2);
         }
     }
   else
@@ -980,11 +995,12 @@ void findNeighbourRecursor()
     {
     }
   else
-  if (cellTotInsideSphere())
-    {
-      addAllPartsRecursor();
-    }
-  else
+  ///
+  /// a check whether the cell is fully inside the tree can be per-
+  /// formed here. for a SPH neighbour search this almost never happens
+  /// and therefore the overhead of the check is bigger than the possible
+  /// gain in speed
+  ///
   if (cellTotOutsideSphere())
     {
     }
@@ -1042,56 +1058,24 @@ bool sphereTotInsideCell()
     }
 }
 
-///
-/// is the cell completely INSIDE the search sphere?
-///
-bool cellTotInsideSphere()
-{
-  cellPartDist = sqrt(
-    (static_cast<cellPtrT>(curNodePtr)->xCenter - curNeighParticleX) *
-    (static_cast<cellPtrT>(curNodePtr)->xCenter - curNeighParticleX)
-    + (static_cast<cellPtrT>(curNodePtr)->yCenter - curNeighParticleY) *
-    (static_cast<cellPtrT>(curNodePtr)->yCenter - curNeighParticleY)
-    + (static_cast<cellPtrT>(curNodePtr)->zCenter - curNeighParticleZ) *
-    (static_cast<cellPtrT>(curNodePtr)->zCenter - curNeighParticleZ)
-    );
-  // ( sqrt(3) / 2 )*cellSize
-  cellCornerDist = static_cast<valueType>(0.866025403784439) *
-                   static_cast<cellPtrT>(curNodePtr)->cellSize;
-  return(cellPartDist + cellCornerDist < searchRadius);
-}
 
 ///
 /// is the cell completely OUTSIDE the search sphere?
 ///
 bool cellTotOutsideSphere()
 {
-  /// cellPartDist, cellCornerDist already calc. by cellTotInsideSphere()
-  return(cellPartDist - cellCornerDist > searchRadius);
-}
+  const valueType cellPartDistPow2 =
+    (static_cast<cellPtrT>(curNodePtr)->xCenter - curNeighParticleX) *
+    (static_cast<cellPtrT>(curNodePtr)->xCenter - curNeighParticleX)
+    + (static_cast<cellPtrT>(curNodePtr)->yCenter - curNeighParticleY) *
+    (static_cast<cellPtrT>(curNodePtr)->yCenter - curNeighParticleY)
+    + (static_cast<cellPtrT>(curNodePtr)->zCenter - curNeighParticleZ) *
+    (static_cast<cellPtrT>(curNodePtr)->zCenter - curNeighParticleZ);
+  const valueType cellCornerDist = static_cast<valueType>(0.866025403784439) *
+                                   static_cast<cellPtrT>(curNodePtr)->cellSize;
 
-///
-/// add all particles of this subtree to the neighbour list unconditionally
-///
-void addAllPartsRecursor()
-{
-  if (curNodePtr->isParticle)
-    {
-      noNeighbours++;
-      neighbourList[noNeighbours] = curNodePtr->ident;
-    }
-  else
-    {
-      for (size_t i = 0; i < 8; i++)
-        {
-          if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
-            {
-              goChild(i);
-              addAllPartsRecursor();
-              goUp();
-            }
-        }
-    }
+  return(cellPartDistPow2 > (searchRadius + cellCornerDist) *
+         (searchRadius + cellCornerDist));
 }
 // end of neighbour search stuff
 

@@ -91,8 +91,11 @@ void prepare()
 {
   noParts = Data.size1();
 
-  //noCells1D = lrint(ceil(pow(static_cast<double>(noParts), 1. / 3.)));
-  noCells1D = lrint(0.7 * ceil(pow(static_cast<double>(noParts), 1. / 3.)));
+  ///
+  /// for some distributions changing this factors increases the speed of
+  /// Rankspace considerably!
+  ///
+  noCells1D = lrint(1.00 * ceil(pow(static_cast<double>(noParts), 1. / 3.)));
   noCells2D = noCells1D * noCells1D;
   noCells3D = noCells2D * noCells1D;
 
@@ -100,8 +103,6 @@ void prepare()
                               static_cast<double>(noCells1D)));
 
   rankspaceCells.resize(noCells3D);
-
-  std::cout << noCells1D << "^3 = " << noCells3D << "   " << partsPerCell1D << " parts per cell\n";
 
   indicesRankedX.resize(noParts);
   indicesRankedY.resize(noParts);
@@ -160,10 +161,7 @@ void prepare()
       cellMaxY[i] = Data(indicesRankedY[maxRank], Y);
       cellMinZ[i] = Data(indicesRankedZ[minRank], Z);
       cellMaxZ[i] = Data(indicesRankedZ[maxRank], Z);
-
-      //std::cout << cellMinY[i] << "," << cellMaxY[i] << "   ";
     }
-  std::cout << "\n";
 
   indicesRankedX.resize(0);
   indicesRankedY.resize(0);
@@ -194,8 +192,11 @@ void prepare()
 
       cartIndex = curCellX + curCellY * noCells1D + curCellZ * noCells2D;
 
-      //rankspaceCells[cartIndex].push_back(i);
+#ifdef SPHLATCH_RANKSPACESERIALIZE
       tmpRSCells[cartIndex].push_back(i);
+#else
+      rankspaceCells[cartIndex].push_back(i);
+#endif
 
       ///
       /// replace indices rsIndices by cell indices
@@ -205,6 +206,7 @@ void prepare()
       rsIndicesZ[i] = curCellZ;
     }
 
+#ifdef SPHLATCH_RANKSPACESERIALIZE
   ///
   /// now reset rankspaceCells and instantate each cells vector
   /// directly with the needed size, this should guarantee better
@@ -228,6 +230,7 @@ void prepare()
           vectItr++;
         }
     }
+#endif
 }
 
 public:
@@ -243,7 +246,8 @@ valueType curPartX, curPartY, curPartZ;
 size_t minCellX, maxCellX, minCellY, maxCellY, minCellZ, maxCellZ;
 public:
 void findNeighbours(const size_t& _curPartIndex,
-                    const valueRefType _search_radius)
+                    //const valueRefType _search_radius)
+                    const valueType _search_radius)
 {
   curPartX = Data(_curPartIndex, X);
   curPartY = Data(_curPartIndex, Y);
@@ -301,9 +305,7 @@ void findNeighbours(const size_t& _curPartIndex,
       maxCellZ++;
     }
 
-  static valueType neighDistPow2;
   const valueType searchRadPow2 = _search_radius * _search_radius;
-  static size_t cartIndex, noPartsInCell, neighIndex;
 
   static size_t noNeighbours;
   noNeighbours = 0;
@@ -314,20 +316,21 @@ void findNeighbours(const size_t& _curPartIndex,
         {
           for (size_t curCellZ = minCellZ; curCellZ <= maxCellZ; curCellZ++)
             {
-              cartIndex = curCellX + curCellY * noCells1D
-                          + curCellZ * noCells2D;
-              noPartsInCell = rankspaceCells[cartIndex].size();
+              const size_t cartIndex = curCellX + curCellY * noCells1D
+                                       + curCellZ * noCells2D;
+              const size_t noPartsInCell = rankspaceCells[cartIndex].size();
 
               for (size_t i = 0; i < noPartsInCell; i++)
                 {
-                  neighIndex = (rankspaceCells[cartIndex])[i];
+                  const size_t neighIndex = (rankspaceCells[cartIndex])[i];
 
-                  neighDistPow2 = (Data(neighIndex, X) - curPartX)
-                                  * (Data(neighIndex, X) - curPartX)
-                                  + (Data(neighIndex, Y) - curPartY)
-                                  * (Data(neighIndex, Y) - curPartY)
-                                  + (Data(neighIndex, Z) - curPartZ)
-                                  * (Data(neighIndex, Z) - curPartZ);
+                  const valueType neighDistPow2 =
+                    (Data(neighIndex, X) - curPartX) *
+                    (Data(neighIndex, X) - curPartX) +
+                    (Data(neighIndex, Y) - curPartY) *
+                    (Data(neighIndex, Y) - curPartY) +
+                    (Data(neighIndex, Z) - curPartZ) *
+                    (Data(neighIndex, Z) - curPartZ);
 
                   if (neighDistPow2 < searchRadPow2)
                     {

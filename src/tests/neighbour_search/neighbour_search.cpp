@@ -6,13 +6,23 @@
 #define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
-//#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_SINGLEPREC
 
 // enable parallel tree
 #define SPHLATCH_MPI
 
 // enable intensive logging for toptree global summation
 //#define SPHLATCH_TREE_LOGSUMUPMP
+
+//#define GRAVITY
+#define TREEORDER
+//#define RSORDER
+
+//#define SPHLATCH_RANKSPACESERIALIZE
+
+//#define BFCHECK
+//#define CHECK_TREE
+//#define CHECK_RANKSPACE
 
 #ifdef SPHLATCH_MPI
 #include <mpi.h>
@@ -121,10 +131,12 @@ int main(int argc, char* argv[])
 
   IOManager.loadCDAT(inputFileName);
 
+  //Data.resize( 660000, Data.size2() );
+
   valueType gravTheta = MemManager.loadParameter("GRAVTHETA");
   if (gravTheta != gravTheta)
     {
-      gravTheta = 0.70;       // standard value for opening angle theta
+      gravTheta = 0.80;       // standard value for opening angle theta
       //gravTheta = 1.00;       // standard value for opening angle theta
     }
   MemManager.saveParameter("GRAVTHETA", gravTheta, true);
@@ -138,7 +150,7 @@ int main(int argc, char* argv[])
   MemManager.saveParameter("GRAVCONST", gravConst, true);
 
   // set up logging stuff
-  std::string logFilename = "logRank000";
+  std::string logFilename = outputFileName + "_rank000";
   std::string rankString = boost::lexical_cast<std::string>(myDomain);
   logFilename.replace(logFilename.size() - 0 - rankString.size(),
                       rankString.size(), rankString);
@@ -160,113 +172,144 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime
           << "    exchanged ghosts (" << noGhosts << ")\n" << std::flush;
+  logFile << "\n";
 
+  sleep(5);
 
-  stepStartTime = MPI_Wtime();
-  partProxies.resize(noParts);
-  for (size_t i = 0; i < noParts; i++)
-    {
-      (partProxies[i]).setup(&Data, i);
-    }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    prepared part proxies\n" << std::flush;
+  size_t curIndex = 0;
+  double treesearchTime, rssearchTime;
 
-  stepStartTime = MPI_Wtime();
-  ghostProxies.resize(noGhosts);
-  for (size_t i = 0; i < noGhosts; i++)
-    {
-      (ghostProxies[i]).setup(&GData, i);
-    }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    prepared ghost proxies\n" << std::flush;
+#ifdef RSORDER
+  partsIndexVectType orderFromTree;
+  orderFromTree.resize(noParts);
+#endif
 
-  stepStartTime = MPI_Wtime();
-  //sphlatch::BHtree<sphlatch::NoMultipoles> BarnesHutTree(gravTheta,
-  //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
-  sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
-  //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
-                                                      gravConst,
-                                                      CostZone.getDepth(),
-                                                      //0,
-                                                      CostZone.getCenter(),
-                                                      CostZone.getSidelength());
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    constructed tree\n" << std::flush;
+  // tree context
+  {
+    stepStartTime = MPI_Wtime();
+    partProxies.resize(noParts);
+    for (size_t i = 0; i < noParts; i++)
+      {
+        (partProxies[i]).setup(&Data, i);
+      }
+    ghostProxies.resize(noGhosts);
+    for (size_t i = 0; i < noGhosts; i++)
+      {
+        (ghostProxies[i]).setup(&GData, i);
+      }
+    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+            << MPI_Wtime() - stepStartTime << "lps prepared part proxies\n" << std::flush;
 
-  stepStartTime = MPI_Wtime();
-  for (size_t i = 0; i < noParts; i++)
-    {
-      BarnesHutTree.insertParticle(*(partProxies[i]), true);
-    }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    inserted parts\n" << std::flush;
+    //sphlatch::BHtree<sphlatch::NoMultipoles> BarnesHutTree(gravTheta,
+    //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
+    sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
+                                                          //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
+                                                          gravConst,
+                                                          //CostZone.getDepth(),
+                                                          0,
+                                                          CostZone.getCenter(),
+                                                          CostZone.getSidelength());
+    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+            << MPI_Wtime() - stepStartTime << "lps constructed tree\n" << std::flush;
 
+    for (size_t i = 0; i < noParts; i++)
+      {
+        BarnesHutTree.insertParticle(*(partProxies[i]), true);
+      }
+    for (size_t i = 0; i < noGhosts; i++)
+      {
+        BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
+      }
+    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+            << MPI_Wtime() - stepStartTime << "lps inserted parts\n" << std::flush;
 
-  stepStartTime = MPI_Wtime();
-  for (size_t i = 0; i < noGhosts; i++)
-    {
-      BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
-    }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    inserted ghosts\n" << std::flush;
+#ifdef TREEORDER
+    BarnesHutTree.detParticleOrder();
+    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+            << MPI_Wtime() - stepStartTime << "lps det. part. order\n" << std::flush;
+#endif
 
+    for (size_t i = 0; i < noParts; i++)
+      {
+#ifdef TREEORDER
+        curIndex = BarnesHutTree.particleOrder[i];
+#else
+        curIndex = i;
+#endif
+        // allow a little tolerance, as the furthest is exactely at 2h
+        const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
+        BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
+      }
+    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+            << MPI_Wtime() - stepStartTime << "    BHtree search       \n" << std::flush;
+    treesearchTime = MPI_Wtime() - stepStartTime;
+    logFile << "\n";
+
+#ifdef RSORDER
+    orderFromTree = BarnesHutTree.particleOrder;
+#endif
+  }
+  // end of tree context
+
+  sleep(5);
+
+  // rankspace context
+  {
+    stepStartTime = MPI_Wtime();
+    sphlatch::Rankspace RSSearch;
+    RSSearch.prepare();
+    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+            << MPI_Wtime() - stepStartTime << "lps prepare RSSearch    \n" << std::flush;
+    for (size_t i = 0; i < noParts; i++)
+      {
+#ifdef RSORDER
+        curIndex = orderFromTree[i];
+#else
+        curIndex = i;
+#endif
+        // allow a little tolerance, as the furthest is exactely at 2h
+        const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
+        RSSearch.findNeighbours(curIndex, searchRadius);
+      }
+    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+            << MPI_Wtime() - stepStartTime << "    Ranksspace search   \n" << std::flush;
+    rssearchTime = MPI_Wtime() - stepStartTime;
+  }
+  // end of rankspace context
+
+  logFile << "\n" << "  RS " << treesearchTime / rssearchTime << "x faster than tree \n";
+
+#ifdef GRAVITY
   stepStartTime = MPI_Wtime();
   BarnesHutTree.calcMultipoles();
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    calculated multipoles\n" << std::flush;
-  //size_t i = 979;
 
-  stepStartTime = MPI_Wtime();
-  sphlatch::Ranklist RLSearch;
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    instantate RLSearch \n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  RLSearch.prepare();
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    prepare RLSearch    \n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  sphlatch::Rankspace RSSearch;
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    instantate RSSearch \n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  RSSearch.prepare();
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    prepare RSSearch    \n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  BarnesHutTree.detParticleOrder();
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    det. part. order\n" << std::flush;
-
-  size_t curIndex = 0;
-/*
-  stepStartTime = MPI_Wtime();
   for (size_t i = 0; i < noParts; i++)
-  //for (size_t i = 0; i < 3; i++)
     {
-      //curIndex = BarnesHutTree.particleOrder[i];
-      curIndex = i;
+      curIndex = BarnesHutTree.particleOrder[i];
+      //curIndex = i;
       BarnesHutTree.calcGravity(*(partProxies[curIndex]));
     }
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;
-*/
+#endif
+
+#ifdef BFCHECK
   partsIndexVectType neighListBF;
-  neighListBF.resize(10000);
-  
+  neighListBF.resize(100);
+
   stepStartTime = MPI_Wtime();
   for (size_t i = 0; i < noParts; i++)
   //for (size_t i = 0; i < 100; i++)
-  //size_t i = 32768;
+  //size_t i = 88358;
     {
-      //curIndex = BarnesHutTree.particleOrder[i];
       curIndex = i;
-      static valueType searchRadius;
-      searchRadius = 2. * Data(curIndex, sphlatch::H);
-/*
+
+      // allow a little tolerance, as the furthest is exactely at 2h
+      const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
+      const valueType searchRadPow2 = searchRadius * searchRadius;
+
       size_t noBFneighbours = 0;
       for (size_t j = 0; j < noParts; j++)
         {
@@ -279,20 +322,20 @@ int main(int argc, char* argv[])
           if (dist < searchRadius)
             {
               noBFneighbours++;
-              neighListBF[0] = noBFneighbours;
               neighListBF[noBFneighbours] = j;
             }
         }
-*/
-      //BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
-      //sphlatch::partsIndexVectRefType neighList(BarnesHutTree.neighbourList);
-      
-      //RLSearch.findNeighbours(curIndex, searchRadius );
-      //sphlatch::partsIndexVectRefType neighList(RLSearch.neighbourList);
+      neighListBF[0] = noBFneighbours;
 
-      RSSearch.findNeighbours(curIndex, searchRadius );
+#ifdef CHECK_TREE
+      BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
+      sphlatch::partsIndexVectRefType neighList(BarnesHutTree.neighbourList);
+#endif
+#ifdef CHECK_RANKSPACE
+      RSSearch.findNeighbours(curIndex, searchRadius);
       sphlatch::partsIndexVectRefType neighList(RSSearch.neighbourList);
-  /*    
+#endif
+      size_t noBFneighs = neighListBF[0];
       neighListBF[0] = 999999;
       std::sort(neighListBF.begin(), neighListBF.end(), std::greater<size_t>());
       size_t noNeighbours = neighList[0];
@@ -300,7 +343,7 @@ int main(int argc, char* argv[])
       std::sort(neighList.begin(), neighList.end(), std::greater<size_t>());
 
       bool neighboursEqual = true;
-      for (size_t j = 0; j < 10000; j++)
+      for (size_t j = 0; j < 100; j++)
         {
           if (neighListBF[j] != neighList[j])
             {
@@ -311,9 +354,10 @@ int main(int argc, char* argv[])
 
       if (!neighboursEqual)
         {
+          //std::cout << i << ":  " << noBFneighs << " (BF)  vs.  " << noNeighbours << " (tree)\n";
           std::cout << " tree search and BF search MISMATCH!!! (" << i << ")\n";
           std::cout << " BF    vs.     tree \n";
-          for (size_t j = 0; j < 60; j++)
+          for (size_t j = 0; j < 100; j++)
             {
               if (neighListBF[j] != neighList[j])
                 {
@@ -323,22 +367,15 @@ int main(int argc, char* argv[])
           std::cout << "\n";
         }
       else
-      {
-        //std::cout << i << " ";
-      }
-*/
+        {
+          std::cout << i << "\n";
+        }
     }
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    neighbour search\n" << std::flush;
-
-  stepStartTime = MPI_Wtime();
-  using namespace sphlatch;
-  std::vector<int> outputAttrSet;
-  outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
-  IOManager.saveCDAT(outputFileName, outputAttrSet);
 
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime << "    saved dump\n" << std::flush;
+          << MPI_Wtime() - stepStartTime << " BF neighbour search\n" << std::flush;
+#endif
+  //IOManager.saveCDAT(outputFileName, outputAttrSet);
 
   logFile.close();
   MPI::Finalize();
