@@ -8,7 +8,7 @@
 #include <boost/numeric/ublas/io.hpp>
 
 #define SPHLATCH_SINGLEPREC
-#define SPHLATCH_MPI
+#define SPHLATCH_PARALLEL
 
 #include <mpi.h>
 

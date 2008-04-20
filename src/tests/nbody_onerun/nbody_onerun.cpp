@@ -9,14 +9,10 @@
 #define SPHLATCH_SINGLEPREC
 
 // enable parallel tree
-#define SPHLATCH_MPI
+#define SPHLATCH_PARALLEL
 
 // enable intensive logging for toptree global summation
 //#define SPHLATCH_TREE_LOGSUMUPMP
-
-#ifdef SPHLATCH_MPI
-#include <mpi.h>
-#endif
 
 #include <cstdlib>
 #include <iostream>

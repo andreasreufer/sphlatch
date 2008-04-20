@@ -11,10 +11,6 @@
  *
  */
 
-#ifdef SPHLATCH_MPI
-#include <mpi.h>
-#endif
-
 #include <iostream>
 #include <fstream>
 #include <iomanip>

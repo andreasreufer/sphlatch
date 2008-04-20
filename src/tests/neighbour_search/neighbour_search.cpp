@@ -8,8 +8,8 @@
 // uncomment for single-precision calculation
 #define SPHLATCH_SINGLEPREC
 
-// enable parallel tree
-#define SPHLATCH_MPI
+// enable parallel version
+#define SPHLATCH_PARALLEL
 
 // enable intensive logging for toptree global summation
 //#define SPHLATCH_TREE_LOGSUMUPMP
@@ -23,10 +23,6 @@
 //#define BFCHECK
 //#define CHECK_TREE
 //#define CHECK_RANKSPACE
-
-#ifdef SPHLATCH_MPI
-#include <mpi.h>
-#endif
 
 #include <cstdlib>
 #include <iostream>
@@ -375,7 +371,9 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << " BF neighbour search\n" << std::flush;
 #endif
-  //IOManager.saveCDAT(outputFileName, outputAttrSet);
+  std::vector<int> outputAttrSet;
+  outputAttrSet += 0;
+  IOManager.saveCDAT(outputFileName, outputAttrSet);
 
   logFile.close();
   MPI::Finalize();

@@ -15,7 +15,7 @@ namespace po = boost::program_options;
 using namespace boost::assign;
 
 #define SPHLATCH_SINGLEPREC
-//#define SPHLATCH_MPI
+//#define SPHLATCH_PARALLEL
 
 #include "particle.h"
 #include "iomanager.h"
@@ -30,7 +30,7 @@ typedef sphlatch::MemoryManager mem_type;
 
 int main(int argc, char* argv[])
 {
-#ifdef SPHLATCH_MPI
+#ifdef SPHLATCH_PARALLEL
   MPI::Init(argc, argv);
 #endif
   po::options_description Options("Global Options");
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
   outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
   IOManager.saveCDAT("out.cdat", outputAttrSet);
 
-  #ifdef SPHLATCH_MPI
+  #ifdef SPHLATCH_PARALLEL
   MPI::Finalize();
   #endif
 

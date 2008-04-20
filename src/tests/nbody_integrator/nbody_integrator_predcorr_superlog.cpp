@@ -4,11 +4,7 @@
 #define SPHLATCH_SINGLEPREC
 
 //#define OOSPH_LOADBALANCE
-#define SPHLATCH_MPI
-
-#ifdef SPHLATCH_MPI
-#include <mpi.h>
-#endif
+#define SPHLATCH_PARALLEL
 
 #include <cstdlib>
 #include <iostream>

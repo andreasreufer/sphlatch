@@ -104,7 +104,7 @@ BHtree(valueType _thetaMAC,
   noToptreeLeafCells = 1 << (3 * toptreeDepth); // 8^(toptreeDepth)
   noMultipoleMoments = asLeaf().noMultipoleMoments();
 
-#ifdef SPHLATCH_MPI
+#ifdef SPHLATCH_PARALLEL
   localCells.resize(noToptreeLeafCells, noMultipoleMoments);
   localIsFilled.resize(noToptreeLeafCells);
 
@@ -431,7 +431,7 @@ void calcMultipoles(void)
   ///
   /// that's the part syncing the toptree leafs level
   ///
-#ifdef SPHLATCH_MPI
+#ifdef SPHLATCH_PARALLEL
   globalCombineToptreeLeafs();
 #endif
 
@@ -611,7 +611,7 @@ size_t toptreeLeafCounter;
 private:
 void globalCombineToptreeLeafs()
 {
-#ifdef SPHLATCH_MPI
+#ifdef SPHLATCH_PARALLEL
   const size_t myDomain = CommManager.getMyDomain();
   const size_t noDomains = CommManager.getNoDomains();
 

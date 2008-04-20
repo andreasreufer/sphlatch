@@ -11,8 +11,8 @@
 #include "memorymanager.h"
 #include "particle.h"
 
-#ifdef SPHLATCH_MPI
-#include <mpi.h>
+#ifdef SPHLATCH_PARALLEL
+#include "communicationmanager.h"
 #endif
 
 namespace sphlatch
@@ -33,6 +33,9 @@ typedef IOManager* self_pointer;
 
 typedef sphlatch::ParticleVarMap varMapType;
 typedef sphlatch::MemoryManager memoryManagerType;
+#ifdef SPHLATCH_PARALLEL
+typedef sphlatch::CommunicationManager commManagerType;
+#endif
 
 typedef std::set<std::string> StringSetType;
 
@@ -45,6 +48,9 @@ void setDoublePrecOut(void);
 
 varMapType& VM;
 memoryManagerType& MemoryManager;
+#ifdef SPHLATCH_PARALLEL
+commManagerType& commManager;
+#endif
 
 protected:
 IOManager(void);
@@ -73,6 +79,9 @@ IOManager::self_reference IOManager::instance(void)
 IOManager::IOManager(void) :
   VM(varMapType::instance()),
   MemoryManager(memoryManagerType::instance())
+#ifdef SPHLATCH_PARALLEL
+  ,commManager(commManagerType::instance())
+#endif
 {
   sizeOfXDRfloat = 4;
   sizeOfXDRdouble = 8;
@@ -98,11 +107,11 @@ std::vector<int> IOManager::loadCDAT(std::string FileName)
 
   using boost::lexical_cast;
 
-#ifdef SPHLATCH_MPI
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
-  const size_t SIZE = MPI::COMM_WORLD.Get_size();
+#ifdef SPHLATCH_PARALLEL
+  const size_t myDomain = commManager.getMyDomain();
+  const size_t SIZE = commManager.getNoDomains();
 #else
-  const size_t RANK = 0;
+  const size_t myDomain = 0;
   const size_t SIZE = 1;
 #endif
 
@@ -158,9 +167,9 @@ std::vector<int> IOManager::loadCDAT(std::string FileName)
       numattributes = -numattributes;
     }
 
-  numlocparticles = (lrint(((double)(RANK + 1) / SIZE) * numtotparticles) - lrint(((double)(RANK) / SIZE) * numtotparticles));
+  numlocparticles = (lrint(((double)(myDomain + 1) / SIZE) * numtotparticles) - lrint(((double)(myDomain) / SIZE) * numtotparticles));
   buffsize = numlocparticles * datawidthLoad * numattributes;
-  dataoffset = lrint(((double)RANK / SIZE) * numtotparticles) * datawidthLoad * numattributes;
+  dataoffset = lrint(((double)myDomain / SIZE) * numtotparticles) * datawidthLoad * numattributes;
   attributes.resize(numattributes);
 
   for (int i = 0; i < numattributes; i++)
@@ -260,14 +269,14 @@ bool IOManager::saveCDAT(std::string FileName, std::vector<int> Attributes)
 
   using boost::lexical_cast;
 
-#ifdef SPHLATCH_MPI
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
-  const size_t SIZE = MPI::COMM_WORLD.Get_size();
+#ifdef SPHLATCH_PARALLEL
+  const size_t myDomain = commManager.getMyDomain();
+  const size_t SIZE = commManager.getNoDomains();
 #else
-  const size_t RANK = 0;
+  const size_t myDomain = 0;
   const size_t SIZE = 1;
 #endif
-  int numtotparticles, numlocparticles, numremainparticles[SIZE];
+  int numtotparticles, numlocparticles;
   size_t datasize, buffsize, dataoffset, numattributes;
   std::vector<int> attributes = Attributes;
   std::string header;
@@ -278,30 +287,35 @@ bool IOManager::saveCDAT(std::string FileName, std::vector<int> Attributes)
   numlocparticles = Data.size1();
   buffsize = numlocparticles * datawidthSave * numattributes;
 
-#ifdef SPHLATCH_MPI
-  MPI::COMM_WORLD.Allgather(&numlocparticles, 1, MPI::INT, &numremainparticles, 1, MPI::INT);
+  countsVectType partCounts;
+  partCounts.resize(SIZE);
+
+  partCounts[myDomain] = Data.size1();
+
+#ifdef SPHLATCH_PARALLEL
+  commManager.sumUpCounts(partCounts);
 #endif
 
   for (size_t i = 1; i < SIZE; i++)
     {
-      numremainparticles[i] += numremainparticles[i - 1];
+      partCounts[i] += partCounts[i - 1];
     }
 
-  if (RANK == 0)
+  if (myDomain == 0)
     {
       dataoffset = 0;
     }
   else
     {
-      dataoffset = numremainparticles[RANK - 1] * datawidthSave * numattributes;
+      dataoffset = partCounts[myDomain - 1] * datawidthSave * numattributes;
     }
 
-#ifdef SPHLATCH_MPI
-  numtotparticles = numremainparticles[SIZE - 1];
+
+#ifdef SPHLATCH_PARALLEL
+  numtotparticles = partCounts[ SIZE - 1 ];
 #else
   numtotparticles = numlocparticles;
 #endif
-
   datasize = numtotparticles * datawidthSave * numattributes;
 
   header += Name;
@@ -349,11 +363,11 @@ bool IOManager::saveCDAT(std::string FileName, std::vector<int> Attributes)
   fout.seekp(0);
   fout.flush();
 
-#ifdef SPHLATCH_MPI
-  MPI::COMM_WORLD.Barrier();
+#ifdef SPHLATCH_PARALLEL
+  commManager.barrier();
 #endif
 
-  if (RANK == 0)
+  if (myDomain == 0)
     {
       fout << header;
     }
@@ -404,8 +418,8 @@ bool IOManager::saveCDAT(std::string FileName, std::vector<int> Attributes)
   fout.close();
   delete buff;
 
-#ifdef SPHLATCH_MPI
-  MPI::COMM_WORLD.Barrier();
+#ifdef SPHLATCH_PARALLEL
+  commManager.barrier();
 #endif
 
   return true;
