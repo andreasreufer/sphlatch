@@ -896,6 +896,7 @@ void calcGravParticle()
 #endif
   //const valueType cellPartDistPow3 = partPartDistPow2 + epsilonSquare;
 
+  // todo: use cellPartDistPow3Inv
   curGravParticleAX -= partGravPartnerM *
                        (curGravParticleX - partGravPartnerX) /
                        cellPartDistPow3;

@@ -16,6 +16,7 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/io.hpp>
 #include <boost/dynamic_bitset.hpp>
 
 namespace sphlatch {
@@ -41,8 +42,8 @@ typedef valueType&              valueRefType;
 /// assumes this type to have continuous storage
 ///
 typedef blas::matrix<valueType>        matrixType;
-typedef blas::matrix<valueType>&       matrixRefType;
-typedef blas::matrix<valueType>*       matrixPtrType;
+typedef matrixType&                    matrixRefType;
+typedef matrixType*                    matrixPtrType;
 
 ///
 /// a matrix row
@@ -126,6 +127,12 @@ typedef unsigned long int bitsetBlockType;
 typedef boost::dynamic_bitset<bitsetBlockType> bitsetType;
 typedef boost::dynamic_bitset<bitsetBlockType>& bitsetRefType;
 
+///
+/// attribute map
+///
+typedef std::map< std::string, valueType > attrMapType;
+typedef attrMapType& attrMapRefType;
+typedef attrMapType* attrMapPtrType;
 };
 
 #endif
