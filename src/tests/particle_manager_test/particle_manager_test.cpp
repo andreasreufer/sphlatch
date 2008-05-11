@@ -52,7 +52,7 @@ typedef sphlatch::ParticleManager part_type;
 #include "io_manager.h"
 typedef sphlatch::IOManager io_type;
 
-#include "communicationmanager.h"
+#include "communication_manager.h"
 typedef sphlatch::CommunicationManager com_type;
 
 using namespace boost::assign;
@@ -181,18 +181,14 @@ int main(int argc, char* argv[])
   //std::cout << pos << "\n";
   //std::cout << h << "\n";
 
-  std::cout << PartManager.attributes[ "time" ] << "\n";
   PartManager.attributes[ "time" ] = 0.;
-  std::cout << PartManager.attributes[ "time" ] << "\n";
 
   PartManager.step = 0;
   stepStartTime = MPI_Wtime();
   IOManager.loadDump( inputFileName );
 
-  std::cout << PartManager.attributes[ "time" ] << "\n";
-
+  //std::cout << PartManager.attributes[ "time" ] << "\n";
   //std::cout << PartManager.step << "\n";
-  
   //std::cout << myDomain << ": " << pos.size1() << "\n";
   //std::cout << pos << "\n";
   //std::cout << h << "\n";

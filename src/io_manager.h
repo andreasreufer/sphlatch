@@ -13,7 +13,7 @@
 #include <hdf5.h>
 
 #ifdef SPHLATCH_PARALLEL
-#include "communicationmanager.h"
+#include "communication_manager.h"
 #include "mpi.h"
 #endif
 
@@ -455,7 +455,6 @@ void IOManager::saveDump(std::string _outputFile,
   ///
   /// write data
   ///
-
   hsize_t dimsMem[2], dimsFile[2], offset[2];
 
   dimsMem[0] = noLocParts;
