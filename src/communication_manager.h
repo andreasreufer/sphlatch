@@ -117,7 +117,6 @@ std::vector<size_t> recvNoPart;
 
 std::vector<size_t> domainToRank;
 std::vector<size_t> rankToDomain;
-
 };
 
 CommunicationManager::self_pointer CommunicationManager::_instance = NULL;
@@ -190,7 +189,7 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
 {
   // exchange number of particles
 
-  double startTime =  MPI_Wtime();
+  double startTime = MPI_Wtime();
   sendQueueType partsQueue;
 
   prepareQueuesOffsets(_partsIndices, 0, partsQueue,
@@ -204,10 +203,10 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
     {
       noParts += noRecvParts[i];
     }
-  
+
   rangeType newLocRange(0, noParts);
 
-  std::cout <<  myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+  std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - startTime
             << " prepared partsQueue " << "\n";
 
@@ -223,18 +222,17 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
       noGhosts += noRecvGhosts[i];
     }
 
-  std::cout <<  myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+  std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - startTime
             << " prepared ghostQueue " << "\n";
 
   ///
   /// determine information for particles staying on node
   ///
-  const size_t stayOffset  = localOffsets[myRank];
-  const size_t stayParts   = noRecvParts[myRank];
+  const size_t stayOffset = localOffsets[myRank];
   noRecvParts[myRank] = 0;
 
-  partsIndexVectType::const_iterator stayItr = _partsIndices[myDomain].begin();
+  partsIndexVectType::const_iterator stayItr;
   partsIndexVectType::const_iterator stayEnd = _partsIndices[myDomain].end();
 
   ///
@@ -248,55 +246,64 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   idvectType idRecvBuff(noParts);
   idSendBuff.resize(noBuffParts);
 
-  std::cout <<  myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+  std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - startTime
             << " set up buffers      " << "\n";
 
+  idvectPtrSetType::const_iterator intsItr = _quantities.ints.begin();
+  idvectPtrSetType::const_iterator intsEnd = _quantities.ints.end();
   //exchangeInt();
-  idvectRefType id(PartManager.id);
-
-  ///
-  /// move local data to its designated space
-  ///
-  size_t storeIndex = stayOffset;
-  while ( stayItr != stayEnd )
+  while ( intsItr != intsEnd )
   {
-    idRecvBuff[storeIndex] = id[*stayItr];
-    storeIndex++;
-    stayItr++;
+    //idvectRefType id(**intsItr);
+
+    ///
+    /// move local data to its designated space
+    ///
+
+    idvectRefType curInts(**intsItr);
+    
+    size_t storeIndex = stayOffset;
+
+    stayItr = _partsIndices[myDomain].begin();
+    while (stayItr != stayEnd)
+      {
+        idRecvBuff[storeIndex] = curInts[*stayItr];
+        storeIndex++;
+        stayItr++;
+      }
+    //std::cout << myDomain << ": " << stayOffset << " - " << storeIndex << "    local\n";
+
+    std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - startTime
+              << " copied local stuff  " << "\n";
+
+    queuedExch(**intsItr, idRecvBuff, partsQueue, localOffsets, noRecvParts);
+
+    std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - startTime
+              << " exchanged remote stuff " << "\n";
+
+    //std::cout << myDomain << ": size of new id is " << idRecvBuff.size() << "\n";
+
+    // set no. of particles
+    PartManager.resize(**intsItr);
+    //std::cout << myDomain << ": " << id.size() << "\n";
+
+    std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - startTime
+              << " resized container   " << "\n";
+
+    idvectRangeType idLocal(**intsItr, newLocRange);
+    idLocal = idRecvBuff;
+
+    std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - startTime
+              << " copied back local buff\n" << "\n";
+    
+    intsItr++;
+    //std::cout << myDomain << ": " << idLocal.size() << "\n";
   }
-  //std::cout << myDomain << ": " << stayOffset << " - " << storeIndex << "    local\n";
-  
-  std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-            << MPI_Wtime() - startTime
-            << " copied local stuff  " << "\n";
-
-  queuedExch(id, idRecvBuff, partsQueue, localOffsets, noRecvParts);
-
-  std::cout <<  myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-            << MPI_Wtime() - startTime
-            << " exchanged remote stuff "<< "\n";
-
-  //std::cout << myDomain << ": size of new id is " << idRecvBuff.size() << "\n";
-
-  // set no. of particles
-  PartManager.resize(id);
-  //std::cout << myDomain << ": " << id.size() << "\n";
-
-  std::cout <<  myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-            << MPI_Wtime() - startTime
-            << " resized container   " << "\n";
-
-  idvectRangeType idLocal( id, newLocRange );
-  idLocal = idRecvBuff;
-  std::cout <<  myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-            << MPI_Wtime() - startTime
-            << " copied back local buff"<< "\n";
-
-  //std::cout << myDomain << ": " << idLocal.size() << "\n";
-
-  // copy buffers
-  //id = idRecvBuff;
 
   // exchange scalars
   // set up buffers
@@ -380,8 +387,8 @@ void CommunicationManager::queuedExch(T& _src, T& _target,
                       _offsets[i] += noBuffParts;
                       const size_t noEffRecvParts =
                         std::min(noBuffParts,
-                                static_cast<size_t>(_noRecvParts[i]));
-                      recvChunk(_target, _offsets[i], 
+                                 static_cast<size_t>(_noRecvParts[i]));
+                      recvChunk(_target, _offsets[i],
                                 recvReqs[i], noEffRecvParts, i);
                     }
                 }
@@ -411,7 +418,10 @@ void CommunicationManager::sendChunk(const idvectRefType _src,
   count = 0;
   while (_qelem.itr != _qelem.end)
     {
+      //if (myDomain == 0)
+      //  std::cout << count << " " << *(_qelem.itr) << "\n";
       idSendBuff(count) = _src(*(_qelem.itr));
+      /// somethings fishy: on node33 (gcc 4.1) the following line just increments the iterators value, but not the iterator itself!
       _qelem.itr++;
       count++;
     }

@@ -104,6 +104,7 @@ int main(int argc, char* argv[])
   std::string outputFileName = VMap["output-file"].as<std::string>();
 
   PartManager.useBasicSPH();
+  PartManager.useTimedepH();
   PartManager.useGravity();
 
   // set up logging stuff
@@ -196,9 +197,13 @@ int main(int argc, char* argv[])
   matrixRefType vel( PartManager.vel );
   valvectRefType m( PartManager.m );
   idvectRefType id( PartManager.id );
-  
+  idvectRefType noneigh( PartManager.noneigh );
+
   stepStartTime = MPI_Wtime();
   IOManager.loadDump( inputFileName );
+
+  std::cout << noneigh.size() << "\n";
+  std::cout << id.size() << "\n";
 
   //std::cout << PartManager.attributes[ "time" ] << "\n";
   //std::cout << PartManager.step << "\n";
@@ -214,6 +219,7 @@ int main(int argc, char* argv[])
 
   quantsType exchQuants;
   exchQuants.vects += &pos, &vel;
+  exchQuants.ints += &id, &noneigh;
 
   stepStartTime = MPI_Wtime();
   

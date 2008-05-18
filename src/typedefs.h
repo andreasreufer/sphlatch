@@ -138,15 +138,19 @@ typedef std::map< std::string, valueType > attrMapType;
 typedef attrMapType& attrMapRefType;
 typedef attrMapType* attrMapPtrType;
 
+typedef std::set<matrixPtrType>  matrixPtrSetType;
+typedef std::set<valvectPtrType> valvectPtrSetType;
+typedef std::set<idvectPtrType>  idvectPtrSetType;
+
 ///
 /// a struct with a set of pointers to the
 /// three possible containers for physical
 /// quantities
 ///
 struct quantsType {
-  std::set<matrixPtrType> vects;
-  std::set<valvectPtrType> scalars;
-  std::set<idvectPtrType> ints;
+  matrixPtrSetType  vects;
+  valvectPtrSetType scalars;
+  idvectPtrSetType  ints;
 };
 
 typedef quantsType& quantsTypeRefType;
