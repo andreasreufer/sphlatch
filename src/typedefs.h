@@ -16,6 +16,7 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/vector_proxy.hpp>
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/dynamic_bitset.hpp>
 
@@ -53,7 +54,7 @@ typedef blas::matrix_row<matrixType>&  matrixRowRefType;
 typedef blas::matrix_row<matrixType>*  matrixRowPtrType;
 
 ///
-/// matrix range and slice
+/// range and slice
 ///
 typedef blas::range rangeType;
 typedef blas::slice sliceType;
@@ -74,7 +75,6 @@ typedef matrixRowType* particleRowPtrType;
 ///
 /// a valueType vector
 ///
-/// use valarray instead
 typedef blas::vector<valueType> valvectType;
 typedef blas::vector<valueType>& valvectRefType;
 typedef blas::vector<valueType>* valvectPtrType;
@@ -91,6 +91,8 @@ typedef blas::vector<identType> idvectType;
 typedef blas::vector<identType>& idvectRefType;
 typedef blas::vector<identType>* idvectPtrType;
 
+typedef blas::vector_range<idvectType> idvectRangeType;
+
 ///
 /// a vector of (particle) indices
 ///
@@ -103,6 +105,8 @@ typedef std::vector<size_t>* partsIndexVectPtrType;
 /// countsType has to be compatible with MPI_INT
 ///
 typedef int countsType;
+typedef countsType& countsRefType;
+typedef countsType* countsPtrType;
 typedef std::vector<countsType> countsVectType;
 typedef std::vector<countsType>& countsVectRefType;
 typedef std::vector<countsType>* countsVectPtrType;
@@ -133,6 +137,21 @@ typedef boost::dynamic_bitset<bitsetBlockType>& bitsetRefType;
 typedef std::map< std::string, valueType > attrMapType;
 typedef attrMapType& attrMapRefType;
 typedef attrMapType* attrMapPtrType;
+
+///
+/// a struct with a set of pointers to the
+/// three possible containers for physical
+/// quantities
+///
+struct quantsType {
+  std::set<matrixPtrType> vects;
+  std::set<valvectPtrType> scalars;
+  std::set<idvectPtrType> ints;
+};
+
+typedef quantsType& quantsTypeRefType;
+typedef quantsType* quantsTypePtrType;
+
 };
 
 #endif

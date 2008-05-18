@@ -4,13 +4,11 @@
 #include <map>
 #include <set>
 #include <boost/assign/std/set.hpp>
-/* #include <boost/assign/std/vector.hpp>*/
 
 #include "typedefs.h"
 
 namespace sphlatch
 {
-
 enum vectorialIndices { X, Y, Z };
 
 class ParticleManager
@@ -44,9 +42,14 @@ void useAVBalsara(void);
 void useAVHernquist(void);
 void useAVTimedepAlpha(void);
 
-void setNoParts(size_t _noParts, size_t _noGhostParts, bool _keepData);
 void setNoParts(size_t _noParts, size_t _noGhostParts);
 void setNoParts(size_t _noParts);
+
+void resize(matrixRefType _matrixRef);
+void resize(valvectRefType _valvectRef);
+void resize(idvectRefType _idvectRef);
+
+void resizeAll(void);
 
 ///
 /// get the name of a int/scalar/vect value reference
@@ -142,7 +145,7 @@ ParticleManager::ParticleManager(void)
   /// (position and ID)
   ///
   usedVectors[ "pos" ] = &pos;
-  pos.resize(0,3);
+  pos.resize(0, 3);
 
   usedIntegers[ "id" ] = &id;
 
@@ -172,7 +175,7 @@ void ParticleManager::useGravity()
 {
   usedVectors[ "vel" ] = &vel;
   usedVectors[ "acc" ] = &acc;
-  
+
   // 3D
   vel.resize(vel.size1(), 3);
   acc.resize(acc.size1(), 3);
@@ -192,7 +195,7 @@ void ParticleManager::useBasicSPH()
   // 3D
   vel.resize(vel.size1(), 3);
   acc.resize(acc.size1(), 3);
-  
+
   usedScalars[ "m" ] = &m;
   usedScalars[ "h" ] = &h;
   usedScalars[ "rho" ] = &rho;
@@ -263,7 +266,7 @@ void ParticleManager::useAVTimedepAlpha()
 void ParticleManager::useAVBalsara()
 {
   usedVectors[ "rotv" ] = &rotv;
-  
+
   // 3D
   rotv.resize(rotv.size1(), 3);
 }
@@ -276,77 +279,120 @@ void ParticleManager::useAVHernquist()
   usedScalars[ "q" ] = &q;
 }
 
-void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts, 
-                                 bool _keepData)
+void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)
 {
   noLocalParts = _noLocalParts;
   noGhostParts = _noGhostParts;
+}
 
-  size_t locSize = noLocalParts;
-  size_t ghostSize = noLocalParts + noGhostParts;
+///
+/// specialization in case you don't need ghosts
+///
+void ParticleManager::setNoParts(size_t _noLocParts)
+{
+  setNoParts(_noLocParts, 0);
+}
 
+///
+/// resize ALL quantities
+///
+void ParticleManager::resizeAll()
+{
   matrixPtrMap::iterator vectorsItr = usedVectors.begin();
 
   while (vectorsItr != usedVectors.end())
     {
-      if (isGhostVar(vectorsItr->first))
-        {
-          vectorsItr->second->resize(ghostSize,
-                                     vectorsItr->second->size2(), _keepData);
-        }
-      else
-        {
-          vectorsItr->second->resize(locSize,
-                                     vectorsItr->second->size2(), _keepData);
-        }
+      resize( *(vectorsItr->second) );
       vectorsItr++;
     }
 
   valVectPtrMap::iterator scalarsItr = usedScalars.begin();
   while (scalarsItr != usedScalars.end())
     {
-      if (isGhostVar(scalarsItr->first))
-        {
-          scalarsItr->second->resize(ghostSize, _keepData);
-        }
-      else
-        {
-          scalarsItr->second->resize(locSize, _keepData);
-        }
+      resize( *(scalarsItr->second) );
       scalarsItr++;
     }
 
   idVectPtrMap::iterator intsItr = usedIntegers.begin();
   while (intsItr != usedIntegers.end())
     {
-      if (isGhostVar(intsItr->first))
-        {
-          intsItr->second->resize(ghostSize, _keepData);
-        }
-      else
-        {
-          intsItr->second->resize(locSize, _keepData);
-        }
+      resize( *(intsItr->second) );
       intsItr++;
     }
 }
 
 ///
-/// specialization in case you want to keep the data in the containers
+/// resize a vectorial quantitiy
 ///
-void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)
+void ParticleManager::resize(matrixRefType _matrix)
 {
-  setNoParts(_noLocalParts, _noGhostParts, true);
+  std::string matrixName = getName(_matrix);
+  size_t newSize;
+
+  if (isGhostVar(matrixName))
+    {
+      newSize = noLocalParts + noGhostParts;
+    }
+  else
+    {
+      newSize = noLocalParts;
+    }
+
+  if (_matrix.size1() != newSize)
+    {
+      _matrix.resize(newSize, _matrix.size2(), false);
+    }
 }
 
 ///
-/// specialization in case you don't need ghosts and data can be discarded
+/// resize a scalar quantitiy
 ///
-void ParticleManager::setNoParts(size_t _noLocParts)
+void ParticleManager::resize(valvectRefType _valvect)
 {
-  setNoParts(_noLocParts, 0, false);
+  std::string vectName = getName(_valvect);
+  size_t newSize;
+
+  if (isGhostVar(vectName))
+    {
+      newSize = noLocalParts + noGhostParts;
+    }
+  else
+    {
+      newSize = noLocalParts;
+    }
+
+  if (_valvect.size() != newSize)
+    {
+      _valvect.resize(newSize, false);
+    }
 }
 
+///
+/// resize an integer quantitiy
+///
+void ParticleManager::resize(idvectRefType _idvect)
+{
+  std::string vectName = getName(_idvect);
+  size_t newSize;
+
+  if (isGhostVar(vectName))
+    {
+      newSize = noLocalParts + noGhostParts;
+    }
+  else
+    {
+      newSize = noLocalParts;
+    }
+
+  if (_idvect.size() != newSize)
+    {
+      _idvect.resize(newSize, false);
+    }
+}
+
+///
+/// return number of local or ghost particles
+///
 size_t ParticleManager::getNoLocalParts()
 {
   return noLocalParts;
@@ -427,16 +473,16 @@ std::string ParticleManager::getName(idvectRefType _idvectRef)
 ///
 matrixPtrType ParticleManager::getVectRef(std::string _name)
 {
-  matrixPtrMap::iterator matrItr = usedVectors.find( _name );
+  matrixPtrMap::iterator matrItr = usedVectors.find(_name);
 
-  if ( matrItr == usedVectors.end() )
-  {
-    return NULL;
-  }
+  if (matrItr == usedVectors.end())
+    {
+      return NULL;
+    }
   else
-  {
-    return matrItr->second;
-  }
+    {
+      return matrItr->second;
+    }
 }
 
 ///
@@ -444,16 +490,16 @@ matrixPtrType ParticleManager::getVectRef(std::string _name)
 ///
 valvectPtrType ParticleManager::getScalarRef(std::string _name)
 {
-  valVectPtrMap::iterator vectItr = usedScalars.find( _name );
+  valVectPtrMap::iterator vectItr = usedScalars.find(_name);
 
-  if ( vectItr == usedScalars.end() )
-  {
-    return NULL;
-  }
+  if (vectItr == usedScalars.end())
+    {
+      return NULL;
+    }
   else
-  {
-    return vectItr->second;
-  }
+    {
+      return vectItr->second;
+    }
 }
 
 ///
@@ -461,16 +507,16 @@ valvectPtrType ParticleManager::getScalarRef(std::string _name)
 ///
 idvectPtrType ParticleManager::getIdRef(std::string _name)
 {
-  idVectPtrMap::iterator intItr = usedIntegers.find( _name );
+  idVectPtrMap::iterator intItr = usedIntegers.find(_name);
 
-  if ( intItr == usedIntegers.end() )
-  {
-    return NULL;
-  }
+  if (intItr == usedIntegers.end())
+    {
+      return NULL;
+    }
   else
-  {
-    return intItr->second;
-  }
+    {
+      return intItr->second;
+    }
 }
 
 ///
@@ -478,9 +524,8 @@ idvectPtrType ParticleManager::getIdRef(std::string _name)
 ///
 bool ParticleManager::attrExists(std::string _name)
 {
-  return ( attributes.find( _name ) != attributes.end() );
+  return(attributes.find(_name) != attributes.end());
 }
-
 };
 
-#endif
+ #endif

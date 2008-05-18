@@ -14,7 +14,6 @@
 
 #ifdef SPHLATCH_PARALLEL
 #include "communication_manager.h"
-#include "mpi.h"
 #endif
 
 namespace sphlatch
@@ -127,8 +126,13 @@ IOManager::~IOManager(void)
 
 void IOManager::loadDump(std::string _inputFile)
 {
+#ifdef SPHLATCH_PARALLEL
   const size_t myDomain = CommManager.getMyDomain();
   const size_t noDomains = CommManager.getNoDomains();
+#else
+  const size_t myDomain = 0;
+  const size_t noDomains = 1;
+#endif
 
   hid_t fileHandle, filePropList;
 
@@ -170,7 +174,7 @@ void IOManager::loadDump(std::string _inputFile)
   stringListType::const_iterator listItr = datasetsInFile.begin();
   while (listItr != datasetsInFile.end())
     {
-      hid_t curDataset;   //, filespace, memspace, datasetPropList;
+      hid_t curDataset;
       hid_t dataType, memSpace, fileSpace;
 
       H5T_class_t dataTypeClass;
@@ -194,9 +198,9 @@ void IOManager::loadDump(std::string _inputFile)
             std::min(noPartsChunk, noTotParts - locOffset);
 
           PartManager.setNoParts(noLocParts);
+          PartManager.resizeAll();
 
           dimsMem[0] = noLocParts;
-
           offset[0] = locOffset;
 
           noPartsDet = true;
@@ -331,7 +335,7 @@ void IOManager::loadDump(std::string _inputFile)
   H5Gclose(curGroup);
 
   ///
-  /// so what step /current points to?
+  /// so which step /current points to?
   ///
   char curPointeeBuff[1024];
   H5Lget_val(fileHandle, "/current", curPointeeBuff, 1024, H5P_DEFAULT);
@@ -375,8 +379,13 @@ void IOManager::saveDump(std::string _outputFile,
                          valVectSet _scalars,
                          idVectSet _integers)
 {
+#ifdef SPHLATCH_PARALLEL
   const size_t myDomain = CommManager.getMyDomain();
   const size_t noDomains = CommManager.getNoDomains();
+#else
+  const size_t myDomain = 0;
+  const size_t noDomains = 1;
+#endif
 
   countsVectType noPartsGlob(noDomains);
 
@@ -384,7 +393,9 @@ void IOManager::saveDump(std::string _outputFile,
   size_t noTotParts = 0, noLocParts = PartManager.getNoLocalParts();
 
   noPartsGlob[myDomain] = noLocParts;
+#ifdef SPHLATCH_PARALLEL
   CommManager.sumUpCounts(noPartsGlob);
+#endif
 
   for (size_t curDomain = 0; curDomain < noDomains; curDomain++)
     {

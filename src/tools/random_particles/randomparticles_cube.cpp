@@ -1,27 +1,13 @@
-/**************************************************************************
-*   Copyright (C) 2005 by Pascal Bauer & Andreas Reufer                   *
-*   andreas.reufer@space.unibe.ch                                         *
-*   pascal.bauer@space.unibe.ch                                           *
-*                                                                         *
-***************************************************************************/
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+// some defs
 
-#ifndef OOSPH_STANDALONE
-#define OOSPH_STANDALONE
-#endif
+// uncomment for single-precision calculation
+#define SPHLATCH_SINGLEPREC
 
+#include <cstdlib>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <string>
-
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/matrix_proxy.hpp>
-#include <boost/numeric/ublas/vector.hpp>
-#include <boost/numeric/ublas/vector_proxy.hpp>
-
-#include <boost/assign/std/vector.hpp>
 
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/cmdline.hpp>
@@ -30,132 +16,89 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/positional_options.hpp>
 
-#include "simulation_trait.h"
-#include "iomanager.h"
-#include "particle.h"
+#include <boost/assign/std/vector.hpp>
 
-namespace num = boost::numeric::ublas;
 namespace po = boost::program_options;
 
-typedef num::matrix<double>::size_type size_type;
+#include "typedefs.h"
+typedef sphlatch::valueType valueType;
 
-typedef oosph::SimulationTrait<> SimTrait;
-typedef oosph::IOManager<SimTrait> IOManagerType;
-typedef oosph::MemoryManager<SimTrait> MemoryManagerType;
+#include "particle_manager.h"
+typedef sphlatch::ParticleManager part_type;
 
-using namespace std;
-using namespace oosph;
+#include "io_manager.h"
+typedef sphlatch::IOManager io_type;
+
 using namespace boost::assign;
 
 int main(int argc, char* argv[])
 {
-    // Get the Command line Arguments
+  po::options_description Options("Global Options");
+  Options.add_options() ("help,h", "Produces this Help")
+  ("no-parts,n",   po::value<size_t>(),       "no. of particles")
+  ("output-file,o", po::value<std::string>(), "output file");
 
-    po::options_description Options("Global Options");
+  po::variables_map VMap;
+  po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
+  po::notify(VMap);
 
-    Options.add_options()
-    ("help,h", "Produce this help Blabla...")
-    ("output-file,o", po::value<std::string>(), "Output File Name")
-    ("number-of-particles,n", po::value<size_t>(), "Number of Particles")
-    ("neighbours-per-particle,b", po::value<size_t>(), "Neighbours per Particles")
-    ("radius,r", po::value<double>(), "Radius of the Initial Sphere");
-
-    po::positional_options_description POD;
-    POD.add("output-file", 1);
-    POD.add("number-of-particles", 1);
-
-    po::variables_map VMap;
-    po::store(po::command_line_parser(argc, argv).options(Options).positional(POD).run(), VMap);
-    po::notify(VMap);
-
-    // Check The Arguments
-
-    if (VMap.count("help") )
+  if (VMap.count("help"))
     {
-        std::cout << Options << std::endl;
-        return EXIT_FAILURE;
+      std::cerr << Options << std::endl;
+      return EXIT_FAILURE;
     }
 
-    std::string OutputFileName;
-
-    if (VMap.count("output-file") )
+  if (!VMap.count("output-file"))
     {
-        OutputFileName = VMap["output-file"].as<std::string>();
+      std::cerr << Options << std::endl;
+      return EXIT_FAILURE;
     }
-    else
-    {
-        std::cout << Options << std::endl;
-        return EXIT_FAILURE;
-    }
+  
+  part_type& PartManager(part_type::instance());
+  io_type& IOManager(io_type::instance());
 
-    size_t NOP;
+  std::string outputFileName = VMap["output-file"].as<std::string>();
+  const size_t noParts       = VMap["no-parts"   ].as<size_t>();
 
-    if (VMap.count("number-of-particles") )
-    {
-        NOP = VMap["number-of-particles"].as<size_t>();
-    }
-    else
-    {
-        std::cout << Options << std::endl;
-        std::cout << "Number of Particles must be specified" << std::endl;
-        return EXIT_FAILURE;
-    }
+  PartManager.useGravity();
 
-    size_t NPP;
+  PartManager.setNoParts(noParts, 0);
+  PartManager.resizeAll();
 
-    if (VMap.count("neighbours-per-particle") )
-    {
-        NPP = VMap["neighbours-per-particle"].as<size_t>();
-    }
-    else
-    {
-        NPP = 50;
-    }
+  sphlatch::idvectRefType id( PartManager.id );
+  sphlatch::matrixRefType pos( PartManager.pos );
+  sphlatch::valvectRefType m( PartManager.m );
 
-    double Radius;
+  using namespace sphlatch;
+  
+  for (size_t i = 0; i < noParts; i++)
+  {
+    id(i) = i;
 
-    if (VMap.count("radius") )
-    {
-        Radius = VMap["radius"].as<double>();
-    }
-    else
-    {
-        Radius = 1.;
-    }
+    m(i) = 1;
 
-    IOManagerType& IOManager(IOManagerType::Instance() );
-    MemoryManagerType& MemoryManager(MemoryManagerType::Instance() );
-    
-    MemoryManager.Data.resize(NOP, 20);
+    pos(i, X) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
+    pos(i, Y) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
+    pos(i, Z) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
+  }
+  
+  std::set<matrixPtrType> saveVects;
+  std::set<valvectPtrType> saveScalars;
+  std::set<idvectPtrType> saveInts;
 
-    
-    const double Volume = 4. / 3. * M_PI * pow(Radius, 3.);
-    const double ParticleRadius = Radius / cbrt(1.663 * NOP) * 5;
+  using namespace boost::assign;
+  saveVects += &pos;
+  saveScalars += &m;
+  saveInts += &id;
 
-    const double cubesize = 1;
-    const double smoothlength = pow( ((double)NPP/NOP), 1./3. ) * cubesize;
+  PartManager.step = 0;
+  IOManager.setSinglePrecOut();
+  IOManager.saveDump( outputFileName, saveVects, saveScalars, saveInts );
 
-    for (size_t i = 0; i < MemoryManager.Data.size1(); i++) {
-    	MemoryManager.Data(i, ID) = i + 1;
-    	MemoryManager.Data(i, X) = cubesize*((double)rand() / RAND_MAX);
-    	MemoryManager.Data(i, Y) = cubesize*((double)rand() / RAND_MAX);
-    	MemoryManager.Data(i, Z) = cubesize*((double)rand() / RAND_MAX);
-	MemoryManager.Data(i, VX) = 0.;
-	MemoryManager.Data(i, VY) = 0.;
-	MemoryManager.Data(i, VZ) = 0.;
-    	MemoryManager.Data(i, M) = 1.;
-    	MemoryManager.Data(i, E) = 10.*((double)rand() / RAND_MAX) + 1;
-    	MemoryManager.Data(i, H) = smoothlength;
-    }
-    
-    MemoryManager.Name = "RandomParticles in a Cube";
+  PartManager.attributes["time"] = 0.0;
 
-    std::vector<int> SaveAttributes;
-    SaveAttributes += ID, X, Y, Z, VX, VY, VZ, H, M;
-    IOManager.SaveCDAT(OutputFileName, SaveAttributes);
-
-    std::cout << "Wrote " << NOP << " with a smoothing length of " << smoothlength << "\n";
-
-    return EXIT_SUCCESS;
+ 
+  return EXIT_SUCCESS;
 }
+
 

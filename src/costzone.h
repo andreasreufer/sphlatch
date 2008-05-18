@@ -6,8 +6,8 @@
 #include <limits>
 #include <cassert>
 
-#include "communicationmanager.h"
-#include "memorymanager.h"
+#include "communication_manager.h"
+#include "particle_manager.h"
 #include "spacefillingcurve.h"
 
 namespace sphlatch
@@ -21,7 +21,7 @@ typedef CostZone& self_reference;
 typedef CostZone* self_pointer;
 
 typedef sphlatch::CommunicationManager commManagerType;
-typedef sphlatch::MemoryManager memoryManagerType;
+typedef sphlatch::ParticleManager partManagerType;
 
 //#define SPHLATCH_CARTESIAN_XYZ
 //#define SPHLATCH_CARTESIAN_YZX
@@ -53,7 +53,7 @@ void fillCostzoneCells();
 
 static self_pointer _instance;
 commManagerType& CommManager;
-memoryManagerType& MemManager;
+partManagerType& PartManager;
 sfcurveType spaceCurve;
 
 public:
@@ -108,7 +108,7 @@ CostZone::self_reference CostZone::instance(void)
 
 CostZone::CostZone(void) :
   CommManager(commManagerType::instance()),
-  MemManager(memoryManagerType::instance())
+  PartManager(partManagerType::instance())
 {
   ///
   /// standard costzone depth
@@ -120,6 +120,10 @@ CostZone::CostZone(void) :
   //const size_t defaultDepth = 5;
 
   resize(defaultDepth);
+  
+  const size_t noDomains = CommManager.getNoDomains();
+  domainPartsIndex.resize(noDomains);
+  domainGhostIndex.resize(noDomains);
 }
 
 CostZone::~CostZone(void)
@@ -156,7 +160,6 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
   const size_t noDomains = CommManager.getNoDomains();
   const size_t myDomain = CommManager.getMyDomain();
 
-  domainPartsIndex.resize(noDomains);
   for (size_t i = 0; i < noDomains; i++)
   {
     domainPartsIndex[i].resize(0);
@@ -274,7 +277,6 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
   const size_t noDomains = CommManager.getNoDomains();
   const size_t myDomain = CommManager.getMyDomain();
 
-  domainGhostIndex.resize(noDomains);
   for (size_t i = 0; i < noDomains; i++)
   {
     domainGhostIndex[i].resize(0);
@@ -357,8 +359,8 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
 ///
 void CostZone::centerOfTheUniverse(void)
 {
-  matrixRefType Data(MemManager.Data);
-  const size_t noParts = Data.size1();
+  matrixRefType pos(PartManager.pos);
+  const size_t noParts = PartManager.getNoLocalParts();
 
   valueType xMin = std::numeric_limits<valueType>::max();
   valueType yMin = std::numeric_limits<valueType>::max();
@@ -370,14 +372,14 @@ void CostZone::centerOfTheUniverse(void)
 
   for (size_t i = 0; i < noParts; i++)
     {
-      xMin = Data(i, X) < xMin ? Data(i, X) : xMin;
-      xMax = Data(i, X) > xMax ? Data(i, X) : xMax;
+      xMin = pos(i, X) < xMin ? pos(i, X) : xMin;
+      xMax = pos(i, X) > xMax ? pos(i, X) : xMax;
 
-      yMin = Data(i, Y) < yMin ? Data(i, Y) : yMin;
-      yMax = Data(i, Y) > yMax ? Data(i, Y) : yMax;
+      yMin = pos(i, Y) < yMin ? pos(i, Y) : yMin;
+      yMax = pos(i, Y) > yMax ? pos(i, Y) : yMax;
 
-      zMin = Data(i, Z) < zMin ? Data(i, Z) : zMin;
-      zMax = Data(i, Z) > zMax ? Data(i, Z) : zMax;
+      zMin = pos(i, Z) < zMin ? pos(i, Z) : zMin;
+      zMax = pos(i, Z) > zMax ? pos(i, Z) : zMax;
     }
 
   CommManager.min(xMin);
@@ -411,8 +413,8 @@ void CostZone::centerOfTheUniverse(void)
 ///
 void CostZone::fillCostzoneCells()
 {
-  matrixRefType Data(MemManager.Data);
-  const size_t noParts = Data.size1();
+  matrixRefType pos(PartManager.pos);
+  const size_t noParts = PartManager.getNoLocalParts();
 
   ///
   /// prepare the costzone cells
@@ -439,9 +441,9 @@ void CostZone::fillCostzoneCells()
   ///
   for (size_t i = 0; i < noParts; i++)
     {
-      const size_t xIndex = lrint((Data(i, X) - xMin) * lengthToIndex - 0.5);
-      const size_t yIndex = lrint((Data(i, Y) - yMin) * lengthToIndex - 0.5);
-      const size_t zIndex = lrint((Data(i, Z) - zMin) * lengthToIndex - 0.5);
+      const size_t xIndex = lrint((pos(i, X) - xMin) * lengthToIndex - 0.5);
+      const size_t yIndex = lrint((pos(i, Y) - yMin) * lengthToIndex - 0.5);
+      const size_t zIndex = lrint((pos(i, Z) - zMin) * lengthToIndex - 0.5);
 
       ///
       /// if this assertion fails, increase the factor in front

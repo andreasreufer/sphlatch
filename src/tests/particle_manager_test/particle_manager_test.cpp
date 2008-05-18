@@ -55,6 +55,9 @@ typedef sphlatch::IOManager io_type;
 #include "communication_manager.h"
 typedef sphlatch::CommunicationManager com_type;
 
+#include "costzone.h"
+typedef sphlatch::CostZone costzone_type;
+
 using namespace boost::assign;
 
 int main(int argc, char* argv[])
@@ -93,6 +96,7 @@ int main(int argc, char* argv[])
   com_type& ComManager(com_type::instance());
   part_type& PartManager(part_type::instance());
   io_type& IOManager(io_type::instance());
+  costzone_type& CostZone(costzone_type::instance());
 
   const size_t myDomain = ComManager.getMyDomain();
 
@@ -113,7 +117,8 @@ int main(int argc, char* argv[])
           << MPI_Wtime() - logStartTime << "    start log\n";
   stepStartTime = MPI_Wtime();
 
-  PartManager.setNoParts(100 + 9*myDomain, 0);
+  /*PartManager.setNoParts(100 + 9*myDomain, 0);
+  PartManager.resizeAll();
   //PartManager.setNoParts(02, 80);
   //PartManager.setNoParts(500);
   //PartManager.setNoParts(300000, 500000);
@@ -183,7 +188,15 @@ int main(int argc, char* argv[])
 
   PartManager.attributes[ "time" ] = 0.;
 
-  PartManager.step = 0;
+  PartManager.step = 0;*/
+
+  using namespace sphlatch;
+  
+  matrixRefType pos( PartManager.pos );
+  matrixRefType vel( PartManager.vel );
+  valvectRefType m( PartManager.m );
+  idvectRefType id( PartManager.id );
+  
   stepStartTime = MPI_Wtime();
   IOManager.loadDump( inputFileName );
 
@@ -197,9 +210,28 @@ int main(int argc, char* argv[])
           << MPI_Wtime() - stepStartTime
           << "      read    data \n" << std::flush;
   
-  PartManager.attributes[ "new attr" ] = 42.;
-  PartManager.step = 29800;
-  IOManager.saveDump( outputFileName, saveVects, saveScalars, saveInts );
+  //std::cout << myDomain << ": " << PartManager.getNoLocalParts() << " parts\n";
+
+  quantsType exchQuants;
+  exchQuants.vects += &pos, &vel;
+
+  stepStartTime = MPI_Wtime();
+  
+  CostZone.createDomainPartsIndex();
+  CostZone.createDomainGhostIndex();
+
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - stepStartTime
+          << "      Costzone ready\n" << std::flush;
+  
+  stepStartTime = MPI_Wtime();
+  ComManager.exchange( CostZone.domainPartsIndex, 
+                       CostZone.domainGhostIndex,
+                       exchQuants );
+  
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - stepStartTime
+          << "      data exchanged\n" << std::flush;
 
   logFile.close();
   MPI::Finalize();
