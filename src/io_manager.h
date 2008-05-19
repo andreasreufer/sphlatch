@@ -146,7 +146,7 @@ void IOManager::loadDump(std::string _inputFile)
   fileHandle = H5Fopen(_inputFile.c_str(), H5F_ACC_RDONLY, filePropList);
   H5Pclose(filePropList);
 
-  hid_t curGroup = H5Gopen(fileHandle, "/current", NULL);
+  hid_t curGroup = H5Gopen(fileHandle, "/current", H5P_DEFAULT);
   
   datasetsInFile.clear();
   H5Lvisit_by_name(fileHandle, "/current", H5_INDEX_CRT_ORDER,
@@ -179,7 +179,7 @@ void IOManager::loadDump(std::string _inputFile)
 
       H5T_class_t dataTypeClass;
 
-      curDataset = H5Dopen(curGroup, (*listItr).c_str(), NULL);
+      curDataset = H5Dopen(curGroup, (*listItr).c_str(), H5P_DEFAULT);
 
       fileSpace = H5Dget_space(curDataset);
       H5Sget_simple_extent_dims(fileSpace, dimsFile, NULL);
@@ -228,7 +228,7 @@ void IOManager::loadDump(std::string _inputFile)
                 {
                   idvectRefType id(*idPtr);
 
-                  assert(id.size1() == dimsMem[0]);
+                  assert(id.size() == dimsMem[0]);
                   dimsMem[1] = 1;
                   memSpace = H5Screate_simple(1, dimsMem, NULL);
 
@@ -283,7 +283,7 @@ void IOManager::loadDump(std::string _inputFile)
                 {
                   valvectRefType vect(*vectPtr);
 
-                  assert(matr.size1() == dimsMem[0]);
+                  assert(vect.size() == dimsMem[0]);
                   dimsMem[1] = 1;
                   memSpace = H5Screate_simple(1, dimsMem, NULL);
 
@@ -355,7 +355,7 @@ herr_t IOManager::getObsCallback(hid_t _fileHandle, const char *_name,
 {
   H5O_info_t curInfo;
 
-  H5Oget_info_by_name(_fileHandle, _name, &curInfo, NULL);
+  H5Oget_info_by_name(_fileHandle, _name, &curInfo, H5P_DEFAULT);
 
   if (curInfo.type == H5O_TYPE_DATASET)
     {
@@ -444,17 +444,17 @@ void IOManager::saveDump(std::string _outputFile,
   ///
   /// start the group business
   ///
-  hid_t rootGroup = H5Gopen(fileHandle, "/", NULL);
+  hid_t rootGroup = H5Gopen(fileHandle, "/", H5P_DEFAULT);
 
   hid_t stepGroup;
   if (objectExist(fileHandle, stepName))
     {
-      stepGroup = H5Gopen(fileHandle, stepName.c_str(), NULL);
+      stepGroup = H5Gopen(fileHandle, stepName.c_str(), H5P_DEFAULT);
     }
   else
     {
       stepGroup = H5Gcreate(fileHandle, stepName.c_str(),
-                            NULL, NULL, NULL);
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     }
 
   hid_t curDataset, filespace, memspace, datasetPropList;
@@ -490,7 +490,7 @@ void IOManager::saveDump(std::string _outputFile,
 
       /// create dataset
       curDataset = H5Dcreate(stepGroup, attrName.c_str(), H5idFileType,
-                             filespace, NULL, NULL, NULL);
+                             filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
       /// select hyperslab
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET,
@@ -524,7 +524,7 @@ void IOManager::saveDump(std::string _outputFile,
 
       /// create dataset
       curDataset = H5Dcreate(stepGroup, attrName.c_str(), H5floatFileType,
-                             filespace, NULL, NULL, NULL);
+                             filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
       /// select hyperslab
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET,
@@ -557,7 +557,7 @@ void IOManager::saveDump(std::string _outputFile,
 
       /// create dataset
       curDataset = H5Dcreate(stepGroup, attrName.c_str(), H5floatFileType,
-                             filespace, NULL, NULL, NULL);
+                             filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
       /// select hyperslab
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET,
@@ -588,7 +588,8 @@ void IOManager::saveDump(std::string _outputFile,
     memspace = H5Screate_simple(1, dimsMem, NULL);
 
     curAttr = H5Acreate_by_name( stepGroup, ".", (attrItr->first).c_str(),
-                                 H5floatFileType, memspace, NULL, NULL, NULL );
+                                 H5floatFileType, memspace,
+                                 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT );
 
     H5Awrite( curAttr, H5floatMemType, &(attrItr->second) );
     H5Aclose( curAttr );
@@ -603,12 +604,12 @@ void IOManager::saveDump(std::string _outputFile,
   ///
   /// create a link to indicate the current dump
   ///
-  if (H5Lexists(rootGroup, "/current", NULL))
+  if (H5Lexists(rootGroup, "/current", H5P_DEFAULT) )
     {
-      H5Ldelete( rootGroup, "/current", NULL);
+      H5Ldelete( rootGroup, "/current", H5P_DEFAULT);
     }
   H5Lcreate_soft( stepName.c_str(), rootGroup, "/current",
-                  H5P_DEFAULT, H5P_DEFAULT );
+                  H5P_DEFAULT, H5P_DEFAULT);
 
   H5Gclose(rootGroup);
 
@@ -634,7 +635,7 @@ bool IOManager::objectExist(hid_t &_fileHandle, std::string &_objPath)
   herr_t status;
 
   status = H5Oget_info_by_name(_fileHandle, _objPath.c_str(),
-                               &objInfo, NULL);
+                               &objInfo, H5P_DEFAULT);
 
   if (status != 0)
     {
