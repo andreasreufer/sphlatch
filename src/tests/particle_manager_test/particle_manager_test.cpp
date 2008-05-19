@@ -6,7 +6,7 @@
 #define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
-#define SPHLATCH_SINGLEPREC
+//#define SPHLATCH_SINGLEPREC
 
 // enable parallel version
 #define SPHLATCH_PARALLEL
@@ -196,6 +196,9 @@ int main(int argc, char* argv[])
   matrixRefType pos( PartManager.pos );
   matrixRefType vel( PartManager.vel );
   valvectRefType m( PartManager.m );
+  valvectRefType h( PartManager.h );
+  valvectRefType p( PartManager.p );
+  valvectRefType rho( PartManager.rho );
   idvectRefType id( PartManager.id );
   idvectRefType noneigh( PartManager.noneigh );
 
@@ -220,6 +223,7 @@ int main(int argc, char* argv[])
   quantsType exchQuants;
   exchQuants.vects += &pos, &vel;
   exchQuants.ints += &id, &noneigh;
+  exchQuants.scalars += &m, &h, &p, &rho;
 
   stepStartTime = MPI_Wtime();
   
@@ -239,6 +243,20 @@ int main(int argc, char* argv[])
           << MPI_Wtime() - stepStartTime
           << "      data exchanged\n" << std::flush;
 
+  /*CostZone.createDomainPartsIndex();
+  CostZone.createDomainGhostIndex();
+  
+  std::cout << " at least CostZone made it!\n";
+
+  stepStartTime = MPI_Wtime();
+  ComManager.exchange( CostZone.domainPartsIndex, 
+                       CostZone.domainGhostIndex,
+                       exchQuants );
+  
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - stepStartTime
+          << "      2nd data xchange\n" << std::flush;*/
+  
   logFile.close();
   MPI::Finalize();
   return EXIT_SUCCESS;

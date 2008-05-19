@@ -79,6 +79,8 @@ typedef blas::vector<valueType> valvectType;
 typedef blas::vector<valueType>& valvectRefType;
 typedef blas::vector<valueType>* valvectPtrType;
 
+typedef blas::vector_range<valvectType> valvectRangeType;
+
 ///
 /// type for particle or tree node IDs
 ///

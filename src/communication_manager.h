@@ -41,6 +41,9 @@ static self_reference instance(void);
 
 PartManagerType& PartManager;
 
+///
+/// this is the central exchange part
+///
 void exchange(domainPartsIndexRefType _partsIndices,
               domainPartsIndexRefType _ghostsIndices,
               quantsTypeRefType _quantities);
@@ -58,13 +61,13 @@ template<class T> void queuedExch(T& _src, T& _trgt,
 
 void sendChunk(const idvectRefType _src, sendQueueElemType _qelem);
 idvectType idSendBuff;
-
-//void sendChunk(const valvectRefType _src, sendQueueElemType _qelem);
+void sendChunk(const valvectRefType _src, sendQueueElemType _qelem);
+valvectType scalSendBuff;
 
 void recvChunk(idvectRefType _target, countsRefType _offset, MPI::Request& _recvRq,
                const size_t& _noParts, const size_t& _recvFrom);
-/*void recvChunk(valvectRefType _target, size_t& _offset, MPI::Request& _recvRq,
-               size_t& _noParts, size_t& _recvFrom);*/
+void recvChunk(valvectRefType _target, countsRefType _offset, MPI::Request& _recvRq,
+               const size_t& _noParts, const size_t& _recvFrom);
 
 void prepareQueuesOffsets(domainPartsIndexRefType _indices, size_t _totalOffset,
                           sendQueueRefType _queue,
@@ -76,6 +79,9 @@ countsVectType localOffsets, noRecvParts, ghostOffsets, noRecvGhosts;
 size_t identTypeSize, valueTypeSize;
 
 public:
+///
+/// various simple helper functions
+///
 void sendMatrix(matrixRefType _matrix, size_t _recvDomain);
 void recvMatrix(matrixRefType _matrix, size_t _sendDomain);
 
@@ -107,13 +113,6 @@ private:
 static self_pointer _instance;
 static size_t commBuffSize, noBuffParts;
 size_t myDomain, myRank, noDomains;
-
-std::vector<matrixType> composeBuffers;
-std::vector<matrixType> recvBuffers;
-matrixType sendBuffer;
-
-std::vector<size_t> sendNoPart;
-std::vector<size_t> recvNoPart;
 
 std::vector<size_t> domainToRank;
 std::vector<size_t> rankToDomain;
@@ -240,9 +239,8 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   ///
   PartManager.setNoParts(noParts, noGhosts);
 
-  /// exchange ints
 
-  // set up buffers
+  /// set up buffers
   idvectType idRecvBuff(noParts);
   idSendBuff.resize(noBuffParts);
 
@@ -250,21 +248,18 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
             << MPI_Wtime() - startTime
             << " set up buffers      " << "\n";
 
+  ///
+  /// exchange integer quantities
+  ///
   idvectPtrSetType::const_iterator intsItr = _quantities.ints.begin();
   idvectPtrSetType::const_iterator intsEnd = _quantities.ints.end();
-  //exchangeInt();
   while ( intsItr != intsEnd )
   {
-    //idvectRefType id(**intsItr);
-
     ///
-    /// move local data to its designated space
+    /// copy particles staying on the node into the buffer
     ///
-
     idvectRefType curInts(**intsItr);
-    
     size_t storeIndex = stayOffset;
-
     stayItr = _partsIndices[myDomain].begin();
     while (stayItr != stayEnd)
       {
@@ -272,44 +267,60 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
         storeIndex++;
         stayItr++;
       }
-    //std::cout << myDomain << ": " << stayOffset << " - " << storeIndex << "    local\n";
 
-    std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-              << MPI_Wtime() - startTime
-              << " copied local stuff  " << "\n";
-
+    ///
+    /// exchange non-staying particles
+    ///
     queuedExch(**intsItr, idRecvBuff, partsQueue, localOffsets, noRecvParts);
 
-    std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-              << MPI_Wtime() - startTime
-              << " exchanged remote stuff " << "\n";
-
-    //std::cout << myDomain << ": size of new id is " << idRecvBuff.size() << "\n";
-
-    // set no. of particles
+    ///
+    /// resize the quantitiy and copy buffer to particle manager
+    ///
     PartManager.resize(**intsItr);
-    //std::cout << myDomain << ": " << id.size() << "\n";
-
-    std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-              << MPI_Wtime() - startTime
-              << " resized container   " << "\n";
-
     idvectRangeType idLocal(**intsItr, newLocRange);
     idLocal = idRecvBuff;
-
-    std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-              << MPI_Wtime() - startTime
-              << " copied back local buff\n" << "\n";
     
     intsItr++;
-    //std::cout << myDomain << ": " << idLocal.size() << "\n";
   }
 
-  // exchange scalars
-  // set up buffers
-  //exchangeScalar();
-  // set no. of particles
-  // copy buffers
+  /// set up buffers
+  valvectType scalRecvBuff(noParts);
+  scalSendBuff.resize(noBuffParts);
+  
+  ///
+  /// exchange scalar quantities
+  ///
+  valvectPtrSetType::const_iterator scalItr = _quantities.scalars.begin();
+  valvectPtrSetType::const_iterator scalEnd = _quantities.scalars.end();
+  while ( scalItr != scalEnd )
+  {
+    ///
+    /// copy particles staying on the node into the buffer
+    ///
+    valvectRefType curScal(**scalItr);
+    size_t storeIndex = stayOffset;
+    stayItr = _partsIndices[myDomain].begin();
+    while (stayItr != stayEnd)
+      {
+        scalRecvBuff[storeIndex] = curScal[*stayItr];
+        storeIndex++;
+        stayItr++;
+      }
+
+    ///
+    /// exchange non-staying particles
+    ///
+    queuedExch(**scalItr, scalRecvBuff, partsQueue, localOffsets, noRecvParts);
+
+    ///
+    /// resize the quantitiy and copy buffer to particle manager
+    ///
+    PartManager.resize(**scalItr);
+    valvectRangeType scalLocal(**scalItr, newLocRange);
+    scalLocal = scalRecvBuff;
+    
+    scalItr++;
+  }
 
   // exchange vectors
   // set up buffers
@@ -317,8 +328,16 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   // set no. of particles
   // copy buffers
 
+  std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+            << MPI_Wtime() - startTime
+            << " exchanged particles " << "\n";
+
   // resize the rest of the variables
-  //PartManager.resizeAll();
+  PartManager.resizeAll();
+  
+  std::cout << myDomain << ": " << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+            << MPI_Wtime() - startTime
+            << " resized remaining quantities " << "\n";
 }
 
 void CommunicationManager::sendGhosts(idvectRefType _idVect)
@@ -435,6 +454,26 @@ void CommunicationManager::sendChunk(const idvectRefType _src,
                         _qelem.sendRank, myRank);
 };
 
+void CommunicationManager::sendChunk(const valvectRefType _src,
+                                     sendQueueElemType _qelem)
+{
+  ///
+  /// fill sendBuff
+  ///
+  static size_t count;
+
+  count = 0;
+  while (_qelem.itr != _qelem.end)
+    {
+      idSendBuff(count) = _src(*(_qelem.itr));
+      _qelem.itr++;
+      count++;
+    }
+
+  MPI::COMM_WORLD.Ssend(&scalSendBuff(0), count * valueTypeSize, MPI::BYTE,
+                        _qelem.sendRank, myRank);
+};
+
 void CommunicationManager::recvChunk(idvectRefType _target,
                                      countsRefType _offset,
                                      MPI::Request& _recvRq,
@@ -443,6 +482,16 @@ void CommunicationManager::recvChunk(idvectRefType _target,
 {
   //std::cout << myDomain << ": " << _offset << " - " << _offset+_noParts << "    from rank " << _recvFrom << "\n";
   _recvRq = MPI::COMM_WORLD.Irecv(&_target(_offset), _noParts * identTypeSize,
+                                  MPI::BYTE, _recvFrom, _recvFrom);
+};
+
+void CommunicationManager::recvChunk(valvectRefType _target,
+                                     countsRefType _offset,
+                                     MPI::Request& _recvRq,
+                                     const size_t& _noParts,
+                                     const size_t& _recvFrom)
+{
+  _recvRq = MPI::COMM_WORLD.Irecv(&_target(_offset), _noParts * valueTypeSize,
                                   MPI::BYTE, _recvFrom, _recvFrom);
 };
 
@@ -467,8 +516,8 @@ void CommunicationManager::prepareQueuesOffsets(domainPartsIndexRefType _indices
     {
       noSendParts[ domainToRank[i] ] = _indices[i].size();
     }
-  MPI::COMM_WORLD.Alltoall(&noSendParts[0], 1, MPI::UNSIGNED_LONG,
-                           &_noRecvParts[0], 1, MPI::UNSIGNED_LONG);
+  MPI::COMM_WORLD.Alltoall(&noSendParts[0], 1, MPI::INT,
+                           &_noRecvParts[0], 1, MPI::INT);
 
   ///
   /// determine offsets
@@ -482,6 +531,7 @@ void CommunicationManager::prepareQueuesOffsets(domainPartsIndexRefType _indices
   ///
   /// fill queue
   ///
+  _queue.clear();
   for (size_t i = 1; i < noRanks; i++)
     {
       const size_t curSendRank = (myRank + i) % noRanks;
