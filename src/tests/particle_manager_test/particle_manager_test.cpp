@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
       MPI::Finalize();
       return EXIT_FAILURE;
     }
-  
+
   com_type& ComManager(com_type::instance());
   part_type& PartManager(part_type::instance());
   io_type& IOManager(io_type::instance());
@@ -115,148 +115,164 @@ int main(int argc, char* argv[])
   std::fstream logFile;
   logFile.open(logFilename.c_str(), std::ios::out);
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - logStartTime << "    start log\n";
+          << MPI_Wtime() - logStartTime << " XXX  start log\n";
   stepStartTime = MPI_Wtime();
 
   /*PartManager.setNoParts(100 + 9*myDomain, 0);
-  PartManager.resizeAll();
-  //PartManager.setNoParts(02, 80);
-  //PartManager.setNoParts(500);
-  //PartManager.setNoParts(300000, 500000);
+     PartManager.resizeAll();
+     //PartManager.setNoParts(02, 80);
+     //PartManager.setNoParts(500);
+     //PartManager.setNoParts(300000, 500000);
 
-  size_t noParts = PartManager.getNoLocalParts();
-  //size_t noGhosts = PartManager.getNoGhostParts();
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+     size_t noParts = PartManager.getNoLocalParts();
+     //size_t noGhosts = PartManager.getNoGhostParts();
+     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime
           << "    prepared partManager  (" << noParts << ")\n" << std::flush;
 
-  sphlatch::matrixRefType pos( PartManager.pos );
-  sphlatch::matrixRefType vel( PartManager.vel );
-  sphlatch::valvectRefType m( PartManager.m );
-  sphlatch::valvectRefType h( PartManager.h );
-  sphlatch::idvectRefType id( PartManager.id );
+     sphlatch::matrixRefType pos( PartManager.pos );
+     sphlatch::matrixRefType vel( PartManager.vel );
+     sphlatch::valvectRefType m( PartManager.m );
+     sphlatch::valvectRefType h( PartManager.h );
+     sphlatch::idvectRefType id( PartManager.id );
 
-  using namespace sphlatch;
+     using namespace sphlatch;
 
-  for (size_t i = 0; i < noParts; i++)
-  {
-    id(i) = 100000*myDomain + i + 1;
+     for (size_t i = 0; i < noParts; i++)
+     {
+     id(i) = 100000*myDomain + i + 1;
 
-    m(i) = 100000*myDomain + i + 1;
-    h(i) = 100000*myDomain + i + 1;
+     m(i) = 100000*myDomain + i + 1;
+     h(i) = 100000*myDomain + i + 1;
 
-    pos(i,X) = i*10 + 0 + 100000*myDomain;
-    pos(i,Y) = i*10 + 1 + 100000*myDomain;
-    pos(i,Z) = i*10 + 2 + 100000*myDomain;
-    
-    vel(i,X) = i*10 + 0 + 100000*myDomain;
-    vel(i,Y) = i*10 + 1 + 100000*myDomain;
-    vel(i,Z) = i*10 + 2 + 100000*myDomain;
-  }
-  
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+     pos(i,X) = i*10 + 0 + 100000*myDomain;
+     pos(i,Y) = i*10 + 1 + 100000*myDomain;
+     pos(i,Z) = i*10 + 2 + 100000*myDomain;
+
+     vel(i,X) = i*10 + 0 + 100000*myDomain;
+     vel(i,Y) = i*10 + 1 + 100000*myDomain;
+     vel(i,Z) = i*10 + 2 + 100000*myDomain;
+     }
+
+     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime
           << "      prepare data \n" << std::flush;
 
-  std::set<matrixPtrType> saveVects;
-  std::set<valvectPtrType> saveScalars;
-  std::set<idvectPtrType> saveInts;
+     std::set<matrixPtrType> saveVects;
+     std::set<valvectPtrType> saveScalars;
+     std::set<idvectPtrType> saveInts;
 
-  using namespace boost::assign;
-  saveVects += &pos, &vel;
-  saveScalars += &m, &h;
-  saveInts += &id;
+     using namespace boost::assign;
+     saveVects += &pos, &vel;
+     saveScalars += &m, &h;
+     saveInts += &id;
 
-  PartManager.step = 2;
-  IOManager.setDoublePrecOut();
-  IOManager.setSinglePrecOut();
-  IOManager.saveDump( outputFileName, saveVects, saveScalars, saveInts );
+     PartManager.step = 2;
+     IOManager.setDoublePrecOut();
+     IOManager.setSinglePrecOut();
+     IOManager.saveDump( outputFileName, saveVects, saveScalars, saveInts );
 
-  PartManager.attributes["time"] = 3.14;
-  PartManager.attributes["gravG"] = 6.0;
+     PartManager.attributes["time"] = 3.14;
+     PartManager.attributes["gravG"] = 6.0;
 
-  PartManager.step = 29659;
-  IOManager.setSinglePrecOut();
-  IOManager.saveDump( outputFileName, saveVects, saveScalars, saveInts );
+     PartManager.step = 29659;
+     IOManager.setSinglePrecOut();
+     IOManager.saveDump( outputFileName, saveVects, saveScalars, saveInts );
 
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime
           << "      wrote   data \n" << std::flush;
- 
-  //std::cout << myDomain << ": " << pos.size1() << "\n";
-  //std::cout << pos << "\n";
-  //std::cout << h << "\n";
 
-  PartManager.attributes[ "time" ] = 0.;
+     //std::cout << myDomain << ": " << pos.size1() << "\n";
+     //std::cout << pos << "\n";
+     //std::cout << h << "\n";
 
-  PartManager.step = 0;*/
+     PartManager.attributes[ "time" ] = 0.;
+
+     PartManager.step = 0;*/
 
   using namespace sphlatch;
-  
-  matrixRefType pos( PartManager.pos );
-  matrixRefType vel( PartManager.vel );
-  valvectRefType m( PartManager.m );
-  valvectRefType h( PartManager.h );
-  valvectRefType p( PartManager.p );
-  valvectRefType rho( PartManager.rho );
-  idvectRefType id( PartManager.id );
-  idvectRefType noneigh( PartManager.noneigh );
+
+  matrixRefType pos(PartManager.pos);
+  matrixRefType vel(PartManager.vel);
+  valvectRefType m(PartManager.m);
+  valvectRefType h(PartManager.h);
+  valvectRefType p(PartManager.p);
+  valvectRefType rho(PartManager.rho);
+  idvectRefType id(PartManager.id);
+  idvectRefType noneigh(PartManager.noneigh);
 
   stepStartTime = MPI_Wtime();
-  IOManager.loadDump( inputFileName );
-
-  std::cout << noneigh.size() << "\n";
-  std::cout << id.size() << "\n";
+  IOManager.loadDump(inputFileName);
 
   //std::cout << PartManager.attributes[ "time" ] << "\n";
   //std::cout << PartManager.step << "\n";
   //std::cout << myDomain << ": " << pos.size1() << "\n";
   //std::cout << pos << "\n";
   //std::cout << h << "\n";
-  
+
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime
           << "      read    data \n" << std::flush;
-  
+
   //std::cout << myDomain << ": " << PartManager.getNoLocalParts() << " parts\n";
 
   quantsType exchQuants;
   exchQuants.vects += &pos, &vel;
   exchQuants.ints += &id, &noneigh;
-  exchQuants.scalars += &m, &h, &p, &rho;
+  exchQuants.scalars += &m, &h;
 
-  stepStartTime = MPI_Wtime();
-  
-  CostZone.createDomainPartsIndex();
-  CostZone.createDomainGhostIndex();
+  for (size_t i = 0; i < 32; i++)
+    {
+      const size_t noParts = PartManager.getNoLocalParts();
 
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime
-          << "      Costzone ready\n" << std::flush;
-  
-  stepStartTime = MPI_Wtime();
-  ComManager.exchange( CostZone.domainPartsIndex, 
-                       CostZone.domainGhostIndex,
-                       exchQuants );
-  
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime
-          << "      data exchanged\n" << std::flush;
+      std::cout << myDomain << ": has " << noParts << " parts\n";
+
+      stepStartTime = MPI_Wtime();
+
+      CostZone.createDomainPartsIndex();
+      CostZone.createDomainGhostIndex();
+
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime
+              << "      costzone prepared \n" << std::flush;
+
+      stepStartTime = MPI_Wtime();
+      ComManager.exchange(CostZone.domainPartsIndex,
+                          CostZone.domainGhostIndex,
+                          exchQuants);
+
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime
+              << "      data exchanged\n" << std::flush;
+
+      for (size_t i = 0; i < noParts; i++)
+        {
+          pos(i, X) += 0.05 * (
+            static_cast<sphlatch::valueType>(rand()) / RAND_MAX - 0.5);
+          pos(i, Y) += 0.05 * (
+            static_cast<sphlatch::valueType>(rand()) / RAND_MAX - 0.5);
+          pos(i, Z) += 0.05 * (
+            static_cast<sphlatch::valueType>(rand()) / RAND_MAX - 0.5);
+        }
+    }
 
   /*CostZone.createDomainPartsIndex();
-  CostZone.createDomainGhostIndex();
-  
-  std::cout << " at least CostZone made it!\n";
+     CostZone.createDomainGhostIndex();
 
-  stepStartTime = MPI_Wtime();
-  ComManager.exchange( CostZone.domainPartsIndex, 
+     stepStartTime = MPI_Wtime();
+     ComManager.exchange( CostZone.domainPartsIndex,
                        CostZone.domainGhostIndex,
                        exchQuants );
-  
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+
+     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime
           << "      2nd data xchange\n" << std::flush;*/
-  
+
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+          << MPI_Wtime() - stepStartTime
+          << " XXX  close logfile \n" << std::flush;
+
   logFile.close();
   MPI::Finalize();
   return EXIT_SUCCESS;

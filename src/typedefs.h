@@ -53,6 +53,8 @@ typedef blas::matrix_row<matrixType>   matrixRowType;
 typedef blas::matrix_row<matrixType>&  matrixRowRefType;
 typedef blas::matrix_row<matrixType>*  matrixRowPtrType;
 
+typedef blas::matrix_range<matrixType> matrixRangeType;
+
 ///
 /// range and slice
 ///
