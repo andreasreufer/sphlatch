@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
   costzone_type& CostZone(costzone_type::instance());
 
   const size_t myDomain = ComManager.getMyDomain();
+  const size_t noDomains = ComManager.getNoDomains();
 
   std::string inputFileName = VMap[ "input-file"].as<std::string>();
   std::string outputFileName = VMap["output-file"].as<std::string>();
@@ -222,7 +223,7 @@ int main(int argc, char* argv[])
   exchQuants.ints += &id, &noneigh;
   exchQuants.scalars += &m, &h;
 
-  for (size_t i = 0; i < 32; i++)
+  /*for (size_t i = 0; i < 16; i++)
     {
       const size_t noParts = PartManager.getNoLocalParts();
 
@@ -244,7 +245,22 @@ int main(int argc, char* argv[])
 
       logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
               << MPI_Wtime() - stepStartTime
-              << "      data exchanged\n" << std::flush;
+              << "      data exchanged "
+              << PartManager.getNoLocalParts() << " "
+              << PartManager.getNoGhostParts() << "\n" << std::flush;
+
+      stepStartTime = MPI_Wtime();
+      //for (size_t j = 0; j < 10; j++)
+      {
+      ComManager.sendGhosts( pos );
+      ComManager.sendGhosts( vel );
+      ComManager.sendGhosts( m  );
+      ComManager.sendGhosts( rho);
+      ComManager.sendGhosts( id );
+      }
+      logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+              << MPI_Wtime() - stepStartTime
+              << "      ghost pos sent\n" << std::flush;
 
       for (size_t i = 0; i < noParts; i++)
         {
@@ -255,19 +271,119 @@ int main(int argc, char* argv[])
           pos(i, Z) += 0.05 * (
             static_cast<sphlatch::valueType>(rand()) / RAND_MAX - 0.5);
         }
-    }
+    }*/
 
-  /*CostZone.createDomainPartsIndex();
-     CostZone.createDomainGhostIndex();
-
-     stepStartTime = MPI_Wtime();
-     ComManager.exchange( CostZone.domainPartsIndex,
-                       CostZone.domainGhostIndex,
+  /*
+  std::cout << myDomain << ": has " << PartManager.getNoLocalParts() << " particles\n";
+  
+  CostZone.createDomainPartsIndex();
+  
+  stepStartTime = MPI_Wtime();
+  ComManager.exchange( CostZone.domainPartsIndex,
+                       CostZone.getNoGhosts(),
                        exchQuants );
 
-     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
+  std::cout << myDomain << ": has " << PartManager.getNoLocalParts() << " particles\n";
+
+  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime
-          << "      2nd data xchange\n" << std::flush;*/
+          << "      2nd data xchange\n" << std::flush;
+
+  ComManager.sendGhostsPrepare( CostZone.createDomainGhostIndex() );
+  ComManager.sendGhosts(pos);
+
+  std::cout << myDomain << ": sent ghosts!\n";
+*/
+
+  domainPartsIndexType domainPartsIndex(2), domainGhostIndex(2);
+  
+  for (size_t i = 0; i < 2; i++)
+  {
+    if ( myDomain == i )
+    {
+      domainPartsIndex[i].resize(20);
+      domainGhostIndex[i].resize(0);
+
+      for (size_t j = 0; j < 20; j++)
+      {
+        (domainPartsIndex[i])[j] = j;
+      }
+    } else {
+      domainPartsIndex[i].resize(10);
+      domainGhostIndex[i].resize(10);
+
+      for (size_t j = 0; j < 10; j++)
+      {
+        (domainPartsIndex[i])[j] = j + 20;
+        (domainGhostIndex[i])[j] = j + 10;
+      }
+    }
+  }
+
+  PartManager.setNoParts(30);
+  PartManager.resizeAll();
+  std::cout << PartManager.getNoLocalParts() << "\n";
+  std::cout << pos.size1() << "\n";
+
+  for (size_t i = 0; i < 30; i++)
+  {
+    pos(i, X) = (myDomain+1)*1000 + i + 1 + 100;
+    pos(i, Y) = (myDomain+1)*1000 + i + 1 + 200;
+    pos(i, Z) = (myDomain+1)*1000 + i + 1 + 300;
+    
+    vel(i, X) = (myDomain+1)*1000 + i + 1 + 100;
+    vel(i, Y) = (myDomain+1)*1000 + i + 1 + 200;
+    vel(i, Z) = (myDomain+1)*1000 + i + 1 + 300;
+
+
+    m(i) = (myDomain+1);
+    h(i) = (myDomain+1);
+    
+    id(i) = (myDomain+1)*1000 + i;
+  }
+
+  if ( myDomain == 0 )
+  {
+    //std::cout << id << "\n\n";
+    std::cout << "no of parts to domain 0    " << domainPartsIndex[0].size() << "\n";
+  } else
+  {
+    std::cout << "no of parts to domain 1    " << domainPartsIndex[0].size() << "\n";
+  }
+
+  ComManager.exchange( domainPartsIndex,
+                       //domainGhostIndex,
+                       10,
+                       exchQuants );
+
+  ComManager.sendGhostsPrepare( domainGhostIndex );
+  
+  /*if ( myDomain == 1 )
+  {
+    std::cout << "id: \n";
+    for (size_t i = 0; i < id.size(); i++)
+    {
+      std::cout << "  " << i << ":  " << id(i) << "\n";
+    }
+    std::cout << "\n";
+  }*/
+
+  ComManager.sendGhosts( pos );
+  ComManager.sendGhosts( id );
+  ComManager.sendGhosts( h );
+
+  if ( myDomain == 1 )
+  {
+    sleep(1);
+  }
+    std::cout << "id: \n";
+    for (size_t i = 0; i < id.size(); i++)
+    {
+      //std::cout << "  " << i << ":  " << pos(i, X) << "  " << pos(i, Y) << "  " << pos(i, Z) << "\n";
+      std::cout << "  " << i << ":  " << id(i) << "\n";
+    }
+    std::cout << "\n";
+  //std::cout << id << "\n";
 
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime

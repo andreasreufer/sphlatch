@@ -69,6 +69,7 @@ static domainPartsIndexType domainGhostIndex;
 valueType getSidelength();
 valvectType getCenter();
 size_t getDepth();
+size_t getNoGhosts();
 
 void resize(const size_t size);
 
@@ -83,7 +84,7 @@ static domainPartsIndexType costzoneCells;
 static countsVectType partsPerCell;
 static countsVectType domainMap;
 valueType xCenter, yCenter, zCenter, sidelength;
-size_t depth, noCells1D, noCells2D, noCells3D;
+size_t depth, noCells1D, noCells2D, noCells3D, noGhosts;
 size_t myFirstWalkIndex, myLastWalkIndex;
 };
 
@@ -117,13 +118,16 @@ CostZone::CostZone(void) :
   //const size_t defaultDepth = 2;
   //const size_t defaultDepth = 3;
   const size_t defaultDepth = 4;
+
   //const size_t defaultDepth = 5;
 
   resize(defaultDepth);
-  
+
   const size_t noDomains = CommManager.getNoDomains();
   domainPartsIndex.resize(noDomains);
   domainGhostIndex.resize(noDomains);
+
+  noGhosts = 0;
 }
 
 CostZone::~CostZone(void)
@@ -133,7 +137,7 @@ CostZone::~CostZone(void)
 void CostZone::resize(size_t _depth)
 {
   depth = _depth;
-  noCells1D = (1 << depth); /// 2^depth
+  noCells1D = (1 << depth);   /// 2^depth
   noCells2D = noCells1D * noCells1D;
   noCells3D = noCells2D * noCells1D;
 
@@ -161,9 +165,9 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
   const size_t myDomain = CommManager.getMyDomain();
 
   for (size_t i = 0; i < noDomains; i++)
-  {
-    domainPartsIndex[i].resize(0);
-  }
+    {
+      domainPartsIndex[i].resize(0);
+    }
 
   ///
   /// determine the size of the universe
@@ -198,7 +202,7 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
 
   myFirstWalkIndex = noCells3D;
   myLastWalkIndex = noCells3D - 1;
-  
+
   ///
   /// now let's walk along the spacefilling curve
   ///
@@ -257,9 +261,69 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
     {
       myFirstWalkIndex = 0;
     }
-  
+
+  ///
+  /// determine number of expected ghosts
+  ///
+  countsVectType noGlobGhosts(noDomains);
+
+  for (size_t i = myFirstWalkIndex; i <= myLastWalkIndex; i++)
+    {
+      const size_t cartIndex = spaceCurve.curveIndexToCartIndex(i);
+
+      ///
+      /// only check for neighbouring non-local cells, if the
+      /// current cell actually has particles in it
+      ///
+      if (globPartsPerCell[cartIndex] > 0)
+        {
+          const size_t xCen = cartIndex % noCells1D;
+          const size_t yCen = ((cartIndex - xCen) % noCells2D) / noCells1D;
+          const size_t zCen = (cartIndex - xCen - yCen * noCells1D) / noCells2D;
+
+          const size_t xMin = std::max(static_cast<int>(xCen - 1), 0);
+          const size_t yMin = std::max(static_cast<int>(yCen - 1), 0);
+          const size_t zMin = std::max(static_cast<int>(zCen - 1), 0);
+
+          const size_t xMax = std::min(xCen + 1, noCells1D - 1);
+          const size_t yMax = std::min(yCen + 1, noCells1D - 1);
+          const size_t zMax = std::min(zCen + 1, noCells1D - 1);
+
+          /// make this set static?
+          std::set<size_t> domainSet;
+          for (size_t xIndex = xMin; xIndex <= xMax; xIndex++)
+            {
+              for (size_t yIndex = yMin; yIndex <= yMax; yIndex++)
+                {
+                  for (size_t zIndex = zMin; zIndex <= zMax; zIndex++)
+                    {
+                      const size_t remCartIndex = xIndex + yIndex * noCells1D +
+                                                  zIndex * noCells2D;
+                      const size_t remDomain = domainMap[remCartIndex];
+                      if (remDomain != myDomain)
+                        {
+                          domainSet.insert(remDomain);
+                        }
+                    }
+                }
+            }
+
+          std::set<size_t>::const_iterator domainItr = domainSet.begin();
+          const std::set<size_t>::const_iterator lastDomain = domainSet.end();
+
+          while (domainItr != lastDomain)
+            {
+              noGlobGhosts[*domainItr] += globPartsPerCell[cartIndex];
+              domainItr++;
+            }
+        }
+    }
+  CommManager.sumUpCounts(noGlobGhosts);
+  noGhosts = noGlobGhosts[myDomain];
+
   return domainPartsIndex;
-};
+}
+;
 
 ///
 /// returns a vector of local particles indices, which
@@ -278,10 +342,10 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
   const size_t myDomain = CommManager.getMyDomain();
 
   for (size_t i = 0; i < noDomains; i++)
-  {
-    domainGhostIndex[i].resize(0);
-  }
-  
+    {
+      domainGhostIndex[i].resize(0);
+    }
+
   ///
   /// fill again the costzone cells
   ///
@@ -290,7 +354,7 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
   for (size_t i = myFirstWalkIndex; i <= myLastWalkIndex; i++)
     {
       const size_t cartIndex = spaceCurve.curveIndexToCartIndex(i);
-      
+
       ///
       /// only check for neighbouring non-local cells, if the
       /// current cell actually has particles in it
@@ -349,7 +413,7 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
             }
         }
     }
-  
+
   return domainGhostIndex;
 }
 
@@ -397,9 +461,9 @@ void CostZone::centerOfTheUniverse(void)
   /// due to rounding errors
   ///
 #ifdef SPHLATCH_SINGLEPREC
-  sidelength = ( 1 + 1e-4 )*
+  sidelength = (1 + 1e-4) *
 #else
-  sidelength = ( 1 + 1e-8 )*
+  sidelength = (1 + 1e-8) *
 #endif
                std::max(std::max(xMax - xMin, yMax - yMin), zMax - zMin);
 
@@ -417,7 +481,7 @@ void CostZone::fillCostzoneCells()
   const size_t noParts = PartManager.getNoLocalParts();
 
   ///
-  /// prepare the costzone cells
+  /// empty the costzone cells
   ///
   for (size_t i = 0; i < noCells3D; i++)
     {
@@ -449,10 +513,10 @@ void CostZone::fillCostzoneCells()
       /// if this assertion fails, increase the factor in front
       /// of the sidelength calculation above
       ///
-      assert( xIndex < noCells1D );
-      assert( yIndex < noCells1D );
-      assert( zIndex < noCells1D );
-      
+      assert(xIndex < noCells1D);
+      assert(yIndex < noCells1D);
+      assert(zIndex < noCells1D);
+
       const size_t cartIndex = xIndex + yIndex * noCells1D + zIndex * noCells2D;
 
       costzoneCells[cartIndex].push_back(i);
@@ -481,6 +545,10 @@ size_t CostZone::getDepth(void)
   return depth;
 }
 
+size_t CostZone::getNoGhosts(void)
+{
+  return noGhosts;
+}
 };
 
 #endif
