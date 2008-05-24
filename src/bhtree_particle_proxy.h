@@ -23,34 +23,34 @@ struct particleProxy {
   genericNode* nodePtr;
   
   // pointer to matrix and matrix index
-  matrixPtrType matrixPtr;
-  size_t rowIndex;
+  //matrixPtrType matrixPtr;
+  //size_t rowIndex;
 
-  particleProxy(matrixType* _matrixPtr, size_t const _rowIndex)
+  /*particleProxy(matrixType* _matrixPtr, size_t const _rowIndex)
   {
     matrixPtr = _matrixPtr;
     rowIndex = _rowIndex;
-  }
+  }*/
 
   particleProxy(void)
   {
   }
 
-  particleProxy* operator*()
+  /*particleProxy* operator*()
   {
     return this;
-  }
+  }*/
 
-  valueRefType operator ()(const size_t &j)
+  /*valueRefType operator ()(const size_t &j)
   {
     return (*matrixPtr)(rowIndex, j);
-  }
+  }*/
 
-  void setup(matrixPtrType _matrixPtr, size_t const _rowIndex)
+  /*void setup(matrixPtrType _matrixPtr, size_t const _rowIndex)
   {
     matrixPtr = _matrixPtr;
     rowIndex = _rowIndex;
-  }
+  }*/
 };
 };
 

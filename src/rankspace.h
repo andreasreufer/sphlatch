@@ -10,35 +10,25 @@
  *
  */
 
-#include "particle.h"
 #include "typedefs.h"
-
-//#include "communicationmanager.h"
-#include "memorymanager.h"
+#include "particle_manager.h"
 
 namespace sphlatch {
 class Rankspace {
-/*typedef genericNode nodeT;
 
-   typedef genericNode* nodePtrT;
-   typedef particleNode* partPtrT;
-   typedef genericCellNode* cellPtrT;
-   typedef particleProxy* partProxyPtrT;*/
-
-//typedef sphlatch::CommunicationManager commManagerType;
-//commManagerType& CommManager;
-typedef sphlatch::MemoryManager memManagerType;
-memManagerType& MemManager;
-matrixRefType Data;
+typedef sphlatch::ParticleManager partManagerType;
+partManagerType& PartManager;
+matrixRefType pos;
 
 ///
 /// constructor
 ///
 public:
 Rankspace() :
-  MemManager(memManagerType::instance()),
-  Data(MemManager.Data)
+  PartManager(partManagerType::instance()),
+  pos(PartManager.pos)
 {
+  /// ugly!
   neighbourList.resize(100);
   neighDistList.resize(100);
 };
@@ -62,34 +52,32 @@ std::valarray<valueType> cellMinX, cellMinY, cellMinZ,
 size_t noParts, noCells1D, noCells2D, noCells3D, partsPerCell1D;
 domainPartsIndexType rankspaceCells;
 public:
-//void insertParticle(partProxyPtrT _newPayload)
-//   {
-//   }
 
 ///
 /// small helper class to sort the rankspace index vectors
 ///
 private:
 template <size_t _idx> class smallerThan {
-typedef sphlatch::MemoryManager memManagerType;
-memManagerType& MemManager;
+typedef sphlatch::ParticleManager partManagerType;
+partManagerType& PartManager;
 
 public:
 smallerThan(void) :
-  MemManager(memManagerType::instance())
+  PartManager(partManagerType::instance())
 {
 }
 
 bool operator()(const size_t& _i, const size_t& _j)
 {
-  return(MemManager.Data(_i, _idx) < MemManager.Data(_j, _idx));
+  return(PartManager.pos(_i, _idx) < PartManager.pos(_j, _idx));
 }
 };
 
 public:
 void prepare()
 {
-  noParts = Data.size1();
+  noParts = PartManager.getNoLocalParts() +
+            PartManager.getNoGhostParts();
 
   ///
   /// for some distributions changing this factors increases the speed of
@@ -155,12 +143,12 @@ void prepare()
       minRank = i * partsPerCell1D;
       maxRank = std::min(minRank + partsPerCell1D - 1, noParts - 1);
 
-      cellMinX[i] = Data(indicesRankedX[minRank], X);
-      cellMaxX[i] = Data(indicesRankedX[maxRank], X);
-      cellMinY[i] = Data(indicesRankedY[minRank], Y);
-      cellMaxY[i] = Data(indicesRankedY[maxRank], Y);
-      cellMinZ[i] = Data(indicesRankedZ[minRank], Z);
-      cellMaxZ[i] = Data(indicesRankedZ[maxRank], Z);
+      cellMinX[i] = pos(indicesRankedX[minRank], X);
+      cellMaxX[i] = pos(indicesRankedX[maxRank], X);
+      cellMinY[i] = pos(indicesRankedY[minRank], Y);
+      cellMaxY[i] = pos(indicesRankedY[maxRank], Y);
+      cellMinZ[i] = pos(indicesRankedZ[minRank], Z);
+      cellMaxZ[i] = pos(indicesRankedZ[maxRank], Z);
     }
 
   indicesRankedX.resize(0);
@@ -236,22 +224,17 @@ void prepare()
 public:
 partsIndexVectType neighbourList;
 std::valarray<valueType> neighDistList;
-/*void findNeighbours(const partProxyPtrT _curParticle,
-                    const valueRefType _search_radius)
-   {
-   }*/
 
 private:
 valueType curPartX, curPartY, curPartZ;
 size_t minCellX, maxCellX, minCellY, maxCellY, minCellZ, maxCellZ;
 public:
 void findNeighbours(const size_t& _curPartIndex,
-                    //const valueRefType _search_radius)
                     const valueType _search_radius)
 {
-  curPartX = Data(_curPartIndex, X);
-  curPartY = Data(_curPartIndex, Y);
-  curPartZ = Data(_curPartIndex, Z);
+  curPartX = pos(_curPartIndex, X);
+  curPartY = pos(_curPartIndex, Y);
+  curPartZ = pos(_curPartIndex, Z);
 
   minCellX = rsIndicesX[_curPartIndex];
   maxCellX = rsIndicesX[_curPartIndex];
@@ -325,12 +308,12 @@ void findNeighbours(const size_t& _curPartIndex,
                   const size_t neighIndex = (rankspaceCells[cartIndex])[i];
 
                   const valueType neighDistPow2 =
-                    (Data(neighIndex, X) - curPartX) *
-                    (Data(neighIndex, X) - curPartX) +
-                    (Data(neighIndex, Y) - curPartY) *
-                    (Data(neighIndex, Y) - curPartY) +
-                    (Data(neighIndex, Z) - curPartZ) *
-                    (Data(neighIndex, Z) - curPartZ);
+                    (pos(neighIndex, X) - curPartX) *
+                    (pos(neighIndex, X) - curPartX) +
+                    (pos(neighIndex, Y) - curPartY) *
+                    (pos(neighIndex, Y) - curPartY) +
+                    (pos(neighIndex, Z) - curPartZ) *
+                    (pos(neighIndex, Z) - curPartZ);
 
                   if (neighDistPow2 < searchRadPow2)
                     {

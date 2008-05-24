@@ -88,10 +88,10 @@ void cellToVect(valvectRefType _vect)
 ///
 void partToVect(valvectRefType _vect)
 {
-  _vect[X] = static_cast<partPtrT>(curNodePtr)->xPos;
-  _vect[Y] = static_cast<partPtrT>(curNodePtr)->yPos;
-  _vect[Z] = static_cast<partPtrT>(curNodePtr)->zPos;
-  _vect[M] = static_cast<partPtrT>(curNodePtr)->mass;
+  _vect[CX] = static_cast<partPtrT>(curNodePtr)->xPos;
+  _vect[CY] = static_cast<partPtrT>(curNodePtr)->yPos;
+  _vect[CZ] = static_cast<partPtrT>(curNodePtr)->zPos;
+  _vect[MASS] = static_cast<partPtrT>(curNodePtr)->mass;
 }
 
 ///
@@ -115,6 +115,8 @@ bool calcGravMAC(void)
 void calcGravCell()
 {
 }
+
+enum noMultipolesIndex { CX, CY, CZ, MASS, MSIZE };
 
 };
 };

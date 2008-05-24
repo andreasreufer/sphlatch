@@ -26,6 +26,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <string>
 
@@ -40,27 +41,23 @@
 
 #include <boost/mpl/vector_c.hpp>
 
-#include "particle.h"
-
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
-typedef sphlatch::partsIndexVectType partsIndexVectType;
+//typedef sphlatch::valueType valueType;
+//typedef sphlatch::partsIndexVectType partsIndexVectType;
 
-#include "iomanager.h"
+#include "io_manager.h"
 typedef sphlatch::IOManager io_type;
 
-#include "memorymanager.h"
-typedef sphlatch::MemoryManager mem_type;
+#include "particle_manager.h"
+typedef sphlatch::ParticleManager part_type;
 
-#include "communicationmanager.h"
+#include "communication_manager.h"
 typedef sphlatch::CommunicationManager com_type;
 
 #include "costzone.h"
 typedef sphlatch::CostZone costzone_type;
-
-using namespace boost::assign;
 
 #include <boost/progress.hpp>
 #include <vector>
@@ -68,7 +65,7 @@ using namespace boost::assign;
 // tree stuff
 #include "bhtree.h"
 
-#include "ranklist.h"
+//#include "ranklist.h"
 #include "rankspace.h"
 
 #include "timer.h"
@@ -77,7 +74,6 @@ int main(int argc, char* argv[])
 {
   MPI::Init(argc, argv);
   double stepStartTime, logStartTime = MPI_Wtime();
-
 
   po::options_description Options("Global Options");
   Options.add_options() ("help,h", "Produces this Help")
@@ -106,44 +102,24 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
     }
 
+  using namespace boost::assign;
+  using namespace sphlatch;
+
   io_type& IOManager(io_type::instance());
-  mem_type& MemManager(mem_type::instance());
+  part_type& PartManager(part_type::instance());
   com_type& ComManager(com_type::instance());
   costzone_type& CostZone(costzone_type::instance());
 
   const size_t myDomain = ComManager.getMyDomain();
-  std::vector<sphlatch::particleProxy> partProxies, ghostProxies;
 
-  sphlatch::matrixRefType Data(MemManager.Data);
-  sphlatch::matrixRefType GData(MemManager.GData);
-
-  /// only OOSPH knows about integration indices
-  Data.resize(Data.size1(), sphlatch::SIZE);
-  GData.resize(GData.size1(), sphlatch::SIZE);
   size_t noParts, noGhosts;
 
   std::string inputFileName = VMap[ "input-file"].as<std::string>();
   std::string outputFileName = VMap["output-file"].as<std::string>();
 
-  IOManager.loadCDAT(inputFileName);
-
-  //Data.resize( 660000, Data.size2() );
-
-  valueType gravTheta = MemManager.loadParameter("GRAVTHETA");
-  if (gravTheta != gravTheta)
-    {
-      gravTheta = 0.80;       // standard value for opening angle theta
-      //gravTheta = 1.00;       // standard value for opening angle theta
-    }
-  MemManager.saveParameter("GRAVTHETA", gravTheta, true);
-
-  valueType gravConst = MemManager.loadParameter("GRAVCONST");
-  if (gravConst != gravConst)
-    {
-      gravConst = 1.;       //  G=1 system
-      //gravConst = 6.67259e-11;       //  SI units
-    }
-  MemManager.saveParameter("GRAVCONST", gravConst, true);
+  PartManager.useBasicSPH();
+  PartManager.useTimedepH();
+  IOManager.loadDump(inputFileName);
 
   // set up logging stuff
   std::string logFilename = outputFileName + "_rank000";
@@ -155,20 +131,33 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - logStartTime << "    start log\n";
 
-  stepStartTime = MPI_Wtime();
-  ComManager.exchange(Data, CostZone.createDomainPartsIndex(), Data);
-  noParts = Data.size1();
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime
-          << "    exchanged parts  (" << noParts << ")\n" << std::flush;
+  matrixRefType pos(PartManager.pos);
+  matrixRefType vel(PartManager.vel);
+
+  valvectRefType h(PartManager.h);
+  valvectRefType m(PartManager.m);
+
+  idvectRefType id(PartManager.id);
+  idvectRefType noneigh(PartManager.noneigh);
+
+  quantsType exchQuants;
+  exchQuants.vects += &pos, &vel;
+  exchQuants.ints += &id, &noneigh;
+  exchQuants.scalars += &m, &h;
+
 
   stepStartTime = MPI_Wtime();
-  ComManager.exchange(Data, CostZone.createDomainGhostIndex(), GData);
-  noGhosts = GData.size1();
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - stepStartTime
-          << "    exchanged ghosts (" << noGhosts << ")\n" << std::flush;
-  logFile << "\n";
+  /// domain decomposition and exchange of particles
+  CostZone.createDomainPartsIndex();
+  ComManager.exchange(CostZone.domainPartsIndex,
+                      CostZone.getNoGhosts(),
+                      exchQuants);
+
+  /// prepare ghost stuff
+  ComManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
+  ComManager.sendGhosts(exchQuants);
+
+  noParts = PartManager.getNoLocalParts();
 
   sleep(5);
 
@@ -182,8 +171,11 @@ int main(int argc, char* argv[])
 
   // tree context
   {
+    const valueType gravTheta = 0.6;
+    const valueType gravConst = 1.0;
+
     stepStartTime = MPI_Wtime();
-    partProxies.resize(noParts);
+    /*partProxies.resize(noParts);
     for (size_t i = 0; i < noParts; i++)
       {
         (partProxies[i]).setup(&Data, i);
@@ -195,7 +187,7 @@ int main(int argc, char* argv[])
       }
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - stepStartTime << "lps prepared part proxies\n" << std::flush;
-
+*/
     //sphlatch::BHtree<sphlatch::NoMultipoles> BarnesHutTree(gravTheta,
     //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
     sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
@@ -208,16 +200,23 @@ int main(int argc, char* argv[])
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - stepStartTime << "lps constructed tree\n" << std::flush;
 
-    for (size_t i = 0; i < noParts; i++)
+    /*for (size_t i = 0; i < noParts; i++)
       {
+        //BarnesHutTree.insertParticle(*(partProxies[i]), true);
         BarnesHutTree.insertParticle(*(partProxies[i]), true);
       }
     for (size_t i = 0; i < noGhosts; i++)
       {
+        //BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
         BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
-      }
+      }*/
+    for (size_t i = 0; i < pos.size1(); i++)
+    {
+      BarnesHutTree.insertParticle(i);
+    }
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - stepStartTime << "lps inserted parts\n" << std::flush;
+
 
 #ifdef TREEORDER
     BarnesHutTree.detParticleOrder();
@@ -233,8 +232,11 @@ int main(int argc, char* argv[])
         curIndex = i;
 #endif
         // allow a little tolerance, as the furthest is exactely at 2h
-        const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
-        BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
+        //const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
+        const valueType searchRadius = 0.1;
+        //BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
+        BarnesHutTree.findNeighbours(i, searchRadius);
+        //std::cout << BarnesHutTree.neighbourList[0] << "\n";
       }
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - stepStartTime << "    BHtree search       \n" << std::flush;
@@ -244,6 +246,7 @@ int main(int argc, char* argv[])
 #ifdef RSORDER
     orderFromTree = BarnesHutTree.particleOrder;
 #endif
+
   }
   // end of tree context
 
@@ -264,7 +267,9 @@ int main(int argc, char* argv[])
         curIndex = i;
 #endif
         // allow a little tolerance, as the furthest is exactely at 2h
-        const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
+        //const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
+        //const valueType searchRadius = 2.0000001 * h(curIndex);
+        const valueType searchRadius = 0.1;
         RSSearch.findNeighbours(curIndex, searchRadius);
       }
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
@@ -285,7 +290,8 @@ int main(int argc, char* argv[])
     {
       curIndex = BarnesHutTree.particleOrder[i];
       //curIndex = i;
-      BarnesHutTree.calcGravity(*(partProxies[curIndex]));
+      //BarnesHutTree.calcGravity(*(partProxies[curIndex]));
+      BarnesHutTree.calcGravity(i);
     }
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;
@@ -303,7 +309,8 @@ int main(int argc, char* argv[])
       curIndex = i;
 
       // allow a little tolerance, as the furthest is exactely at 2h
-      const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
+      //const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
+      const valueType searchRadius = 0.1;
       const valueType searchRadPow2 = searchRadius * searchRadius;
 
       size_t noBFneighbours = 0;
@@ -311,10 +318,13 @@ int main(int argc, char* argv[])
         {
           static valueType dist;
 
-          using namespace sphlatch;
-          dist = sqrt((Data(i, X) - Data(j, X)) * (Data(i, X) - Data(j, X))
+          //using namespace sphlatch;
+          /*dist = sqrt((Data(i, X) - Data(j, X)) * (Data(i, X) - Data(j, X))
                       + (Data(i, Y) - Data(j, Y)) * (Data(i, Y) - Data(j, Y))
-                      + (Data(i, Z) - Data(j, Z)) * (Data(i, Z) - Data(j, Z)));
+                      + (Data(i, Z) - Data(j, Z)) * (Data(i, Z) - Data(j, Z)));*/
+          dist = sqrt((pow(i, X) - pow(j, X)) * (pow(i, X) - pow(j, X))
+                      + (pow(i, Y) - pow(j, Y)) * (pow(i, Y) - pow(j, Y))
+                      + (pow(i, Z) - pow(j, Z)) * (pow(i, Z) - pow(j, Z)));
           if (dist < searchRadius)
             {
               noBFneighbours++;
@@ -324,7 +334,8 @@ int main(int argc, char* argv[])
       neighListBF[0] = noBFneighbours;
 
 #ifdef CHECK_TREE
-      BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
+      //BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
+      BarnesHutTree.findNeighbours(curIndex, searchRadius);
       sphlatch::partsIndexVectRefType neighList(BarnesHutTree.neighbourList);
 #endif
 #ifdef CHECK_RANKSPACE
@@ -371,10 +382,7 @@ int main(int argc, char* argv[])
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << " BF neighbour search\n" << std::flush;
 #endif
-  std::vector<int> outputAttrSet;
-  outputAttrSet += 0;
-  IOManager.saveCDAT(outputFileName, outputAttrSet);
-
+  
   logFile.close();
   MPI::Finalize();
   return EXIT_SUCCESS;

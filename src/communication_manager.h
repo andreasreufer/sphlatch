@@ -48,11 +48,13 @@ void exchange(domainPartsIndexRefType _partsIndices,
               size_t _noGhosts,
               quantsTypeRefType _quantities);
 
-void sendGhostsPrepare( domainPartsIndexRefType _ghostsIndices );
+void sendGhostsPrepare(domainPartsIndexRefType _ghostsIndices);
 
 void sendGhosts(idvectRefType _idVect);
 void sendGhosts(valvectRefType _valVect);
 void sendGhosts(matrixRefType _matrix);
+
+void sendGhosts(quantsTypeRefType _quantities);
 
 private:
 std::vector<MPI::Request> recvReqs;
@@ -180,7 +182,7 @@ CommunicationManager::~CommunicationManager(void)
 /// buffer size in bytes, MPI transfers will have on average this size
 ///
 //size_t CommunicationManager::commBuffSize =  131072;  //  128 kByte
-  size_t CommunicationManager::commBuffSize = 1048576;  // 1024 kByte
+size_t CommunicationManager::commBuffSize = 1048576;    // 1024 kByte
 //size_t CommunicationManager::commBuffSize = 8388608;  // 8096 kByte
 
 ///
@@ -191,7 +193,7 @@ CommunicationManager::~CommunicationManager(void)
 /// higher dimension vectors like tensors
 ///
 //size_t CommunicationManager::noBuffParts =   200; // for testing purposes
-  size_t CommunicationManager::noBuffParts = 65536;
+size_t CommunicationManager::noBuffParts = 65536;
 
 void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
                                     size_t _noGhosts,
@@ -212,18 +214,6 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
     }
 
   rangeType newLocRange(0, newNoParts);
-
-  ///
-  /// prepare ghost queue and number of ghosts
-  ///
-  /*prepareQueuesOffsets(_ghostsIndices, noParts, ghostQueue,
-                       ghostOffsets, noRecvGhosts);
-
-  size_t noGhosts = 0;
-  for (size_t i = 0; i < noDomains; i++)
-    {
-      noGhosts += noRecvGhosts[i];
-    }*/
 
   ///
   /// determine information for particles staying on node
@@ -373,7 +363,7 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
 }
 
 void CommunicationManager::sendGhostsPrepare(
-                           domainPartsIndexRefType _ghostsIndices )
+  domainPartsIndexRefType _ghostsIndices)
 {
   prepareQueuesOffsets(_ghostsIndices, newNoParts, ghostQueue,
                        ghostOffsets, noRecvGhosts);
@@ -392,6 +382,38 @@ void CommunicationManager::sendGhosts(valvectRefType _valVect)
 void CommunicationManager::sendGhosts(matrixRefType _matrix)
 {
   queuedExch(_matrix, _matrix, ghostQueue, ghostOffsets, noRecvGhosts);
+}
+
+void CommunicationManager::sendGhosts(quantsTypeRefType _quantities)
+{
+  matrixPtrSetType::const_iterator vectItr = _quantities.vects.begin();
+  matrixPtrSetType::const_iterator vectEnd = _quantities.vects.end();
+
+  while (vectItr != vectEnd)
+    {
+      queuedExch(**vectItr, **vectItr,
+                 ghostQueue, ghostOffsets, noRecvGhosts);
+      vectItr++;
+    }
+
+  idvectPtrSetType::const_iterator intsItr = _quantities.ints.begin();
+  idvectPtrSetType::const_iterator intsEnd = _quantities.ints.end();
+  while (intsItr != intsEnd)
+    {
+      queuedExch(**intsItr, **intsItr,
+                 ghostQueue, ghostOffsets, noRecvGhosts);
+      intsItr++;
+    }
+
+
+  valvectPtrSetType::const_iterator scalItr = _quantities.scalars.begin();
+  valvectPtrSetType::const_iterator scalEnd = _quantities.scalars.end();
+  while (scalItr != scalEnd)
+    {
+      queuedExch(**scalItr, **scalItr,
+                 ghostQueue, ghostOffsets, noRecvGhosts);
+      scalItr++;
+    }
 }
 
 ///

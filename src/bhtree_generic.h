@@ -12,23 +12,26 @@
 
 #include "bhtree_generic_node.h"
 #include "bhtree_particle_node.h"
-#include "bhtree_particle_proxy.h"
+//#include "bhtree_particle_proxy.h"
 #include "bhtree_cell_node.h"
 
-#include "particle.h"
-#include "communicationmanager.h"
+#include "communication_manager.h"
+#include "particle_manager.h"
 
-#include "timer.h"
+//#include "timer.h"
 
 namespace sphlatch {
 template<class T_leaftype>
+
 class BHtree {
 typedef genericNode nodeT;
 
 typedef genericNode* nodePtrT;
 typedef particleNode* partPtrT;
 typedef genericCellNode* cellPtrT;
-typedef particleProxy* partProxyPtrT;
+
+typedef sphlatch::CommunicationManager commManagerType;
+typedef sphlatch::ParticleManager partManagerType;
 
 private:
 T_leaftype& asLeaf()
@@ -50,7 +53,12 @@ BHtree(valueType _thetaMAC,
        size_t _czDepth,
        valvectType _rootCenter,
        valueType _rootSize) :
-  CommManager(commManagerType::instance())
+  CommManager(commManagerType::instance()),
+  PartManager(partManagerType::instance()),
+  pos(PartManager.pos),
+  acc(PartManager.acc),
+  eps(PartManager.eps),
+    m(PartManager.m)
 {
   if (_thetaMAC < 0.)
     {
@@ -116,6 +124,13 @@ BHtree(valueType _thetaMAC,
   /// ugly
   neighbourList.resize(100);
   neighDistList.resize(100);
+
+  ///
+  /// prepare the list of local particles
+  ///
+  noLocParts  = PartManager.getNoLocalParts();
+  locMaxIndex = PartManager.getNoLocalParts() - 1;
+  partProxies.resize(noLocParts);
 };
 
 ///
@@ -130,6 +145,10 @@ BHtree(valueType _thetaMAC,
 }
 
 protected:
+commManagerType& CommManager;
+partManagerType& PartManager;
+
+protected:
 nodePtrT curNodePtr, rootPtr;
 
 ///
@@ -142,14 +161,13 @@ matrixType localCells, remoteCells;
 bitsetType localIsFilled, remoteIsFilled;
 valvectType cellVect;
 
+matrixRefType pos, acc;
+valvectRefType eps, m;
+
+std::vector<nodePtrT> partProxies;
+size_t noLocParts, locMaxIndex;
+
 std::fstream logFile;
-
-CycleTimer ct;
-
-protected:
-typedef sphlatch::CommunicationManager commManagerType;
-commManagerType& CommManager;
-
 
 /// little helpers
 protected:
@@ -308,11 +326,13 @@ public:
 /// - call the insertion recursor
 ///
 
-void insertParticle(partProxyPtrT _newPayload,
-                    bool _newIsLocal)
+//void insertParticle(partProxyPtrT _newPayload,
+//                    bool _newIsLocal)
+void insertParticle(size_t _newPartIdx)
 {
   goRoot();
-  insertParticleRecursor(_newPayload, _newIsLocal);
+  //insertParticleRecursor(_newPayload, _newIsLocal);
+  insertParticleRecursor(_newPartIdx);
   partCounter++;
 }
 
@@ -327,16 +347,23 @@ private:
 ///   call recursor for existing and new
 ///   particle.
 ///
-void insertParticleRecursor(partProxyPtrT _newPayload,
-                            bool _newIsLocal)
+//void insertParticleRecursor(partProxyPtrT _newPayload,
+//                            bool _newIsLocal)
+void insertParticleRecursor(size_t _newPartIdx)
 {
   size_t targetOctant = 0;
 
-  targetOctant += ((*_newPayload)(X) <
+  /*targetOctant += ((*_newPayload)(X) <
                    static_cast<cellPtrT>(curNodePtr)->xCenter) ? 0 : 1;
   targetOctant += ((*_newPayload)(Y) <
                    static_cast<cellPtrT>(curNodePtr)->yCenter) ? 0 : 2;
   targetOctant += ((*_newPayload)(Z) <
+                   static_cast<cellPtrT>(curNodePtr)->zCenter) ? 0 : 4;*/
+  targetOctant += ( pos(_newPartIdx, X) <
+                   static_cast<cellPtrT>(curNodePtr)->xCenter) ? 0 : 1;
+  targetOctant += ( pos(_newPartIdx, Y) <
+                   static_cast<cellPtrT>(curNodePtr)->yCenter) ? 0 : 2;
+  targetOctant += ( pos(_newPartIdx, Z) <
                    static_cast<cellPtrT>(curNodePtr)->zCenter) ? 0 : 4;
 
 ///
@@ -349,25 +376,36 @@ void insertParticleRecursor(partProxyPtrT _newPayload,
       newPartChild(targetOctant);
       goChild(targetOctant);
 
-      static_cast<partPtrT>(curNodePtr)->partProxyPtr = _newPayload;
-      curNodePtr->isLocal = _newIsLocal;
+      // not needed any more
+      //static_cast<partPtrT>(curNodePtr)->partProxyPtr = _newPayload;
+      //curNodePtr->isLocal = _newIsLocal;
+      if ( _newPartIdx > locMaxIndex ) {
+        curNodePtr->isLocal = false;
+      } else {
+        curNodePtr->isLocal = true;
+      }
 
       /// particle saves its position to node directly
-      static_cast<partPtrT>(curNodePtr)->xPos = (*_newPayload)(X);
+      /*static_cast<partPtrT>(curNodePtr)->xPos = (*_newPayload)(X);
       static_cast<partPtrT>(curNodePtr)->yPos = (*_newPayload)(Y);
       static_cast<partPtrT>(curNodePtr)->zPos = (*_newPayload)(Z);
-      static_cast<partPtrT>(curNodePtr)->mass = (*_newPayload)(M);
+      static_cast<partPtrT>(curNodePtr)->mass = (*_newPayload)(M);*/
+      static_cast<partPtrT>(curNodePtr)->xPos = pos(_newPartIdx, X);
+      static_cast<partPtrT>(curNodePtr)->yPos = pos(_newPartIdx, Y);
+      static_cast<partPtrT>(curNodePtr)->zPos = pos(_newPartIdx, Z);
+      static_cast<partPtrT>(curNodePtr)->mass =   m(_newPartIdx);
 
       /// ident saves the rowIndex of the particle
-      curNodePtr->ident =
-        static_cast<identType>(_newPayload->rowIndex);
+      /*curNodePtr->ident =
+        static_cast<identType>(_newPayload->rowIndex);*/
+      curNodePtr->ident = _newPartIdx;
 
 ///
 /// don't forget to wire the nodePtr of the
 /// NodeProxy back to the node
 ///
-      static_cast<partPtrT>(curNodePtr)->partProxyPtr->nodePtr = curNodePtr;
-
+      //static_cast<partPtrT>(curNodePtr)->partProxyPtr->nodePtr = curNodePtr;
+      partProxies[_newPartIdx] = curNodePtr;
       goUp();
     }
 
@@ -381,7 +419,8 @@ void insertParticleRecursor(partProxyPtrT _newPayload,
     {
       curNodePtr->isEmpty = false;
       goChild(targetOctant);
-      insertParticleRecursor(_newPayload, _newIsLocal);
+      //insertParticleRecursor(_newPayload, _newIsLocal);
+      insertParticleRecursor(_newPartIdx);
       goUp();
     }
 
@@ -393,9 +432,10 @@ void insertParticleRecursor(partProxyPtrT _newPayload,
     {
       /// goto child, save resident particle
       goChild(targetOctant);
-      partProxyPtrT residentPayload =
+      /*partProxyPtrT residentPayload =
         static_cast<partPtrT>(curNodePtr)->partProxyPtr;
-      bool residentIsLocal = curNodePtr->isLocal;
+      bool residentIsLocal = curNodePtr->isLocal;*/
+      size_t residentIdx = static_cast<partPtrT>(curNodePtr)->ident;
       goUp();
 
       /// replace particle by cell node
@@ -405,8 +445,10 @@ void insertParticleRecursor(partProxyPtrT _newPayload,
 
       /// and try to insert both particles again
       goChild(targetOctant);
-      insertParticleRecursor(residentPayload, residentIsLocal);
-      insertParticleRecursor(_newPayload, _newIsLocal);
+      //insertParticleRecursor(residentPayload, residentIsLocal);
+      //insertParticleRecursor(_newPayload, _newIsLocal);
+      insertParticleRecursor(residentIdx);
+      insertParticleRecursor(_newPartIdx);
       goUp();
     }
   else
@@ -785,17 +827,22 @@ public:
 ///
 
 // what about a ref?
-void calcGravity(const partProxyPtrT _curParticle)
+//void calcGravity(const partProxyPtrT _curParticle)
+void calcGravity(const size_t _partIdx)
 {
-  curGravParticleX = (*_curParticle)(X);
+  /*curGravParticleX = (*_curParticle)(X);
   curGravParticleY = (*_curParticle)(Y);
-  curGravParticleZ = (*_curParticle)(Z);
+  curGravParticleZ = (*_curParticle)(Z);*/
+  curGravParticleX = pos(_partIdx, X);
+  curGravParticleY = pos(_partIdx, Y);
+  curGravParticleZ = pos(_partIdx, Z);
 
   curGravParticleAX = 0.;
   curGravParticleAY = 0.;
   curGravParticleAZ = 0.;
 
-  epsilonSquare = (*_curParticle)(GRAVEPS)*(*_curParticle)(GRAVEPS);
+  //epsilonSquare = (*_curParticle)(GRAVEPS)*(*_curParticle)(GRAVEPS);
+  epsilonSquare = eps(_partIdx)*eps(_partIdx);
 
 #ifdef SPHLATCH_TREE_PROFILE
   calcGravityPartsCounter = 0;
@@ -807,21 +854,26 @@ void calcGravity(const partProxyPtrT _curParticle)
   /// an empty cell node, so that it doesn't gravitate with
   /// itself. btw: a particle is always empty.
   ///
-  _curParticle->nodePtr->isParticle = false;
+  //_curParticle->nodePtr->isParticle = false;
+  partProxies[_partIdx]->isParticle = false;
 
   goRoot();
   calcGravityRecursor();
 
-  ct.start();
+  //ct.start();
 
-  (*_curParticle)(AX) += gravConst * curGravParticleAX;
+  /*(*_curParticle)(AX) += gravConst * curGravParticleAX;
   (*_curParticle)(AY) += gravConst * curGravParticleAY;
-  (*_curParticle)(AZ) += gravConst * curGravParticleAZ;
+  (*_curParticle)(AZ) += gravConst * curGravParticleAZ;*/
+  acc(_partIdx, X) += gravConst * curGravParticleAX;
+  acc(_partIdx, Y) += gravConst * curGravParticleAY;
+  acc(_partIdx, Z) += gravConst * curGravParticleAZ;
 
   ///
   /// undo the trick above
   ///
-  _curParticle->nodePtr->isParticle = true;
+  //_curParticle->nodePtr->isParticle = true;
+  partProxies[_partIdx]->isParticle = true;
 }
 
 private:
@@ -932,23 +984,20 @@ public:
 ///
 partsIndexVectType neighbourList;
 std::valarray<valueType> neighDistList;
-/*void findNeighbours(const partProxyPtrT _curParticle,
-                    const valueRefType _search_radius)*/
-void findNeighbours(const partProxyPtrT _curParticle,
+//void findNeighbours(const partProxyPtrT _curParticle,
+void findNeighbours(size_t _curPartIdx,
                     //const valueRefType _search_radius)
                     const valueType _search_radius)
 {
   ///
-  /// go to particles parent cell
+  /// set up some vars and go to particles node
   ///
-  curNodePtr = _curParticle->nodePtr;
+  //curNodePtr = _curParticle->nodePtr;
+  curNodePtr = partProxies[_curPartIdx];
+  
   curNeighParticleX = static_cast<partPtrT>(curNodePtr)->xPos;
   curNeighParticleY = static_cast<partPtrT>(curNodePtr)->yPos;
   curNeighParticleZ = static_cast<partPtrT>(curNodePtr)->zPos;
-
-  ///
-  /// go to parent cell
-  ///
 
   searchRadius = _search_radius;
   searchRadPow2 = _search_radius * _search_radius;

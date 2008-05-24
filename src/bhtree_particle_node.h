@@ -21,7 +21,7 @@ struct particleProxy;
 struct particleNode : public genericNode {
   
   // pointer to particle proxy
-  particleProxy* partProxyPtr;
+  //particleProxy* partProxyPtr;
 
   // particle position and mass
   // are cached locally
