@@ -6,7 +6,7 @@
 #define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
-#define SPHLATCH_SINGLEPREC
+//#define SPHLATCH_SINGLEPREC
 
 // enable parallel version
 #define SPHLATCH_PARALLEL
@@ -16,7 +16,7 @@
 
 //#define GRAVITY
 #define TREEORDER
-//#define RSORDER
+#define RSORDER
 
 //#define SPHLATCH_RANKSPACESERIALIZE
 
@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 
   const size_t myDomain = ComManager.getMyDomain();
 
-  size_t noParts, noGhosts;
+  size_t noParts, noGhosts, noTotParts;
 
   std::string inputFileName = VMap[ "input-file"].as<std::string>();
   std::string outputFileName = VMap["output-file"].as<std::string>();
@@ -145,7 +145,6 @@ int main(int argc, char* argv[])
   exchQuants.ints += &id, &noneigh;
   exchQuants.scalars += &m, &h;
 
-
   stepStartTime = MPI_Wtime();
   /// domain decomposition and exchange of particles
   CostZone.createDomainPartsIndex();
@@ -158,6 +157,7 @@ int main(int argc, char* argv[])
   ComManager.sendGhosts(exchQuants);
 
   noParts = PartManager.getNoLocalParts();
+  noTotParts = PartManager.getNoTotalParts();
 
   sleep(5);
 
@@ -175,23 +175,11 @@ int main(int argc, char* argv[])
     const valueType gravConst = 1.0;
 
     stepStartTime = MPI_Wtime();
-    /*partProxies.resize(noParts);
-    for (size_t i = 0; i < noParts; i++)
-      {
-        (partProxies[i]).setup(&Data, i);
-      }
-    ghostProxies.resize(noGhosts);
-    for (size_t i = 0; i < noGhosts; i++)
-      {
-        (ghostProxies[i]).setup(&GData, i);
-      }
-    logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-            << MPI_Wtime() - stepStartTime << "lps prepared part proxies\n" << std::flush;
-*/
+    
     //sphlatch::BHtree<sphlatch::NoMultipoles> BarnesHutTree(gravTheta,
     //sphlatch::BHtree<sphlatch::Monopoles> BarnesHutTree(gravTheta,
     sphlatch::BHtree<sphlatch::Quadrupoles> BarnesHutTree(gravTheta,
-                                                          //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
+    //sphlatch::BHtree<sphlatch::Octupoles> BarnesHutTree(gravTheta,
                                                           gravConst,
                                                           //CostZone.getDepth(),
                                                           0,
@@ -200,17 +188,7 @@ int main(int argc, char* argv[])
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - stepStartTime << "lps constructed tree\n" << std::flush;
 
-    /*for (size_t i = 0; i < noParts; i++)
-      {
-        //BarnesHutTree.insertParticle(*(partProxies[i]), true);
-        BarnesHutTree.insertParticle(*(partProxies[i]), true);
-      }
-    for (size_t i = 0; i < noGhosts; i++)
-      {
-        //BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
-        BarnesHutTree.insertParticle(*(ghostProxies[i]), false);
-      }*/
-    for (size_t i = 0; i < pos.size1(); i++)
+    for (size_t i = 0; i < noTotParts; i++)
     {
       BarnesHutTree.insertParticle(i);
     }
@@ -232,11 +210,9 @@ int main(int argc, char* argv[])
         curIndex = i;
 #endif
         // allow a little tolerance, as the furthest is exactely at 2h
-        //const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
-        const valueType searchRadius = 0.1;
-        //BarnesHutTree.findNeighbours(*(partProxies[curIndex]), searchRadius);
-        BarnesHutTree.findNeighbours(i, searchRadius);
-        //std::cout << BarnesHutTree.neighbourList[0] << "\n";
+        const valueType searchRadius = 2.0000001 * h(curIndex);
+        BarnesHutTree.findNeighbours(curIndex, searchRadius);
+        std::cout << curIndex << ": " << BarnesHutTree.neighbourList[0] << "\n";
       }
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - stepStartTime << "    BHtree search       \n" << std::flush;
@@ -251,6 +227,8 @@ int main(int argc, char* argv[])
   // end of tree context
 
   sleep(5);
+
+  std::cout << "\n\n";
 
   // rankspace context
   {
@@ -267,10 +245,9 @@ int main(int argc, char* argv[])
         curIndex = i;
 #endif
         // allow a little tolerance, as the furthest is exactely at 2h
-        //const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
-        //const valueType searchRadius = 2.0000001 * h(curIndex);
-        const valueType searchRadius = 0.1;
+        const valueType searchRadius = 2.0000001 * h(curIndex);
         RSSearch.findNeighbours(curIndex, searchRadius);
+        std::cout << curIndex << ": " << RSSearch.neighbourList[0] << "\n";
       }
     logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
             << MPI_Wtime() - stepStartTime << "    Ranksspace search   \n" << std::flush;
@@ -309,8 +286,7 @@ int main(int argc, char* argv[])
       curIndex = i;
 
       // allow a little tolerance, as the furthest is exactely at 2h
-      //const valueType searchRadius = 2.0000001 * Data(curIndex, sphlatch::H);
-      const valueType searchRadius = 0.1;
+      const valueType searchRadius = 2.0000001 * h(curIndex);
       const valueType searchRadPow2 = searchRadius * searchRadius;
 
       size_t noBFneighbours = 0;

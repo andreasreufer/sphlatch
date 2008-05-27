@@ -12,13 +12,10 @@
 
 #include "bhtree_generic_node.h"
 #include "bhtree_particle_node.h"
-//#include "bhtree_particle_proxy.h"
 #include "bhtree_cell_node.h"
 
 #include "communication_manager.h"
 #include "particle_manager.h"
-
-//#include "timer.h"
 
 namespace sphlatch {
 template<class T_leaftype>
@@ -40,14 +37,15 @@ T_leaftype& asLeaf()
 }
 
 public:
-/** \brief constructor:
- * - set theta, gravity constant and toptree depth
- * - check them for sanity
- * - allocate and setup RootNode and point cursor to it
- * - set counters
- * - build toptree
- * - set up buffer matrices for toptree cell nodes
- */
+///
+/// \brief constructor:
+/// - set theta, gravity constant and toptree depth
+/// - check them for sanity
+/// - allocate and setup RootNode and point cursor to it
+/// - set counters
+/// - build toptree
+/// - set up buffer matrices for toptree cell nodes
+///
 BHtree(valueType _thetaMAC,
        valueType _gravConst,
        size_t _czDepth,
@@ -353,12 +351,6 @@ void insertParticleRecursor(size_t _newPartIdx)
 {
   size_t targetOctant = 0;
 
-  /*targetOctant += ((*_newPayload)(X) <
-                   static_cast<cellPtrT>(curNodePtr)->xCenter) ? 0 : 1;
-  targetOctant += ((*_newPayload)(Y) <
-                   static_cast<cellPtrT>(curNodePtr)->yCenter) ? 0 : 2;
-  targetOctant += ((*_newPayload)(Z) <
-                   static_cast<cellPtrT>(curNodePtr)->zCenter) ? 0 : 4;*/
   targetOctant += ( pos(_newPartIdx, X) <
                    static_cast<cellPtrT>(curNodePtr)->xCenter) ? 0 : 1;
   targetOctant += ( pos(_newPartIdx, Y) <
@@ -376,9 +368,6 @@ void insertParticleRecursor(size_t _newPartIdx)
       newPartChild(targetOctant);
       goChild(targetOctant);
 
-      // not needed any more
-      //static_cast<partPtrT>(curNodePtr)->partProxyPtr = _newPayload;
-      //curNodePtr->isLocal = _newIsLocal;
       if ( _newPartIdx > locMaxIndex ) {
         curNodePtr->isLocal = false;
       } else {
@@ -386,25 +375,15 @@ void insertParticleRecursor(size_t _newPartIdx)
       }
 
       /// particle saves its position to node directly
-      /*static_cast<partPtrT>(curNodePtr)->xPos = (*_newPayload)(X);
-      static_cast<partPtrT>(curNodePtr)->yPos = (*_newPayload)(Y);
-      static_cast<partPtrT>(curNodePtr)->zPos = (*_newPayload)(Z);
-      static_cast<partPtrT>(curNodePtr)->mass = (*_newPayload)(M);*/
       static_cast<partPtrT>(curNodePtr)->xPos = pos(_newPartIdx, X);
       static_cast<partPtrT>(curNodePtr)->yPos = pos(_newPartIdx, Y);
       static_cast<partPtrT>(curNodePtr)->zPos = pos(_newPartIdx, Z);
       static_cast<partPtrT>(curNodePtr)->mass =   m(_newPartIdx);
 
       /// ident saves the rowIndex of the particle
-      /*curNodePtr->ident =
-        static_cast<identType>(_newPayload->rowIndex);*/
       curNodePtr->ident = _newPartIdx;
 
-///
-/// don't forget to wire the nodePtr of the
-/// NodeProxy back to the node
-///
-      //static_cast<partPtrT>(curNodePtr)->partProxyPtr->nodePtr = curNodePtr;
+      /// save the particle's proxy
       partProxies[_newPartIdx] = curNodePtr;
       goUp();
     }
@@ -419,7 +398,6 @@ void insertParticleRecursor(size_t _newPartIdx)
     {
       curNodePtr->isEmpty = false;
       goChild(targetOctant);
-      //insertParticleRecursor(_newPayload, _newIsLocal);
       insertParticleRecursor(_newPartIdx);
       goUp();
     }
@@ -432,9 +410,6 @@ void insertParticleRecursor(size_t _newPartIdx)
     {
       /// goto child, save resident particle
       goChild(targetOctant);
-      /*partProxyPtrT residentPayload =
-        static_cast<partPtrT>(curNodePtr)->partProxyPtr;
-      bool residentIsLocal = curNodePtr->isLocal;*/
       size_t residentIdx = static_cast<partPtrT>(curNodePtr)->ident;
       goUp();
 
@@ -445,8 +420,6 @@ void insertParticleRecursor(size_t _newPartIdx)
 
       /// and try to insert both particles again
       goChild(targetOctant);
-      //insertParticleRecursor(residentPayload, residentIsLocal);
-      //insertParticleRecursor(_newPayload, _newIsLocal);
       insertParticleRecursor(residentIdx);
       insertParticleRecursor(_newPartIdx);
       goUp();
@@ -830,9 +803,6 @@ public:
 //void calcGravity(const partProxyPtrT _curParticle)
 void calcGravity(const size_t _partIdx)
 {
-  /*curGravParticleX = (*_curParticle)(X);
-  curGravParticleY = (*_curParticle)(Y);
-  curGravParticleZ = (*_curParticle)(Z);*/
   curGravParticleX = pos(_partIdx, X);
   curGravParticleY = pos(_partIdx, Y);
   curGravParticleZ = pos(_partIdx, Z);
@@ -841,7 +811,6 @@ void calcGravity(const size_t _partIdx)
   curGravParticleAY = 0.;
   curGravParticleAZ = 0.;
 
-  //epsilonSquare = (*_curParticle)(GRAVEPS)*(*_curParticle)(GRAVEPS);
   epsilonSquare = eps(_partIdx)*eps(_partIdx);
 
 #ifdef SPHLATCH_TREE_PROFILE
@@ -854,17 +823,11 @@ void calcGravity(const size_t _partIdx)
   /// an empty cell node, so that it doesn't gravitate with
   /// itself. btw: a particle is always empty.
   ///
-  //_curParticle->nodePtr->isParticle = false;
   partProxies[_partIdx]->isParticle = false;
 
   goRoot();
   calcGravityRecursor();
 
-  //ct.start();
-
-  /*(*_curParticle)(AX) += gravConst * curGravParticleAX;
-  (*_curParticle)(AY) += gravConst * curGravParticleAY;
-  (*_curParticle)(AZ) += gravConst * curGravParticleAZ;*/
   acc(_partIdx, X) += gravConst * curGravParticleAX;
   acc(_partIdx, Y) += gravConst * curGravParticleAY;
   acc(_partIdx, Z) += gravConst * curGravParticleAZ;
@@ -872,7 +835,6 @@ void calcGravity(const size_t _partIdx)
   ///
   /// undo the trick above
   ///
-  //_curParticle->nodePtr->isParticle = true;
   partProxies[_partIdx]->isParticle = true;
 }
 
@@ -881,12 +843,10 @@ void calcGravityRecursor(void)
 {
   if (curNodePtr->isParticle)
     {
-      //ct.start();
       calcGravParticle();
 #ifdef SPHLATCH_TREE_PROFILE
       calcGravityPartsCounter++;
 #endif
-      //std::cout << ct.lapse() << " cycles particle \n";
     }
   else
   if (curNodePtr->isEmpty)
@@ -895,12 +855,10 @@ void calcGravityRecursor(void)
   else
   if (asLeaf().calcGravMAC())
     {
-      //ct.start();
       asLeaf().calcGravCell();
 #ifdef SPHLATCH_TREE_PROFILE
       calcGravityCellsCounter++;
 #endif
-      //std::cout << ct.lapse() << " cycles cell \n";
     }
   else
     {
@@ -908,9 +866,7 @@ void calcGravityRecursor(void)
         {
           if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
             {
-              //ct.start();
               goChild(i);
-              //std::cout << ct.lapse() << " cycles go child \n";
               calcGravityRecursor();
               goUp();
             }
@@ -984,15 +940,12 @@ public:
 ///
 partsIndexVectType neighbourList;
 std::valarray<valueType> neighDistList;
-//void findNeighbours(const partProxyPtrT _curParticle,
 void findNeighbours(size_t _curPartIdx,
-                    //const valueRefType _search_radius)
                     const valueType _search_radius)
 {
   ///
   /// set up some vars and go to particles node
   ///
-  //curNodePtr = _curParticle->nodePtr;
   curNodePtr = partProxies[_curPartIdx];
   
   curNeighParticleX = static_cast<partPtrT>(curNodePtr)->xPos;

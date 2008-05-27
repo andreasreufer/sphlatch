@@ -12,11 +12,8 @@
 
 #include "typedefs.h"
 #include "bhtree_generic_node.h"
-#include "bhtree_particle_proxy.h"
 
 namespace sphlatch {
-
-struct particleProxy;
 
 struct particleNode : public genericNode {
   

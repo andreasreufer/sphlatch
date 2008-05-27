@@ -119,6 +119,15 @@ int main(int argc, char* argv[])
           << MPI_Wtime() - logStartTime << " XXX  start log\n";
   stepStartTime = MPI_Wtime();
 
+  sphlatch::valvectType aux;
+  std::cout << "aux var has size " << aux.size() << "\n";
+  PartManager.regQuantity(aux, "aux");
+  PartManager.regQuantity(aux, "aux1");
+  PartManager.setNoParts(500);
+  PartManager.resizeAll();
+  std::cout << "aux var has size " << aux.size() << "\n";
+  PartManager.unRegQuantity(aux);
+
   /*PartManager.setNoParts(100 + 9*myDomain, 0);
      PartManager.resizeAll();
      //PartManager.setNoParts(02, 80);

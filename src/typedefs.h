@@ -53,6 +53,8 @@ typedef blas::matrix_row<matrixType>   matrixRowType;
 typedef blas::matrix_row<matrixType>&  matrixRowRefType;
 typedef blas::matrix_row<matrixType>*  matrixRowPtrType;
 
+typedef blas::matrix_column<matrixType>   matrixColumnType;
+
 typedef blas::matrix_range<matrixType> matrixRangeType;
 
 ///
@@ -73,6 +75,13 @@ typedef blas::matrix_vector_slice<const matrixType> constMatrixVectorSliceType;
 typedef matrixRowType particleRowType;
 typedef matrixRowType& particleRowRefType;
 typedef matrixRowType* particleRowPtrType;
+
+///
+/// a matrix column represents a quantitiy in a matrix
+///
+typedef matrixColumnType quantColumnType;
+typedef matrixColumnType& quantColumnRefType;
+typedef matrixColumnType* quantColumnPtrType;
 
 ///
 /// a valueType vector

@@ -18,7 +18,6 @@ class NoMultipoles : public BHtree<NoMultipoles>
 typedef genericNode* nodePtrT;
 typedef particleNode* partPtrT;
 typedef genericCellNode* cellPtrT;
-typedef particleProxy* partProxyPtrT;
 
 public:
 ///

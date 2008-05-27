@@ -66,6 +66,20 @@ valvectPtrType getScalarRef(std::string _name);
 idvectPtrType  getIdRef(std::string _name);
 
 ///
+/// register an auxilliary quantity, for example integration vars
+///
+void regQuantity(matrixRefType _matrixRef,   std::string _name);
+void regQuantity(valvectRefType _valvectRef, std::string _name);
+void regQuantity(idvectRefType _idvectRef,   std::string _name);
+
+///
+/// unregister a quantity again, for example when an integrator is destructed
+///
+void unRegQuantity(matrixRefType  _matRef);
+void unRegQuantity(valvectRefType _valvectRef);
+void unRegQuantity(idvectRefType  _idvectRef);
+
+///
 /// vector quantities
 ///
 matrixType pos, vel, acc, rotv, M, I, S;
@@ -107,6 +121,7 @@ size_t noLocalParts, noGhostParts;
 public:
 size_t getNoLocalParts();
 size_t getNoGhostParts();
+size_t getNoTotalParts();
 
 ///
 /// the quantities which are ghosts, when used
@@ -403,6 +418,11 @@ size_t ParticleManager::getNoGhostParts()
   return noGhostParts;
 }
 
+size_t ParticleManager::getNoTotalParts()
+{
+  return noLocalParts + noGhostParts;
+}
+
 ///
 /// is the variable with a given name used by ghosts?
 ///
@@ -517,6 +537,64 @@ idvectPtrType ParticleManager::getIdRef(std::string _name)
     {
       return intItr->second;
     }
+}
+
+
+///
+/// register an auxilliary quantity, for example integration vars
+///
+void ParticleManager::regQuantity(matrixRefType _matrixRef,
+                                  std::string _name)
+{
+  if ( _name.size() > 0 )
+  {
+    usedVectors[ _name ] = &_matrixRef;
+  }
+}
+
+void ParticleManager::regQuantity(valvectRefType _valvectRef,
+                                  std::string _name)
+{
+  if ( _name.size() > 0 )
+  {
+  usedScalars[ _name ] = &_valvectRef;
+  }
+}
+
+void ParticleManager::regQuantity(idvectRefType _idvectRef,
+                                  std::string _name)
+{
+  if ( _name.size() > 0 )
+  {
+  usedIntegers[ _name ] = &_idvectRef;
+  }
+}
+
+///
+/// unregister a quantity again, for example when an integrator is destructed
+///
+void ParticleManager::unRegQuantity(matrixRefType _matrRef)
+{
+  while ( getName(_matrRef).size() > 0 )
+  {
+    usedVectors.erase( getName(_matrRef) );
+  }
+}
+
+void ParticleManager::unRegQuantity(valvectRefType _valvectRef)
+{
+  while ( getName(_valvectRef).size() > 0 )
+  {
+    usedScalars.erase( getName(_valvectRef) );
+  }
+}
+
+void ParticleManager::unRegQuantity(idvectRefType _idvectRef)
+{
+  while ( getName(_idvectRef).size() > 0 )
+  {
+    usedIntegers.erase( getName(_idvectRef) );
+  }
 }
 
 ///

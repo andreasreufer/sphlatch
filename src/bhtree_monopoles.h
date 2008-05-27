@@ -19,7 +19,6 @@ typedef genericNode* nodePtrT;
 typedef particleNode* partPtrT;
 typedef genericCellNode* cellPtrT;
 typedef monopoleCellNode* monoPtrT;
-typedef particleProxy* partProxyPtrT;
 
 public:
 ///
