@@ -46,6 +46,8 @@ typedef blas::matrix<valueType>        matrixType;
 typedef matrixType&                    matrixRefType;
 typedef matrixType*                    matrixPtrType;
 
+typedef blas::zero_matrix<valueType>   zeromatrixType;
+
 ///
 /// a matrix row
 ///
@@ -89,6 +91,9 @@ typedef matrixColumnType* quantColumnPtrType;
 typedef blas::vector<valueType> valvectType;
 typedef blas::vector<valueType>& valvectRefType;
 typedef blas::vector<valueType>* valvectPtrType;
+
+typedef blas::zero_vector<valueType> zerovalvectType;
+
 
 typedef blas::vector_range<valvectType> valvectRangeType;
 
@@ -166,8 +171,8 @@ struct quantsType {
   idvectPtrSetType  ints;
 };
 
-typedef quantsType& quantsTypeRefType;
-typedef quantsType* quantsTypePtrType;
+typedef quantsType& quantsRefType;
+typedef quantsType* quantPtrType;
 
 };
 

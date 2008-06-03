@@ -13,122 +13,287 @@
 #include "integrator_generic.h"
 
 namespace sphlatch {
-
-/*template<class T>
-class VerletIntegrator
+///
+/// templates hierarchies with non-template base
+/// class don't work, so we use non-templated functions here
+///
+/// virtual functions are a performance sin, but here we deal with
+/// veeeery big loops, so that's not a problem
+///
+class GenericVerlet : public GenericIntegrator {
+public:
+GenericVerlet()
 {
-  public:
-    VerletIntegrator(T& _var, T& _dVar, T& _ddVar)
-    {
-      var   = *_var;
-      dVar  = *_dVar;
-      ddVar = *_ddVar;
-    }
-    void resize() {};
-    void bootstrap();
-    void integrate();
-  public:
-    T oVar;
-    T* var, dVar, ddVar;
+};
+virtual ~GenericVerlet()
+{
+};
+public:
+virtual void bootstrap(void) = 0;
+
+///
+/// drift changes the position:
+///  x_1 = x_0 + v_0*dt + 0.5*a_0*dt^2
+///
+virtual void drift(valueRefType _dt) = 0;
+
+///
+/// kick changes the velocity:
+///  v_1 = v_0 + 0.5*a_0*dt + 0.5*a_1*dt;
+///
+virtual void kick(valueRefType _dt) = 0;
 };
 
-template<>
-void VerletIntegrator<matrixType>::resize()
+///
+/// 2nd order vectorial Verlet integrator
+///
+class VerletVectO2 : public GenericVerlet {
+public:
+VerletVectO2(matrixRefType _var,
+             matrixRefType _dVar,
+             matrixRefType _ddVar)
 {
-  oVar.resize( oVar.size1(), var->size2() );
+  var = &_var;
+  dVar = &_dVar;
+  ddVar = &_ddVar;
+
+  oddVar.resize(0, var->size2());
+  zero.resize(0, var->size2());
+
+  PartManager.regQuantity(oddVar, "o" + PartManager.getName(*ddVar));
+};
+
+~VerletVectO2()
+{
+  PartManager.unRegQuantity(oddVar);
+};
+
+public:
+void bootstrap(void)
+{
+  matrixRefType a(*ddVar);
+
+  noParts = a.size1();
+  zero.resize(noParts, a.size2());
+
+  /// a = 0;
+  a = zero;
 }
-*/
 
-///
-/// template polymorphism is not allow, so we will
-/// use a non-templated hierarchy here
-///
-/// virtual functions are a sin, but in this case
-/// they are not called very often
-///
-class VerletGeneric {
-  public:
-    VerletGeneric(void) {};
-    virtual ~VerletGeneric() {};
-
-  public:
-    virtual void bootstrap(void) {};
-    virtual void integrate(valueType _dt) {};
-};
-
-class VerletVectO2 : public VerletGeneric {
-  public:
-    VerletVectO2(size_t _i)
-    {
-      std::cout << "new VerletVectO2 with arg " << _i << "\n";
-    };
-    ~VerletVectO2() {};
-
-  public:
-    void bootstrap(void)
-    {
-      std::cout << "VerletVectO2 bootstrapped!\n";
-    }
-
-    void integrate(valueType _dt)
-    {
-    }
-  private:
-    matrixType oVar;
-    matrixPtrType var, dVar, ddVar;
-
-};
-
-class VerletScalO2 : public VerletGeneric {
-  public:
-    VerletScalO2() {};
-    ~VerletScalO2() {};
-
-  public:
-    void bootstrap(void)
-    {
-      std::cout << "VerletScalO2 bootstrapped!\n";
-    }
-
-    void integrate(valueType _dt)
-    {
-      std::cout << " integrate ... " << _dt << "\n";
-    }
-};
-
-
-
-class Verlet : public MetaIntegrator<Verlet>
+void drift(valueRefType _dt)
 {
-  public:
-    ///
-    /// only second order integration is implemented
-    ///
-    /// make template out of it
-    //template<class T>
-    void regIntegration( valvectRefType _var,
-                         valvectRefType _devVar,
-                         valvectRefType _ddevVar )
-    {
-      std::vector<VerletGeneric*> integrators;
-      integrators.push_back( new VerletVectO2(1) );
+  matrixRangeType x(*var, rangeType(0, noParts), rangeType(0, var->size2()) );
+  matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()) );
+  
+  matrixRefType a(*ddVar);
+  matrixRefType oa(oddVar);
 
-      integrators[0]->bootstrap();
-      
-      //integrators.push_back( new VerletScalO2(2) );
+  /// move
+  const valueType dtSquare = _dt * _dt;
 
-      delete integrators[0];
-      //delete integrators[1];
-    }
-    /*void regIntegration( T& _var,
-                         T& _dVar,
-                         T& _ddVar )
-    {
-      VerletIntegrator<T>* Int = new VerletIntegrator<T>(_var, _dVar, _ddVar);
-      std::vector< VerletIntegrator<T>* > vect;
-    }*/
+  x += (v * _dt) + 0.5*(a * dtSquare);
+  //std::cout << "new pos " << x(0, 0) << "\t" << x(0,1) << "\n";
+
+  /// oa = a
+  oa.swap(a);
+
+  /// a = 0;
+  a = zero;
+}
+
+void kick(valueRefType _dt)
+{
+  matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()) );
+  matrixRefType a(*ddVar);
+  matrixRefType oa(oddVar);
+
+  /// boost
+  v += 0.5 * ( a * _dt + oa * _dt );
+}
+private:
+matrixType oddVar;
+matrixPtrType var, dVar, ddVar;
+zeromatrixType zero;
+size_t noParts;
 };
 
+///
+/// 2nd order scalar Verlet integrator
+///
+class VerletScalO2 : public GenericVerlet {
+public:
+VerletScalO2(valvectRefType _var,
+             valvectRefType _dVar,
+             valvectRefType _ddVar)
+{
+  var = &_var;
+  dVar = &_dVar;
+  ddVar = &_ddVar;
+
+  /// register the integration variable for resizing
+  PartManager.regQuantity(oddVar, "o" + PartManager.getName(*ddVar));
+  /// also register to CommManager
+#ifdef SPHLATCH_PARALLEL
+  //CommManager.regExchQuant(oddVar);
+#endif
+};
+
+~VerletScalO2()
+{
+  PartManager.unRegQuantity(oddVar);
+};
+
+public:
+void bootstrap(void)
+{
+  valvectRefType a(*ddVar);
+
+  noParts = a.size();
+  zero.resize(noParts);
+
+  /// a = 0;
+  a = zero;
+}
+
+void drift(valueRefType _dt)
+{
+  valvectRangeType x(*var, rangeType(0, noParts) );
+  valvectRangeType v(*dVar, rangeType(0, noParts) );
+  
+  valvectRefType a(*ddVar);
+  valvectRefType oa(oddVar);
+
+  /// move
+  const valueType dtSquare = _dt * _dt;
+
+  x += v * _dt + 0.5*a * (dtSquare);
+
+  /// oa = a
+  oa.swap(a);
+
+  /// a = 0;   do this with zero_matrix instead?
+  a = zero;
+}
+
+void kick(valueRefType _dt)
+{
+  valvectRangeType v(*dVar, rangeType(0, noParts) );
+  valvectRefType a(*ddVar);
+  valvectRefType oa(oddVar);
+
+  /// boost
+  v += 0.5 * ( a * _dt + oa * _dt);
+}
+private:
+valvectType oddVar;
+valvectPtrType var, dVar, ddVar;
+zerovalvectType zero;
+size_t noParts;
+};
+
+
+///
+/// the Verlet meta integrator
+///
+class VerletMetaIntegrator : public GenericMetaIntegrator
+{
+private:
+typedef std::list<GenericVerlet*> integratorsListType;
+typedef void (*funcPtr)(void);
+
+integratorsListType::iterator integItr, integEnd;
+funcPtr derivFunc;
+
+public:
+VerletMetaIntegrator( void (*_deriv)(void))
+{
+  derivFunc = _deriv;
+};
+
+~VerletMetaIntegrator()
+{
+  /// delete the integrators on meta integrator destruction
+  integItr = integrators.begin();
+  integEnd = integrators.end();
+
+  while (integItr != integEnd)
+    {
+      delete *integItr;
+      integItr++;
+    }
+};
+public:
+void bootstrap()
+{
+  integEnd = integrators.end();
+
+  integItr = integrators.begin();
+  while (integItr != integEnd)
+    {
+      (*integItr)->bootstrap();
+      integItr++;
+    }
+  
+  derivFunc();
+
+  valueType dt = 2.*M_PI / 50.;
+  integItr = integrators.begin();
+  while (integItr != integEnd)
+    {
+      (*integItr)->drift(dt);
+      integItr++;
+    }
+
+};
+
+///
+/// this is the integration mail loop
+///
+void integrate(valueType _dt)
+{
+  integItr = integrators.begin();
+  integEnd = integrators.end();
+
+  /// particles are freshly moved
+  /// derivative
+  derivFunc();
+
+  /// kick
+  integItr = integrators.begin();
+  while (integItr != integEnd)
+    {
+      (*integItr)->kick(_dt);
+      integItr++;
+    }
+  
+  /// drift
+  integItr = integrators.begin();
+  while (integItr != integEnd)
+    {
+      (*integItr)->drift(_dt);
+      integItr++;
+    }
+
+};
+
+void regIntegration(valvectRefType _var,
+                    valvectRefType _dVar,
+                    valvectRefType _ddVar)
+{
+  integrators.push_back(new VerletScalO2(_var, _dVar, _ddVar));
+}
+
+void regIntegration(matrixRefType _var,
+                    matrixRefType _dVar,
+                    matrixRefType _ddVar)
+{
+  integrators.push_back(new VerletVectO2(_var, _dVar, _ddVar));
+}
+
+
+private:
+integratorsListType integrators;
+};
 };
 
 #endif

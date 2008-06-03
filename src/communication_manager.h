@@ -45,8 +45,11 @@ PartManagerType& PartManager;
 /// this is the central exchange part
 ///
 void exchange(domainPartsIndexRefType _partsIndices,
-              size_t _noGhosts,
-              quantsTypeRefType _quantities);
+              //size_t _noGhosts,
+              //quantsRefType _quantities);
+              size_t _noGhosts);
+
+quantsType exchangeQuants;
 
 void sendGhostsPrepare(domainPartsIndexRefType _ghostsIndices);
 
@@ -54,7 +57,7 @@ void sendGhosts(idvectRefType _idVect);
 void sendGhosts(valvectRefType _valVect);
 void sendGhosts(matrixRefType _matrix);
 
-void sendGhosts(quantsTypeRefType _quantities);
+void sendGhosts(quantsRefType _quantities);
 
 private:
 std::vector<MPI::Request> recvReqs;
@@ -196,8 +199,9 @@ size_t CommunicationManager::commBuffSize = 1048576;    // 1024 kByte
 size_t CommunicationManager::noBuffParts = 65536;
 
 void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
-                                    size_t _noGhosts,
-                                    quantsTypeRefType _quantities)
+                                    //size_t _noGhosts,
+                                    //quantsRefType _quantities)
+                                    size_t _noGhosts)
 {
   ///
   /// prepare particle queue and number of particles
@@ -235,8 +239,10 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   idvectType idRecvBuff(newNoParts);
   idSendBuff.resize(noBuffParts);
 
-  idvectPtrSetType::const_iterator intsItr = _quantities.ints.begin();
-  idvectPtrSetType::const_iterator intsEnd = _quantities.ints.end();
+  //idvectPtrSetType::const_iterator intsItr = _quantities.ints.begin();
+  //idvectPtrSetType::const_iterator intsEnd = _quantities.ints.end();
+  idvectPtrSetType::const_iterator intsItr = exchangeQuants.ints.begin();
+  idvectPtrSetType::const_iterator intsEnd = exchangeQuants.ints.end();
   while (intsItr != intsEnd)
     {
       ///
@@ -274,8 +280,10 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   valvectType scalRecvBuff(newNoParts);
   scalSendBuff.resize(noBuffParts);
 
-  valvectPtrSetType::const_iterator scalItr = _quantities.scalars.begin();
-  valvectPtrSetType::const_iterator scalEnd = _quantities.scalars.end();
+  //valvectPtrSetType::const_iterator scalItr = _quantities.scalars.begin();
+  //valvectPtrSetType::const_iterator scalEnd = _quantities.scalars.end();
+  valvectPtrSetType::const_iterator scalItr = exchangeQuants.scalars.begin();
+  valvectPtrSetType::const_iterator scalEnd = exchangeQuants.scalars.end();
   while (scalItr != scalEnd)
     {
       ///
@@ -313,8 +321,10 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   matrixType vectRecvBuff(newNoParts, 0);
   vectSendBuff.resize(noBuffParts, 0);
 
-  matrixPtrSetType::const_iterator vectItr = _quantities.vects.begin();
-  matrixPtrSetType::const_iterator vectEnd = _quantities.vects.end();
+  //matrixPtrSetType::const_iterator vectItr = _quantities.vects.begin();
+  //matrixPtrSetType::const_iterator vectEnd = _quantities.vects.end();
+  matrixPtrSetType::const_iterator vectItr = exchangeQuants.vects.begin();
+  matrixPtrSetType::const_iterator vectEnd = exchangeQuants.vects.end();
   while (vectItr != vectEnd)
     {
       ///
@@ -384,7 +394,7 @@ void CommunicationManager::sendGhosts(matrixRefType _matrix)
   queuedExch(_matrix, _matrix, ghostQueue, ghostOffsets, noRecvGhosts);
 }
 
-void CommunicationManager::sendGhosts(quantsTypeRefType _quantities)
+void CommunicationManager::sendGhosts(quantsRefType _quantities)
 {
   matrixPtrSetType::const_iterator vectItr = _quantities.vects.begin();
   matrixPtrSetType::const_iterator vectEnd = _quantities.vects.end();

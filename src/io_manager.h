@@ -52,7 +52,7 @@ void saveDump(std::string _outputFile,
               std::set<valvectPtrType> _scalars,
               std::set<idvectPtrType>  _integers);
 
-void saveDump(std::string _outputFile, quantsTypeRefType _quantities);
+void saveDump(std::string _outputFile, quantsRefType _quantities);
               
 
 void setSinglePrecOut(void);
@@ -621,7 +621,7 @@ void IOManager::saveDump(std::string _outputFile,
 }
 
 void IOManager::saveDump(std::string _outputFile,
-                         quantsTypeRefType _quantities)
+                         quantsRefType _quantities)
 {
   saveDump( _outputFile,
             _quantities.vects, _quantities.scalars, _quantities.ints );

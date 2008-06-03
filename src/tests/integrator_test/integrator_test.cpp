@@ -6,7 +6,7 @@
 #define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
-//#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_SINGLEPREC
 
 // enable parallel version
 #define SPHLATCH_PARALLEL
@@ -67,66 +67,43 @@ typedef sphlatch::CostZone costzone_type;
 // tree stuff
 #include "bhtree.h"
 
+void derivate()
+{
+  using namespace sphlatch;
+  
+  part_type& PartManager(part_type::instance());
+  matrixRefType pos(PartManager.pos);
+  matrixRefType vel(PartManager.vel);
+  matrixRefType acc(PartManager.acc);
+
+  const size_t noParts = PartManager.getNoLocalParts();
+
+  for (size_t i = 0; i < noParts; i++)
+  {
+    const valueType dist = sqrt( pos(i, X)*pos(i, X) +
+                                 pos(i, Y)*pos(i, Y) );
+    
+    const valueType distPow3 = dist*dist*dist;
+    
+    acc(i, X) = - pos(i, X) / distPow3;
+    acc(i, Y) = - pos(i, Y) / distPow3;
+    acc(i, Z) = 0;
+  }
+
+};
+
 int main(int argc, char* argv[])
 {
-  MPI::Init(argc, argv);
-  double stepStartTime, logStartTime = MPI_Wtime();
-
-  po::options_description Options("Global Options");
-  Options.add_options() ("help,h", "Produces this Help")
-  ("input-file,i", po::value<std::string>(), "input  file")
-  ("output-file,o", po::value<std::string>(), "output file");
-
-  po::positional_options_description POD;
-  POD.add("input-file", 1);
-
-  po::variables_map VMap;
-  po::store(po::command_line_parser(argc, argv).options(Options).positional(POD).run(), VMap);
-  po::notify(VMap);
-
-  if (VMap.count("help"))
-    {
-      std::cerr << Options << std::endl;
-      MPI::Finalize();
-      return EXIT_FAILURE;
-    }
-
-  if (!VMap.count("input-file") or
-      !VMap.count("output-file"))
-    {
-      std::cerr << Options << std::endl;
-      MPI::Finalize();
-      return EXIT_FAILURE;
-    }
 
   using namespace boost::assign;
   using namespace sphlatch;
 
-  io_type& IOManager(io_type::instance());
   part_type& PartManager(part_type::instance());
-  com_type& ComManager(com_type::instance());
-  costzone_type& CostZone(costzone_type::instance());
-
-  const size_t myDomain = ComManager.getMyDomain();
-
-  size_t noParts, noGhosts, noTotParts;
-
-  std::string inputFileName = VMap[ "input-file"].as<std::string>();
-  std::string outputFileName = VMap["output-file"].as<std::string>();
 
   PartManager.useGravity();
+  PartManager.setNoParts(100);
+  PartManager.resizeAll();
   
-  IOManager.loadDump(inputFileName);
-
-  // set up logging stuff
-  std::string logFilename = outputFileName + "_rank000";
-  std::string rankString = boost::lexical_cast<std::string>(myDomain);
-  logFilename.replace(logFilename.size() - 0 - rankString.size(),
-                      rankString.size(), rankString);
-  std::fstream logFile;
-  logFile.open(logFilename.c_str(), std::ios::out);
-  logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-          << MPI_Wtime() - logStartTime << "    start log\n";
 
   matrixRefType pos(PartManager.pos);
   matrixRefType vel(PartManager.vel);
@@ -136,36 +113,55 @@ int main(int argc, char* argv[])
 
   idvectRefType id(PartManager.id);
 
-  quantsType exchQuants;
-  exchQuants.vects += &pos, &vel;
-  exchQuants.ints += &id;
-  exchQuants.scalars += &m;
+  VerletMetaIntegrator myIntegrator(derivate);
+  myIntegrator.regIntegration(pos, vel, acc);
 
-  stepStartTime = MPI_Wtime();
-  /// domain decomposition and exchange of particles
-  CostZone.createDomainPartsIndex();
-  ComManager.exchange(CostZone.domainPartsIndex,
-                      CostZone.getNoGhosts(),
-                      exchQuants);
+  //size_t noParts = 200;
+  size_t noParts = 1;
 
-  /// prepare ghost stuff
-  ComManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-  ComManager.sendGhosts(exchQuants);
+  //PartManager.setNoParts(1000000,1000000);
+  PartManager.setNoParts(noParts,10);
+  PartManager.resizeAll();
 
-  noParts = PartManager.getNoLocalParts();
-  noGhosts = PartManager.getNoGhostParts();
-  noTotParts = PartManager.getNoTotalParts();
+  //const valueType k = 1.88;
+  const valueType k = 0.;
+  for (size_t i = 0; i < noParts; i++)
+  {
+    const valueType phi = 2*M_PI*static_cast<valueType>(random())/RAND_MAX;
 
-  size_t curIndex = 0;
-  double treesearchTime;
+    pos(i, X) = sin( phi );
+    pos(i, Y) = cos( phi );
+    pos(i, Z) = 0;
 
-  MetaIntegrator<Verlet> myIntegrator;
+    const valueType theta = phi
+      + k*( (static_cast<valueType>(random())/RAND_MAX) - 0.5);
+    
+    //vel(i, X) = 1.40*cos( theta );
+    //vel(i, Y) = -1.35*sin( theta );
+    vel(i, X) = cos( theta );
+    vel(i, Y) = -sin( theta );
+    vel(i, Z) = 0.;
+    std::cerr << phi << " " << theta << "\n";
+  }
+  
+  myIntegrator.bootstrap();
 
-  myIntegrator.regIntegration(m, m, m);
+  size_t step = 0;
+  while ( step < 50000 )
+  {
+    myIntegrator.integrate(2*M_PI / 50.);
+    step++;
+    
+    for (size_t i = 0; i < noParts; i++)
+    {
+      std::cout << pos(i, X) << "\t" << pos(i, Y) << "\n";
+    }
+  }
 
+  std::cerr << pos << "\n";
+  std::cerr << vel << "\n";
+  std::cerr << acc << "\n";
 
-  logFile.close();
-  MPI::Finalize();
   return EXIT_SUCCESS;
 }
 
