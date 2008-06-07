@@ -93,6 +93,7 @@ BHtree(valueType _thetaMAC,
 
   cellCounter = 1;  // we now have the root cell
   partCounter = 0;  // ... and no particles
+  ghostCounter = 0;  // ... and no ghost particles
 
   thetaMAC = _thetaMAC;
   gravConst = _gravConst;
@@ -152,7 +153,7 @@ nodePtrT curNodePtr, rootPtr;
 ///
 /// variables
 ///
-size_t cellCounter, partCounter, toptreeDepth,
+size_t cellCounter, partCounter, ghostCounter, toptreeDepth,
        noToptreeCells, noToptreeLeafCells, noMultipoleMoments;
 
 matrixType localCells, remoteCells;
@@ -331,7 +332,12 @@ void insertParticle(size_t _newPartIdx)
   goRoot();
   //insertParticleRecursor(_newPayload, _newIsLocal);
   insertParticleRecursor(_newPartIdx);
-  partCounter++;
+      
+  if ( _newPartIdx > locMaxIndex ) {
+    ghostCounter++;
+  } else {
+    partCounter++;
+  }
 }
 
 private:
@@ -372,6 +378,8 @@ void insertParticleRecursor(size_t _newPartIdx)
         curNodePtr->isLocal = false;
       } else {
         curNodePtr->isLocal = true;
+        /// save the particle's proxy
+        partProxies[_newPartIdx] = curNodePtr;
       }
 
       /// particle saves its position to node directly
@@ -383,8 +391,6 @@ void insertParticleRecursor(size_t _newPartIdx)
       /// ident saves the rowIndex of the particle
       curNodePtr->ident = _newPartIdx;
 
-      /// save the particle's proxy
-      partProxies[_newPartIdx] = curNodePtr;
       goUp();
     }
 
@@ -757,7 +763,7 @@ void detParticleOrder()
 private:
 void particleOrderRecursor()
 {
-  if (curNodePtr->isParticle)
+  if (curNodePtr->isParticle && curNodePtr->isLocal)
     {
       particleOrder[partCounter] = curNodePtr->ident;
       partCounter++;

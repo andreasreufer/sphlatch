@@ -18,7 +18,7 @@ namespace sphlatch {
 /// class don't work, so we use non-templated functions here
 ///
 /// virtual functions are a performance sin, but here we deal with
-/// veeeery big loops, so that's not a problem
+/// veeeery big loops, so that's not really a problem
 ///
 class GenericVerlet : public GenericIntegrator {
 public:
@@ -29,7 +29,7 @@ virtual ~GenericVerlet()
 {
 };
 public:
-virtual void bootstrap(void) = 0;
+virtual void prepare(void) = 0;
 
 ///
 /// drift changes the position:
@@ -60,7 +60,13 @@ VerletVectO2(matrixRefType _var,
   oddVar.resize(0, var->size2());
   zero.resize(0, var->size2());
 
+  /// take name of the second derivative variable, prefix with "o"
+  /// and register it to PartManager for resizing
   PartManager.regQuantity(oddVar, "o" + PartManager.getName(*ddVar));
+  /// also register to CommManager if we're gonna do parallel
+#ifdef SPHLATCH_PARALLEL
+  CommManager.regExchQuant(oddVar);
+#endif
 };
 
 ~VerletVectO2()
@@ -69,7 +75,7 @@ VerletVectO2(matrixRefType _var,
 };
 
 public:
-void bootstrap(void)
+void prepare(void)
 {
   matrixRefType a(*ddVar);
 
@@ -82,16 +88,16 @@ void bootstrap(void)
 
 void drift(valueRefType _dt)
 {
-  matrixRangeType x(*var, rangeType(0, noParts), rangeType(0, var->size2()) );
-  matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()) );
-  
+  matrixRangeType x(*var, rangeType(0, noParts), rangeType(0, var->size2()));
+  matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
+
   matrixRefType a(*ddVar);
   matrixRefType oa(oddVar);
 
   /// move
   const valueType dtSquare = _dt * _dt;
 
-  x += (v * _dt) + 0.5*(a * dtSquare);
+  x += (v * _dt) + 0.5 * (a * dtSquare);
   //std::cout << "new pos " << x(0, 0) << "\t" << x(0,1) << "\n";
 
   /// oa = a
@@ -103,12 +109,14 @@ void drift(valueRefType _dt)
 
 void kick(valueRefType _dt)
 {
-  matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()) );
+  matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
   matrixRefType a(*ddVar);
   matrixRefType oa(oddVar);
 
   /// boost
-  v += 0.5 * ( a * _dt + oa * _dt );
+
+  //std::cerr << v.size1() << " " << a.size1() << " " << oa.size1() << "\n";
+  v += 0.5 * (a * _dt + oa * _dt);
 }
 private:
 matrixType oddVar;
@@ -130,11 +138,12 @@ VerletScalO2(valvectRefType _var,
   dVar = &_dVar;
   ddVar = &_ddVar;
 
-  /// register the integration variable for resizing
+  /// take name of the second derivative variable, prefix with "o"
+  /// and register it to PartManager for resizing
   PartManager.regQuantity(oddVar, "o" + PartManager.getName(*ddVar));
-  /// also register to CommManager
+  /// also register to CommManager if we're gonna do parallel
 #ifdef SPHLATCH_PARALLEL
-  //CommManager.regExchQuant(oddVar);
+  CommManager.regExchQuant(oddVar);
 #endif
 };
 
@@ -144,7 +153,7 @@ VerletScalO2(valvectRefType _var,
 };
 
 public:
-void bootstrap(void)
+void prepare(void)
 {
   valvectRefType a(*ddVar);
 
@@ -157,16 +166,16 @@ void bootstrap(void)
 
 void drift(valueRefType _dt)
 {
-  valvectRangeType x(*var, rangeType(0, noParts) );
-  valvectRangeType v(*dVar, rangeType(0, noParts) );
-  
+  valvectRangeType x(*var, rangeType(0, noParts));
+  valvectRangeType v(*dVar, rangeType(0, noParts));
+
   valvectRefType a(*ddVar);
   valvectRefType oa(oddVar);
 
   /// move
   const valueType dtSquare = _dt * _dt;
 
-  x += v * _dt + 0.5*a * (dtSquare);
+  x += v * _dt + 0.5 * a * (dtSquare);
 
   /// oa = a
   oa.swap(a);
@@ -177,12 +186,12 @@ void drift(valueRefType _dt)
 
 void kick(valueRefType _dt)
 {
-  valvectRangeType v(*dVar, rangeType(0, noParts) );
+  valvectRangeType v(*dVar, rangeType(0, noParts));
   valvectRefType a(*ddVar);
   valvectRefType oa(oddVar);
 
   /// boost
-  v += 0.5 * ( a * _dt + oa * _dt);
+  v += 0.5 * (a * _dt + oa * _dt);
 }
 private:
 valvectType oddVar;
@@ -203,9 +212,10 @@ typedef void (*funcPtr)(void);
 
 integratorsListType::iterator integItr, integEnd;
 funcPtr derivFunc;
+valueType lastDt;
 
 public:
-VerletMetaIntegrator( void (*_deriv)(void))
+VerletMetaIntegrator(void(*_deriv)(void))
 {
   derivFunc = _deriv;
 };
@@ -218,32 +228,30 @@ VerletMetaIntegrator( void (*_deriv)(void))
 
   while (integItr != integEnd)
     {
-      delete *integItr;
+      delete * integItr;
       integItr++;
     }
 };
 public:
-void bootstrap()
+void bootstrap(valueType _dt)
 {
   integEnd = integrators.end();
 
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
-      (*integItr)->bootstrap();
+      (*integItr)->prepare();
       integItr++;
     }
-  
-  derivFunc();
 
-  valueType dt = 2.*M_PI / 50.;
+  derivFunc();
+  
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
-      (*integItr)->drift(dt);
+      (*integItr)->drift(_dt);
       integItr++;
     }
-
 };
 
 ///
@@ -265,7 +273,7 @@ void integrate(valueType _dt)
       (*integItr)->kick(_dt);
       integItr++;
     }
-  
+
   /// drift
   integItr = integrators.begin();
   while (integItr != integEnd)
@@ -273,7 +281,6 @@ void integrate(valueType _dt)
       (*integItr)->drift(_dt);
       integItr++;
     }
-
 };
 
 void regIntegration(valvectRefType _var,

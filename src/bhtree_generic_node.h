@@ -13,14 +13,14 @@
 #include "typedefs.h"
 
 namespace sphlatch {
-/** \brief tree node struct with an
- *           arbitrary payload
- */
+/// \brief tree node struct with an
+///        arbitrary payload
+///
 
 struct genericNode {
-  /**
-   * pointer to parent
-   */
+  ///
+  /// pointer to parent
+  ///
   genericNode* parent;
 
   ///
@@ -36,26 +36,26 @@ struct genericNode {
   ///
   identType ident;
 
-  /**
-   * isParticle:    is a particle
-   */
+  ///
+  /// isParticle:   is a particle
+  ///
   bool isParticle : 1;
 
-  /**
-   * isEmpty:		 a cell node whose subtrees do not contain particles
-   *                on any costzone domain.
-   */
+  ///
+  /// isEmpty:	    a cell node whose subtrees do not contain particles
+  ///               on any costzone domain.
+  ///
   bool isEmpty    : 1;
 
-  /**
-   * isLocal:       determines whether a particle is local or non-
-   *                local (ghost).
-   */
+  ///
+  /// isLocal:       determines whether a particle is local or non-
+  ///                local (ghost).
+  ///
   bool isLocal    : 1;
 
-  /**
-   * pointer operator
-   */
+  ///
+  /// pointer operator
+  ///
   genericNode*  operator*() {
     return this;
   }

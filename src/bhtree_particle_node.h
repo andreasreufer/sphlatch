@@ -16,10 +16,6 @@
 namespace sphlatch {
 
 struct particleNode : public genericNode {
-  
-  // pointer to particle proxy
-  //particleProxy* partProxyPtr;
-
   // particle position and mass
   // are cached locally
   valueType xPos, yPos, zPos;

@@ -59,6 +59,10 @@ void sendGhosts(matrixRefType _matrix);
 
 void sendGhosts(quantsRefType _quantities);
 
+void regExchQuant(idvectRefType _idVect);
+void regExchQuant(valvectRefType _valVect);
+void regExchQuant(matrixRefType _matrix);
+
 private:
 std::vector<MPI::Request> recvReqs;
 template<class T> void queuedExch(T& _src, T& _trgt,
@@ -239,8 +243,6 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   idvectType idRecvBuff(newNoParts);
   idSendBuff.resize(noBuffParts);
 
-  //idvectPtrSetType::const_iterator intsItr = _quantities.ints.begin();
-  //idvectPtrSetType::const_iterator intsEnd = _quantities.ints.end();
   idvectPtrSetType::const_iterator intsItr = exchangeQuants.ints.begin();
   idvectPtrSetType::const_iterator intsEnd = exchangeQuants.ints.end();
   while (intsItr != intsEnd)
@@ -257,7 +259,6 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
           storeIndex++;
           stayItr++;
         }
-
 
       ///
       /// exchange non-staying particles
@@ -280,8 +281,6 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   valvectType scalRecvBuff(newNoParts);
   scalSendBuff.resize(noBuffParts);
 
-  //valvectPtrSetType::const_iterator scalItr = _quantities.scalars.begin();
-  //valvectPtrSetType::const_iterator scalEnd = _quantities.scalars.end();
   valvectPtrSetType::const_iterator scalItr = exchangeQuants.scalars.begin();
   valvectPtrSetType::const_iterator scalEnd = exchangeQuants.scalars.end();
   while (scalItr != scalEnd)
@@ -321,8 +320,6 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   matrixType vectRecvBuff(newNoParts, 0);
   vectSendBuff.resize(noBuffParts, 0);
 
-  //matrixPtrSetType::const_iterator vectItr = _quantities.vects.begin();
-  //matrixPtrSetType::const_iterator vectEnd = _quantities.vects.end();
   matrixPtrSetType::const_iterator vectItr = exchangeQuants.vects.begin();
   matrixPtrSetType::const_iterator vectEnd = exchangeQuants.vects.end();
   while (vectItr != vectEnd)
@@ -369,6 +366,7 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
     }
 
   // resize the rest of the variables
+
   PartManager.resizeAll();
 }
 
@@ -424,6 +422,39 @@ void CommunicationManager::sendGhosts(quantsRefType _quantities)
                  ghostQueue, ghostOffsets, noRecvGhosts);
       scalItr++;
     }
+}
+
+///
+/// register a quantity for exchange (only when ptr is not already
+/// registered)
+///
+void CommunicationManager::regExchQuant(idvectRefType _idVect)
+{
+  idvectPtrSetType::iterator searchItr = exchangeQuants.ints.find( &_idVect );
+  if ( searchItr == exchangeQuants.ints.end() )
+  {
+    exchangeQuants.ints.insert( &_idVect );
+  }
+}
+
+void CommunicationManager::regExchQuant(valvectRefType _valVect)
+{
+  valvectPtrSetType::iterator searchItr =
+    exchangeQuants.scalars.find( &_valVect );
+  if ( searchItr == exchangeQuants.scalars.end() )
+  {
+    exchangeQuants.scalars.insert( &_valVect );
+  }
+}
+
+void CommunicationManager::regExchQuant(matrixRefType _matrix)
+{
+  matrixPtrSetType::iterator searchItr =
+    exchangeQuants.vects.find( &_matrix );
+  if ( searchItr == exchangeQuants.vects.end() )
+  {
+    exchangeQuants.vects.insert( &_matrix );
+  }
 }
 
 ///

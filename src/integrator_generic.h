@@ -24,10 +24,12 @@ namespace sphlatch {
 ///
 class GenericIntegrator {
 typedef sphlatch::ParticleManager partManagerType;
+typedef sphlatch::CommunicationManager commManagerType;
 
 public:
-GenericIntegrator(void)
-  :PartManager(partManagerType::instance())
+GenericIntegrator(void) :
+  PartManager(partManagerType::instance()),
+  CommManager(commManagerType::instance())
 {
 };
 virtual ~GenericIntegrator()
@@ -37,6 +39,7 @@ public:
 
 protected:
 partManagerType& PartManager;
+commManagerType& CommManager;
 };
 
 class GenericMetaIntegrator {
