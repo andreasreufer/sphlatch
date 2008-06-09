@@ -98,7 +98,6 @@ void drift(valueRefType _dt)
   const valueType dtSquare = _dt * _dt;
 
   x += (v * _dt) + 0.5 * (a * dtSquare);
-  //std::cout << "new pos " << x(0, 0) << "\t" << x(0,1) << "\n";
 
   /// oa = a
   oa.swap(a);
@@ -114,8 +113,6 @@ void kick(valueRefType _dt)
   matrixRefType oa(oddVar);
 
   /// boost
-
-  //std::cerr << v.size1() << " " << a.size1() << " " << oa.size1() << "\n";
   v += 0.5 * (a * _dt + oa * _dt);
 }
 private:
@@ -237,6 +234,8 @@ void bootstrap(valueType _dt)
 {
   integEnd = integrators.end();
 
+  //PartManager.attributes["time"];
+
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
@@ -252,6 +251,9 @@ void bootstrap(valueType _dt)
       (*integItr)->drift(_dt);
       integItr++;
     }
+  
+  valueRefType time( PartManager.attributes["time"] );
+  time += _dt;
 };
 
 ///
@@ -261,6 +263,16 @@ void integrate(valueType _dt)
 {
   integItr = integrators.begin();
   integEnd = integrators.end();
+
+  ///
+  /// resize the containers again
+  ///
+  integItr = integrators.begin();
+  while (integItr != integEnd)
+    {
+      (*integItr)->prepare();
+      integItr++;
+    }
 
   /// particles are freshly moved
   /// derivative
@@ -281,6 +293,9 @@ void integrate(valueType _dt)
       (*integItr)->drift(_dt);
       integItr++;
     }
+
+  valueRefType time( PartManager.attributes["time"] );
+  time += _dt;
 };
 
 void regIntegration(valvectRefType _var,

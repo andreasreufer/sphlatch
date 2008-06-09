@@ -6,6 +6,8 @@
 ///
 #define H5_NO_DEPRECATED_SYMBOLS
 
+#include <boost/lexical_cast.hpp>
+
 #include "typedefs.h"
 #include "particle_manager.h"
 

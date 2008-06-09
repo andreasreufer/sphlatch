@@ -11,6 +11,8 @@
  */
 
 #include <vector>
+#include <map>
+#include <set>
 #include <list>
 #include <valarray>
 #include <boost/numeric/ublas/matrix.hpp>

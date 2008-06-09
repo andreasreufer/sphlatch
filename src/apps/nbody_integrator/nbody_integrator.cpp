@@ -16,9 +16,6 @@
 
 //#define SPHLATCH_RANKSPACESERIALIZE
 
-//#define BFCHECK
-//#define CHECK_TREE
-//#define CHECK_RANKSPACE
 
 #include <cstdlib>
 #include <iostream>
@@ -45,6 +42,7 @@ typedef sphlatch::valvectRefType valvectRefType;
 typedef sphlatch::idvectRefType idvectRefType;
 typedef sphlatch::matrixRefType matrixRefType;
 typedef sphlatch::partsIndexVectType partsIndexVectType;
+typedef sphlatch::quantsType quantsType;
 
 #include "io_manager.h"
 typedef sphlatch::IOManager io_type;
@@ -74,7 +72,7 @@ void derivate()
   
   //matrixRefType pos(PartManager.pos);
   //matrixRefType vel(PartManager.vel);
-  matrixRefType acc(PartManager.acc);
+  //matrixRefType acc(PartManager.acc);
   
   valvectRefType m(PartManager.m);
   
@@ -82,14 +80,15 @@ void derivate()
 
   const size_t noParts = PartManager.getNoLocalParts();
   const size_t noTotParts = noParts + PartManager.getNoGhostParts();
-  const size_t myDomain = CommManager.getMyDomain();
+  //const size_t myDomain = CommManager.getMyDomain();
   
   //const valueType gravTheta = 0.7;
   const valueType gravTheta = 0.7;
-  //const valueType gravTheta = 0.49;
   const valueType gravConst = 6.674e-11;
 
+//sphlatch::BHtree<sphlatch::Monopoles>   Tree(gravTheta,
   sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
+//sphlatch::BHtree<sphlatch::Octupoles>   Tree(gravTheta,
                                                gravConst,
                                                CostZone.getDepth(),
                                                CostZone.getCenter(),
@@ -97,6 +96,9 @@ void derivate()
                                                );
 
 
+  ///
+  /// fill up tree, determine ordering, calculate multipoles
+  ///
   for (size_t i = 0; i < noTotParts; i++)
   {
     Tree.insertParticle(i);
@@ -105,66 +107,27 @@ void derivate()
   Tree.detParticleOrder();
   Tree.calcMultipoles();
   
+  ///
+  /// calculate the accelerations
+  ///
   for (size_t i = 0; i < noParts; i++)
   {
     const size_t curIndex = Tree.particleOrder[i];
+    ///
+    /// don't calculate the acceleration for particle with ID = 1 (star)
+    ///
     if ( lrint( id(curIndex) ) != 1 )
     {
       Tree.calcGravity( curIndex );
     }
-    else
-    {
-      //std::cerr << "star on domain " << myDomain << "\n";
-    }
-    if ( lrint( id(curIndex) ) == 3 )
-    {
-      //std::cout << acc(curIndex, 0) << " " << acc(curIndex, 1) << " " << acc(curIndex, 2) << "\n";
-    }
   }
-    
-  /*
-  const valueType dist = sqrt( pos(0,0)* pos(0,0) +  pos(0,1)*pos(0,1));
-
-  std::cerr << " part dist is " << dist << "\n";
-  
-  const valueType distPow3 = dist*dist*dist;
-
-  std::cerr << " dev: " << ( acc(0, 0) + ( pos(0,0) / distPow3 ) )
-            <<    "   " << ( acc(0, 1) + ( pos(0,1) / distPow3 ) ) << "\n";
-
-  std::cerr << " acc: " << acc(0, 0)
-            <<    "   " << acc(0, 1) << "\n";
-
-  std::cerr << "\n\n";*/
-  /*
-  acc(1, 0) = 0.;
-  acc(1, 1) = 0.;
-  acc(1, 2) = 0.;
-  */
-
-    //std::cout << "acc " << acc(0, sphlatch::X) << "\t" << acc(0, sphlatch::Y) << "\n";
-
-  /*for (size_t i = 0; i < noParts; i++)
-  {
-    const valueType dist = sqrt( pos(i, sphlatch::X)*pos(i, sphlatch::X) +
-                                 pos(i, sphlatch::Y)*pos(i, sphlatch::Y) );
-    if ( dist > 1.e-9 )
-    {
-    const valueType distPow3 = dist*dist*dist;
-    
-    acc(i, sphlatch::X) = - pos(i, sphlatch::X) / distPow3;
-    acc(i, sphlatch::Y) = - pos(i, sphlatch::Y) / distPow3;
-    acc(i, sphlatch::Z) = 0;
-    }
-  }*/
-
 };
+
+using namespace boost::assign;
 
 int main(int argc, char* argv[])
 {
   MPI::Init(argc, argv);
-
-  using namespace boost::assign;
 
   ///
   /// instantate managers
@@ -192,6 +155,8 @@ int main(int argc, char* argv[])
   idvectRefType id(PartManager.id);
   
   size_t& step(PartManager.step);
+  
+  const size_t myDomain = CommManager.getMyDomain();
 
   ///
   /// register the quantites to be exchanged
@@ -207,51 +172,15 @@ int main(int argc, char* argv[])
   sphlatch::VerletMetaIntegrator Integrator(derivate);
   Integrator.regIntegration(pos, vel, acc);
 
-  //IOManager.loadDump("nbody_start.h5part");
   IOManager.loadDump("nbody_small.h5part");
-  //size_t noParts = 200;
-  /*size_t noParts = 5;
 
-  //PartManager.setNoParts(1000000,1000000);
-  PartManager.setNoParts(noParts,10);
-  //PartManager.setNoParts(noParts);
-  PartManager.resizeAll();
-
-  //const valueType k = 1.88;
-  const valueType k = 0.;
-  for (size_t i = 0; i < noParts; i++)
-  {
-    const valueType phi = 2*M_PI*static_cast<valueType>(random())/RAND_MAX;
-
-    m(i) = 1.e-1;
-    eps(i) = 0.;
-    id(i) = i;
-
-    pos(i, sphlatch::X) = sin( phi );
-    pos(i, sphlatch::Y) = cos( phi );
-    pos(i, sphlatch::Z) = 0;
-
-    const valueType theta = phi
-      + k*( (static_cast<valueType>(random())/RAND_MAX) - 0.5);
-    
-    //vel(i, X) = 1.40*cos( theta );
-    //vel(i, Y) = -1.35*sin( theta );
-    vel(i, sphlatch::X) = cos( theta );
-    vel(i, sphlatch::Y) = -sin( theta );
-    vel(i, sphlatch::Z) = 0.;
-    //std::cerr << phi << " " << theta << "\n";
-  }
- 
-  pos(1, 0) = 0.;
-  pos(1, 1) = 0.;
-  pos(1, 2) = 0.;
-  vel(1, 0) = 0.;
-  vel(1, 1) = 0.;
-  vel(1, 2) = 0.;
-  m(1) = 1.;
-  */
-
-  const size_t myDomain = CommManager.getMyDomain();
+  ///
+  /// define the quantities to save in a dump
+  ///
+  quantsType saveQuants;
+  saveQuants.vects   += &pos, &vel;
+  saveQuants.scalars += &eps, &m;
+  saveQuants.ints    += &id;
 
   ///
   /// exchange particles
@@ -268,15 +197,29 @@ int main(int argc, char* argv[])
   CommManager.sendGhosts(pos);
   CommManager.sendGhosts(id);
   CommManager.sendGhosts(m);
-  
-  //valueType dt = 2*M_PI / 50.;
-  valueType dt = 138.e6 / 50.;
 
+  ///
+  /// define some simulation parameters
+  /// 
+  const valueType dt = 138.e6 / 50.;
+  //const size_t maxSteps = 500000;
+  //const size_t saveSteps =  5000;
+  const size_t maxStep = 100;
+  const size_t saveSteps =  10;
+
+  ///
+  /// bootstrap the integrator
+  ///
   Integrator.bootstrap(dt);
 
-
-  while ( step < 10000 )
+  ///
+  /// the integration loop
+  ///
+  while ( step < maxStep )
   {
+    ///
+    /// exchange particles and ghosts
+    ///
     CostZone.createDomainPartsIndex();
     CommManager.exchange(CostZone.domainPartsIndex,
                          CostZone.getNoGhosts());
@@ -286,31 +229,21 @@ int main(int argc, char* argv[])
     CommManager.sendGhosts(pos);
     CommManager.sendGhosts(id);
     CommManager.sendGhosts(m);
-    
-
-    for (size_t i = 0; i < PartManager.getNoLocalParts(); i++)
-    {
-      if ( lrint( id(i) ) == 3 )
-      {
-        std::cout << pos(i, 0) << " " << pos(i, 1) << " " << pos(i, 2) << " #pos\n";
-        std::cout << vel(i, 0) << " " << vel(i, 1) << " " << vel(i, 2) << " #vel\n";
-        std::cout << "#" << step << "\n";
-        //std::cout << vel(i, 0) << " " << vel(i, 1) << " " << vel(i, 2) << "\n";
-
-        const valueType dist = sqrt( pos(i, 0)*pos(i, 0) +
-                                     pos(i, 1)*pos(i, 1) +
-                                     pos(i, 2)*pos(i, 2) );
-        const valueType vel1 = sqrt( vel(i, 0)*vel(i, 0) +
-                                     vel(i, 1)*vel(i, 1) +
-                                     vel(i, 2)*vel(i, 2) );
-
-        //std::cout << dist << " " << vel1 << "     " <<  pos(i, 0) << "\n";//   (" << myDomain << ")\n";
-      }
-    }
-    
+   
+    ///
+    /// integrate
+    ///
     Integrator.integrate(dt);
-    
     step++;
+
+    ///
+    /// save a dump
+    ///
+    if ( ( step % saveSteps ) == 0 )
+    {
+      std::cerr << "save dump!\n";
+      IOManager.saveDump("saveDump.h5part", saveQuants);
+    }
   }
 
 
