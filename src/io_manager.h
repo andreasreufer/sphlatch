@@ -425,16 +425,22 @@ void IOManager::saveDump(std::string _outputFile,
   /// use the stat() syscall, because the parallel HDF5 produces some
   /// nasty output, when the outputfile doesn't exist
   ///
-  struct stat statBuff;
-  if (stat(_outputFile.c_str(), &statBuff) == -1)
-    {
-      fileHandle = H5Fcreate(_outputFile.c_str(),
-                             H5F_ACC_TRUNC, H5P_DEFAULT, filePropList);
-    }
-  else
-    {
-      fileHandle = H5Fopen(_outputFile.c_str(), H5F_ACC_RDWR, filePropList);
-    }
+  if (myDomain == 0)
+  {
+    struct stat statBuff;
+    if (stat(_outputFile.c_str(), &statBuff) == -1)
+      {
+        hid_t filePropLocList = H5Pcreate(H5P_FILE_ACCESS);
+        fileHandle = H5Fcreate(_outputFile.c_str(),
+                             H5F_ACC_TRUNC, H5P_DEFAULT, filePropLocList);
+        H5Fclose(fileHandle);
+        H5Pclose(filePropLocList);
+        sleep(1);
+      }
+  }
+  CommManager.barrier();
+  
+  fileHandle = H5Fopen(_outputFile.c_str(), H5F_ACC_RDWR, filePropList);
   H5Pclose(filePropList);
 
   ///
