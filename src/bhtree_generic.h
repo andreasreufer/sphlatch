@@ -128,7 +128,6 @@ BHtree(valueType _thetaMAC,
   /// prepare the list of local particles
   ///
   noLocParts  = PartManager.getNoLocalParts();
-  locMaxIndex = PartManager.getNoLocalParts() - 1;
   partProxies.resize(noLocParts);
 };
 
@@ -164,7 +163,7 @@ matrixRefType pos, acc;
 valvectRefType eps, m;
 
 std::vector<nodePtrT> partProxies;
-size_t noLocParts, locMaxIndex;
+size_t noLocParts;
 
 std::fstream logFile;
 
@@ -324,16 +323,12 @@ public:
 /// - go to root
 /// - call the insertion recursor
 ///
-
-//void insertParticle(partProxyPtrT _newPayload,
-//                    bool _newIsLocal)
 void insertParticle(size_t _newPartIdx)
 {
   goRoot();
-  //insertParticleRecursor(_newPayload, _newIsLocal);
   insertParticleRecursor(_newPartIdx);
       
-  if ( _newPartIdx > locMaxIndex ) {
+  if ( _newPartIdx >= noLocParts ) {
     ghostCounter++;
   } else {
     partCounter++;
@@ -351,8 +346,6 @@ private:
 ///   call recursor for existing and new
 ///   particle.
 ///
-//void insertParticleRecursor(partProxyPtrT _newPayload,
-//                            bool _newIsLocal)
 void insertParticleRecursor(size_t _newPartIdx)
 {
   size_t targetOctant = 0;
@@ -374,7 +367,7 @@ void insertParticleRecursor(size_t _newPartIdx)
       newPartChild(targetOctant);
       goChild(targetOctant);
 
-      if ( _newPartIdx > locMaxIndex ) {
+      if ( _newPartIdx >= noLocParts ) {
         curNodePtr->isLocal = false;
       } else {
         curNodePtr->isLocal = true;
