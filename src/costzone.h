@@ -6,7 +6,9 @@
 #include <limits>
 #include <cassert>
 
+#ifdef SPHLATCH_PARALLEL
 #include "communication_manager.h"
+#endif
 #include "particle_manager.h"
 #include "spacefillingcurve.h"
 
@@ -20,7 +22,9 @@ typedef CostZone self_type;
 typedef CostZone& self_reference;
 typedef CostZone* self_pointer;
 
+#ifdef SPHLATCH_PARALLEL
 typedef sphlatch::CommunicationManager commManagerType;
+#endif
 typedef sphlatch::ParticleManager partManagerType;
 
 //#define SPHLATCH_CARTESIAN_XYZ
@@ -52,7 +56,9 @@ void centerOfTheUniverse();
 void fillCostzoneCells();
 
 static self_pointer _instance;
+#ifdef SPHLATCH_PARALLEL
 commManagerType& CommManager;
+#endif
 partManagerType& PartManager;
 sfcurveType spaceCurve;
 
@@ -108,7 +114,9 @@ CostZone::self_reference CostZone::instance(void)
 }
 
 CostZone::CostZone(void) :
+#ifdef SPHLATCH_PARALLEL
   CommManager(commManagerType::instance()),
+#endif
   PartManager(partManagerType::instance())
 {
   ///
@@ -123,7 +131,11 @@ CostZone::CostZone(void) :
 
   resize(defaultDepth);
 
+#ifdef SPHLATCH_PARALLEL
   const size_t noDomains = CommManager.getNoDomains();
+#else
+  const size_t noDomains = 1;
+#endif
   domainPartsIndex.resize(noDomains);
   domainGhostIndex.resize(noDomains);
 
@@ -161,8 +173,13 @@ void CostZone::resize(size_t _depth)
 ///
 domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
 {
+#ifdef SPHLATCH_PARALLEL
   const size_t noDomains = CommManager.getNoDomains();
   const size_t myDomain = CommManager.getMyDomain();
+#else
+  const size_t noDomains = 1;
+  const size_t myDomain = 0;
+#endif
 
   for (size_t i = 0; i < noDomains; i++)
     {
@@ -182,7 +199,9 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
   ///
   countsVectType globPartsPerCell = partsPerCell;
 
+#ifdef SPHLATCH_PARALLEL
   CommManager.sumUpCounts(globPartsPerCell);
+#endif
   size_t noGlobParts = 0;
   for (size_t i = 0; i < noCells3D; i++)
     {
@@ -318,7 +337,9 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
             }
         }
     }
+#ifdef SPHLATCH_PARALLEL
   CommManager.sumUpCounts(noGlobGhosts);
+#endif
   noGhosts = noGlobGhosts[myDomain];
 
   return domainPartsIndex;
@@ -338,8 +359,13 @@ domainPartsIndexRefType CostZone::createDomainPartsIndex(void)
 ///
 domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
 {
+#ifdef SPHLATCH_PARALLEL
   const size_t noDomains = CommManager.getNoDomains();
   const size_t myDomain = CommManager.getMyDomain();
+#else
+  const size_t noDomains = 1;
+  const size_t myDomain = 0;
+#endif
 
   for (size_t i = 0; i < noDomains; i++)
     {
@@ -446,6 +472,7 @@ void CostZone::centerOfTheUniverse(void)
       zMax = pos(i, Z) > zMax ? pos(i, Z) : zMax;
     }
 
+#ifdef SPHLATCH_PARALLEL
   CommManager.min(xMin);
   CommManager.max(xMax);
 
@@ -454,6 +481,7 @@ void CostZone::centerOfTheUniverse(void)
 
   CommManager.min(zMin);
   CommManager.max(zMax);
+#endif
 
   ///
   /// the box size is increased by a small factor, so that the cell

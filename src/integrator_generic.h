@@ -13,7 +13,9 @@
 //#include "communication_manager.h"
 #include "typedefs.h"
 #include "particle_manager.h"
+#ifdef SPHLATCH_PARALLEL
 #include "communication_manager.h"
+#endif
 
 namespace sphlatch {
 ///
@@ -24,12 +26,17 @@ namespace sphlatch {
 ///
 class GenericIntegrator {
 typedef sphlatch::ParticleManager partManagerType;
+
+#ifdef SPHLATCH_PARALLEL
 typedef sphlatch::CommunicationManager commManagerType;
+#endif
 
 public:
 GenericIntegrator(void) :
-  PartManager(partManagerType::instance()),
-  CommManager(commManagerType::instance())
+  PartManager(partManagerType::instance())
+#ifdef SPHLATCH_PARALLEL
+  ,CommManager(commManagerType::instance())
+#endif
 {
 };
 virtual ~GenericIntegrator()
@@ -39,12 +46,14 @@ public:
 
 protected:
 partManagerType& PartManager;
+#ifdef SPHLATCH_PARALLEL
 commManagerType& CommManager;
+#endif
 };
+
 
 class GenericMetaIntegrator {
 typedef sphlatch::ParticleManager partManagerType;
-
 
 public:
 GenericMetaIntegrator() :

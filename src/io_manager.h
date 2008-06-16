@@ -2,7 +2,7 @@
 #define SPHLATCH_IOMANAGER_H
 
 ///
-/// we use the HDF5 >= 1.8 functions
+/// we use HDF5 >= 1.8 functions
 ///
 #define H5_NO_DEPRECATED_SYMBOLS
 
@@ -438,8 +438,10 @@ void IOManager::saveDump(std::string _outputFile,
         sleep(1);
       }
   }
+#ifdef SPHLATCH_PARALLEL
   CommManager.barrier();
-  
+#endif
+
   fileHandle = H5Fopen(_outputFile.c_str(), H5F_ACC_RDWR, filePropList);
   H5Pclose(filePropList);
 

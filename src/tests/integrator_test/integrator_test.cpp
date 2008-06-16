@@ -9,7 +9,7 @@
 #define SPHLATCH_SINGLEPREC
 
 // enable parallel version
-#define SPHLATCH_PARALLEL
+//#define SPHLATCH_PARALLEL
 
 // enable intensive logging for toptree global summation
 //#define SPHLATCH_TREE_LOGSUMUPMP
@@ -53,8 +53,8 @@ typedef sphlatch::IOManager io_type;
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
 
-#include "communication_manager.h"
-typedef sphlatch::CommunicationManager com_type;
+//#include "communication_manager.h"
+//typedef sphlatch::CommunicationManager com_type;
 
 #include "costzone.h"
 typedef sphlatch::CostZone costzone_type;
@@ -73,7 +73,7 @@ void derivate()
   
   part_type& PartManager(part_type::instance());
   matrixRefType pos(PartManager.pos);
-  matrixRefType vel(PartManager.vel);
+  //matrixRefType vel(PartManager.vel);
   matrixRefType acc(PartManager.acc);
 
   const size_t noParts = PartManager.getNoLocalParts();
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
   matrixRefType vel(PartManager.vel);
   matrixRefType acc(PartManager.acc);
 
-  valvectRefType m(PartManager.m);
+  //valvectRefType m(PartManager.m);
 
   idvectRefType id(PartManager.id);
 
@@ -127,6 +127,8 @@ int main(int argc, char* argv[])
   const valueType k = 0.;
   for (size_t i = 0; i < noParts; i++)
   {
+    id(i) = i;
+
     const valueType phi = 2*M_PI*static_cast<valueType>(random())/RAND_MAX;
 
     pos(i, X) = sin( phi );
@@ -143,13 +145,15 @@ int main(int argc, char* argv[])
     vel(i, Z) = 0.;
     std::cerr << phi << " " << theta << "\n";
   }
+
+  const valueType dt = 2*M_PI / 50.;
   
-  myIntegrator.bootstrap();
+  myIntegrator.bootstrap(dt);
 
   size_t step = 0;
   while ( step < 50000 )
   {
-    myIntegrator.integrate(2*M_PI / 50.);
+    myIntegrator.integrate(dt);
     step++;
     
     for (size_t i = 0; i < noParts; i++)

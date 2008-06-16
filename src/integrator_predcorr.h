@@ -32,16 +32,28 @@ public:
 virtual void prepare(void) = 0;
 
 ///
-/// drift changes the position:
-///  x_1 = x_0 + v_0*dt + 0.5*a_0*dt^2
+/// prediction step:
+///  x_p = x + 0.5*( 3*v_0 + - v_-1 )*dt
 ///
-virtual void drift(valueRefType _dt) = 0;
+virtual void predict(valueRefType _dt) = 0;
 
 ///
-/// kick changes the velocity:
-///  v_1 = v_0 + 0.5*a_0*dt + 0.5*a_1*dt;
+/// correction step:
+///  x_1 = x_0 + 0.5(  v_p + v_0 )*dt
 ///
-virtual void kick(valueRefType _dt) = 0;
+virtual void correct(valueRefType _dt) = 0;
+
+///
+/// prepare:
+///  resize internal temporaries
+///
+virtual void prepare() = 0;
+
+///
+/// bootstrap:
+///  bootstrap the predictor/corrector
+///
+virtual void bootstrap(valueRefType _dt) = 0;
 };
 
 ///
@@ -53,15 +65,20 @@ PredCorrVectO2(matrixRefType _var,
                matrixRefType _dVar,
                matrixRefType _ddVar)
 {
-  var = &_var;
-  dVar = &_dVar;
+    var =   &_var;
+   dVar =  &_dVar;
   ddVar = &_ddVar;
 
+    oVar.resize(0, var->size2());
+   odVar.resize(0, var->size2());
   oddVar.resize(0, var->size2());
+  
   zero.resize(0, var->size2());
 
-  /// take name of the second derivative variable, prefix with "o"
+  /// take name of the variables, prefix with "o"
   /// and register it to PartManager for resizing
+  PartManager.regQuantity(oVar,   "o" + PartManager.getName(  *var));
+  PartManager.regQuantity(odVar,  "o" + PartManager.getName( *dVar));
   PartManager.regQuantity(oddVar, "o" + PartManager.getName(*ddVar));
   /// also register to CommManager if we're gonna do parallel
 #ifdef SPHLATCH_PARALLEL
@@ -89,9 +106,9 @@ void prepare(void)
   a = zero;
 }
 
-void drift(valueRefType _dt)
+void predict(valueRefType _dt)
 {
-  matrixRangeType x(*var, rangeType(0, noParts), rangeType(0, var->size2()));
+  matrixRangeType x(*var,  rangeType(0, noParts), rangeType(0, var->size2()));
   matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
 
   matrixRefType a(*ddVar);
@@ -109,7 +126,7 @@ void drift(valueRefType _dt)
   a = zero;
 }
 
-void kick(valueRefType _dt)
+void correct(valueRefType _dt)
 {
   matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
   matrixRefType a(*ddVar);
@@ -119,90 +136,11 @@ void kick(valueRefType _dt)
   v += 0.5 * (a * _dt + oa * _dt);
 }
 private:
-matrixType oddVar;
+matrixType oVar, odVar, oddVar;
 matrixPtrType var, dVar, ddVar;
 zeromatrixType zero;
 size_t noParts;
 };
-
-///
-/// 2nd order scalar PredCorr integrator
-///
-class PredCorrScalO2 : public GenericPredCorr {
-public:
-PredCorrScalO2(valvectRefType _var,
-               valvectRefType _dVar,
-               valvectRefType _ddVar)
-{
-  var = &_var;
-  dVar = &_dVar;
-  ddVar = &_ddVar;
-
-  /// take name of the second derivative variable, prefix with "o"
-  /// and register it to PartManager for resizing
-  PartManager.regQuantity(oddVar, "o" + PartManager.getName(*ddVar));
-  /// also register to CommManager if we're gonna do parallel
-#ifdef SPHLATCH_PARALLEL
-  CommManager.regExchQuant(oddVar);
-#endif
-};
-
-~PredCorrScalO2()
-{
-  PartManager.unRegQuantity(oddVar);
-};
-
-public:
-void prepare(void)
-{
-  valvectRefType a(*ddVar);
-
-  noParts = a.size();
-  if (zero.size() != noParts)
-    {
-      zero.resize(noParts);
-    }
-
-  /// a = 0;
-  a = zero;
-}
-
-void drift(valueRefType _dt)
-{
-  valvectRangeType x(*var, rangeType(0, noParts));
-  valvectRangeType v(*dVar, rangeType(0, noParts));
-
-  valvectRefType a(*ddVar);
-  valvectRefType oa(oddVar);
-
-  /// move
-  const valueType dtSquare = _dt * _dt;
-
-  x += v * _dt + 0.5 * a * (dtSquare);
-
-  /// oa = a
-  oa.swap(a);
-
-  /// a = 0;   do this with zero_matrix instead?
-  a = zero;
-}
-
-void kick(valueRefType _dt)
-{
-  valvectRangeType v(*dVar, rangeType(0, noParts));
-  valvectRefType a(*ddVar);
-  valvectRefType oa(oddVar);
-
-  /// boost
-  v += 0.5 * (a * _dt + oa * _dt);
-}
-private:
-valvectType oddVar;
-valvectPtrType var, dVar, ddVar;
-zerovalvectType zero;
-size_t noParts;
-};
-
 
 ///
 /// the PredCorr meta integrator
@@ -218,6 +156,10 @@ funcPtr derivFunc;
 valueType lastDt;
 
 public:
+///
+/// instantate the metaIntegrator with a
+/// function pointer to the derivation function
+///
 PredCorrMetaIntegrator(void(*_deriv)(void))
 {
   derivFunc = _deriv;

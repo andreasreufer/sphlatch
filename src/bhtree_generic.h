@@ -14,7 +14,9 @@
 #include "bhtree_particle_node.h"
 #include "bhtree_cell_node.h"
 
+#ifdef SPHLATCH_PARALLEL
 #include "communication_manager.h"
+#endif
 #include "particle_manager.h"
 
 namespace sphlatch {
@@ -27,7 +29,9 @@ typedef genericNode* nodePtrT;
 typedef particleNode* partPtrT;
 typedef genericCellNode* cellPtrT;
 
+#ifdef SPHLATCH_PARALLEL
 typedef sphlatch::CommunicationManager commManagerType;
+#endif
 typedef sphlatch::ParticleManager partManagerType;
 
 private:
@@ -51,7 +55,9 @@ BHtree(valueType _thetaMAC,
        size_t _czDepth,
        valvectType _rootCenter,
        valueType _rootSize) :
+#ifdef SPHLATCH_PARALLEL
   CommManager(commManagerType::instance()),
+#endif
   PartManager(partManagerType::instance()),
   pos(PartManager.pos),
   acc(PartManager.acc),
@@ -143,7 +149,9 @@ BHtree(valueType _thetaMAC,
 }
 
 protected:
+#ifdef SPHLATCH_PARALLEL
 commManagerType& CommManager;
+#endif
 partManagerType& PartManager;
 
 protected:
