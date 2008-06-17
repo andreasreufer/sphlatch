@@ -60,12 +60,16 @@ typedef sphlatch::ParticleManager part_type;
 typedef sphlatch::CostZone costzone_type;
 
 #include "integrator_verlet.h"
+#include "integrator_predcorr.h"
 
 #include <boost/progress.hpp>
 #include <vector>
 
 // tree stuff
 #include "bhtree.h"
+
+//#define ORBIT
+#define ONEDIMTHROW
 
 void derivate()
 {
@@ -80,6 +84,7 @@ void derivate()
 
   for (size_t i = 0; i < noParts; i++)
   {
+#ifdef ORBIT
     const valueType dist = sqrt( pos(i, X)*pos(i, X) +
                                  pos(i, Y)*pos(i, Y) );
     
@@ -88,6 +93,14 @@ void derivate()
     acc(i, X) = - pos(i, X) / distPow3;
     acc(i, Y) = - pos(i, Y) / distPow3;
     acc(i, Z) = 0;
+#endif
+#ifdef ONEDIMTHROW
+    //const valueType dist = sqrt( pos(i, X)*pos(i, X) );
+    //const valueType distPow3 = dist*dist*dist;
+
+    //acc(i, X) = - pos(i, X) / distPow3;
+    acc(i, X) = (pos(i, X) > 0.) ? -1. : 1.;
+#endif
   }
 
 };
@@ -113,7 +126,8 @@ int main(int argc, char* argv[])
 
   idvectRefType id(PartManager.id);
 
-  VerletMetaIntegrator myIntegrator(derivate);
+  //VerletMetaIntegrator myIntegrator(derivate);
+  PredCorrMetaIntegrator myIntegrator(derivate);
   myIntegrator.regIntegration(pos, vel, acc);
 
   //size_t noParts = 200;
@@ -123,6 +137,7 @@ int main(int argc, char* argv[])
   PartManager.setNoParts(noParts,10);
   PartManager.resizeAll();
 
+#ifdef ORBIT
   //const valueType k = 1.88;
   const valueType k = 0.;
   for (size_t i = 0; i < noParts; i++)
@@ -145,13 +160,28 @@ int main(int argc, char* argv[])
     vel(i, Z) = 0.;
     std::cerr << phi << " " << theta << "\n";
   }
+#endif
+#ifdef ONEDIMTHROW
+  for (size_t i = 0; i < noParts; i++)
+  {
+    id(i) = i;
 
+    pos(i, X) = 1.;
+    pos(i, Y) = 0.;
+    pos(i, Z) = 0.;
+
+    vel(i, X) = 0.;
+    vel(i, Y) = 0.;
+    vel(i, Z) = 0.;
+  }
+#endif
+  
   const valueType dt = 2*M_PI / 50.;
   
   myIntegrator.bootstrap(dt);
 
   size_t step = 0;
-  while ( step < 50000 )
+  while ( step < 1000 )
   {
     myIntegrator.integrate(dt);
     step++;
