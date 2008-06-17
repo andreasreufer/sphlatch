@@ -57,6 +57,7 @@ typedef sphlatch::CommunicationManager comm_type;
 typedef sphlatch::CostZone costzone_type;
 
 #include "integrator_verlet.h"
+#include "integrator_predcorr.h"
 
 #include <boost/progress.hpp>
 #include <vector>
@@ -65,6 +66,8 @@ typedef sphlatch::CostZone costzone_type;
 
 // tree stuff
 #include "bhtree.h"
+
+#include "rankspace.h"
 
 void derivate()
 {
@@ -86,6 +89,8 @@ void derivate()
   const size_t noParts = PartManager.getNoLocalParts();
   const size_t noTotParts = noParts + PartManager.getNoGhostParts();
   //const size_t myDomain = CommManager.getMyDomain();
+
+
 /*  
   //const valueType gravTheta = 0.7;
   const valueType gravTheta = 0.7;
@@ -127,6 +132,35 @@ void derivate()
     }
   }
   */
+
+  sphlatch::CubicSpline3D Kernel;
+
+  sphlatch::Rankspace RSSearch;
+  RSSearch.prepare();
+
+  RSSearch.neighbourList[0];
+
+  for (size_t i = 0; i < noParts; i++)
+  {
+    const valueType curSmoI = h(i);
+    const valueType sRad = 2.*curSmoI;
+    RSSearch.findNeighbours(i, sRad);
+
+    const size_t noNeighs = RSSearch.neighbourList[0];
+
+    static valueType curRho;
+    curRho = 0.;
+    for (size_t j = 0; j <= noNeighs; j++)
+    {
+      const valueType     r = RSSearch.neighDistList[j];
+      const size_t curNeigh = RSSearch.neighbourList[j];
+      const valueType curSmoIJ = 0.5*( curSmoI + h(curNeigh) );
+      
+      curRho += m(curNeigh)*Kernel.value( r, curSmoIJ );
+    }
+
+    rho(i) = curRho;
+  }
 };
 
 using namespace boost::assign;
@@ -147,6 +181,7 @@ int main(int argc, char* argv[])
   /// define what we're doing
   ///
   PartManager.useGravity();
+  PartManager.useBasicSPH();
 
   ///
   /// some useful references
@@ -175,10 +210,11 @@ int main(int argc, char* argv[])
   /// instantate the MetaIntegrator and
   /// register spatial integration
   ///
-  sphlatch::VerletMetaIntegrator Integrator(derivate);
+  //sphlatch::VerletMetaIntegrator Integrator(derivate);
+  sphlatch::PredCorrMetaIntegrator Integrator(derivate);
   Integrator.regIntegration(pos, vel, acc);
 
-  IOManager.loadDump("nbody_small.h5part");
+  IOManager.loadDump("shocktube.hdf5");
 
   ///
   /// define the quantities to save in a dump
