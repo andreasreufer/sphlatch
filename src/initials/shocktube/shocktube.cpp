@@ -88,8 +88,8 @@ int main(int argc, char* argv[])
       for (size_t i = 0; i < noPartsX; i++)
       {
         id(curIndex) = i + 10*j + 100*k;
-        h(curIndex) = 1;
-        u(curIndex) = 1.5;
+        h(curIndex) = 1.;
+        u(curIndex) = 1.;
 
         pos(curIndex, X) = static_cast<valueType>(i);
         pos(curIndex, Y) = static_cast<valueType>(j);
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
   
   sphlatch::quantsType saveQuants;
   saveQuants.vects += &pos, &vel;
-  saveQuants.scalars += &m, &u;
+  saveQuants.scalars += &m, &u, &h;
   saveQuants.ints  += &id;
 
   PartManager.attributes["time"] = 0.0;

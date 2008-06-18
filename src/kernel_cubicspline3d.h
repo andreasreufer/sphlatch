@@ -55,7 +55,10 @@ valvectType derive( const valueType& _r, const valueType& _h, const valvectType&
 {
   const valueType q = _r / _h;
 
-  if ( q > 2. )
+  ///
+  /// when q = 0, the kernel also has to be (0,0,0)
+  /// 
+  if ( q > 2. || q == 0.)
   {
     //derivative(X) = 0.;
     //derivative(Y) = 0.;

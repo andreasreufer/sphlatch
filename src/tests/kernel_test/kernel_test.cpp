@@ -36,10 +36,10 @@ int main(int argc, char* argv[])
   rvec(Y) = 0.;
   rvec(Z) = 0.;
 
-  for (size_t j = 0; j < 10; j++)
-  {
-  //const size_t steps = 10000;
-  const size_t steps = 10000000;
+  //for (size_t j = 0; j < 10; j++)
+  //{
+  const size_t steps = 10000;
+  //const size_t steps = 10000000;
   for (size_t i = 0; i < steps; i++)
   {
     const valueType x = -2.25 + ( 4.5*i / steps );
@@ -48,11 +48,11 @@ int main(int argc, char* argv[])
     
     rvec(Y) = x;
     
-    //std::cout << x << "\t" << myKernel.value( r, h ) << "\t" << myKernel.derive( r, h, rvec )(Y) << "\n";
-    myKernel.value( r, h );
-    myKernel.derive( r, h, rvec );
+    std::cout << x << "\t" << myKernel.value( r, h ) << "\t" << myKernel.derive( r, h, rvec )(Y) << "\n";
+    //myKernel.value( r, h );
+    //myKernel.derive( r, h, rvec );
   }
-  }
+  //}
 
   return EXIT_SUCCESS;
 }

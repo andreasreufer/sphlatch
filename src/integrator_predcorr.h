@@ -360,7 +360,7 @@ void integrate(valueType _dt)
   time += _dt;
   derivFunc();
   
-  /// drift
+  /// correct
   integItr = integrators.begin();
   while (integItr != integEnd)
     {

@@ -38,7 +38,12 @@ namespace po = boost::program_options;
 
 #include "typedefs.h"
 typedef sphlatch::valueType valueType;
+typedef sphlatch::valvectType valvectType;
+typedef sphlatch::zerovalvectType zerovalvectType;
 typedef sphlatch::valvectRefType valvectRefType;
+
+typedef sphlatch::particleRowType particleRowType;
+
 typedef sphlatch::idvectRefType idvectRefType;
 typedef sphlatch::matrixRefType matrixRefType;
 typedef sphlatch::partsIndexVectType partsIndexVectType;
@@ -74,16 +79,18 @@ void derivate()
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
   costzone_type& CostZone(costzone_type::instance());
-  
+
   matrixRefType pos(PartManager.pos);
   matrixRefType vel(PartManager.vel);
   matrixRefType acc(PartManager.acc);
-  
+
   valvectRefType m(PartManager.m);
   valvectRefType h(PartManager.h);
   valvectRefType p(PartManager.p);
+  valvectRefType u(PartManager.u);
   valvectRefType rho(PartManager.rho);
-  
+  valvectRefType dudt(PartManager.dudt);
+
   idvectRefType id(PartManager.id);
 
   const size_t noParts = PartManager.getNoLocalParts();
@@ -91,14 +98,14 @@ void derivate()
   //const size_t myDomain = CommManager.getMyDomain();
 
 
-/*  
-  //const valueType gravTheta = 0.7;
-  const valueType gravTheta = 0.7;
-  const valueType gravConst = 6.674e-11;
+/*
+   //const valueType gravTheta = 0.7;
+   const valueType gravTheta = 0.7;
+   const valueType gravConst = 6.674e-11;
 
-//sphlatch::BHtree<sphlatch::Monopoles>   Tree(gravTheta,
-  sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
-//sphlatch::BHtree<sphlatch::Octupoles>   Tree(gravTheta,
+   //sphlatch::BHtree<sphlatch::Monopoles>   Tree(gravTheta,
+   sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
+   //sphlatch::BHtree<sphlatch::Octupoles>   Tree(gravTheta,
                                                gravConst,
                                                CostZone.getDepth(),
                                                CostZone.getCenter(),
@@ -106,22 +113,22 @@ void derivate()
                                                );
 
 
-  ///
-  /// fill up tree, determine ordering, calculate multipoles
-  ///
-  for (size_t i = 0; i < noTotParts; i++)
-  {
+   ///
+   /// fill up tree, determine ordering, calculate multipoles
+   ///
+   for (size_t i = 0; i < noTotParts; i++)
+   {
     Tree.insertParticle(i);
-  }
+   }
 
-  Tree.detParticleOrder();
-  Tree.calcMultipoles();
-  
-  ///
-  /// calculate the accelerations
-  ///
-  for (size_t i = 0; i < noParts; i++)
-  {
+   Tree.detParticleOrder();
+   Tree.calcMultipoles();
+
+   ///
+   /// calculate the accelerations
+   ///
+   for (size_t i = 0; i < noParts; i++)
+   {
     const size_t curIndex = Tree.particleOrder[i];
     ///
     /// don't calculate the acceleration for particle with ID = 1 (star)
@@ -130,37 +137,157 @@ void derivate()
     {
       Tree.calcGravity( curIndex );
     }
-  }
-  */
+   }
+ */
 
   sphlatch::CubicSpline3D Kernel;
 
   sphlatch::Rankspace RSSearch;
+
+
   RSSearch.prepare();
 
   RSSearch.neighbourList[0];
 
   for (size_t i = 0; i < noParts; i++)
-  {
-    const valueType curSmoI = h(i);
-    const valueType sRad = 2.*curSmoI;
-    RSSearch.findNeighbours(i, sRad);
-
-    const size_t noNeighs = RSSearch.neighbourList[0];
-
-    static valueType curRho;
-    curRho = 0.;
-    for (size_t j = 0; j <= noNeighs; j++)
     {
-      const valueType     r = RSSearch.neighDistList[j];
-      const size_t curNeigh = RSSearch.neighbourList[j];
-      const valueType curSmoIJ = 0.5*( curSmoI + h(curNeigh) );
-      
-      curRho += m(curNeigh)*Kernel.value( r, curSmoIJ );
+      const valueType hi = h(i);
+      const valueType srchRad = 2. * hi;
+      RSSearch.findNeighbours(i, srchRad);
+
+      const size_t noNeighs = RSSearch.neighbourList[0];
+
+      //std::cout << i << ": " << noNeighs << " neighbours (searchRad: " << srchRad << ")\n";
+
+      static valueType rhoi;
+      rhoi = 0.;
+
+      for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
+        {
+          const valueType r = RSSearch.neighDistList[curNeigh];
+          const size_t j = RSSearch.neighbourList[curNeigh];
+
+          const valueType hij = 0.5 * (hi + h(j));
+
+          rhoi += m(j) * Kernel.value(r, hij);
+          //std::cout << "i: " << i << "   j: " << j << " rho: " << rhoi << " r: " << r << " hij: " << hij << "\n";
+        }
+
+      rho(i) = rhoi;
+      //std::cout << rho(i) << "\n";
     }
 
-    rho(i) = curRho;
-  }
+  const valueType gamma = 1.4;
+
+  p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
+
+  /*
+     if ( pos(i, 0) < 8 && pos(i, 0) > 2 &&
+         pos(i, 1) < 8 && pos(i, 1) > 2 )
+     {
+      std::cout << pos(i, 2) << "\t" << rho(i) << "\n";
+     }
+   */
+
+  std::cerr << "density queue finished!\n";
+
+  const valueType alpha = 1;
+  const valueType beta = 1;
+
+  valvectType curAcc(3);
+  zerovalvectType zero(3);
+
+  valueType curPow = 0.;
+
+  for (size_t i = 0; i < noParts; i++)
+    {
+      const valueType hi = h(i);
+      const valueType rhoi = rho(i);
+      const valueType pi = p(i);
+
+      const valueType piOrhoirhoi = pi / (rhoi * rhoi);
+
+      /// find the neighbours
+      const valueType srchRad = 2. * hi;
+      RSSearch.findNeighbours(i, srchRad);
+
+      const size_t noNeighs = RSSearch.neighbourList[0];
+
+      curAcc = zero;
+      curPow = 0.;
+
+      /*if ( i == 0 )
+         std::cerr << "i " << pi << " " << rhoi << "\n";*/
+
+      const particleRowType veli(vel, i);
+      const particleRowType Ri(pos, i);
+
+      const valueType ci = sqrt(gamma * p(i) / rho(i));
+
+      for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
+        {
+          const valueType rij = RSSearch.neighDistList[curNeigh];
+          const size_t j = RSSearch.neighbourList[curNeigh];
+
+          const valueType rhoj = rho(j);
+          const valueType pj = p(j);
+          /*if ( i == 0 )
+             std::cerr << "j " << pj << " " << rhoj << "\n";*/
+
+          const valueType hij = 0.5 * (hi + h(j));
+          const valueType rhoij = 0.5 * (rhoi + rhoj);
+          const valueType cij = 0.5 * (ci + sqrt(gamma * p(j) / rhoj));
+
+          const particleRowType velj(vel, j);
+          const particleRowType Rj(pos, j);
+
+          /// replace by scalar expressions?
+          const valueType vijrij =
+            boost::numeric::ublas::inner_prod(velj - veli, Rj - Ri);
+
+          const valueType rijrij =
+            boost::numeric::ublas::inner_prod(Ri - Rj, Ri - Rj);
+
+          /// AV
+          const valueType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
+          const valueType av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
+
+          const valueType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
+
+          /*if ( i == 0 ) {
+             std::cerr << "j2 " << rijrij << " " << vijrij << " " << accTerm << " " << muij << " " << av << "\t" << "\n";
+             std::cerr << "j3 " << curAcc(0) << "\n";
+
+             }*/
+          /// acceleration
+          curAcc += (m(j) * accTerm * Kernel.derive(rij, hij, Ri - Rj));
+
+          /// pdV + AV heating
+          curPow += m(j) * accTerm *
+                    //boost::numeric::ublas::inner_prod(velj - veli, Kernel.derivative); /// check sign!
+                    boost::numeric::ublas::inner_prod(veli - velj, Kernel.derivative); /// check sign!
+          /*if ( i == 0 ) {
+             std::cerr << "j4 " << Kernel.derivative << " " << rij << " " << hij << " " << Ri - Rj << "\n\n";
+             }*/
+        }
+
+      curAcc(0) = 0.;
+      curAcc(1) = 0.;
+
+      if ( pos(i, 2) < 5. || pos(i, 2) > 95. )
+      {
+      curAcc(2) = 0.;
+      }
+
+      particleRowType(acc, i) = curAcc;
+      dudt(i) = curPow;
+    }
+  std::cerr << "acc&pow queue finished!\n";
+
+  /*for (size_t i = 0; i < noParts; i++)
+     {
+
+     }*/
 };
 
 using namespace boost::assign;
@@ -182,6 +309,8 @@ int main(int argc, char* argv[])
   ///
   PartManager.useGravity();
   PartManager.useBasicSPH();
+  PartManager.useEnergy();
+  PartManager.useTimedepEnergy();
 
   ///
   /// some useful references
@@ -191,28 +320,33 @@ int main(int argc, char* argv[])
   matrixRefType acc(PartManager.acc);
 
   valvectRefType m(PartManager.m);
-  valvectRefType eps(PartManager.eps);
+  valvectRefType rho(PartManager.rho);
+  valvectRefType u(PartManager.u);
+  valvectRefType dudt(PartManager.dudt);
+  valvectRefType p(PartManager.p);
 
   idvectRefType id(PartManager.id);
-  
+
   size_t& step(PartManager.step);
-  
+
   const size_t myDomain = CommManager.getMyDomain();
 
   ///
   /// register the quantites to be exchanged
   ///
   CommManager.exchangeQuants.vects += &pos, &vel;
-  CommManager.exchangeQuants.scalars += &eps, &m;
+  CommManager.exchangeQuants.scalars += &m, &u;
   CommManager.exchangeQuants.ints += &id;
 
   ///
   /// instantate the MetaIntegrator and
   /// register spatial integration
   ///
+
   //sphlatch::VerletMetaIntegrator Integrator(derivate);
   sphlatch::PredCorrMetaIntegrator Integrator(derivate);
   Integrator.regIntegration(pos, vel, acc);
+  Integrator.regIntegration(u, dudt);
 
   IOManager.loadDump("shocktube.hdf5");
 
@@ -220,9 +354,9 @@ int main(int argc, char* argv[])
   /// define the quantities to save in a dump
   ///
   quantsType saveQuants;
-  saveQuants.vects   += &pos, &vel;
-  saveQuants.scalars += &eps, &m;
-  saveQuants.ints    += &id;
+  saveQuants.vects += &pos, &vel, &acc;
+  saveQuants.scalars += &m, &rho, &u, &p;
+  saveQuants.ints += &id;
 
   ///
   /// exchange particles
@@ -235,59 +369,76 @@ int main(int argc, char* argv[])
   /// prepare ghost sends and send ghosts
   ///
   CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-  
+
   CommManager.sendGhosts(pos);
   CommManager.sendGhosts(id);
   CommManager.sendGhosts(m);
+  CommManager.sendGhosts(rho);
+  CommManager.sendGhosts(u);
 
   ///
   /// define some simulation parameters
-  /// 
-  const valueType dt = 138.e6 / 50.;
+  ///
+  //const valueType dt = 138.e6 / 50.;
+  const valueType dt = 0.5e-1;
   //const size_t maxSteps = 500000;
   //const size_t saveSteps =  5000;
-  const size_t maxStep = 100;
-  const size_t saveSteps =  10;
+  const size_t maxStep   = 30;
+  const size_t saveSteps = 30;
 
   ///
   /// bootstrap the integrator
   ///
   Integrator.bootstrap(dt);
 
+  //MPI::Finalize();
+  //return EXIT_SUCCESS;
   ///
   /// the integration loop
   ///
-  while ( step < maxStep )
-  {
-    ///
-    /// exchange particles and ghosts
-    ///
-    CostZone.createDomainPartsIndex();
-    CommManager.exchange(CostZone.domainPartsIndex,
-                         CostZone.getNoGhosts());
-    
-    CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-  
-    CommManager.sendGhosts(pos);
-    CommManager.sendGhosts(id);
-    CommManager.sendGhosts(m);
-   
-    ///
-    /// integrate
-    ///
-    Integrator.integrate(dt);
-    step++;
-
-    ///
-    /// save a dump
-    ///
-    if ( ( step % saveSteps ) == 0 )
+  while (step < maxStep)
     {
-      std::cerr << "save dump!\n";
-      IOManager.saveDump("saveDump.h5part", saveQuants);
-    }
-  }
+      ///
+      /// exchange particles and ghosts
+      ///
+      CostZone.createDomainPartsIndex();
+      CommManager.exchange(CostZone.domainPartsIndex,
+                           CostZone.getNoGhosts());
 
+      CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
+
+      CommManager.sendGhosts(pos);
+      CommManager.sendGhosts(id);
+      CommManager.sendGhosts(m);
+
+      ///
+      /// integrate
+      ///
+      Integrator.integrate(dt);
+      step++;
+
+      ///
+      /// save a dump
+      ///
+      if ((step % saveSteps) == 0)
+        {
+          if (myDomain == 0)
+            {
+              std::cerr << "save dump!\n";
+            }
+          
+          const size_t noParts = PartManager.getNoLocalParts();
+          for (size_t i = 0; i < noParts; i++)
+            {
+              if (pos(i, 0) < 8 && pos(i, 0) > 2 &&
+                  pos(i, 1) < 8 && pos(i, 1) > 2)
+                {
+                  std::cout << pos(i, 2) << "\t" << rho(i) << "\t" << p(i) << "\t" << dudt(i) << "\t" << vel(i, sphlatch::Z) << "\n";
+                }
+            }
+          IOManager.saveDump("saveDump.h5part", saveQuants);
+        }
+    }
 
   MPI::Finalize();
   return EXIT_SUCCESS;
