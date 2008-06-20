@@ -22,7 +22,7 @@
 #include <fstream>
 #include <iomanip>
 #include <string>
-#include <math.h>
+#include <cmath>
 
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/cmdline.hpp>
@@ -75,6 +75,8 @@ typedef sphlatch::CostZone costzone_type;
 
 #include "rankspace.h"
 
+using namespace sphlatch::vectindices;
+
 valueType timeStep()
 {
   part_type& PartManager(part_type::instance());
@@ -98,13 +100,13 @@ valueType timeStep()
   ///
   /// don't go further than one smoothing length
   ///
-  valueType dtA = VAL_MAX;
+  valueType dtA = std::numeric_limits<valueType>::max();
 
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType ai = sqrt(acc(i, 0) * acc(i, 0) +
-                                acc(i, 1) * acc(i, 1) +
-                                acc(i, 2) * acc(i, 2));
+      const valueType ai = sqrt(acc(i, X) * acc(i, X) +
+                                acc(i, Y) * acc(i, Y) +
+                                acc(i, Z) * acc(i, Z));
 
       if (ai > 0.)
         {
@@ -117,7 +119,8 @@ valueType timeStep()
   /// energy integration
   ///
   const valueType uMin = 0.1;
-  valueType dtU = VAL_MAX;
+  //valueType dtU = VAL_MAX;
+  valueType dtU = std::numeric_limits<valueType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
       const valueType absdudti = dudt(i);
@@ -133,7 +136,8 @@ valueType timeStep()
   ///
   /// CFL condition
   ///
-  valueType dtCFL = VAL_MAX;
+  //valueType dtCFL = VAL_MAX;
+  valueType dtCFL = std::numeric_limits<valueType>::max();
   const valueType gamma = 1.4;
   for (size_t i = 0; i < noParts; i++)
     {
@@ -151,7 +155,8 @@ valueType timeStep()
   /// by parallel minimizing the timesteps, we
   /// can estimate which ones are dominant
   ///
-  valueType dtGlob = VAL_MAX;
+  //valueType dtGlob = VAL_MAX;
+  valueType dtGlob = std::numeric_limits<valueType>::max();
 
   CommManager.min(dtA);
   CommManager.min(dtU);
@@ -357,7 +362,8 @@ void derivate()
           curPow += m(j) * accTerm *
                     boost::numeric::ublas::inner_prod(veli - velj,
                                                       Kernel.derivative); /// check sign!
-          /*if ( fpclassify( curPow ) == FP_NAN )
+          //if ( fpclassify( curPow ) == FP_NAN )
+          if ( isnan( curPow ) )
              {
              std::cerr << "nan in power sum  i:" << i << " j: " << j << " accTerm: " << accTerm << " (Kernel deriv: " << boost::numeric::ublas::inner_prod(veli - velj,Kernel.derivative) << " hij: " << hij << " R: " << Ri - Rj << " Ri: " << Ri << " Rj: " << Rj << ")\n";
              std::cerr << "  piOrhoirhoi: " << piOrhoirhoi << " pj: " << pj << " rhoj: " << rhoj << " av: " << av << "\n";
@@ -369,14 +375,14 @@ void derivate()
               //if (pos(k, 0) < 8 && pos(k, 0) > 2 &&
               //    pos(k, 1) < 8 && pos(k, 1) > 2)
                 {
-                  std::cout << pos(k, 2) << "\t" << rho(k) << "\t" << p(k) << "\t" << dudt(k) << "\t" << vel(k, 2) << "\t" << u(k) << "\n";
+                  std::cout << pos(k, Z) << "\t" << rho(k) << "\t" << p(k) << "\t" << dudt(k) << "\t" << vel(k, 2) << "\t" << u(k) << "\n";
                 }
 
              }
 
              MPI::Finalize();
              exit(EXIT_FAILURE);
-             }*/
+             }
         }
 
       curAcc(0) = 0.;

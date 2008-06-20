@@ -19,6 +19,8 @@
 #endif
 #include "particle_manager.h"
 
+using namespace sphlatch::vectindices;
+
 namespace sphlatch {
 template<class T_leaftype>
 

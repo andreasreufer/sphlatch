@@ -9,7 +9,11 @@
 
 namespace sphlatch
 {
-enum vectorialIndices { X, Y, Z };
+
+namespace vectindices
+{
+enum Vectindices { X, Y, Z };
+}
 
 class ParticleManager
 {

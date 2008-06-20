@@ -64,6 +64,8 @@ typedef sphlatch::CostZone costzone_type;
 // tree stuff
 #include "bhtree.h"
 
+using namespace sphlatch::vectindices;
+
 valueType timeStep()
 {
   const valueType dt = 138.e6 / 50.;

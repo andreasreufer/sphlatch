@@ -14,7 +14,6 @@
 #include <map>
 #include <set>
 #include <list>
-#include <valarray>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_expression.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
@@ -24,7 +23,9 @@
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/dynamic_bitset.hpp>
 
-#include <float.h>
+#include <cmath>
+#include <limits>
+#include <valarray>
 
 namespace sphlatch {
 ///
@@ -37,15 +38,8 @@ namespace blas = boost::numeric::ublas;
 ///
 #ifdef SPHLATCH_SINGLEPREC
 typedef float valueType;
-#define VAL_MIN FLT_MIN;
-#define VAL_MAX FLT_MAX;
-#define VAL_EPS FLT_EPSILON;
-
 #else
 typedef double valueType;
-#define VAL_MIN DBL_MIN;
-#define VAL_MAX DBL_MAX;
-#define VAL_EPS DBL_EPSILON;
 #endif
 typedef valueType*              valuePtrType;
 typedef valueType&              valueRefType;

@@ -12,6 +12,8 @@
 #include "particle_manager.h"
 #include "spacefillingcurve.h"
 
+using namespace sphlatch::vectindices;
+
 namespace sphlatch
 {
 class CostZone
