@@ -24,6 +24,8 @@
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/dynamic_bitset.hpp>
 
+#include <float.h>
+
 namespace sphlatch {
 ///
 /// the BLAS namespace
@@ -35,11 +37,19 @@ namespace blas = boost::numeric::ublas;
 ///
 #ifdef SPHLATCH_SINGLEPREC
 typedef float valueType;
+#define VAL_MIN FLT_MIN;
+#define VAL_MAX FLT_MAX;
+#define VAL_EPS FLT_EPSILON;
+
 #else
 typedef double valueType;
+#define VAL_MIN DBL_MIN;
+#define VAL_MAX DBL_MAX;
+#define VAL_EPS DBL_EPSILON;
 #endif
 typedef valueType*              valuePtrType;
 typedef valueType&              valueRefType;
+typedef const valueType&        valueCRefType;
 
 ///
 /// a valueType matrix

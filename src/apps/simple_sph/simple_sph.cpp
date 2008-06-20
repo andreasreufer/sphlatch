@@ -6,7 +6,7 @@
 #define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
-//#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_SINGLEPREC
 
 // enable parallel version
 #define SPHLATCH_PARALLEL
@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iomanip>
 #include <string>
+#include <math.h>
 
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/cmdline.hpp>
@@ -76,31 +77,98 @@ typedef sphlatch::CostZone costzone_type;
 
 valueType timeStep()
 {
-  /*part_type& PartManager(part_type::instance());
+  part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
-  costzone_type& CostZone(costzone_type::instance());
 
-  matrixRefType pos(PartManager.pos);
-  matrixRefType vel(PartManager.vel);
+  //matrixRefType pos(PartManager.pos);
+  //matrixRefType vel(PartManager.vel);
   matrixRefType acc(PartManager.acc);
 
-  valvectRefType m(PartManager.m);
+  //valvectRefType m(PartManager.m);
   valvectRefType h(PartManager.h);
   valvectRefType p(PartManager.p);
   valvectRefType u(PartManager.u);
   valvectRefType rho(PartManager.rho);
   valvectRefType dudt(PartManager.dudt);
 
-  idvectRefType id(PartManager.id);*/
+  //idvectRefType id(PartManager.id);
 
-  return 0.1;
+  const size_t noParts = PartManager.getNoLocalParts();
+
+  ///
+  /// don't go further than one smoothing length
+  ///
+  valueType dtA = VAL_MAX;
+
+  for (size_t i = 0; i < noParts; i++)
+    {
+      const valueType ai = sqrt(acc(i, 0) * acc(i, 0) +
+                                acc(i, 1) * acc(i, 1) +
+                                acc(i, 2) * acc(i, 2));
+
+      if (ai > 0.)
+        {
+          const valueType dtAi = sqrt(h(i) / ai);
+          dtA = dtAi < dtA ? dtAi : dtA;
+        }
+    }
+
+  ///
+  /// energy integration
+  ///
+  const valueType uMin = 0.1;
+  valueType dtU = VAL_MAX;
+  for (size_t i = 0; i < noParts; i++)
+    {
+      const valueType absdudti = dudt(i);
+
+      const valueType dtUi = (u(i) + uMin) / absdudti;
+
+      if ( absdudti > 0. )
+      {
+        dtU = dtUi < dtU ? dtUi : dtU;
+      }
+    }
+
+  ///
+  /// CFL condition
+  ///
+  valueType dtCFL = VAL_MAX;
+  const valueType gamma = 1.4;
+  for (size_t i = 0; i < noParts; i++)
+    {
+      const valueType ci = sqrt(p(i) * gamma / rho(i));
+      const valueType dtCFLi = h(i) / ci;
+
+      if ( ci > 0. )
+      {
+        dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
+      }
+    }
+
+  ///
+  /// determine global minimum
+  /// by parallel minimizing the timesteps, we
+  /// can estimate which ones are dominant
+  ///
+  valueType dtGlob = VAL_MAX;
+
+  CommManager.min(dtA);
+  CommManager.min(dtU);
+  CommManager.min(dtCFL);
+  
+  dtGlob = dtA < dtGlob ? dtA : dtGlob;
+  dtGlob = dtU < dtGlob ? dtU : dtGlob;
+  dtGlob = dtCFL < dtGlob ? dtCFL : dtGlob;
+
+  return dtGlob;
 }
 
 void derivate()
 {
   part_type& PartManager(part_type::instance());
-  comm_type& CommManager(comm_type::instance());
-  costzone_type& CostZone(costzone_type::instance());
+  //comm_type& CommManager(comm_type::instance());
+  //costzone_type& CostZone(costzone_type::instance());
 
   matrixRefType pos(PartManager.pos);
   matrixRefType vel(PartManager.vel);
@@ -113,13 +181,11 @@ void derivate()
   valvectRefType rho(PartManager.rho);
   valvectRefType dudt(PartManager.dudt);
 
-  idvectRefType id(PartManager.id);
+  //idvectRefType id(PartManager.id);
 
   const size_t noParts = PartManager.getNoLocalParts();
-  const size_t noTotParts = noParts + PartManager.getNoGhostParts();
+  //const size_t noTotParts = noParts + PartManager.getNoGhostParts();
   //const size_t myDomain = CommManager.getMyDomain();
-
-
 /*
    //const valueType gravTheta = 0.7;
    const valueType gravTheta = 0.7;
@@ -162,24 +228,25 @@ void derivate()
    }
  */
 
+  ///
+  /// define kernel and neighbour search algorithm
+  ///
   sphlatch::CubicSpline3D Kernel;
-
   sphlatch::Rankspace RSSearch;
-
-
   RSSearch.prepare();
-
-  RSSearch.neighbourList[0];
 
   for (size_t i = 0; i < noParts; i++)
     {
+      ///
+      /// find neighbours
+      ///
       const valueType hi = h(i);
       const valueType srchRad = 2. * hi;
       RSSearch.findNeighbours(i, srchRad);
 
       const size_t noNeighs = RSSearch.neighbourList[0];
 
-      if ( noNeighs < 10 )
+      if (noNeighs < 10)
         std::cerr << noNeighs << " ";
 
       static valueType rhoi;
@@ -197,10 +264,10 @@ void derivate()
 
           rhoi += m(j) * Kernel.value(r, hij);
 
-          if ( isnan( rhoi ) )
-          {
-            std::cerr << "nan in density sum  i:" << i << " j: " << j << " (Kernel: " <<  Kernel.value(r, hij) << " hij: " << hij << " r: " << r << ")\n";
-          }
+          /*if ( fpclassify( rhoi ) == FP_NAN )
+             {
+             std::cerr << "nan in density sum  i:" << i << " j: " << j << " (Kernel: " <<  Kernel.value(r, hij) << " hij: " << hij << " r: " << r << ")\n";
+             }*/
         }
       rho(i) = rhoi;
     }
@@ -212,12 +279,12 @@ void derivate()
   /// lower temperature bound
   ///
   for (size_t i = 0; i < noParts; i++)
-  {
-    if ( u(i) < 0.1 )
     {
-      u(i) = 0.1;
+      if (u(i) < 0.1)
+        {
+          u(i) = 0.1;
+        }
     }
-  }
   p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
 
 
@@ -285,31 +352,31 @@ void derivate()
           /// acceleration
           curAcc += (m(j) * accTerm * Kernel.derive(rij, hij, Ri - Rj));
 
-          
+
           /// pdV + AV heating
           curPow += m(j) * accTerm *
                     boost::numeric::ublas::inner_prod(veli - velj,
                                                       Kernel.derivative); /// check sign!
-          if ( isnan( curPow ) )
-          {
-            std::cerr << "nan in power sum  i:" << i << " j: " << j << " accTerm: " << accTerm << " (Kernel deriv: " << boost::numeric::ublas::inner_prod(veli - velj,Kernel.derivative) << " hij: " << hij << " R: " << Ri - Rj << " Ri: " << Ri << " Rj: " << Rj << ")\n";
-            std::cerr << "  piOrhoirhoi: " << piOrhoirhoi << " pj: " << pj << " rhoj: " << rhoj << " av: " << av << "\n";
-            std::cerr << "  av stuff  cij: " << cij << " muij: " << muij << " rhoi: " << rhoi << "\n";
-            std::cerr << "  cij stuff  ci: " << ci << " rhoj: " << rhoj << " gamma: " << gamma << " p(j): " << p(j) << " sqrt(gamma * p(j) / rhoj): " << sqrt(gamma * p(j) / rhoj) << " u(j): " << u(j) << "\n";
+          /*if ( fpclassify( curPow ) == FP_NAN )
+             {
+             std::cerr << "nan in power sum  i:" << i << " j: " << j << " accTerm: " << accTerm << " (Kernel deriv: " << boost::numeric::ublas::inner_prod(veli - velj,Kernel.derivative) << " hij: " << hij << " R: " << Ri - Rj << " Ri: " << Ri << " Rj: " << Rj << ")\n";
+             std::cerr << "  piOrhoirhoi: " << piOrhoirhoi << " pj: " << pj << " rhoj: " << rhoj << " av: " << av << "\n";
+             std::cerr << "  av stuff  cij: " << cij << " muij: " << muij << " rhoi: " << rhoi << "\n";
+             std::cerr << "  cij stuff  ci: " << ci << " rhoj: " << rhoj << " gamma: " << gamma << " p(j): " << p(j) << " sqrt(gamma * p(j) / rhoj): " << sqrt(gamma * p(j) / rhoj) << " u(j): " << u(j) << "\n";
 
-            for (size_t k = 0; k < noParts; k++)
-            {
+             for (size_t k = 0; k < noParts; k++)
+             {
               //if (pos(k, 0) < 8 && pos(k, 0) > 2 &&
               //    pos(k, 1) < 8 && pos(k, 1) > 2)
                 {
                   std::cout << pos(k, 2) << "\t" << rho(k) << "\t" << p(k) << "\t" << dudt(k) << "\t" << vel(k, 2) << "\t" << u(k) << "\n";
                 }
-              
-            }
-  
-            MPI::Finalize();
-            exit(EXIT_FAILURE);
-          }
+
+             }
+
+             MPI::Finalize();
+             exit(EXIT_FAILURE);
+             }*/
         }
 
       curAcc(0) = 0.;
@@ -324,7 +391,6 @@ void derivate()
       dudt(i) = curPow;
     }
   std::cerr << "acc&pow queue finished!\n";
-
 };
 
 using namespace boost::assign;
@@ -359,7 +425,7 @@ int main(int argc, char* argv[])
   valvectRefType m(PartManager.m);
   valvectRefType rho(PartManager.rho);
   valvectRefType u(PartManager.u);
-  valvectRefType dudt(PartManager.dudt);
+  //valvectRefType dudt(PartManager.dudt);
   valvectRefType p(PartManager.p);
 
   idvectRefType id(PartManager.id);
@@ -417,7 +483,7 @@ int main(int argc, char* argv[])
   /// define some simulation parameters
   ///
   //const valueType dt = 138.e6 / 50.;
-  
+
   //const size_t maxSteps = 500000;
   //const size_t saveSteps =  5000;
   const size_t maxStep = 300;
@@ -425,7 +491,6 @@ int main(int argc, char* argv[])
 
   ///
   /// bootstrap the integrator
-  ///  in case of the predictor&corrector, the dt argument is ignored
   ///
   Integrator.bootstrap();
 
@@ -468,15 +533,15 @@ int main(int argc, char* argv[])
             }
 
           /*const size_t noParts = PartManager.getNoLocalParts();
-          std::cout << "#z\trho\tp\tdudt\tvz\n";
-          for (size_t i = 0; i < noParts; i++)
-            {
+             std::cout << "#z\trho\tp\tdudt\tvz\n";
+             for (size_t i = 0; i < noParts; i++)
+             {
               if (pos(i, 0) < 8 && pos(i, 0) > 2 &&
                   pos(i, 1) < 8 && pos(i, 1) > 2)
                 {
                   std::cout << pos(i, 2) << "\t" << rho(i) << "\t" << p(i) << "\t" << dudt(i) << "\t" << vel(i, sphlatch::Z) << "\n";
                 }
-            }*/
+             }*/
           IOManager.saveDump("saveDump.h5part", saveQuants);
         }
     }

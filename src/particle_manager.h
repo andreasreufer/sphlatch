@@ -88,7 +88,7 @@ matrixType pos, vel, acc, rotv, M, I, S;
 /// scalar quantities
 ///
 valvectType m, h, dhdt, rho, drhodt, p, u, dudt, A, dAdt, alpha, dalphadt,
-            divv, mumax, q, eps;
+            divv, mumax, q, eps, dtav, dt;
 
 ///
 /// integers

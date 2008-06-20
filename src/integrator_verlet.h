@@ -35,13 +35,13 @@ virtual void prepare(void) = 0;
 /// drift changes the position:
 ///  x_1 = x_0 + v_0*dt + 0.5*a_0*dt^2
 ///
-virtual void drift(valueRefType _dt) = 0;
+virtual void drift(const valueType& _dt) = 0;
 
 ///
 /// kick changes the velocity:
 ///  v_1 = v_0 + 0.5*a_0*dt + 0.5*a_1*dt;
 ///
-virtual void kick(valueRefType _dt) = 0;
+virtual void kick(const valueType& _dt) = 0;
 };
 
 ///
@@ -86,7 +86,7 @@ void prepare(void)
   a = zero;
 }
 
-void drift(valueRefType _dt)
+void drift(const valueType& _dt)
 {
   matrixRangeType x(*var, rangeType(0, noParts), rangeType(0, var->size2()));
   matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
@@ -106,7 +106,7 @@ void drift(valueRefType _dt)
   a = zero;
 }
 
-void kick(valueRefType _dt)
+void kick(const valueType& _dt)
 {
   matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
   matrixRefType a(*ddVar);
@@ -161,7 +161,7 @@ void prepare(void)
   a = zero;
 }
 
-void drift(valueRefType _dt)
+void drift(const valueType& _dt)
 {
   valvectRangeType x(*var, rangeType(0, noParts));
   valvectRangeType v(*dVar, rangeType(0, noParts));
@@ -181,7 +181,7 @@ void drift(valueRefType _dt)
   a = zero;
 }
 
-void kick(valueRefType _dt)
+void kick(const valueType& _dt)
 {
   valvectRangeType v(*dVar, rangeType(0, noParts));
   valvectRefType a(*ddVar);
@@ -205,16 +205,19 @@ class VerletMetaIntegrator : public GenericMetaIntegrator
 {
 private:
 typedef std::list<GenericVerlet*> integratorsListType;
-typedef void (*funcPtr)(void);
+typedef void (*voidVoidFuncPtr)(void);
+typedef valueType (*valueTypeVoidFuncPtr)(void);
 
 integratorsListType::iterator integItr, integEnd;
-funcPtr derivFunc;
+voidVoidFuncPtr derivFunc;
+valueTypeVoidFuncPtr timingFunc;
 valueType lastDt;
 
 public:
-VerletMetaIntegrator(void(*_deriv)(void))
+VerletMetaIntegrator(void(*_deriv)(void), valueType(*_timing)(void))
 {
   derivFunc = _deriv;
+  timingFunc = _timing;
 };
 
 ~VerletMetaIntegrator()
@@ -230,7 +233,7 @@ VerletMetaIntegrator(void(*_deriv)(void))
     }
 };
 public:
-void bootstrap(valueType _dt)
+void bootstrap()
 {
   integEnd = integrators.end();
 
@@ -245,21 +248,23 @@ void bootstrap(valueType _dt)
 
   derivFunc();
   
+  const valueType dt = timingFunc();
+  
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
-      (*integItr)->drift(_dt);
+      (*integItr)->drift(dt);
       integItr++;
     }
   
   valueRefType time( PartManager.attributes["time"] );
-  time += _dt;
+  time += dt;
 };
 
 ///
 /// this is the integration mail loop
 ///
-void integrate(valueType _dt)
+void integrate()
 {
   integItr = integrators.begin();
   integEnd = integrators.end();
@@ -275,14 +280,16 @@ void integrate(valueType _dt)
     }
 
   /// particles are freshly moved
-  /// derivative
+  /// calculate derivative
   derivFunc();
+
+  const valueType dt = timingFunc();
 
   /// kick
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
-      (*integItr)->kick(_dt);
+      (*integItr)->kick(dt);
       integItr++;
     }
 
@@ -290,12 +297,12 @@ void integrate(valueType _dt)
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
-      (*integItr)->drift(_dt);
+      (*integItr)->drift(dt);
       integItr++;
     }
 
   valueRefType time( PartManager.attributes["time"] );
-  time += _dt;
+  time += dt;
 };
 
 void regIntegration(valvectRefType _var,

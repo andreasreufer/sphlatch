@@ -64,6 +64,12 @@ typedef sphlatch::CostZone costzone_type;
 // tree stuff
 #include "bhtree.h"
 
+valueType timeStep()
+{
+  const valueType dt = 138.e6 / 50.;
+  return dt;
+}
+
 void derivate()
 {
   part_type& PartManager(part_type::instance());
@@ -169,7 +175,7 @@ int main(int argc, char* argv[])
   /// instantate the MetaIntegrator and
   /// register spatial integration
   ///
-  sphlatch::VerletMetaIntegrator Integrator(derivate);
+  sphlatch::VerletMetaIntegrator Integrator(derivate, timeStep);
   Integrator.regIntegration(pos, vel, acc);
 
   IOManager.loadDump("nbody_small.h5part");
@@ -201,7 +207,6 @@ int main(int argc, char* argv[])
   ///
   /// define some simulation parameters
   /// 
-  const valueType dt = 138.e6 / 50.;
   //const size_t maxSteps = 500000;
   //const size_t saveSteps =  5000;
   const size_t maxStep = 100;
@@ -210,7 +215,7 @@ int main(int argc, char* argv[])
   ///
   /// bootstrap the integrator
   ///
-  Integrator.bootstrap(dt);
+  Integrator.bootstrap();
 
   ///
   /// the integration loop
@@ -233,7 +238,7 @@ int main(int argc, char* argv[])
     ///
     /// integrate
     ///
-    Integrator.integrate(dt);
+    Integrator.integrate();
     step++;
 
     ///
