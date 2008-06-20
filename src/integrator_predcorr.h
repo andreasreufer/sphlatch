@@ -34,19 +34,19 @@ public:
 /// bootstrap:
 ///  bootstrap the predictor/corrector
 ///
-virtual void bootstrap(valueRefType _dt) = 0;
+virtual void bootstrap(const valueType& _dt) = 0;
 
 ///
 /// prediction step:
 ///  x_p = x + 0.5*( 3*v_0 + - v_-1 )*dt
 ///
-virtual void predict(valueRefType _dt) = 0;
+virtual void predict(const valueType& _dt) = 0;
 
 ///
 /// correction step:
 ///  x_1 = x_0 + 0.5(  v_p + v_0 )*dt
 ///
-virtual void correct(valueRefType _dt) = 0;
+virtual void correct(const valueType& _dt) = 0;
 
 ///
 /// prepare:
@@ -95,7 +95,7 @@ void prepare(void)
     }
 }
 
-void bootstrap(valueRefType _dt)
+void bootstrap(const valueType& _dt)
 {
   valvectRefType   v(*dVar);
   valvectRefType  ov(odVar);
@@ -108,7 +108,7 @@ void bootstrap(valueRefType _dt)
   ov = v;
 }
 
-void predict(valueRefType _dt)
+void predict(const valueType& _dt)
 {
   valvectRangeType x(*var,  rangeType(0, noParts));
   valvectRefType  ox(oVar);
@@ -127,7 +127,7 @@ void predict(valueRefType _dt)
   v = zero;
 }
 
-void correct(valueRefType _dt)
+void correct(const valueType& _dt)
 {
   valvectRangeType x(*var,  rangeType(0, noParts));
   valvectRefType  ox(oVar);
@@ -136,7 +136,7 @@ void correct(valueRefType _dt)
   valvectRefType  ov(odVar);
   
   x = ox + 0.5*_dt*( v + ov );
-  v = zero;
+  //v = zero;  << does that belong to the integrator?
 }
 private:
 valvectType oVar, odVar;
@@ -200,7 +200,7 @@ void prepare(void)
   //a = zero;
 }
 
-void bootstrap(valueRefType _dt)
+void bootstrap(const valueType& _dt)
 {
   matrixRefType  a(*ddVar);
   matrixRefType oa(oddVar);
@@ -217,7 +217,7 @@ void bootstrap(valueRefType _dt)
   ov = v;
 }
 
-void predict(valueRefType _dt)
+void predict(const valueType& _dt)
 {
   matrixRangeType x(*var,  rangeType(0, noParts), rangeType(0, var->size2()));
   matrixRefType  ox(oVar);
@@ -244,7 +244,7 @@ void predict(valueRefType _dt)
   a = zero;
 }
 
-void correct(valueRefType _dt)
+void correct(const valueType& _dt)
 {
   matrixRangeType x(*var,  rangeType(0, noParts), rangeType(0, var->size2()));
   matrixRefType  ox(oVar);
@@ -273,20 +273,22 @@ class PredCorrMetaIntegrator : public GenericMetaIntegrator
 {
 private:
 typedef std::list<GenericPredCorr*> integratorsListType;
-typedef void (*funcPtr)(void);
+typedef void (*voidVoidFuncPtr)(void);
+typedef valueType (*valueTypeVoidFuncPtr)(void);
 
 integratorsListType::iterator integItr, integEnd;
-funcPtr derivFunc;
-valueType lastDt;
+voidVoidFuncPtr derivFunc;
+valueTypeVoidFuncPtr timingFunc;
 
 public:
 ///
 /// instantate the metaIntegrator with a
 /// function pointer to the derivation function
 ///
-PredCorrMetaIntegrator(void(*_deriv)(void))
+PredCorrMetaIntegrator(void(*_deriv)(void), valueType(*_timing)(void))
 {
   derivFunc = _deriv;
+  timingFunc = _timing;
 };
 
 ~PredCorrMetaIntegrator()
@@ -302,7 +304,7 @@ PredCorrMetaIntegrator(void(*_deriv)(void))
     }
 };
 public:
-void bootstrap(valueType _dt)
+void bootstrap()
 {
   integEnd = integrators.end();
 
@@ -314,22 +316,24 @@ void bootstrap(valueType _dt)
     }
 
   derivFunc();
+  
+  const valueType dt = timingFunc();
 
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
-      (*integItr)->bootstrap(_dt);
+      (*integItr)->bootstrap(dt);
       integItr++;
     }
 
   valueRefType time(PartManager.attributes["time"]);
-  time += _dt;
+  time += dt;
 };
 
 ///
 /// this is the integration mail loop
 ///
-void integrate(valueType _dt)
+void integrate(void)
 {
   integItr = integrators.begin();
   integEnd = integrators.end();
@@ -348,23 +352,27 @@ void integrate(valueType _dt)
   /// derivative
   derivFunc();
 
+  ///
+  /// timestepping belongs here
+  const valueType dt = timingFunc();
+
   /// predict
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
-      (*integItr)->predict(_dt);
+      (*integItr)->predict(dt);
       integItr++;
     }
 
   valueRefType time(PartManager.attributes["time"]);
-  time += _dt;
+  time += dt;
   derivFunc();
   
   /// correct
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
-      (*integItr)->correct(_dt);
+      (*integItr)->correct(dt);
       integItr++;
     }
 };

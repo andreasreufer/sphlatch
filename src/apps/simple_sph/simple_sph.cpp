@@ -74,6 +74,28 @@ typedef sphlatch::CostZone costzone_type;
 
 #include "rankspace.h"
 
+valueType timeStep()
+{
+  /*part_type& PartManager(part_type::instance());
+  comm_type& CommManager(comm_type::instance());
+  costzone_type& CostZone(costzone_type::instance());
+
+  matrixRefType pos(PartManager.pos);
+  matrixRefType vel(PartManager.vel);
+  matrixRefType acc(PartManager.acc);
+
+  valvectRefType m(PartManager.m);
+  valvectRefType h(PartManager.h);
+  valvectRefType p(PartManager.p);
+  valvectRefType u(PartManager.u);
+  valvectRefType rho(PartManager.rho);
+  valvectRefType dudt(PartManager.dudt);
+
+  idvectRefType id(PartManager.id);*/
+
+  return 0.1;
+}
+
 void derivate()
 {
   part_type& PartManager(part_type::instance());
@@ -157,11 +179,15 @@ void derivate()
 
       const size_t noNeighs = RSSearch.neighbourList[0];
 
-      //std::cout << i << ": " << noNeighs << " neighbours (searchRad: " << srchRad << ")\n";
+      if ( noNeighs < 10 )
+        std::cerr << noNeighs << " ";
 
       static valueType rhoi;
       rhoi = 0.;
 
+      ///
+      /// SPH density sum
+      ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
           const valueType r = RSSearch.neighDistList[curNeigh];
@@ -170,26 +196,30 @@ void derivate()
           const valueType hij = 0.5 * (hi + h(j));
 
           rhoi += m(j) * Kernel.value(r, hij);
-          //std::cout << "i: " << i << "   j: " << j << " rho: " << rhoi << " r: " << r << " hij: " << hij << "\n";
-        }
 
+          if ( isnan( rhoi ) )
+          {
+            std::cerr << "nan in density sum  i:" << i << " j: " << j << " (Kernel: " <<  Kernel.value(r, hij) << " hij: " << hij << " r: " << r << ")\n";
+          }
+        }
       rho(i) = rhoi;
-      //std::cout << rho(i) << "\n";
     }
+  std::cerr << "density queue finished!\n";
 
   const valueType gamma = 1.4;
 
+  ///
+  /// lower temperature bound
+  ///
+  for (size_t i = 0; i < noParts; i++)
+  {
+    if ( u(i) < 0.1 )
+    {
+      u(i) = 0.1;
+    }
+  }
   p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
 
-  /*
-     if ( pos(i, 0) < 8 && pos(i, 0) > 2 &&
-         pos(i, 1) < 8 && pos(i, 1) > 2 )
-     {
-      std::cout << pos(i, 2) << "\t" << rho(i) << "\n";
-     }
-   */
-
-  std::cerr << "density queue finished!\n";
 
   const valueType alpha = 1;
   const valueType beta = 1;
@@ -216,14 +246,14 @@ void derivate()
       curAcc = zero;
       curPow = 0.;
 
-      /*if ( i == 0 )
-         std::cerr << "i " << pi << " " << rhoi << "\n";*/
-
       const particleRowType veli(vel, i);
       const particleRowType Ri(pos, i);
 
       const valueType ci = sqrt(gamma * p(i) / rho(i));
 
+      ///
+      /// SPH acceleration and specific power sum
+      ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
           const valueType rij = RSSearch.neighDistList[curNeigh];
@@ -231,8 +261,6 @@ void derivate()
 
           const valueType rhoj = rho(j);
           const valueType pj = p(j);
-          /*if ( i == 0 )
-             std::cerr << "j " << pj << " " << rhoj << "\n";*/
 
           const valueType hij = 0.5 * (hi + h(j));
           const valueType rhoij = 0.5 * (rhoi + rhoj);
@@ -254,40 +282,49 @@ void derivate()
 
           const valueType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
 
-          /*if ( i == 0 ) {
-             std::cerr << "j2 " << rijrij << " " << vijrij << " " << accTerm << " " << muij << " " << av << "\t" << "\n";
-             std::cerr << "j3 " << curAcc(0) << "\n";
-
-             }*/
           /// acceleration
           curAcc += (m(j) * accTerm * Kernel.derive(rij, hij, Ri - Rj));
 
+          
           /// pdV + AV heating
           curPow += m(j) * accTerm *
-                    //boost::numeric::ublas::inner_prod(velj - veli, Kernel.derivative); /// check sign!
-                    boost::numeric::ublas::inner_prod(veli - velj, Kernel.derivative); /// check sign!
-          /*if ( i == 0 ) {
-             std::cerr << "j4 " << Kernel.derivative << " " << rij << " " << hij << " " << Ri - Rj << "\n\n";
-             }*/
+                    boost::numeric::ublas::inner_prod(veli - velj,
+                                                      Kernel.derivative); /// check sign!
+          if ( isnan( curPow ) )
+          {
+            std::cerr << "nan in power sum  i:" << i << " j: " << j << " accTerm: " << accTerm << " (Kernel deriv: " << boost::numeric::ublas::inner_prod(veli - velj,Kernel.derivative) << " hij: " << hij << " R: " << Ri - Rj << " Ri: " << Ri << " Rj: " << Rj << ")\n";
+            std::cerr << "  piOrhoirhoi: " << piOrhoirhoi << " pj: " << pj << " rhoj: " << rhoj << " av: " << av << "\n";
+            std::cerr << "  av stuff  cij: " << cij << " muij: " << muij << " rhoi: " << rhoi << "\n";
+            std::cerr << "  cij stuff  ci: " << ci << " rhoj: " << rhoj << " gamma: " << gamma << " p(j): " << p(j) << " sqrt(gamma * p(j) / rhoj): " << sqrt(gamma * p(j) / rhoj) << " u(j): " << u(j) << "\n";
+
+            for (size_t k = 0; k < noParts; k++)
+            {
+              //if (pos(k, 0) < 8 && pos(k, 0) > 2 &&
+              //    pos(k, 1) < 8 && pos(k, 1) > 2)
+                {
+                  std::cout << pos(k, 2) << "\t" << rho(k) << "\t" << p(k) << "\t" << dudt(k) << "\t" << vel(k, 2) << "\t" << u(k) << "\n";
+                }
+              
+            }
+  
+            MPI::Finalize();
+            exit(EXIT_FAILURE);
+          }
         }
 
       curAcc(0) = 0.;
       curAcc(1) = 0.;
 
-      if ( pos(i, 2) < 5. || pos(i, 2) > 95. )
-      {
-      curAcc(2) = 0.;
-      }
+      if (pos(i, 2) < 5. || pos(i, 2) > 95.)
+        {
+          curAcc(2) = 0.;
+        }
 
       particleRowType(acc, i) = curAcc;
       dudt(i) = curPow;
     }
   std::cerr << "acc&pow queue finished!\n";
 
-  /*for (size_t i = 0; i < noParts; i++)
-     {
-
-     }*/
 };
 
 using namespace boost::assign;
@@ -343,10 +380,10 @@ int main(int argc, char* argv[])
   /// register spatial integration
   ///
 
-  //sphlatch::VerletMetaIntegrator Integrator(derivate);
-  sphlatch::PredCorrMetaIntegrator Integrator(derivate);
+  //sphlatch::VerletMetaIntegrator Integrator(derivate, timestep);
+  sphlatch::PredCorrMetaIntegrator Integrator(derivate, timeStep);
   Integrator.regIntegration(pos, vel, acc);
-  Integrator.regIntegration(u, dudt);
+  //Integrator.regIntegration(u, dudt);
 
   IOManager.loadDump("shocktube.hdf5");
 
@@ -380,16 +417,17 @@ int main(int argc, char* argv[])
   /// define some simulation parameters
   ///
   //const valueType dt = 138.e6 / 50.;
-  const valueType dt = 0.5e-1;
+  
   //const size_t maxSteps = 500000;
   //const size_t saveSteps =  5000;
-  const size_t maxStep   = 30;
+  const size_t maxStep = 300;
   const size_t saveSteps = 30;
 
   ///
   /// bootstrap the integrator
+  ///  in case of the predictor&corrector, the dt argument is ignored
   ///
-  Integrator.bootstrap(dt);
+  Integrator.bootstrap();
 
   //MPI::Finalize();
   //return EXIT_SUCCESS;
@@ -414,8 +452,10 @@ int main(int argc, char* argv[])
       ///
       /// integrate
       ///
-      Integrator.integrate(dt);
+      Integrator.integrate();
       step++;
+
+      std::cerr << "now at step " << step << "\n";
 
       ///
       /// save a dump
@@ -426,8 +466,9 @@ int main(int argc, char* argv[])
             {
               std::cerr << "save dump!\n";
             }
-          
-          const size_t noParts = PartManager.getNoLocalParts();
+
+          /*const size_t noParts = PartManager.getNoLocalParts();
+          std::cout << "#z\trho\tp\tdudt\tvz\n";
           for (size_t i = 0; i < noParts; i++)
             {
               if (pos(i, 0) < 8 && pos(i, 0) > 2 &&
@@ -435,7 +476,7 @@ int main(int argc, char* argv[])
                 {
                   std::cout << pos(i, 2) << "\t" << rho(i) << "\t" << p(i) << "\t" << dudt(i) << "\t" << vel(i, sphlatch::Z) << "\n";
                 }
-            }
+            }*/
           IOManager.saveDump("saveDump.h5part", saveQuants);
         }
     }
