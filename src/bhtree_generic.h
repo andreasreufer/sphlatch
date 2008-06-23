@@ -125,9 +125,9 @@ BHtree(valueType _thetaMAC,
 
   remoteCells.resize(noToptreeLeafCells, noMultipoleMoments);
   remoteIsFilled.resize(noToptreeLeafCells);
-
-  cellVect.resize(noMultipoleMoments);
 #endif
+  cellVect.resize(noMultipoleMoments);
+
   /// ugly
   neighbourList.resize(100);
   neighDistList.resize(100);
@@ -949,8 +949,8 @@ public:
 ///
 partsIndexVectType neighbourList;
 std::valarray<valueType> neighDistList;
-void findNeighbours(size_t _curPartIdx,
-                    const valueType _search_radius)
+void findNeighbours(size_t& _curPartIdx,
+                    const valueType& _search_radius)
 {
   ///
   /// set up some vars and go to particles node
@@ -1090,6 +1090,71 @@ bool cellTotOutsideSphere()
          (searchRadius + cellCornerDist));
 }
 // end of neighbour search stuff
+
+
+// find maximal mass enclosing radius stuff
+public:
+///
+/// find maximal mass enclosing radius:
+/// - load current particle i data
+/// - go to current particle i node
+/// - go up until the cell j contains enough mass m
+/// - the sphere around the particle with r_s = | r_j - r_i + 0.5*r_c |
+///   contains at least enough mass m
+///   r_c is the distance between the cell center and the cell
+///   corner with the biggest distance to the particle
+/// 
+/// this algorithm gives a maximal smoothing length for each particle:
+/// when each particle has mass m = 1, then the masses of the cells
+/// give directly the number of particles contained in them
+///
+valueType maxMassEncloseRad(size_t& _curPartIdx, const valueType& _minMass)
+{
+  ///
+  /// set up some vars and go to particle node
+  ///
+  curNodePtr = partProxies[_curPartIdx];
+  const valueType partX = static_cast<partPtrT>(curNodePtr)->xPos;
+  const valueType partY = static_cast<partPtrT>(curNodePtr)->yPos;
+  const valueType partZ = static_cast<partPtrT>(curNodePtr)->zPos;
+
+  ///
+  /// go up (if possible) until minimal mass is reached
+  ///
+  while ( curNodePtr->parent != NULL )
+  {
+    goUp();
+    asLeaf().cellToVect(cellVect);
+    //if ( cellVect[MASS] > _minMass )
+    if ( cellVect[3] > _minMass )
+    {
+      break;
+    }
+  }
+
+  ///
+  /// determine the farthest corner of the cell relative to the particle,
+  /// determine its distance to the particle and return it
+  /// 
+  valueType cornerX = static_cast<cellPtrT>(curNodePtr)->xCenter;
+  valueType cornerY = static_cast<cellPtrT>(curNodePtr)->yCenter;
+  valueType cornerZ = static_cast<cellPtrT>(curNodePtr)->zCenter;
+
+  const valueType halfCellSize = 
+    0.5*static_cast<cellPtrT>(curNodePtr)->cellSize;
+
+  cornerX = ( partX < cornerX ) ?
+    cornerX + halfCellSize : cornerX - halfCellSize;
+  cornerY = ( partY < cornerY ) ?
+    cornerY + halfCellSize : cornerY - halfCellSize;
+  cornerZ = ( partZ < cornerZ ) ?
+    cornerZ + halfCellSize : cornerZ - halfCellSize;
+
+  return sqrt( ( cornerX - partX )*( cornerX - partX )
+              +( cornerY - partY )*( cornerY - partY )
+              +( cornerZ - partZ )*( cornerZ - partZ ) );
+}
+// end of find maximal mass enclosing radius stuff
 
 // treeDOTDump() stuff
 protected:
@@ -1389,6 +1454,7 @@ void emptyRecursor()
     }
 };
 // end of empty() stuff
+
 };
 };
 

@@ -120,6 +120,7 @@ size_t getMyDomain();
 size_t getNoDomains();
 
 void barrier();
+double wtime();
 
 size_t domainToMPIrank(size_t _domain);
 size_t MPIrankToDomain(size_t _rank);
@@ -159,6 +160,8 @@ CommunicationManager::CommunicationManager(void) :
 
   ///
   /// insert mapping here
+  ///
+  /// right now rank maps directly to the domain number
   ///
   for (size_t i = 0; i < noDomains; i++)
     {
@@ -366,7 +369,6 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
     }
 
   // resize the rest of the variables
-
   PartManager.resizeAll();
 }
 
@@ -981,6 +983,11 @@ size_t CommunicationManager::getNoDomains()
 void CommunicationManager::barrier()
 {
   MPI::COMM_WORLD.Barrier();
+}
+
+double CommunicationManager::wtime()
+{
+  return MPI::Wtime();
 }
 
 size_t CommunicationManager::domainToMPIrank(size_t _domain)

@@ -1,4 +1,4 @@
-all: particle_manager communication_manager
+all: particle_manager communication_manager log_manager
 
 particle_manager:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lboost_program_options -lhdf5 -lz -o particle_manager_test particle_manager_test.cpp
@@ -8,3 +8,7 @@ communication_manager:
 
 attributes:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -o attributes_test attributes_test.cpp
+
+log_manager:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lboost_program_options -lhdf5 -lz -o log_manager_test log_manager_test.cpp
+

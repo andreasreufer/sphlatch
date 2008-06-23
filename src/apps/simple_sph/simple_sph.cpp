@@ -39,6 +39,7 @@ namespace po = boost::program_options;
 
 #include "typedefs.h"
 typedef sphlatch::valueType valueType;
+typedef sphlatch::valueRefType valueRefType;
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::zerovalvectType zerovalvectType;
 typedef sphlatch::valvectRefType valvectRefType;
@@ -62,6 +63,9 @@ typedef sphlatch::CommunicationManager comm_type;
 #include "costzone.h"
 typedef sphlatch::CostZone costzone_type;
 
+#include "log_manager.h"
+typedef sphlatch::LogManager log_type;
+
 #include "integrator_verlet.h"
 #include "integrator_predcorr.h"
 
@@ -81,6 +85,7 @@ valueType timeStep()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
+  log_type& Logger(log_type::instance());
 
   //matrixRefType pos(PartManager.pos);
   //matrixRefType vel(PartManager.vel);
@@ -118,14 +123,15 @@ valueType timeStep()
   ///
   /// energy integration
   ///
-  const valueType uMin = 0.1;
+  const valueType uMin = 0.2;
   //valueType dtU = VAL_MAX;
   valueType dtU = std::numeric_limits<valueType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
       const valueType absdudti = dudt(i);
 
-      const valueType dtUi = (u(i) + uMin) / absdudti;
+      //const valueType dtUi = (u(i) + uMin) / absdudti;
+      const valueType dtUi = (u(i)) / absdudti;
 
       if ( absdudti > 0. )
       {
@@ -165,6 +171,11 @@ valueType timeStep()
   dtGlob = dtA < dtGlob ? dtA : dtGlob;
   dtGlob = dtU < dtGlob ? dtU : dtGlob;
   dtGlob = dtCFL < dtGlob ? dtCFL : dtGlob;
+  dtGlob = dtGlob < 0.1 ? dtGlob : 0.1;
+
+  Logger.stream << "dtA: " << dtA << " dtU: " << dtU
+                << " dtCFL: " << dtCFL << "   dtGlob: " << dtGlob;
+  Logger.flushStream();
 
   return dtGlob;
 }
@@ -174,6 +185,7 @@ void derivate()
   part_type& PartManager(part_type::instance());
   //comm_type& CommManager(comm_type::instance());
   //costzone_type& CostZone(costzone_type::instance());
+  log_type& Logger(log_type::instance());
 
   matrixRefType pos(PartManager.pos);
   matrixRefType vel(PartManager.vel);
@@ -239,6 +251,7 @@ void derivate()
   sphlatch::CubicSpline3D Kernel;
   sphlatch::Rankspace RSSearch;
   RSSearch.prepare();
+  Logger << "Rankspace prepared";
 
   for (size_t i = 0; i < noParts; i++)
     {
@@ -268,15 +281,10 @@ void derivate()
           const valueType hij = 0.5 * (hi + h(j));
 
           rhoi += m(j) * Kernel.value(r, hij);
-
-          /*if ( fpclassify( rhoi ) == FP_NAN )
-             {
-             std::cerr << "nan in density sum  i:" << i << " j: " << j << " (Kernel: " <<  Kernel.value(r, hij) << " hij: " << hij << " r: " << r << ")\n";
-             }*/
         }
       rho(i) = rhoi;
     }
-  std::cerr << "density queue finished!\n";
+  Logger << "SPH density sum";
 
   const valueType gamma = 1.4;
 
@@ -285,13 +293,13 @@ void derivate()
   ///
   for (size_t i = 0; i < noParts; i++)
     {
-      if (u(i) < 0.1)
+      if (u(i) < 0.2)
         {
-          u(i) = 0.1;
+          u(i) = 0.2;
         }
     }
   p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
-
+  Logger << "pressure";
 
   const valueType alpha = 1;
   const valueType beta = 1;
@@ -362,7 +370,6 @@ void derivate()
           curPow += m(j) * accTerm *
                     boost::numeric::ublas::inner_prod(veli - velj,
                                                       Kernel.derivative); /// check sign!
-          //if ( fpclassify( curPow ) == FP_NAN )
           if ( isnan( curPow ) )
              {
              std::cerr << "nan in power sum  i:" << i << " j: " << j << " accTerm: " << accTerm << " (Kernel deriv: " << boost::numeric::ublas::inner_prod(veli - velj,Kernel.derivative) << " hij: " << hij << " R: " << Ri - Rj << " Ri: " << Ri << " Rj: " << Rj << ")\n";
@@ -396,7 +403,7 @@ void derivate()
       particleRowType(acc, i) = curAcc;
       dudt(i) = curPow;
     }
-  std::cerr << "acc&pow queue finished!\n";
+  Logger << "acceleration & power sum";
 };
 
 using namespace boost::assign;
@@ -412,6 +419,7 @@ int main(int argc, char* argv[])
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
   costzone_type& CostZone(costzone_type::instance());
+  log_type& Logger(log_type::instance());
 
   ///
   /// define what we're doing
@@ -437,6 +445,7 @@ int main(int argc, char* argv[])
   idvectRefType id(PartManager.id);
 
   size_t& step(PartManager.step);
+  valueRefType time(PartManager.attributes["time"]);
 
   const size_t myDomain = CommManager.getMyDomain();
 
@@ -458,6 +467,7 @@ int main(int argc, char* argv[])
   //Integrator.regIntegration(u, dudt);
 
   IOManager.loadDump("shocktube.hdf5");
+  Logger << "loaded shocktube.hdf5";
 
   ///
   /// define the quantities to save in a dump
@@ -485,6 +495,12 @@ int main(int argc, char* argv[])
   CommManager.sendGhosts(rho);
   CommManager.sendGhosts(u);
 
+  
+  Logger.stream << "distributed particles: "
+                << PartManager.getNoLocalParts() << " parts. & "
+                << PartManager.getNoGhostParts() << " ghosts";
+  Logger.flushStream();
+  
   ///
   /// define some simulation parameters
   ///
@@ -492,13 +508,14 @@ int main(int argc, char* argv[])
 
   //const size_t maxSteps = 500000;
   //const size_t saveSteps =  5000;
-  const size_t maxStep = 300;
-  const size_t saveSteps = 30;
+  const size_t maxStep = 30000;
+  const size_t saveSteps = 3000;
 
   ///
   /// bootstrap the integrator
   ///
   Integrator.bootstrap();
+  Logger << "integrator bootstrapped";
 
   //MPI::Finalize();
   //return EXIT_SUCCESS;
@@ -520,11 +537,21 @@ int main(int argc, char* argv[])
       CommManager.sendGhosts(id);
       CommManager.sendGhosts(m);
 
+      Logger.stream << "distributed particles: "
+                    << PartManager.getNoLocalParts() << " parts. & "
+                    << PartManager.getNoGhostParts() << " ghosts";
+      Logger.flushStream();
+
       ///
       /// integrate
       ///
       Integrator.integrate();
+      
+      Logger.stream << "finished step " << step << ", now at t = " << time;
+      Logger.flushStream();
+      Logger.zeroRelTime();
       step++;
+      
 
       std::cerr << "now at step " << step << "\n";
 
