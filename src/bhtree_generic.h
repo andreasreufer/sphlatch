@@ -686,7 +686,7 @@ void globalCombineToptreeLeafs()
   /// receive multipoles from other nodes and add
   /// them to local value
   ///
-  while (!sumUpRecv.empty())
+  while (not sumUpRecv.empty())
     {
       size_t recvFrom = sumUpRecv.front();
       sumUpRecv.pop();
@@ -709,7 +709,7 @@ void globalCombineToptreeLeafs()
   ///
   /// send local value to another node
   ///
-  while (!sumUpSend.empty())
+  while (not sumUpSend.empty())
     {
       size_t sendTo = sumUpSend.front();
       sumUpSend.pop();
@@ -721,7 +721,7 @@ void globalCombineToptreeLeafs()
   //
   // receive global result
   //
-  while (!distrRecv.empty())
+  while (not distrRecv.empty())
     {
       size_t recvFrom = distrRecv.top();
       distrRecv.pop();
@@ -733,7 +733,7 @@ void globalCombineToptreeLeafs()
   //
   // ... and distribute it to other nodes
   //
-  while (!distrSend.empty())
+  while (not distrSend.empty())
     {
       size_t sendTo = distrSend.top();
       distrSend.pop();
@@ -948,8 +948,8 @@ public:
 /// - return neighbours
 ///
 partsIndexVectType neighbourList;
-std::valarray<valueType> neighDistList;
-void findNeighbours(size_t& _curPartIdx,
+valvectType neighDistList;
+void findNeighbours(const size_t& _curPartIdx,
                     const valueType& _search_radius)
 {
   ///
@@ -999,7 +999,7 @@ void findNeighbourRecursor()
           ///
           noNeighbours++;
           neighbourList[noNeighbours] = curNodePtr->ident;
-          neighDistList[noNeighbours] = sqrt(partPartDistPow2);
+          neighDistList(noNeighbours) = sqrt(partPartDistPow2);
         }
     }
   else
@@ -1108,7 +1108,8 @@ public:
 /// when each particle has mass m = 1, then the masses of the cells
 /// give directly the number of particles contained in them
 ///
-valueType maxMassEncloseRad(size_t& _curPartIdx, const valueType& _minMass)
+valueType maxMassEncloseRad(const size_t& _curPartIdx,
+                            const valueType& _minMass)
 {
   ///
   /// set up some vars and go to particle node
@@ -1125,7 +1126,6 @@ valueType maxMassEncloseRad(size_t& _curPartIdx, const valueType& _minMass)
   {
     goUp();
     asLeaf().cellToVect(cellVect);
-    //if ( cellVect[MASS] > _minMass )
     if ( cellVect[3] > _minMass )
     {
       break;
@@ -1270,27 +1270,27 @@ void treeDumpRecursor()
 {
   if (curNodePtr->isParticle)
     {
-      dumpFile << "P";
+      dumpFile << "P"; /// is particle
     }
   else
     {
-      dumpFile << "N";
+      dumpFile << "C"; /// is cell
     }
   if (curNodePtr->isEmpty)
     {
-      dumpFile << "E";
+      dumpFile << "E"; /// is empty
     }
   else
     {
-      dumpFile << "F";
+      dumpFile << "F"; /// is filled
     }
   if (curNodePtr->isLocal)
     {
-      dumpFile << "L";
+      dumpFile << "L"; /// is local
     }
   else
     {
-      dumpFile << "R";
+      dumpFile << "R"; /// is remote
     }
   dumpFile << " ";
 

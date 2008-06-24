@@ -55,7 +55,7 @@ void saveDump(std::string _outputFile,
               std::set<idvectPtrType>  _integers);
 
 void saveDump(std::string _outputFile, quantsRefType _quantities);
-              
+
 
 void setSinglePrecOut(void);
 void setDoublePrecOut(void);
@@ -79,7 +79,7 @@ bool objectExist(hid_t &_fileHandle, std::string &_objPath);
 static herr_t getObsCallback(hid_t locId, const char *name,
                              const H5L_info_t *info, void *opData);
 static herr_t getAttrsCallback(hid_t _loc, const char *_name,
-                                   const H5A_info_t *info, void *opData);
+                               const H5A_info_t *info, void *opData);
 
 static stringListType datasetsInFile, attributesInFile;
 };
@@ -152,7 +152,7 @@ void IOManager::loadDump(std::string _inputFile)
   H5Pclose(filePropList);
 
   hid_t curGroup = H5Gopen(fileHandle, "/current", H5P_DEFAULT);
-  
+
   datasetsInFile.clear();
   H5Lvisit_by_name(fileHandle, "/current", H5_INDEX_CRT_ORDER,
                    H5_ITER_NATIVE, getObsCallback, NULL, H5P_DEFAULT);
@@ -317,23 +317,23 @@ void IOManager::loadDump(std::string _inputFile)
   ///
   /// read attributes
   ///
-  attrMapRefType attributes( PartManager.attributes );
-  
+  attrMapRefType attributes(PartManager.attributes);
+
   stringListType::const_iterator attrItr = attributesInFile.begin();
   while (attrItr != attributesInFile.end())
-  {
-    hid_t curAttr;
-    dimsMem[0] = 1;
-    valueType attrBuff;
+    {
+      hid_t curAttr;
+      dimsMem[0] = 1;
+      valueType attrBuff;
 
-    curAttr = H5Aopen( curGroup, (*attrItr).c_str(), H5P_DEFAULT );
-    H5Aread( curAttr, H5floatMemType, &attrBuff);
-    H5Aclose( curAttr );
-    
-    attributes[ *attrItr ] = attrBuff;
+      curAttr = H5Aopen(curGroup, (*attrItr).c_str(), H5P_DEFAULT);
+      H5Aread(curAttr, H5floatMemType, &attrBuff);
+      H5Aclose(curAttr);
 
-    attrItr++;
-  }
+      attributes[ *attrItr ] = attrBuff;
+
+      attrItr++;
+    }
 
 
   H5Pclose(datasetPropList);
@@ -349,7 +349,7 @@ void IOManager::loadDump(std::string _inputFile)
   /// pass the step number to PartManager
   ///
   std::string curPointee(curPointeeBuff);
-  std::istringstream stepString( curPointee.substr(6,8) ); /// chars #6-14
+  std::istringstream stepString(curPointee.substr(6, 8)); /// chars #6-14
   stepString >> PartManager.step;
 
   H5Fclose(fileHandle);
@@ -426,18 +426,18 @@ void IOManager::saveDump(std::string _outputFile,
   /// nasty output, when the outputfile doesn't exist
   ///
   if (myDomain == 0)
-  {
-    struct stat statBuff;
-    if (stat(_outputFile.c_str(), &statBuff) == -1)
-      {
-        hid_t filePropLocList = H5Pcreate(H5P_FILE_ACCESS);
-        fileHandle = H5Fcreate(_outputFile.c_str(),
-                             H5F_ACC_TRUNC, H5P_DEFAULT, filePropLocList);
-        H5Fclose(fileHandle);
-        H5Pclose(filePropLocList);
-        sleep(1);
-      }
-  }
+    {
+      struct stat statBuff;
+      if (stat(_outputFile.c_str(), &statBuff) == -1)
+        {
+          hid_t filePropLocList = H5Pcreate(H5P_FILE_ACCESS);
+          fileHandle = H5Fcreate(_outputFile.c_str(),
+                                 H5F_ACC_TRUNC, H5P_DEFAULT, filePropLocList);
+          H5Fclose(fileHandle);
+          H5Pclose(filePropLocList);
+          sleep(1);
+        }
+    }
 #ifdef SPHLATCH_PARALLEL
   CommManager.barrier();
 #endif
@@ -501,9 +501,17 @@ void IOManager::saveDump(std::string _outputFile,
       dimsFile[1] = 1;
       filespace = H5Screate_simple(1, dimsFile, NULL);
 
-      /// create dataset
-      curDataset = H5Dcreate(stepGroup, attrName.c_str(), H5idFileType,
-                             filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      /// create or open dataset
+      if (objectExist(stepGroup, attrName))
+        {
+          curDataset = H5Dopen(stepGroup, attrName.c_str(), H5P_DEFAULT);
+        }
+      else
+        {
+          curDataset = H5Dcreate(stepGroup, attrName.c_str(), H5idFileType,
+                                 filespace, H5P_DEFAULT,
+                                 H5P_DEFAULT, H5P_DEFAULT);
+        }
 
       /// select hyperslab
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET,
@@ -535,10 +543,18 @@ void IOManager::saveDump(std::string _outputFile,
       dimsFile[1] = matr.size2();
       filespace = H5Screate_simple(2, dimsFile, NULL);
 
-      /// create dataset
-      curDataset = H5Dcreate(stepGroup, attrName.c_str(), H5floatFileType,
-                             filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
+      /// check if dataset already exists in the right size
+      if (objectExist(stepGroup, attrName))
+        {
+          curDataset = H5Dopen(stepGroup, attrName.c_str(), H5P_DEFAULT);
+        }
+      else
+        {
+          curDataset = H5Dcreate(stepGroup, attrName.c_str(), H5floatFileType,
+                                 filespace, H5P_DEFAULT,
+                                 H5P_DEFAULT, H5P_DEFAULT);
+        }
+      
       /// select hyperslab
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET,
                           offset, NULL, dimsMem, NULL);
@@ -568,9 +584,17 @@ void IOManager::saveDump(std::string _outputFile,
       dimsFile[1] = 1;
       filespace = H5Screate_simple(1, dimsFile, NULL);
 
-      /// create dataset
-      curDataset = H5Dcreate(stepGroup, attrName.c_str(), H5floatFileType,
-                             filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      /// check if dataset already exists in the right size
+      if (objectExist(stepGroup, attrName))
+        {
+          curDataset = H5Dopen(stepGroup, attrName.c_str(), H5P_DEFAULT);
+        }
+      else
+        {
+          curDataset = H5Dcreate(stepGroup, attrName.c_str(), H5floatFileType,
+                                 filespace, H5P_DEFAULT,
+                                 H5P_DEFAULT, H5P_DEFAULT);
+        }
 
       /// select hyperslab
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET,
@@ -591,50 +615,49 @@ void IOManager::saveDump(std::string _outputFile,
   ///
   /// write attributes
   ///
-  attrMapRefType attributes( PartManager.attributes );
+  attrMapRefType attributes(PartManager.attributes);
   attrMapType::const_iterator attrItr = attributes.begin();
-  while ( attrItr != attributes.end() )
-  {
-    hid_t curAttr;
-    dimsMem[0] = 1;
-    
-    memspace = H5Screate_simple(1, dimsMem, NULL);
+  while (attrItr != attributes.end())
+    {
+      hid_t curAttr;
+      dimsMem[0] = 1;
 
-    curAttr = H5Acreate_by_name( stepGroup, ".", (attrItr->first).c_str(),
-                                 H5floatFileType, memspace,
-                                 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT );
+      memspace = H5Screate_simple(1, dimsMem, NULL);
 
-    H5Awrite( curAttr, H5floatMemType, &(attrItr->second) );
-    H5Aclose( curAttr );
+      curAttr = H5Acreate_by_name(stepGroup, ".", (attrItr->first).c_str(),
+                                  H5floatFileType, memspace,
+                                  H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    H5Sclose(memspace);
-    
-    attrItr++;
-  }
+      H5Awrite(curAttr, H5floatMemType, &(attrItr->second));
+      H5Aclose(curAttr);
+
+      H5Sclose(memspace);
+
+      attrItr++;
+    }
 
   H5Gclose(stepGroup);
 
   ///
   /// create a link to indicate the current dump
   ///
-  if (H5Lexists(rootGroup, "/current", H5P_DEFAULT) )
+  if (H5Lexists(rootGroup, "/current", H5P_DEFAULT))
     {
-      H5Ldelete( rootGroup, "/current", H5P_DEFAULT);
+      H5Ldelete(rootGroup, "/current", H5P_DEFAULT);
     }
-  H5Lcreate_soft( stepName.c_str(), rootGroup, "/current",
-                  H5P_DEFAULT, H5P_DEFAULT);
+  H5Lcreate_soft(stepName.c_str(), rootGroup, "/current",
+                 H5P_DEFAULT, H5P_DEFAULT);
 
   H5Gclose(rootGroup);
 
   H5Fclose(fileHandle);
-
 }
 
 void IOManager::saveDump(std::string _outputFile,
                          quantsRefType _quantities)
 {
-  saveDump( _outputFile,
-            _quantities.vects, _quantities.scalars, _quantities.ints );
+  saveDump(_outputFile,
+           _quantities.vects, _quantities.scalars, _quantities.ints);
 }
 
 void IOManager::setSinglePrecOut(void)

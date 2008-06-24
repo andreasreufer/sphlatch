@@ -123,7 +123,7 @@ valueType timeStep()
   ///
   /// energy integration
   ///
-  const valueType uMin = 0.2;
+  const valueType uMin = 0.1;
   //valueType dtU = VAL_MAX;
   valueType dtU = std::numeric_limits<valueType>::max();
   for (size_t i = 0; i < noParts; i++)
@@ -251,6 +251,9 @@ void derivate()
   sphlatch::CubicSpline3D Kernel;
   sphlatch::Rankspace RSSearch;
   RSSearch.prepare();
+  RSSearch.neighbourList.resize(512);
+  RSSearch.neighDistList.resize(512);
+
   Logger << "Rankspace prepared";
 
   for (size_t i = 0; i < noParts; i++)
@@ -291,11 +294,12 @@ void derivate()
   ///
   /// lower temperature bound
   ///
+  const valueType uMin = 0.1;
   for (size_t i = 0; i < noParts; i++)
     {
-      if (u(i) < 0.2)
+      if (u(i) < uMin)
         {
-          u(i) = 0.2;
+          u(i) = uMin;
         }
     }
   p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
@@ -367,7 +371,8 @@ void derivate()
 
 
           /// pdV + AV heating
-          curPow += m(j) * accTerm *
+          //curPow += m(j) * accTerm *
+          curPow += 0.5*m(j) * accTerm *
                     boost::numeric::ublas::inner_prod(veli - velj,
                                                       Kernel.derivative); /// check sign!
           if ( isnan( curPow ) )
@@ -439,7 +444,7 @@ int main(int argc, char* argv[])
   valvectRefType m(PartManager.m);
   valvectRefType rho(PartManager.rho);
   valvectRefType u(PartManager.u);
-  //valvectRefType dudt(PartManager.dudt);
+  valvectRefType dudt(PartManager.dudt);
   valvectRefType p(PartManager.p);
 
   idvectRefType id(PartManager.id);
@@ -464,7 +469,7 @@ int main(int argc, char* argv[])
   //sphlatch::VerletMetaIntegrator Integrator(derivate, timestep);
   sphlatch::PredCorrMetaIntegrator Integrator(derivate, timeStep);
   Integrator.regIntegration(pos, vel, acc);
-  //Integrator.regIntegration(u, dudt);
+  Integrator.regIntegration(u, dudt);
 
   IOManager.loadDump("shocktube.hdf5");
   Logger << "loaded shocktube.hdf5";
@@ -509,7 +514,7 @@ int main(int argc, char* argv[])
   //const size_t maxSteps = 500000;
   //const size_t saveSteps =  5000;
   const size_t maxStep = 30000;
-  const size_t saveSteps = 3000;
+  const size_t saveSteps = 300;
 
   ///
   /// bootstrap the integrator
@@ -553,7 +558,9 @@ int main(int argc, char* argv[])
       step++;
       
 
-      std::cerr << "now at step " << step << "\n";
+      std::cerr << "t = " << std::fixed << std::right
+                << std::setw(12) << std::setprecision(6)
+                << time << " (" << step << ")\n";
 
       ///
       /// save a dump

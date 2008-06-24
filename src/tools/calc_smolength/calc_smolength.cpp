@@ -11,12 +11,6 @@
 // enable parallel version
 #define SPHLATCH_PARALLEL
 
-// enable intensive logging for toptree global summation
-//#define SPHLATCH_TREE_LOGSUMUPMP
-
-//#define SPHLATCH_RANKSPACESERIALIZE
-
-
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -29,15 +23,15 @@
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/positional_options.hpp>
-
-#include <boost/assign/std/vector.hpp>
+namespace po = boost::program_options;
 
 #include <boost/mpl/vector_c.hpp>
 
-namespace po = boost::program_options;
+#include <boost/assign/std/vector.hpp>
 
 #include "typedefs.h"
 typedef sphlatch::valueType valueType;
+typedef sphlatch::zerovalvectType zerovalvectType;
 typedef sphlatch::valvectRefType valvectRefType;
 typedef sphlatch::idvectRefType idvectRefType;
 typedef sphlatch::matrixRefType matrixRefType;
@@ -56,8 +50,6 @@ typedef sphlatch::CommunicationManager comm_type;
 #include "costzone.h"
 typedef sphlatch::CostZone costzone_type;
 
-#include "integrator_verlet.h"
-
 #include <boost/progress.hpp>
 #include <vector>
 
@@ -65,77 +57,46 @@ typedef sphlatch::CostZone costzone_type;
 #include "bhtree.h"
 
 using namespace sphlatch::vectindices;
-
-valueType timeStep()
-{
-  const valueType dt = 138.e6 / 50.;
-  return dt;
-}
-
-void derivate()
-{
-  part_type& PartManager(part_type::instance());
-  comm_type& CommManager(comm_type::instance());
-  costzone_type& CostZone(costzone_type::instance());
-  
-  //matrixRefType pos(PartManager.pos);
-  //matrixRefType vel(PartManager.vel);
-  //matrixRefType acc(PartManager.acc);
-  
-  valvectRefType m(PartManager.m);
-  
-  idvectRefType id(PartManager.id);
-
-  const size_t noParts = PartManager.getNoLocalParts();
-  const size_t noTotParts = noParts + PartManager.getNoGhostParts();
-  //const size_t myDomain = CommManager.getMyDomain();
-  
-  //const valueType gravTheta = 0.7;
-  const valueType gravTheta = 0.7;
-  const valueType gravConst = 6.674e-11;
-
-//sphlatch::BHtree<sphlatch::Monopoles>   Tree(gravTheta,
-  sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
-//sphlatch::BHtree<sphlatch::Octupoles>   Tree(gravTheta,
-                                               gravConst,
-                                               CostZone.getDepth(),
-                                               CostZone.getCenter(),
-                                               CostZone.getSidelength()
-                                               );
-
-
-  ///
-  /// fill up tree, determine ordering, calculate multipoles
-  ///
-  for (size_t i = 0; i < noTotParts; i++)
-  {
-    Tree.insertParticle(i);
-  }
-
-  Tree.detParticleOrder();
-  Tree.calcMultipoles();
-  
-  ///
-  /// calculate the accelerations
-  ///
-  for (size_t i = 0; i < noParts; i++)
-  {
-    const size_t curIndex = Tree.particleOrder[i];
-    ///
-    /// don't calculate the acceleration for particle with ID = 1 (star)
-    ///
-    if ( lrint( id(curIndex) ) != 1 )
-    {
-      Tree.calcGravity( curIndex );
-    }
-  }
-};
-
 using namespace boost::assign;
 
 int main(int argc, char* argv[])
 {
   MPI::Init(argc, argv);
+
+  po::options_description Options("Global Options");
+  Options.add_options() ("help", "Produces this Help")
+  ("input-file,i", po::value<std::string>(), "hdf5 file")
+  ("no-neighs,n", po::value<size_t>(), "no. of neighbours  (default 50)")
+  ("cs-length,c", po::value<valueType>(), "comp. supp. length (default 2.)");
+
+  po::variables_map PoMap;
+  po::store(po::command_line_parser(argc, argv).options(Options).run(), PoMap);
+  po::notify(PoMap);
+
+  if (not PoMap.count("input-file"))
+    {
+      std::cerr << "input-file not specified!\n";
+      std::cerr << Options << "\n";
+      MPI::Finalize();
+      return EXIT_FAILURE;
+    }
+
+  std::string filename = PoMap[ "input-file" ].as<std::string>();
+
+  size_t noDesNeighs = 50;
+  if (PoMap.count("no-neighs"))
+    {
+      noDesNeighs = PoMap[ "no-neighs" ].as<size_t>();
+    }
+
+  valueType csLength = 2.;
+  if (PoMap.count("cs-length"))
+    {
+      csLength = PoMap[ "cs-length" ].as<valueType>();
+    }
+
+  std::cout << " trying to get " << noDesNeighs << " neighbours inside "
+            << csLength << "h\n";
 
   ///
   /// instantate managers
@@ -148,47 +109,24 @@ int main(int argc, char* argv[])
   ///
   /// define what we're doing
   ///
-  PartManager.useGravity();
+  PartManager.useBasicSPH();
 
   ///
   /// some useful references
   ///
   matrixRefType pos(PartManager.pos);
-  matrixRefType vel(PartManager.vel);
-  matrixRefType acc(PartManager.acc);
-
   valvectRefType m(PartManager.m);
-  valvectRefType eps(PartManager.eps);
-
+  valvectRefType h(PartManager.h);
   idvectRefType id(PartManager.id);
-  
-  size_t& step(PartManager.step);
-  
-  const size_t myDomain = CommManager.getMyDomain();
 
   ///
   /// register the quantites to be exchanged
   ///
-  CommManager.exchangeQuants.vects += &pos, &vel;
-  CommManager.exchangeQuants.scalars += &eps, &m;
+  CommManager.exchangeQuants.vects += &pos;
+  CommManager.exchangeQuants.scalars += &m;
   CommManager.exchangeQuants.ints += &id;
 
-  ///
-  /// instantate the MetaIntegrator and
-  /// register spatial integration
-  ///
-  sphlatch::VerletMetaIntegrator Integrator(derivate, timeStep);
-  Integrator.regIntegration(pos, vel, acc);
-
-  IOManager.loadDump("nbody_small.h5part");
-
-  ///
-  /// define the quantities to save in a dump
-  ///
-  quantsType saveQuants;
-  saveQuants.vects   += &pos, &vel;
-  saveQuants.scalars += &eps, &m;
-  saveQuants.ints    += &id;
+  IOManager.loadDump(filename);
 
   ///
   /// exchange particles
@@ -201,58 +139,75 @@ int main(int argc, char* argv[])
   /// prepare ghost sends and send ghosts
   ///
   CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-  
   CommManager.sendGhosts(pos);
   CommManager.sendGhosts(id);
-  CommManager.sendGhosts(m);
 
   ///
-  /// define some simulation parameters
-  /// 
-  //const size_t maxSteps = 500000;
-  //const size_t saveSteps =  5000;
-  const size_t maxStep = 100;
-  const size_t saveSteps =  10;
+  /// build empty tree
+  ///
+  sphlatch::BHtree<sphlatch::Monopoles>   Tree(1.0,
+                                               0.0,
+                                               CostZone.getDepth(),
+                                               CostZone.getCenter(),
+                                               CostZone.getSidelength()
+                                               );
+
 
   ///
-  /// bootstrap the integrator
+  /// fill up tree, determine ordering, calculate multipoles
   ///
-  Integrator.bootstrap();
-
-  ///
-  /// the integration loop
-  ///
-  while ( step < maxStep )
-  {
-    ///
-    /// exchange particles and ghosts
-    ///
-    CostZone.createDomainPartsIndex();
-    CommManager.exchange(CostZone.domainPartsIndex,
-                         CostZone.getNoGhosts());
-    
-    CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-  
-    CommManager.sendGhosts(pos);
-    CommManager.sendGhosts(id);
-    CommManager.sendGhosts(m);
-   
-    ///
-    /// integrate
-    ///
-    Integrator.integrate();
-    step++;
-
-    ///
-    /// save a dump
-    ///
-    if ( ( step % saveSteps ) == 0 )
+  const size_t noParts = PartManager.getNoLocalParts();
+  const size_t noTotParts = PartManager.getNoTotalParts();
+  for (size_t i = 0; i < noTotParts; i++)
     {
-      std::cerr << "save dump!\n";
-      IOManager.saveDump("saveDump.h5part", saveQuants);
+      m(i) = 1.;
+      Tree.insertParticle(i);
     }
-  }
+  Tree.detParticleOrder();
+  Tree.calcMultipoles();
 
+  ///
+  /// this is the maximal number of neighbours to be allowed
+  /// in the maxmimal mass enclosing sphere. if the number's
+  /// bigger, the neighbour search algorithm will unspecta-
+  /// cularly crash
+  ///
+  const size_t noMaxNeighs = 16834;
+
+  Tree.neighbourList.resize(noMaxNeighs);
+  Tree.neighDistList.resize(noMaxNeighs);
+
+  zerovalvectType zeroVect(noMaxNeighs);
+
+  const valueType minMass = static_cast<valueType>(noDesNeighs);
+
+  for (size_t i = 0; i < noParts; i++)
+    {
+      const size_t curIndex = Tree.particleOrder[i];
+
+      const valueType maxRad = Tree.maxMassEncloseRad(curIndex, minMass);
+
+      /// the tree does not guarantee valid entries in the neighbour list
+      /// and the neighbour dist list above the number of neighbours, so
+      /// zero the dist list before searching the neighbours
+      Tree.neighDistList = zeroVect;
+      Tree.findNeighbours(curIndex, maxRad);
+
+      const size_t noGuessNeighs = Tree.neighbourList[0];
+
+      std::sort(Tree.neighDistList.begin(), Tree.neighDistList.end());
+
+      assert(noMaxNeighs - noGuessNeighs + noDesNeighs < noMaxNeighs);
+      h(curIndex) = Tree.neighDistList(noMaxNeighs - 1 - noGuessNeighs
+                                       + noDesNeighs) / csLength;
+    }
+
+  ///
+  /// overwrite smoothing length in file
+  ///
+  quantsType saveQuants;
+  saveQuants.scalars += &h;
+  IOManager.saveDump(filename, saveQuants);
 
   MPI::Finalize();
   return EXIT_SUCCESS;
