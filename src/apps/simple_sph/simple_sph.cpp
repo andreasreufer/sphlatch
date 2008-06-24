@@ -123,8 +123,8 @@ valueType timeStep()
   ///
   /// energy integration
   ///
-  const valueType uMin = 0.1;
-  //valueType dtU = VAL_MAX;
+  
+  //const valueType uMin = 0.1;
   valueType dtU = std::numeric_limits<valueType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
@@ -289,8 +289,6 @@ void derivate()
     }
   Logger << "SPH density sum";
 
-  const valueType gamma = 1.4;
-
   ///
   /// lower temperature bound
   ///
@@ -302,9 +300,17 @@ void derivate()
           u(i) = uMin;
         }
     }
+  
+  ///
+  /// pressure
+  ///
+  const valueType gamma = 1.4;
   p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
   Logger << "pressure";
 
+  ///
+  /// acceleration and power
+  ///
   const valueType alpha = 1;
   const valueType beta = 1;
 

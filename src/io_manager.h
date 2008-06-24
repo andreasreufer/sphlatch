@@ -450,9 +450,9 @@ void IOManager::saveDump(std::string _outputFile,
   ///
   const size_t step = PartManager.step;
   std::string stepString = boost::lexical_cast<std::string>(step);
-  std::string stepName = "/Step#00000000";
-  stepName.replace(stepName.size() - stepString.size(),
-                   stepString.size(), stepString);
+  std::string stepName = "/Step#";
+  stepName.append(stepString);
+
 
   ///
   /// start the group business
