@@ -259,6 +259,7 @@ void ParticleManager::useTimedepEntropy()
 void ParticleManager::useTimedepH()
 {
   usedScalars[ "dhdt" ] = &dhdt;
+  usedScalars[ "divv" ] = &divv;
   usedIntegers[ "noneigh" ] = &noneigh;
 }
 

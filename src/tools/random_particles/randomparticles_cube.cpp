@@ -30,6 +30,7 @@ typedef sphlatch::ParticleManager part_type;
 typedef sphlatch::IOManager io_type;
 
 using namespace boost::assign;
+using namespace sphlatch::vectindices;
 
 int main(int argc, char* argv[])
 {
@@ -69,8 +70,6 @@ int main(int argc, char* argv[])
   sphlatch::matrixRefType pos( PartManager.pos );
   sphlatch::valvectRefType m( PartManager.m );
 
-  using namespace sphlatch;
-  
   for (size_t i = 0; i < noParts; i++)
   {
     id(i) = i;
@@ -82,18 +81,16 @@ int main(int argc, char* argv[])
     pos(i, Z) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
   }
   
-  std::set<matrixPtrType> saveVects;
-  std::set<valvectPtrType> saveScalars;
-  std::set<idvectPtrType> saveInts;
 
   using namespace boost::assign;
-  saveVects += &pos;
-  saveScalars += &m;
-  saveInts += &id;
+  sphlatch::quantsType saveQuants;
+  saveQuants.vects   += &pos;
+  saveQuants.scalars += &m;
+  saveQuants.ints    += &id;
 
   PartManager.step = 0;
   IOManager.setSinglePrecOut();
-  IOManager.saveDump( outputFileName, saveVects, saveScalars, saveInts );
+  IOManager.saveDump( outputFileName, saveQuants );
 
   PartManager.attributes["time"] = 0.0;
 

@@ -87,7 +87,7 @@ valueType timeStep()
   comm_type& CommManager(comm_type::instance());
   log_type& Logger(log_type::instance());
 
-  //matrixRefType pos(PartManager.pos);
+  matrixRefType pos(PartManager.pos);
   //matrixRefType vel(PartManager.vel);
   matrixRefType acc(PartManager.acc);
 
@@ -97,8 +97,9 @@ valueType timeStep()
   valvectRefType u(PartManager.u);
   valvectRefType rho(PartManager.rho);
   valvectRefType dudt(PartManager.dudt);
+  valvectRefType dhdt(PartManager.dhdt);
 
-  //idvectRefType id(PartManager.id);
+  idvectRefType id(PartManager.id);
 
   const size_t noParts = PartManager.getNoLocalParts();
 
@@ -123,26 +124,36 @@ valueType timeStep()
   ///
   /// energy integration
   ///
-  
-  //const valueType uMin = 0.1;
   valueType dtU = std::numeric_limits<valueType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
       const valueType absdudti = dudt(i);
-
-      //const valueType dtUi = (u(i) + uMin) / absdudti;
       const valueType dtUi = (u(i)) / absdudti;
 
-      if ( absdudti > 0. )
-      {
-        dtU = dtUi < dtU ? dtUi : dtU;
-      }
+      if (absdudti > 0.)
+        {
+          dtU = dtUi < dtU ? dtUi : dtU;
+        }
+    }
+
+  ///
+  /// smoothing length integration
+  ///
+  valueType dtH = std::numeric_limits<valueType>::max();
+  for (size_t i = 0; i < noParts; i++)
+    {
+      const valueType absdhdti = dhdt(i);
+      const valueType dtHi = (h(i)) / absdhdti;
+
+      if (absdhdti > 0.)
+        {
+          dtH = dtHi < dtH ? dtHi : dtH;
+        }
     }
 
   ///
   /// CFL condition
   ///
-  //valueType dtCFL = VAL_MAX;
   valueType dtCFL = std::numeric_limits<valueType>::max();
   const valueType gamma = 1.4;
   for (size_t i = 0; i < noParts; i++)
@@ -150,31 +161,36 @@ valueType timeStep()
       const valueType ci = sqrt(p(i) * gamma / rho(i));
       const valueType dtCFLi = h(i) / ci;
 
-      if ( ci > 0. )
-      {
-        dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
-      }
+      if (ci > 0.)
+        {
+          dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
+        }
     }
 
   ///
-  /// determine global minimum
-  /// by parallel minimizing the timesteps, we
+  /// determine global minimum.
+  /// by parallelly minimizing the timesteps, we
   /// can estimate which ones are dominant
   ///
-  //valueType dtGlob = VAL_MAX;
   valueType dtGlob = std::numeric_limits<valueType>::max();
 
   CommManager.min(dtA);
   CommManager.min(dtU);
+  CommManager.min(dtH);
   CommManager.min(dtCFL);
-  
+
+  const valueType courantNumber = 0.3;
   dtGlob = dtA < dtGlob ? dtA : dtGlob;
   dtGlob = dtU < dtGlob ? dtU : dtGlob;
+  dtGlob = dtH < dtGlob ? dtH : dtGlob;
   dtGlob = dtCFL < dtGlob ? dtCFL : dtGlob;
-  dtGlob = dtGlob < 0.1 ? dtGlob : 0.1;
+  dtGlob *= courantNumber;
 
-  Logger.stream << "dtA: " << dtA << " dtU: " << dtU
-                << " dtCFL: " << dtCFL << "   dtGlob: " << dtGlob;
+  Logger.stream << "dtA: " << dtA
+                << " dtU: " << dtU
+                << " dtH: " << dtH
+                << " dtCFL: " << dtCFL
+                << "   dtGlob: " << dtGlob;
   Logger.flushStream();
 
   return dtGlob;
@@ -183,8 +199,8 @@ valueType timeStep()
 void derivate()
 {
   part_type& PartManager(part_type::instance());
-  //comm_type& CommManager(comm_type::instance());
-  //costzone_type& CostZone(costzone_type::instance());
+  comm_type& CommManager(comm_type::instance());
+  costzone_type& CostZone(costzone_type::instance());
   log_type& Logger(log_type::instance());
 
   matrixRefType pos(PartManager.pos);
@@ -197,20 +213,26 @@ void derivate()
   valvectRefType u(PartManager.u);
   valvectRefType rho(PartManager.rho);
   valvectRefType dudt(PartManager.dudt);
+  valvectRefType dhdt(PartManager.dhdt);
+  valvectRefType divv(PartManager.divv);
 
-  //idvectRefType id(PartManager.id);
+  idvectRefType id(PartManager.id);
+  idvectRefType noneigh(PartManager.noneigh);
 
   const size_t noParts = PartManager.getNoLocalParts();
-  //const size_t noTotParts = noParts + PartManager.getNoGhostParts();
-  //const size_t myDomain = CommManager.getMyDomain();
-/*
-   //const valueType gravTheta = 0.7;
-   const valueType gravTheta = 0.7;
-   const valueType gravConst = 6.674e-11;
+  size_t& step(PartManager.step);
 
-   //sphlatch::BHtree<sphlatch::Monopoles>   Tree(gravTheta,
-   sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
-   //sphlatch::BHtree<sphlatch::Octupoles>   Tree(gravTheta,
+  const size_t noTotParts = noParts + PartManager.getNoGhostParts();
+  const size_t myDomain = CommManager.getMyDomain();
+
+  //const valueType gravTheta = 0.7;
+  const valueType gravTheta = 0.7;
+  //const valueType gravConst = 6.674e-11;
+  const valueType gravConst = 1.e-3;
+
+  //sphlatch::BHtree<sphlatch::Monopoles>   Tree(gravTheta,
+  sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
+  //sphlatch::BHtree<sphlatch::Octupoles>   Tree(gravTheta,
                                                gravConst,
                                                CostZone.getDepth(),
                                                CostZone.getCenter(),
@@ -218,32 +240,33 @@ void derivate()
                                                );
 
 
-   ///
-   /// fill up tree, determine ordering, calculate multipoles
-   ///
-   for (size_t i = 0; i < noTotParts; i++)
-   {
-    Tree.insertParticle(i);
-   }
-
-   Tree.detParticleOrder();
-   Tree.calcMultipoles();
-
-   ///
-   /// calculate the accelerations
-   ///
-   for (size_t i = 0; i < noParts; i++)
-   {
-    const size_t curIndex = Tree.particleOrder[i];
-    ///
-    /// don't calculate the acceleration for particle with ID = 1 (star)
-    ///
-    if ( lrint( id(curIndex) ) != 1 )
+  ///
+  /// fill up tree, determine ordering, calculate multipoles
+  ///
+  for (size_t i = 0; i < noTotParts; i++)
     {
-      Tree.calcGravity( curIndex );
+      Tree.insertParticle(i);
     }
-   }
- */
+
+  Tree.detParticleOrder();
+  Tree.calcMultipoles();
+  Logger << "Tree ready";
+  ///
+  /// calculate the accelerations
+  ///
+  const zerovalvectType zero(3);
+  for (size_t i = 0; i < noParts; i++)
+    {
+      const size_t curIndex = Tree.particleOrder[i];
+      particleRowType(acc, curIndex) = zero;
+      Tree.calcGravity(curIndex);
+      if (id(curIndex) == 4920)
+        {
+          std::cout << "a_z: " << acc(curIndex, 2) << "\n";
+        }
+    }
+  Logger << "gravity calculated";
+
 
   ///
   /// define kernel and neighbour search algorithm
@@ -267,8 +290,10 @@ void derivate()
 
       const size_t noNeighs = RSSearch.neighbourList[0];
 
-      if (noNeighs < 10)
-        std::cerr << noNeighs << " ";
+      ///
+      /// store the number of neighbours
+      ///
+      noneigh(i) = noNeighs;
 
       static valueType rhoi;
       rhoi = 0.;
@@ -300,7 +325,7 @@ void derivate()
           u(i) = uMin;
         }
     }
-  
+
   ///
   /// pressure
   ///
@@ -309,15 +334,15 @@ void derivate()
   Logger << "pressure";
 
   ///
-  /// acceleration and power
+  /// acceleration, power and velocity divergence
   ///
   const valueType alpha = 1;
   const valueType beta = 1;
 
   valvectType curAcc(3);
-  zerovalvectType zero(3);
 
-  valueType curPow = 0.;
+  valueType curPow = 0., curVelDiv = 0.;
+  valueType divvMax = std::numeric_limits<valueType>::min();
 
   for (size_t i = 0; i < noParts; i++)
     {
@@ -335,6 +360,7 @@ void derivate()
 
       curAcc = zero;
       curPow = 0.;
+      curVelDiv = 0.;
 
       const particleRowType veli(vel, i);
       const particleRowType Ri(pos, i);
@@ -353,68 +379,114 @@ void derivate()
           const valueType pj = p(j);
 
           const valueType hij = 0.5 * (hi + h(j));
-          const valueType rhoij = 0.5 * (rhoi + rhoj);
-          const valueType cij = 0.5 * (ci + sqrt(gamma * p(j) / rhoj));
 
           const particleRowType velj(vel, j);
           const particleRowType Rj(pos, j);
+
 
           /// replace by scalar expressions?
           const valueType vijrij =
             boost::numeric::ublas::inner_prod(velj - veli, Rj - Ri);
 
-          const valueType rijrij =
-            boost::numeric::ublas::inner_prod(Ri - Rj, Ri - Rj);
+          valueType av = 0;
 
           /// AV
-          const valueType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
-          const valueType av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
+          if (vijrij < 0.)
+            {
+              const valueType rijrij =
+                boost::numeric::ublas::inner_prod(Ri - Rj, Ri - Rj);
+              const valueType rhoij = 0.5 * (rhoi + rhoj);
+              const valueType cij = 0.5 * (ci + sqrt(gamma * p(j) / rhoj));
+              const valueType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
+
+              av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
+            }
 
           const valueType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
 
           /// acceleration
-          curAcc += (m(j) * accTerm * Kernel.derive(rij, hij, Ri - Rj));
+          curAcc -= (m(j) * accTerm * Kernel.derive(rij, hij, Ri - Rj));
 
+          /// m_j * v_ij * divW_ij
+          const valueType mjvijdivWij = m(j) * (
+            boost::numeric::ublas::inner_prod(veli - velj,
+                                              Kernel.derivative));
 
           /// pdV + AV heating
-          //curPow += m(j) * accTerm *
-          curPow += 0.5*m(j) * accTerm *
-                    boost::numeric::ublas::inner_prod(veli - velj,
-                                                      Kernel.derivative); /// check sign!
-          if ( isnan( curPow ) )
-             {
-             std::cerr << "nan in power sum  i:" << i << " j: " << j << " accTerm: " << accTerm << " (Kernel deriv: " << boost::numeric::ublas::inner_prod(veli - velj,Kernel.derivative) << " hij: " << hij << " R: " << Ri - Rj << " Ri: " << Ri << " Rj: " << Rj << ")\n";
-             std::cerr << "  piOrhoirhoi: " << piOrhoirhoi << " pj: " << pj << " rhoj: " << rhoj << " av: " << av << "\n";
-             std::cerr << "  av stuff  cij: " << cij << " muij: " << muij << " rhoi: " << rhoi << "\n";
-             std::cerr << "  cij stuff  ci: " << ci << " rhoj: " << rhoj << " gamma: " << gamma << " p(j): " << p(j) << " sqrt(gamma * p(j) / rhoj): " << sqrt(gamma * p(j) / rhoj) << " u(j): " << u(j) << "\n";
+          curPow += (0.5 * accTerm * mjvijdivWij);
 
-             for (size_t k = 0; k < noParts; k++)
-             {
-              //if (pos(k, 0) < 8 && pos(k, 0) > 2 &&
-              //    pos(k, 1) < 8 && pos(k, 1) > 2)
-                {
-                  std::cout << pos(k, Z) << "\t" << rho(k) << "\t" << p(k) << "\t" << dudt(k) << "\t" << vel(k, 2) << "\t" << u(k) << "\n";
-                }
-
-             }
-
-             MPI::Finalize();
-             exit(EXIT_FAILURE);
-             }
+          /// velocity divergence
+          curVelDiv += mjvijdivWij;
         }
 
+      ///
+      /// a_x = a_y = 0.
+      /// hold both shocktube ends
+      ///
+
+/*
       curAcc(0) = 0.;
       curAcc(1) = 0.;
 
       if (pos(i, 2) < 5. || pos(i, 2) > 95.)
         {
           curAcc(2) = 0.;
+          vel(i, 2) = 0.;
         }
+*/
+      const valueType dist = sqrt( pos(i, 0)*pos(i, 0)
+                                 + pos(i, 1)*pos(i, 1)
+                                 + pos(i, 2)*pos(i, 2) );
 
-      particleRowType(acc, i) = curAcc;
+      if ( dist > 400. )
+      {
+        vel(i, 0) = 0.;
+        vel(i, 1) = 0.;
+        vel(i, 2) = 0.;
+      }
+
+      particleRowType(acc, i) += curAcc;
       dudt(i) = curPow;
+      divv(i) = curVelDiv / rho(i);
+
+      divvMax = divv(i) > divvMax ? divv(i) : divvMax;
     }
-  Logger << "acceleration & power sum";
+  CommManager.max(divvMax);
+
+  Logger << "acceleration, power & velocity divergence sum";
+
+  /// define desired number of neighbours
+  const size_t noNeighOpt = 50;
+
+  const valueType noNeighMin = (2. / 3.) * static_cast<valueType>(noNeighOpt);
+  const valueType noNeighMax = (5. / 3.) * static_cast<valueType>(noNeighOpt);
+  const valueType cDivvMax = divvMax;
+
+  for (size_t i = 0; i < noParts; i++)
+    {
+      const valueType noNeighCur = static_cast<valueType>(noneigh(i));
+
+      const valueType A = exp((noNeighCur - noNeighMin) / 5.);
+      const valueType B = exp((noNeighCur - noNeighMax) / 5.);
+
+      const valueType k1 = 1. / (A * (A + (1. / A)));
+      const valueType k2 = (A / (A + (1. / A)))
+                           + 1. / (B * (B + (1. / B))) - 1.;
+      const valueType k3 = B / (B + (1. / B));
+
+      dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
+                 - k2 * static_cast<valueType>(1. / 3.) * divv(i)) * h(i);
+
+      //dhdt(i) = ( - 0.333333333333333 * h(i) * divv(i) );
+
+      if (id(i) == 4920)
+        {
+          std::cout << "a_z: " << acc(i, 2) << "\n";
+          std::cout << "z: " << pos(i, 2) << "   rho: " << rho(i) << "   divv: " << divv(i) << "   dhdt: " << dhdt(i) << "    h: " << h(i) << "    noneigh: " << noneigh(i) << "\n";
+          //std::cout << "k1 " << k1 << "    k2 " << k2 << "   k3 " << k3 << "\n";
+        }
+    }
+  Logger << "adapted smoothing length";
 };
 
 using namespace boost::assign;
@@ -437,8 +509,10 @@ int main(int argc, char* argv[])
   ///
   PartManager.useGravity();
   PartManager.useBasicSPH();
+  PartManager.useAVMonaghan();
   PartManager.useEnergy();
   PartManager.useTimedepEnergy();
+  PartManager.useTimedepH();
 
   ///
   /// some useful references
@@ -451,9 +525,13 @@ int main(int argc, char* argv[])
   valvectRefType rho(PartManager.rho);
   valvectRefType u(PartManager.u);
   valvectRefType dudt(PartManager.dudt);
+  valvectRefType h(PartManager.h);
+  valvectRefType dhdt(PartManager.dhdt);
   valvectRefType p(PartManager.p);
+  valvectRefType eps(PartManager.eps);
 
   idvectRefType id(PartManager.id);
+  idvectRefType noneigh(PartManager.noneigh);
 
   size_t& step(PartManager.step);
   valueRefType time(PartManager.attributes["time"]);
@@ -464,29 +542,70 @@ int main(int argc, char* argv[])
   /// register the quantites to be exchanged
   ///
   CommManager.exchangeQuants.vects += &pos, &vel;
-  CommManager.exchangeQuants.scalars += &m, &u;
-  CommManager.exchangeQuants.ints += &id;
+  CommManager.exchangeQuants.scalars += &m, &u, &h;
+  CommManager.exchangeQuants.ints += &id, &noneigh;
 
   ///
-  /// instantate the MetaIntegrator and
-  /// register spatial integration
+  /// instantate the MetaIntegrator
   ///
 
   //sphlatch::VerletMetaIntegrator Integrator(derivate, timestep);
   sphlatch::PredCorrMetaIntegrator Integrator(derivate, timeStep);
+
+  ///
+  /// register spatial, energy and smoothing length integration
+  ///
   Integrator.regIntegration(pos, vel, acc);
   Integrator.regIntegration(u, dudt);
+  Integrator.regIntegration(h, dhdt);
 
-  IOManager.loadDump("shocktube.hdf5");
-  Logger << "loaded shocktube.hdf5";
+  //IOManager.loadDump("shocktube.h5part");
+  //Logger << "loaded shocktube.h5part";
+  
+  IOManager.loadDump("random010k.h5part");
+  Logger << "loaded random010k.h5part";
+  
+  const size_t noParts = PartManager.getNoLocalParts();
+  valueType xCom = 0., yCom = 0., zCom = 0., mTot = 0.;
+
+  for (size_t i = 0; i < noParts; i++)
+  {
+    xCom += pos(i, X)*m(i);
+    yCom += pos(i, Y)*m(i);
+    zCom += pos(i, Z)*m(i);
+    mTot += m(i);
+    std::cout << pos(i, X) << " " << pos(i, Y) << "\n";
+  }
+  xCom /= mTot;
+  yCom /= mTot;
+  zCom /= mTot;
+
+  Logger.stream << "center of mass: ["
+                << xCom << ","
+                << yCom << ","
+                << zCom << "]\n";
+  Logger.flushStream();
+
+  for (size_t i = 0; i < noParts; i++)
+  {
+    pos(i, X) = 20.*( pos(i, X) - xCom );
+    pos(i, Y) = 20.*( pos(i, Y) - yCom );
+    pos(i, Z) = 20.*( pos(i, Z) - zCom );
+    h(i)   *= 20.;
+    eps(i) = .5;
+    m(i)   = 1.;
+    u(i)   = 1.;
+  }
+  Logger << "data ready";
+  std::cout  << "center of mass: " << xCom << " " << yCom << " " << zCom << "\n";
 
   ///
   /// define the quantities to save in a dump
   ///
   quantsType saveQuants;
   saveQuants.vects += &pos, &vel, &acc;
-  saveQuants.scalars += &m, &rho, &u, &p;
-  saveQuants.ints += &id;
+  saveQuants.scalars += &m, &rho, &u, &p, &h;
+  saveQuants.ints += &id, &noneigh;
 
   ///
   /// exchange particles
@@ -506,12 +625,12 @@ int main(int argc, char* argv[])
   CommManager.sendGhosts(rho);
   CommManager.sendGhosts(u);
 
-  
+
   Logger.stream << "distributed particles: "
                 << PartManager.getNoLocalParts() << " parts. & "
                 << PartManager.getNoGhostParts() << " ghosts";
   Logger.flushStream();
-  
+
   ///
   /// define some simulation parameters
   ///
@@ -519,8 +638,8 @@ int main(int argc, char* argv[])
 
   //const size_t maxSteps = 500000;
   //const size_t saveSteps =  5000;
-  const size_t maxStep = 30000;
-  const size_t saveSteps = 300;
+  const size_t maxStep = 3000;
+  const size_t saveSteps = 20;
 
   ///
   /// bootstrap the integrator
@@ -557,14 +676,14 @@ int main(int argc, char* argv[])
       /// integrate
       ///
       Integrator.integrate();
-      
+
       Logger.stream << "finished step " << step << ", now at t = " << time;
       Logger.flushStream();
       Logger.zeroRelTime();
       step++;
-      
 
-      std::cerr << "t = " << std::fixed << std::right
+
+      std::cout << "t = " << std::fixed << std::right
                 << std::setw(12) << std::setprecision(6)
                 << time << " (" << step << ")\n";
 
@@ -575,19 +694,8 @@ int main(int argc, char* argv[])
         {
           if (myDomain == 0)
             {
-              std::cerr << "save dump!\n";
+              std::cout << "save dump!\n";
             }
-
-          /*const size_t noParts = PartManager.getNoLocalParts();
-             std::cout << "#z\trho\tp\tdudt\tvz\n";
-             for (size_t i = 0; i < noParts; i++)
-             {
-              if (pos(i, 0) < 8 && pos(i, 0) > 2 &&
-                  pos(i, 1) < 8 && pos(i, 1) > 2)
-                {
-                  std::cout << pos(i, 2) << "\t" << rho(i) << "\t" << p(i) << "\t" << dudt(i) << "\t" << vel(i, sphlatch::Z) << "\n";
-                }
-             }*/
           IOManager.saveDump("saveDump.h5part", saveQuants);
         }
     }
