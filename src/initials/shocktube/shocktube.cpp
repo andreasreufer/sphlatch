@@ -21,6 +21,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
+typedef sphlatch::valueType valueType;
 
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
@@ -29,7 +30,7 @@ typedef sphlatch::ParticleManager part_type;
 typedef sphlatch::IOManager io_type;
 
 using namespace boost::assign;
-using namespace sphlatch;
+using namespace sphlatch::vectindices;
 
 int main(int argc, char* argv[])
 {
@@ -70,14 +71,14 @@ int main(int argc, char* argv[])
 
   std::cout << noParts << " particles \n";
 
-  idvectRefType id( PartManager.id );
+  sphlatch::idvectRefType id( PartManager.id );
   
-  matrixRefType pos( PartManager.pos );
-  matrixRefType vel( PartManager.vel );
+  sphlatch::matrixRefType pos( PartManager.pos );
+  sphlatch::matrixRefType vel( PartManager.vel );
   
-  valvectRefType m( PartManager.m );
-  valvectRefType u( PartManager.u );
-  valvectRefType h( PartManager.h );
+  sphlatch::valvectRefType m( PartManager.m );
+  sphlatch::valvectRefType u( PartManager.u );
+  sphlatch::valvectRefType h( PartManager.h );
 
   size_t curIndex = 0;
 
