@@ -6,7 +6,7 @@
 #define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
-#define SPHLATCH_SINGLEPREC
+//#define SPHLATCH_SINGLEPREC
 
 // enable parallel version
 #define SPHLATCH_PARALLEL
@@ -74,9 +74,10 @@ typedef sphlatch::LogManager log_type;
 
 #include "kernel_cubicspline3d.h"
 
-// tree stuff
+/// tree stuff
 #include "bhtree.h"
 
+/// neighbour search
 #include "rankspace.h"
 
 using namespace sphlatch::vectindices;
@@ -98,6 +99,8 @@ valueType timeStep()
   valvectRefType rho(PartManager.rho);
   valvectRefType dudt(PartManager.dudt);
   valvectRefType dhdt(PartManager.dhdt);
+
+  valueRefType time(PartManager.attributes["time"]);
 
   idvectRefType id(PartManager.id);
 
@@ -168,6 +171,14 @@ valueType timeStep()
     }
 
   ///
+  /// distance to next saveItrvl
+  ///
+  const valueType saveItrvl = 0.2;
+  const valueType nextSaveTime = (floor( (time / saveItrvl) + 1.e-6)
+                                  + 1.) * saveItrvl;
+  valueType dtSave = nextSaveTime - time;
+
+  ///
   /// determine global minimum.
   /// by parallelly minimizing the timesteps, we
   /// can estimate which ones are dominant
@@ -186,10 +197,13 @@ valueType timeStep()
   dtGlob = dtCFL < dtGlob ? dtCFL : dtGlob;
   dtGlob *= courantNumber;
 
+  dtGlob = dtSave < dtGlob ? dtSave : dtGlob;
+
   Logger.stream << "dtA: " << dtA
                 << " dtU: " << dtU
                 << " dtH: " << dtH
                 << " dtCFL: " << dtCFL
+                << " dtSave: " << dtSave
                 << "   dtGlob: " << dtGlob;
   Logger.flushStream();
 
@@ -228,11 +242,11 @@ void derivate()
   //const valueType gravTheta = 0.7;
   const valueType gravTheta = 0.7;
   //const valueType gravConst = 6.674e-11;
-  const valueType gravConst = 1.e-3;
+  const valueType gravConst = 5.e-3;
 
   //sphlatch::BHtree<sphlatch::Monopoles>   Tree(gravTheta,
   sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
-  //sphlatch::BHtree<sphlatch::Octupoles>   Tree(gravTheta,
+                                               //sphlatch::BHtree<sphlatch::Octupoles>   Tree(gravTheta,
                                                gravConst,
                                                CostZone.getDepth(),
                                                CostZone.getCenter(),
@@ -262,7 +276,7 @@ void derivate()
       Tree.calcGravity(curIndex);
       if (id(curIndex) == 4920)
         {
-          std::cout << "a_z: " << acc(curIndex, 2) << "\n";
+          std::cerr << "a_z_tree: " << acc(curIndex, 2);
         }
     }
   Logger << "gravity calculated";
@@ -433,17 +447,17 @@ void derivate()
           curAcc(2) = 0.;
           vel(i, 2) = 0.;
         }
-*/
-      const valueType dist = sqrt( pos(i, 0)*pos(i, 0)
-                                 + pos(i, 1)*pos(i, 1)
-                                 + pos(i, 2)*pos(i, 2) );
+ */
+      const valueType dist = sqrt(pos(i, 0) * pos(i, 0)
+                                  + pos(i, 1) * pos(i, 1)
+                                  + pos(i, 2) * pos(i, 2));
 
-      if ( dist > 400. )
-      {
-        vel(i, 0) = 0.;
-        vel(i, 1) = 0.;
-        vel(i, 2) = 0.;
-      }
+      if (dist > 400.)
+        {
+          vel(i, 0) = 0.;
+          vel(i, 1) = 0.;
+          vel(i, 2) = 0.;
+        }
 
       particleRowType(acc, i) += curAcc;
       dudt(i) = curPow;
@@ -481,9 +495,9 @@ void derivate()
 
       if (id(i) == 4920)
         {
-          std::cout << "a_z: " << acc(i, 2) << "\n";
-          std::cout << "z: " << pos(i, 2) << "   rho: " << rho(i) << "   divv: " << divv(i) << "   dhdt: " << dhdt(i) << "    h: " << h(i) << "    noneigh: " << noneigh(i) << "\n";
-          //std::cout << "k1 " << k1 << "    k2 " << k2 << "   k3 " << k3 << "\n";
+          std::cerr << "   a_z_tot: " << acc(i, 2) << "\n";
+          std::cerr << "z: " << pos(i, 2) << "    v_z: " << vel(i, 2) << "   rho: " << rho(i) << "   u: " << u(i) << "    noneigh: " << noneigh(i) << "\n";
+          //std::cerr << "k1 " << k1 << "    k2 " << k2 << "   k3 " << k3 << "\n";
         }
     }
   Logger << "adapted smoothing length";
@@ -561,21 +575,20 @@ int main(int argc, char* argv[])
 
   //IOManager.loadDump("shocktube.h5part");
   //Logger << "loaded shocktube.h5part";
-  
+
   IOManager.loadDump("random010k.h5part");
   Logger << "loaded random010k.h5part";
-  
+
   const size_t noParts = PartManager.getNoLocalParts();
   valueType xCom = 0., yCom = 0., zCom = 0., mTot = 0.;
 
   for (size_t i = 0; i < noParts; i++)
-  {
-    xCom += pos(i, X)*m(i);
-    yCom += pos(i, Y)*m(i);
-    zCom += pos(i, Z)*m(i);
-    mTot += m(i);
-    std::cout << pos(i, X) << " " << pos(i, Y) << "\n";
-  }
+    {
+      xCom += pos(i, X) * m(i);
+      yCom += pos(i, Y) * m(i);
+      zCom += pos(i, Z) * m(i);
+      mTot += m(i);
+    }
   xCom /= mTot;
   yCom /= mTot;
   zCom /= mTot;
@@ -587,23 +600,23 @@ int main(int argc, char* argv[])
   Logger.flushStream();
 
   for (size_t i = 0; i < noParts; i++)
-  {
-    pos(i, X) = 20.*( pos(i, X) - xCom );
-    pos(i, Y) = 20.*( pos(i, Y) - yCom );
-    pos(i, Z) = 20.*( pos(i, Z) - zCom );
-    h(i)   *= 20.;
-    eps(i) = .5;
-    m(i)   = 1.;
-    u(i)   = 1.;
-  }
+    {
+      pos(i, X) = 20. * (pos(i, X) - xCom);
+      pos(i, Y) = 20. * (pos(i, Y) - yCom);
+      pos(i, Z) = 20. * (pos(i, Z) - zCom);
+      h(i) *= 20.;
+      eps(i) = .5;
+      m(i) = 1.;
+      u(i) = 1.;
+    }
   Logger << "data ready";
-  std::cout  << "center of mass: " << xCom << " " << yCom << " " << zCom << "\n";
+  std::cout << "center of mass: " << xCom << " " << yCom << " " << zCom << "\n";
 
   ///
   /// define the quantities to save in a dump
   ///
   quantsType saveQuants;
-  saveQuants.vects += &pos, &vel, &acc;
+  saveQuants.vects += &pos, &vel;
   saveQuants.scalars += &m, &rho, &u, &p, &h;
   saveQuants.ints += &id, &noneigh;
 
@@ -622,8 +635,8 @@ int main(int argc, char* argv[])
   CommManager.sendGhosts(pos);
   CommManager.sendGhosts(id);
   CommManager.sendGhosts(m);
-  CommManager.sendGhosts(rho);
-  CommManager.sendGhosts(u);
+  //CommManager.sendGhosts(rho);
+  //CommManager.sendGhosts(u);
 
 
   Logger.stream << "distributed particles: "
@@ -638,8 +651,11 @@ int main(int argc, char* argv[])
 
   //const size_t maxSteps = 500000;
   //const size_t saveSteps =  5000;
-  const size_t maxStep = 3000;
-  const size_t saveSteps = 20;
+  //const size_t maxStep = 20000;
+  //const size_t saveSteps = 20;
+  const valueType maxTime  = 200.;
+  const valueType saveItrvl = 0.2;
+  valueType nextSaveTime = time;
 
   ///
   /// bootstrap the integrator
@@ -652,8 +668,27 @@ int main(int argc, char* argv[])
   ///
   /// the integration loop
   ///
-  while (step < maxStep)
+  //while (step < maxStep)
+  while (time < maxTime)
     {
+      ///
+      /// save a dump
+      ///
+      if (nextSaveTime - time < 1.e-6)
+        {
+          Logger << "save dump\n";
+
+          std::string fileName = "saveDump000000.h5part";
+          std::string stepString = boost::lexical_cast<std::string>(step);
+
+          fileName.replace(fileName.size() - 7 - stepString.size(),
+                           stepString.size(), stepString);
+
+          //IOManager.saveDump("saveDump.h5part", saveQuants);
+          IOManager.saveDump(fileName, saveQuants);
+          nextSaveTime += saveItrvl;
+        }
+
       ///
       /// exchange particles and ghosts
       ///
@@ -682,22 +717,42 @@ int main(int argc, char* argv[])
       Logger.zeroRelTime();
       step++;
 
-
       std::cout << "t = " << std::fixed << std::right
                 << std::setw(12) << std::setprecision(6)
                 << time << " (" << step << ")\n";
 
       ///
-      /// save a dump
+      /// determine center of mass and move all particles, so
+      /// that the center of mass is again [0,0,0]
       ///
-      if ((step % saveSteps) == 0)
+      xCom = 0.;
+      yCom = 0.;
+      zCom = 0.;
+      mTot = 0.;
+
+      for (size_t i = 0; i < noParts; i++)
         {
-          if (myDomain == 0)
-            {
-              std::cout << "save dump!\n";
-            }
-          IOManager.saveDump("saveDump.h5part", saveQuants);
+          xCom += pos(i, X) * m(i);
+          yCom += pos(i, Y) * m(i);
+          zCom += pos(i, Z) * m(i);
+          mTot += m(i);
         }
+      xCom /= mTot;
+      yCom /= mTot;
+      zCom /= mTot;
+
+      for (size_t i = 0; i < noParts; i++)
+      {
+        pos(i, X) -= xCom;
+        pos(i, Y) -= yCom;
+        pos(i, Z) -= zCom;
+      }
+
+      Logger.stream << "center of mass: ["
+                    << xCom << ","
+                    << yCom << ","
+                    << zCom << "]";
+      Logger.flushStream();
     }
 
   MPI::Finalize();

@@ -124,6 +124,7 @@ void LogManager::operator<<(std::string _str)
 {
   locLog << std::fixed << std::right << std::setw(18) << std::setprecision(6)
                          << getRelTime() << "      " << _str << "\n" << std::flush;
+  relStartTime = getAbsTime();
 }
 
 void LogManager::zeroRelTime()
@@ -140,7 +141,6 @@ void LogManager::flushStream()
   stream << std::flush;
   (*this) << stream.str();
   stream.str("");
-  //stream.str.clear();
 }
 
 double LogManager::getRelTime()
