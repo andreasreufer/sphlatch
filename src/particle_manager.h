@@ -175,7 +175,7 @@ ParticleManager::ParticleManager(void)
   ///
   isGhostVarSet += "pos", "vel", "rotv";
   /// scalar quantities:
-  isGhostVarSet += "m", "h", "rho", "p", "u", "A", "alpha", "divv";
+  isGhostVarSet += "m", "h", "rho", "p", "u", "A", "alpha", "divv", "eps";
   /// integers:
   isGhostVarSet += "id";
 

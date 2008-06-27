@@ -317,7 +317,7 @@ void bootstrap()
 
   derivFunc();
   
-  const valueType dt = timingFunc();
+  const valueType dt = 0.;
 
   integItr = integrators.begin();
   while (integItr != integEnd)
@@ -325,9 +325,6 @@ void bootstrap()
       (*integItr)->bootstrap(dt);
       integItr++;
     }
-
-  valueRefType time(PartManager.attributes["time"]);
-  time += dt;
 };
 
 ///

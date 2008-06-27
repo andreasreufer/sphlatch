@@ -34,9 +34,14 @@ using namespace sphlatch::vectindices;
 
 int main(int argc, char* argv[])
 {
-  const size_t noPartsX = 10;
-  const size_t noPartsY = 10;
-  const size_t noPartsZ = 100;
+  /// 30x30x300 = 270k particles
+  const size_t noPartsX =  30;
+  const size_t noPartsY =  30;
+  const size_t noPartsZ = 300;
+
+  /// define particle weight on the faint and dense side of the shocktube
+  const valueType faintSideWeight = 1.;
+  const valueType denseSideWeight = 4.;
 
   const size_t noParts = noPartsX*noPartsY*noPartsZ;
 
@@ -88,7 +93,7 @@ int main(int argc, char* argv[])
     {
       for (size_t i = 0; i < noPartsX; i++)
       {
-        id(curIndex) = i + 10*j + 100*k;
+        id(curIndex) = i + 100*j + 10000*k;
         h(curIndex) = 1.;
         u(curIndex) = 1.;
 
@@ -100,7 +105,7 @@ int main(int argc, char* argv[])
         vel(curIndex, Y) = 0.;
         vel(curIndex, Z) = 0.;
 
-        m(curIndex) = ( k > noPartsZ / 2 ) ? 1 : 2;
+        m(curIndex) = ( k > noPartsZ / 2 ) ? faintSideWeight  : denseSideWeight;
         
         curIndex++;
       }

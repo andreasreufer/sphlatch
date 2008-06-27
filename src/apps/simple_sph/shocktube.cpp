@@ -1,9 +1,9 @@
 // some defs
 
-//#define SPHLATCH_CARTESIAN_XYZ
+#define SPHLATCH_CARTESIAN_XYZ
 //#define SPHLATCH_CARTESIAN_YZX
 //#define SPHLATCH_CARTESIAN_ZXY
-#define SPHLATCH_HILBERT3D
+//#define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
 //#define SPHLATCH_SINGLEPREC
@@ -88,7 +88,7 @@ valueType timeStep()
   comm_type& CommManager(comm_type::instance());
   log_type& Logger(log_type::instance());
 
-  matrixRefType pos(PartManager.pos);
+  //matrixRefType pos(PartManager.pos);
   //matrixRefType vel(PartManager.vel);
   matrixRefType acc(PartManager.acc);
 
@@ -102,7 +102,7 @@ valueType timeStep()
 
   valueRefType time(PartManager.attributes["time"]);
 
-  idvectRefType id(PartManager.id);
+  //idvectRefType id(PartManager.id);
 
   const size_t noParts = PartManager.getNoLocalParts();
 
@@ -173,7 +173,7 @@ valueType timeStep()
   ///
   /// distance to next saveItrvl
   ///
-  const valueType saveItrvl = 0.2;
+  const valueType saveItrvl = 10.;
   const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
                                   + 1.) * saveItrvl;
   valueType dtSave = nextSaveTime - time;
@@ -214,7 +214,7 @@ void derivate()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
-  costzone_type& CostZone(costzone_type::instance());
+  //costzone_type& CostZone(costzone_type::instance());
   log_type& Logger(log_type::instance());
 
   matrixRefType pos(PartManager.pos);
@@ -234,19 +234,19 @@ void derivate()
   idvectRefType noneigh(PartManager.noneigh);
 
   const size_t noParts = PartManager.getNoLocalParts();
-  size_t& step(PartManager.step);
+  //size_t& step(PartManager.step);
 
-  const size_t noTotParts = noParts + PartManager.getNoGhostParts();
+  //const size_t noTotParts = noParts + PartManager.getNoGhostParts();
   const size_t myDomain = CommManager.getMyDomain();
 
   /// little helper vector to zero a 3D quantity
   const zerovalvectType zero(3);
 
-   const valueType gravTheta = 0.7;
-   //const valueType gravConst = 6.674e-11;
-   const valueType gravConst = 5.e-3;
+/*
+   const valueType gravTheta = 1.0;
+   const valueType gravConst = 0.0;
 
-   sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
+   sphlatch::BHtree<sphlatch::NoMultipoles> Tree(gravTheta,
                                                gravConst,
                                                CostZone.getDepth(),
                                                CostZone.getCenter(),
@@ -265,17 +265,7 @@ void derivate()
    Tree.detParticleOrder();
    Tree.calcMultipoles();
    Logger << "Tree ready";
-   ///
-   /// calculate the accelerations
-   ///
-   for (size_t i = 0; i < noParts; i++)
-    {
-      const size_t curIndex = Tree.particleOrder[i];
-      particleRowType(acc, curIndex) = zero;
-      Tree.calcGravity(curIndex);
-    }
-   Logger << "gravity calculated";
-
+*/
   ///
   /// define kernel and neighbour search algorithm
   ///
@@ -433,16 +423,18 @@ void derivate()
         }
 
       ///
-      /// collapse stuff
+      /// a_x = a_y = 0.
+      /// hold both shocktube ends:
+      /// a_z = 0. if z < z_min || z > z_max
+      /// z_min = 5.
+      /// z_max = 295.
       ///
-      const valueType dist = sqrt(pos(i, 0) * pos(i, 0)
-                                + pos(i, 1) * pos(i, 1)
-                                + pos(i, 2) * pos(i, 2));
+      curAcc(0) = 0.;
+      curAcc(1) = 0.;
 
-      if (dist > 100.)
+      if (pos(i, 2) < 5. || pos(i, 2) > 295.)
         {
-          vel(i, 0) = 0.;
-          vel(i, 1) = 0.;
+          curAcc(2) = 0.;
           vel(i, 2) = 0.;
         }
       
@@ -556,45 +548,8 @@ int main(int argc, char* argv[])
   Integrator.regIntegration(u, dudt);
   Integrator.regIntegration(h, dhdt);
 
-  IOManager.loadDump("shocktube.h5part");
-  Logger << "loaded shocktube.h5part";
-
-  //IOManager.loadDump("random010k.h5part");
-  //Logger << "loaded random010k.h5part";
-
-  const size_t noParts = PartManager.getNoLocalParts();
-  
-  /*valueType xCom = 0., yCom = 0., zCom = 0., mTot = 0.;
-
-  for (size_t i = 0; i < noParts; i++)
-     {
-      xCom += pos(i, X) * m(i);
-      yCom += pos(i, Y) * m(i);
-      zCom += pos(i, Z) * m(i);
-      mTot += m(i);
-     }
-     xCom /= mTot;
-     yCom /= mTot;
-     zCom /= mTot;*(
-
-     Logger.stream << "center of mass: ["
-                << xCom << ","
-                << yCom << ","
-                << zCom << "]\n";
-     Logger.flushStream();
-
-     for (size_t i = 0; i < noParts; i++)
-     {
-      pos(i, X) = 20. * (pos(i, X) - xCom);
-      pos(i, Y) = 20. * (pos(i, Y) - yCom);
-      pos(i, Z) = 20. * (pos(i, Z) - zCom);
-      h(i) *= 20.;
-      eps(i) = .5;
-      m(i) = 1.;
-      u(i) = 1.;
-     }
-     Logger << "data ready";
-     std::cout << "center of mass: " << xCom << " " << yCom << " " << zCom << "\n";*/
+  IOManager.loadDump("shocktube270k.h5part");
+  Logger << "loaded shocktube270k.h5part";
 
   ///
   /// define the quantities to save in a dump
@@ -611,8 +566,6 @@ int main(int argc, char* argv[])
   CommManager.exchange(CostZone.domainPartsIndex,
                        CostZone.getNoGhosts());
 
-  Logger.stream << "noParts: " << noParts << " noGhosts: " << PartManager.getNoGhostParts() << "  rho: " << rho.size() << " u: " << u.size() << " p: " << p.size() << " h: " << h.size() << " pos: " << pos.size1() << " vel: " << vel.size1() << "\n";
-  Logger.flushStream();
   ///
   /// prepare ghost sends and send ghosts
   ///
@@ -637,12 +590,8 @@ int main(int argc, char* argv[])
   ///
   //const valueType dt = 138.e6 / 50.;
 
-  //const size_t maxSteps = 500000;
-  //const size_t saveSteps =  5000;
-  //const size_t maxStep = 20000;
-  //const size_t saveSteps = 20;
-  const valueType maxTime = 200.;
-  const valueType saveItrvl = 0.2;
+  const valueType maxTime = 300.;
+  const valueType saveItrvl = 10.;
   valueType nextSaveTime = time;
 
   ///
@@ -672,8 +621,7 @@ int main(int argc, char* argv[])
           fileName.replace(fileName.size() - 7 - stepString.size(),
                            stepString.size(), stepString);
 
-          //IOManager.saveDump("saveDump.h5part", saveQuants);
-          //IOManager.saveDump(fileName, saveQuants);
+          IOManager.saveDump(fileName, saveQuants);
           nextSaveTime += saveItrvl;
         }
 
@@ -709,42 +657,13 @@ int main(int argc, char* argv[])
       Logger.zeroRelTime();
       step++;
 
+      if ( myDomain == 0 )
+      {
       std::cout << "t = " << std::fixed << std::right
                 << std::setw(12) << std::setprecision(6)
                 << time << " (" << step << ")\n";
+                }
 
-      ///
-      /// determine center of mass and move all particles, so
-      /// that the center of mass is again [0,0,0]
-      ///
-      /*xCom = 0.;
-      yCom = 0.;
-      zCom = 0.;
-      mTot = 0.;
-
-      for (size_t i = 0; i < noParts; i++)
-        {
-          xCom += pos(i, X) * m(i);
-          yCom += pos(i, Y) * m(i);
-          zCom += pos(i, Z) * m(i);
-          mTot += m(i);
-        }
-      xCom /= mTot;
-      yCom /= mTot;
-      zCom /= mTot;
-
-      for (size_t i = 0; i < noParts; i++)
-        {
-          pos(i, X) -= xCom;
-          pos(i, Y) -= yCom;
-          pos(i, Z) -= zCom;
-        }
-
-      Logger.stream << "center of mass: ["
-                    << xCom << ","
-                    << yCom << ","
-                    << zCom << "]";
-      Logger.flushStream();*/
     }
 
   MPI::Finalize();
