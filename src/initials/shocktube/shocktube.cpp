@@ -89,12 +89,14 @@ int main(int argc, char* argv[])
 
   for (size_t k = 0; k < noPartsZ; k++)
   {
+    const valueType curZmass = ( k > noPartsZ / 2 ) ?
+                               faintSideWeight  : denseSideWeight;
     for (size_t j = 0; j < noPartsY; j++)
     {
       for (size_t i = 0; i < noPartsX; i++)
       {
         id(curIndex) = i + 100*j + 10000*k;
-        h(curIndex) = 1.;
+        h(curIndex) = 1.2;
         u(curIndex) = 1.;
 
         pos(curIndex, X) = static_cast<valueType>(i);
@@ -105,7 +107,7 @@ int main(int argc, char* argv[])
         vel(curIndex, Y) = 0.;
         vel(curIndex, Z) = 0.;
 
-        m(curIndex) = ( k > noPartsZ / 2 ) ? faintSideWeight  : denseSideWeight;
+        m(curIndex) = curZmass;
         
         curIndex++;
       }

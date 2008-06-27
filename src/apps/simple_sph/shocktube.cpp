@@ -242,6 +242,13 @@ void derivate()
   /// little helper vector to zero a 3D quantity
   const zerovalvectType zero(3);
 
+  /// send ghosts to other domains
+  CommManager.sendGhosts(pos);
+  CommManager.sendGhosts(vel);
+  CommManager.sendGhosts(id);
+  CommManager.sendGhosts(m);
+  CommManager.sendGhosts(h);
+
 /*
    const valueType gravTheta = 1.0;
    const valueType gravConst = 0.0;
@@ -265,10 +272,10 @@ void derivate()
    Tree.detParticleOrder();
    Tree.calcMultipoles();
    Logger << "Tree ready";
-*/
-  ///
-  /// define kernel and neighbour search algorithm
-  ///
+ */
+///
+/// define kernel and neighbour search algorithm
+///
   sphlatch::CubicSpline3D Kernel;
   sphlatch::Rankspace RSSearch;
 
@@ -299,6 +306,8 @@ void derivate()
 
       ///
       /// SPH density sum
+      /// I need    : pos, h, m
+      /// I provide : rho
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
@@ -331,6 +340,9 @@ void derivate()
 
   ///
   /// pressure
+  ///
+  /// I need    : u, rho
+  /// I provide : p
   ///
   const valueType gamma = 1.4;
   p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
@@ -373,6 +385,9 @@ void derivate()
       ///
       /// SPH acceleration and specific power sum
       ///
+      /// I need    : pos, vel, h, m, rho, u
+      /// I provide : acc, dhdu, divv
+      ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
           const valueType rij = RSSearch.neighDistList[curNeigh];
@@ -385,7 +400,6 @@ void derivate()
 
           const particleRowType velj(vel, j);
           const particleRowType Rj(pos, j);
-
 
           /// replace by scalar expressions?
           const valueType vijrij =
@@ -437,7 +451,7 @@ void derivate()
           curAcc(2) = 0.;
           vel(i, 2) = 0.;
         }
-      
+
       particleRowType(acc, i) += curAcc;
       dudt(i) = curPow;
       divv(i) = curVelDiv / rho(i);
@@ -567,19 +581,9 @@ int main(int argc, char* argv[])
                        CostZone.getNoGhosts());
 
   ///
-  /// prepare ghost sends and send ghosts
+  /// prepare ghost sends
   ///
   CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-
-  CommManager.sendGhosts(pos);
-  CommManager.sendGhosts(vel);
-  CommManager.sendGhosts(id);
-  CommManager.sendGhosts(m);
-  CommManager.sendGhosts(h);
-
-  CommManager.sendGhosts(eps); // gravity
-
-
   Logger.stream << "distributed particles: "
                 << PartManager.getNoLocalParts() << " parts. & "
                 << PartManager.getNoGhostParts() << " ghosts";
@@ -588,8 +592,6 @@ int main(int argc, char* argv[])
   ///
   /// define some simulation parameters
   ///
-  //const valueType dt = 138.e6 / 50.;
-
   const valueType maxTime = 300.;
   const valueType saveItrvl = 10.;
   valueType nextSaveTime = time;
@@ -600,12 +602,9 @@ int main(int argc, char* argv[])
   Integrator.bootstrap();
   Logger << "integrator bootstrapped";
 
-  //MPI::Finalize();
-  //return EXIT_SUCCESS;
   ///
   /// the integration loop
   ///
-  //while (step < maxStep)
   while (time < maxTime)
     {
       ///
@@ -627,21 +626,13 @@ int main(int argc, char* argv[])
 
       ///
       /// exchange particles and ghosts
+      /// \todo: only do this, when necessary
       ///
       CostZone.createDomainPartsIndex();
       CommManager.exchange(CostZone.domainPartsIndex,
                            CostZone.getNoGhosts());
 
       CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-
-      CommManager.sendGhosts(pos);
-      CommManager.sendGhosts(vel);
-      CommManager.sendGhosts(id);
-      CommManager.sendGhosts(m);
-      CommManager.sendGhosts(h);
-
-      CommManager.sendGhosts(eps); // gravity
-
       Logger.stream << "distributed particles: "
                     << PartManager.getNoLocalParts() << " parts. & "
                     << PartManager.getNoGhostParts() << " ghosts";
@@ -657,13 +648,12 @@ int main(int argc, char* argv[])
       Logger.zeroRelTime();
       step++;
 
-      if ( myDomain == 0 )
-      {
-      std::cout << "t = " << std::fixed << std::right
-                << std::setw(12) << std::setprecision(6)
-                << time << " (" << step << ")\n";
-                }
-
+      if (myDomain == 0)
+        {
+          std::cout << "t = " << std::fixed << std::right
+                    << std::setw(12) << std::setprecision(6)
+                    << time << " (" << step << ")\n";
+        }
     }
 
   MPI::Finalize();
