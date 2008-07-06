@@ -34,7 +34,7 @@ public:
 /// bootstrap:
 ///  bootstrap the predictor/corrector
 ///
-virtual void bootstrap(const valueType& _dt) = 0;
+virtual void bootstrap() = 0;
 
 ///
 /// prediction step:
@@ -84,7 +84,7 @@ PredCorrScalO1(valvectRefType _var,
 };
 
 public:
-void prepare(void)
+void prepare()
 {
   valvectRefType v(*dVar);
 
@@ -93,9 +93,10 @@ void prepare(void)
     {
       zero.resize(noParts);
     }
+  v = zero;
 }
 
-void bootstrap(const valueType& _dt)
+void bootstrap()
 {
   valvectRefType   v(*dVar);
   valvectRefType  ov(odVar);
@@ -121,8 +122,8 @@ void predict(const valueType& _dt)
   ox = x;
   x += ( 1.5*v - 0.5*ov )*_dt;
 
-  /// oa = a
-  /// a = 0;
+  /// ov = v
+  /// v = 0;
   ov.swap(v);
   v = zero;
 }
@@ -186,7 +187,7 @@ PredCorrVectO2(matrixRefType _var,
 };
 
 public:
-void prepare(void)
+void prepare()
 {
   matrixRefType a(*ddVar);
 
@@ -197,10 +198,10 @@ void prepare(void)
     }
 
   /// a = 0;
-  //a = zero;
+  a = zero;
 }
 
-void bootstrap(const valueType& _dt)
+void bootstrap()
 {
   matrixRefType  a(*ddVar);
   matrixRefType oa(oddVar);
@@ -257,7 +258,6 @@ void correct(const valueType& _dt)
   
   x = ox + 0.5*_dt*( v + ov );
   v = ov + 0.5*_dt*( a + oa );
-  a = zero;
 }
 private:
 matrixType oVar, odVar, oddVar;
@@ -317,12 +317,10 @@ void bootstrap()
 
   derivFunc();
   
-  const valueType dt = 0.;
-
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
-      (*integItr)->bootstrap(dt);
+      (*integItr)->bootstrap();
       integItr++;
     }
 };
@@ -332,7 +330,6 @@ void bootstrap()
 ///
 void integrate(void)
 {
-  integItr = integrators.begin();
   integEnd = integrators.end();
 
   ///

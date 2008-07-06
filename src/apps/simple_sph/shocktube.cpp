@@ -335,6 +335,7 @@ void derivate()
           u(i) = uMin;
         }
     }
+  Logger << "assure minimal temperature";
   CommManager.sendGhosts(u);
   Logger << " temperature sent to ghosts";
 
@@ -445,14 +446,13 @@ void derivate()
       ///
       curAcc(0) = 0.;
       curAcc(1) = 0.;
-
       if (pos(i, 2) < 5. || pos(i, 2) > 295.)
         {
           curAcc(2) = 0.;
           vel(i, 2) = 0.;
         }
 
-      particleRowType(acc, i) += curAcc;
+      particleRowType(acc, i) = curAcc;
       dudt(i) = curPow;
       divv(i) = curVelDiv / rho(i);
 
@@ -484,10 +484,6 @@ void derivate()
       dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
                  - k2 * static_cast<valueType>(1. / 3.) * divv(i)) * h(i);
 
-      if (id(i) == 4920)
-        {
-          std::cerr << "part 4920 on domain " << myDomain << "   z: " << pos(i, 2) << "    v_z: " << vel(i, 2) << "   rho: " << rho(i) << "   u: " << u(i) << "    noneigh: " << noneigh(i) << "\n";
-        }
     }
   Logger << "adapted smoothing length";
 };
@@ -506,6 +502,16 @@ int main(int argc, char* argv[])
   comm_type& CommManager(comm_type::instance());
   costzone_type& CostZone(costzone_type::instance());
   log_type& Logger(log_type::instance());
+
+  ///
+  /// some simulation parameters
+  ///
+
+  std::string loadDumpFile = "shocktube270k.h5part";
+  //std::string loadDumpFile = "shocktube_t30.h5part";
+
+  const valueType maxTime = 30.1;
+  const valueType saveItrvl = 10.;
 
   ///
   /// define what we're doing
@@ -532,6 +538,7 @@ int main(int argc, char* argv[])
   valvectRefType dhdt(PartManager.dhdt);
   valvectRefType p(PartManager.p);
   valvectRefType eps(PartManager.eps);
+  valvectRefType divv(PartManager.divv);
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
@@ -562,15 +569,16 @@ int main(int argc, char* argv[])
   Integrator.regIntegration(u, dudt);
   Integrator.regIntegration(h, dhdt);
 
-  IOManager.loadDump("shocktube270k.h5part");
-  Logger << "loaded shocktube270k.h5part";
+  IOManager.loadDump(loadDumpFile);
+  Logger.stream << "loaded " << loadDumpFile;
+  Logger.flushStream();
 
   ///
   /// define the quantities to save in a dump
   ///
   quantsType saveQuants;
-  saveQuants.vects += &pos, &vel;
-  saveQuants.scalars += &m, &rho, &u, &p, &h;
+  saveQuants.vects += &pos, &vel, &acc;
+  saveQuants.scalars += &m, &rho, &u, &p, &h, &divv, &dudt, &dhdt;
   saveQuants.ints += &id, &noneigh;
 
   ///
@@ -590,13 +598,6 @@ int main(int argc, char* argv[])
   Logger.flushStream();
 
   ///
-  /// define some simulation parameters
-  ///
-  const valueType maxTime = 300.;
-  const valueType saveItrvl = 10.;
-  valueType nextSaveTime = time;
-
-  ///
   /// bootstrap the integrator
   ///
   Integrator.bootstrap();
@@ -605,14 +606,15 @@ int main(int argc, char* argv[])
   ///
   /// the integration loop
   ///
+  valueType nextSaveTime = time;
   while (time < maxTime)
     {
       ///
-      /// save a dump
+      /// save a dump << move to timing func
       ///
       if (nextSaveTime - time < 1.e-6)
         {
-          Logger << "save dump\n";
+          Logger << "save dump";
 
           std::string fileName = "saveDump000000.h5part";
           std::string stepString = boost::lexical_cast<std::string>(step);
