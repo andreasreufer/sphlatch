@@ -320,7 +320,7 @@ void derivate()
         }
       rho(i) = rhoi;
     }
-  Logger << "SPH density sum";
+  Logger << "SPH sum: rho";
   CommManager.sendGhosts(rho);
   Logger << " density sent to ghosts";
 
@@ -452,7 +452,7 @@ void derivate()
           vel(i, 2) = 0.;
         }
 
-      particleRowType(acc, i) = curAcc;
+      particleRowType(acc, i) += curAcc;
       dudt(i) = curPow;
       divv(i) = curVelDiv / rho(i);
 
@@ -460,7 +460,7 @@ void derivate()
     }
   CommManager.max(divvMax);
 
-  Logger << "acceleration, power & velocity divergence sum";
+  Logger << "SPH sum: acc, pow, divv";
 
   /// define desired number of neighbours
   const size_t noNeighOpt = 50;
@@ -510,7 +510,7 @@ int main(int argc, char* argv[])
   std::string loadDumpFile = "shocktube270k.h5part";
   //std::string loadDumpFile = "shocktube_t30.h5part";
 
-  const valueType maxTime = 30.1;
+  const valueType maxTime   = 50.;
   const valueType saveItrvl = 10.;
 
   ///
@@ -607,7 +607,7 @@ int main(int argc, char* argv[])
   /// the integration loop
   ///
   valueType nextSaveTime = time;
-  while (time < maxTime)
+  while (time <= maxTime)
     {
       ///
       /// save a dump << move to timing func

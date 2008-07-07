@@ -29,7 +29,7 @@ virtual ~GenericVerlet()
 {
 };
 public:
-virtual void prepare(void) = 0;
+virtual void prepare() = 0;
 
 ///
 /// drift changes the position:
@@ -75,7 +75,7 @@ VerletVectO2(matrixRefType _var,
 };
 
 public:
-void prepare(void)
+void prepare()
 {
   matrixRefType a(*ddVar);
 
@@ -150,7 +150,7 @@ VerletScalO2(valvectRefType _var,
 };
 
 public:
-void prepare(void)
+void prepare()
 {
   valvectRefType a(*ddVar);
 
@@ -176,9 +176,6 @@ void drift(const valueType& _dt)
 
   /// oa = a
   oa.swap(a);
-
-  /// a = 0;   do this with zero_matrix instead?
-  a = zero;
 }
 
 void kick(const valueType& _dt)
