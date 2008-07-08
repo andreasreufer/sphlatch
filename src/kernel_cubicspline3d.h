@@ -38,7 +38,7 @@ valueType value(const valueType& _r, const valueType& _h)
   }
   else
   {
-    const valueType k1 = ( 1. / ( _h*_h*_h*M_PI*M_PI) );
+    const valueType k1 = ( 1. / ( _h*_h*_h*M_PI) );
 
     if ( q > 1. )
     {
@@ -67,7 +67,7 @@ valvectType derive( const valueType& _r, const valueType& _h, const valvectType&
   }
   else
   {
-    const valueType k2 = _h*_h*_h*_h*M_PI*M_PI*_r ;
+    const valueType k2 = _h*_h*_h*_h*M_PI*_r ;
     derivative = _R / k2;
 
     if ( q > 1. )

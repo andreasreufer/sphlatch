@@ -68,6 +68,7 @@ BHtree(valueType _thetaMAC,
 {
   if (_thetaMAC < 0.)
     {
+      /// use logger here
       std::cerr << "error: theta may not be negative! setting theta = 0.6\n";
       _thetaMAC = 0.6;
     }
