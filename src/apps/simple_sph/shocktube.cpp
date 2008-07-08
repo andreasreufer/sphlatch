@@ -81,28 +81,34 @@ typedef sphlatch::LogManager log_type;
 #include "rankspace.h"
 
 using namespace sphlatch::vectindices;
+using namespace boost::assign;
 
 valueType timeStep()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
   log_type& Logger(log_type::instance());
+  io_type& IOManager(io_type::instance());
 
-  //matrixRefType pos(PartManager.pos);
-  //matrixRefType vel(PartManager.vel);
+  matrixRefType pos(PartManager.pos);
+  matrixRefType vel(PartManager.vel);
   matrixRefType acc(PartManager.acc);
 
-  //valvectRefType m(PartManager.m);
+  valvectRefType m(PartManager.m);
   valvectRefType h(PartManager.h);
   valvectRefType p(PartManager.p);
   valvectRefType u(PartManager.u);
   valvectRefType rho(PartManager.rho);
   valvectRefType dudt(PartManager.dudt);
   valvectRefType dhdt(PartManager.dhdt);
+  valvectRefType divv(PartManager.divv);
+
+  idvectRefType id(PartManager.id);
+  idvectRefType noneigh(PartManager.noneigh);
 
   valueRefType time(PartManager.attributes["time"]);
+  size_t& step(PartManager.step);
 
-  //idvectRefType id(PartManager.id);
 
   const size_t noParts = PartManager.getNoLocalParts();
 
@@ -174,6 +180,8 @@ valueType timeStep()
   /// distance to next saveItrvl
   ///
   const valueType saveItrvl = 10.;
+  std::string fileName = "saveDump000000.h5part";
+
   const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
                                   + 1.) * saveItrvl;
   valueType dtSave = nextSaveTime - time;
@@ -207,6 +215,29 @@ valueType timeStep()
                 << "   dtGlob: " << dtGlob;
   Logger.flushStream();
 
+  ///
+  /// define the quantities to save in a dump
+  ///
+  quantsType saveQuants;
+  saveQuants.vects += &pos, &vel, &acc;
+  saveQuants.scalars += &m, &rho, &u, &p, &h, &divv, &dudt, &dhdt;
+  saveQuants.ints += &id, &noneigh;
+
+
+  const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9) )
+                                * saveItrvl;
+  if ( fabs(curSaveTime - time) < 1.e-9)
+    {
+      Logger << "save dump";
+
+      std::string stepString = boost::lexical_cast<std::string>(step);
+
+      fileName.replace(fileName.size() - 7 - stepString.size(),
+                       stepString.size(), stepString);
+
+      IOManager.saveDump(fileName, saveQuants);
+    }
+
   return dtGlob;
 }
 
@@ -234,9 +265,9 @@ void derivate()
   idvectRefType noneigh(PartManager.noneigh);
 
   const size_t noParts = PartManager.getNoLocalParts();
+  const size_t noTotParts = noParts + PartManager.getNoGhostParts();
+  
   //size_t& step(PartManager.step);
-
-  //const size_t noTotParts = noParts + PartManager.getNoGhostParts();
   const size_t myDomain = CommManager.getMyDomain();
 
   /// little helper vector to zero a 3D quantity
@@ -248,6 +279,20 @@ void derivate()
   CommManager.sendGhosts(id);
   CommManager.sendGhosts(m);
   CommManager.sendGhosts(h);
+
+  ///
+  /// boundary conditions
+  ///
+  for (size_t i = 0; i < noTotParts; i++)
+    {
+      vel(i, 0) = 0.;
+      vel(i, 1) = 0.;
+      
+      if (pos(i, 2) < 5. || pos(i, 2) > 295.)
+        {
+          vel(i, 2) = 0.;
+        }
+    }
 
 /*
    const valueType gravTheta = 1.0;
@@ -449,7 +494,6 @@ void derivate()
       if (pos(i, 2) < 5. || pos(i, 2) > 295.)
         {
           curAcc(2) = 0.;
-          vel(i, 2) = 0.;
         }
 
       particleRowType(acc, i) += curAcc;
@@ -483,12 +527,10 @@ void derivate()
 
       dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
                  - k2 * static_cast<valueType>(1. / 3.) * divv(i)) * h(i);
-
     }
   Logger << "adapted smoothing length";
 };
 
-using namespace boost::assign;
 
 int main(int argc, char* argv[])
 {
@@ -510,7 +552,7 @@ int main(int argc, char* argv[])
   std::string loadDumpFile = "shocktube270k.h5part";
   //std::string loadDumpFile = "shocktube_t30.h5part";
 
-  const valueType maxTime   = 50.;
+  const valueType maxTime = 50.;
   const valueType saveItrvl = 10.;
 
   ///
@@ -574,14 +616,6 @@ int main(int argc, char* argv[])
   Logger.flushStream();
 
   ///
-  /// define the quantities to save in a dump
-  ///
-  quantsType saveQuants;
-  saveQuants.vects += &pos, &vel, &acc;
-  saveQuants.scalars += &m, &rho, &u, &p, &h, &divv, &dudt, &dhdt;
-  saveQuants.ints += &id, &noneigh;
-
-  ///
   /// exchange particles
   ///
   CostZone.createDomainPartsIndex();
@@ -606,26 +640,9 @@ int main(int argc, char* argv[])
   ///
   /// the integration loop
   ///
-  valueType nextSaveTime = time;
+  //valueType nextSaveTime = time;
   while (time <= maxTime)
     {
-      ///
-      /// save a dump << move to timing func
-      ///
-      if (nextSaveTime - time < 1.e-6)
-        {
-          Logger << "save dump";
-
-          std::string fileName = "saveDump000000.h5part";
-          std::string stepString = boost::lexical_cast<std::string>(step);
-
-          fileName.replace(fileName.size() - 7 - stepString.size(),
-                           stepString.size(), stepString);
-
-          IOManager.saveDump(fileName, saveQuants);
-          nextSaveTime += saveItrvl;
-        }
-
       ///
       /// exchange particles and ghosts
       /// \todo: only do this, when necessary

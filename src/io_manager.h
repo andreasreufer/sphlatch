@@ -472,8 +472,22 @@ void IOManager::saveDump(std::string _outputFile,
 
   hid_t curDataset, filespace, memspace, datasetPropList;
   datasetPropList = H5Pcreate(H5P_DATASET_XFER);
+
 #ifdef SPHLATCH_PARALLEL
-  H5Pset_dxpl_mpio(datasetPropList, H5FD_MPIO_COLLECTIVE);
+  ///
+  /// if a domain has nothing to save, the COLLECTIVE IO will fail
+  ///
+  valueType minLocParts = noLocParts;
+  CommManager.min(minLocParts);
+
+  if (minLocParts < 1)
+    {
+      H5Pset_dxpl_mpio(datasetPropList, H5FD_MPIO_INDEPENDENT);
+    }
+  else
+    {
+      H5Pset_dxpl_mpio(datasetPropList, H5FD_MPIO_COLLECTIVE);
+    }
 #endif
 
   ///
@@ -554,7 +568,7 @@ void IOManager::saveDump(std::string _outputFile,
                                  filespace, H5P_DEFAULT,
                                  H5P_DEFAULT, H5P_DEFAULT);
         }
-      
+
       /// select hyperslab
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET,
                           offset, NULL, dimsMem, NULL);

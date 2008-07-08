@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
   rvec(Y) = 0.;
   rvec(Z) = 0.;
 
-  const size_t steps = 100;
+  const size_t steps = 1000;
   const valueType h = 1.e-9;
   
   valueType kernelVal = 0;
