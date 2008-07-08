@@ -38,7 +38,7 @@ typedef std::set< valvectPtrType > valVectSet;
 typedef std::set< matrixPtrType >   matrixSet;
 typedef std::set< idvectPtrType >   idVectSet;
 
-typedef std::list< std::string > stringListType;
+typedef sphlatch::stringListType stringListType;
 
 typedef sphlatch::ParticleManager PartManagerType;
 #ifdef SPHLATCH_PARALLEL
@@ -56,6 +56,8 @@ void saveDump(std::string _outputFile,
 
 void saveDump(std::string _outputFile, quantsRefType _quantities);
 
+stringListType discoverVars( std::string _inputFile, std::string _stepName );
+stringListType discoverVars( std::string _inputFile );
 
 void setSinglePrecOut(void);
 void setDoublePrecOut(void);

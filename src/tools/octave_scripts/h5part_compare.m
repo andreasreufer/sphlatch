@@ -39,12 +39,15 @@ function delta = h5part_compare(ref, cmp)
 
     if ( useKey )
       printf("delta of %s\n", refKey);
-      delta = setfield( delta, refKey,
+      delta = setfield( delta, strcat("d_", refKey),
         refVal(:,ref.idx_sorted) -
-        (getfield( cmp, refKey ))(:,ref.idx_sorted) );
+        (getfield( cmp, refKey ))(:,cmp.idx_sorted) );
     endif
 
   endfor
+
+  # also store the reference particle positions
+  delta = setfield( delta, "refpos", ref.pos(:, ref.idx_sorted) );
 
 endfunction
 

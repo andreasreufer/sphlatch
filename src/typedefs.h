@@ -169,6 +169,11 @@ typedef std::set<valvectPtrType> valvectPtrSetType;
 typedef std::set<idvectPtrType>  idvectPtrSetType;
 
 ///
+/// a list of strings
+///
+typedef std::list< std::string > stringListType;
+
+///
 /// a struct with a set of pointers to the
 /// three possible containers for physical
 /// quantities
