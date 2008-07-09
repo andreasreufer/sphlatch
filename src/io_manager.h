@@ -676,6 +676,41 @@ void IOManager::saveDump(std::string _outputFile,
            _quantities.vects, _quantities.scalars, _quantities.ints);
 }
 
+IOManager::stringListType
+IOManager::discoverVars( std::string _inputFile,
+                         std::string _stepName )
+{
+  hid_t fileHandle, filePropList;
+
+  ///
+  /// get a new HDF5 file handle
+  ///
+  filePropList = H5Pcreate(H5P_FILE_ACCESS);
+#ifdef SPHLATCH_PARALLEL
+  H5Pset_fapl_mpio(filePropList, MPI::COMM_WORLD, MPI::INFO_NULL);
+#endif
+  fileHandle = H5Fopen(_inputFile.c_str(), H5F_ACC_RDONLY, filePropList);
+  H5Pclose(filePropList);
+
+  hid_t curGroup = H5Gopen(fileHandle, _stepName.c_str(), H5P_DEFAULT);
+
+  datasetsInFile.clear();
+  H5Lvisit_by_name(fileHandle, _stepName.c_str(), H5_INDEX_CRT_ORDER,
+                   H5_ITER_NATIVE, getObsCallback, NULL, H5P_DEFAULT);
+
+  H5Gclose(curGroup);
+  H5Fclose(fileHandle);
+
+  return datasetsInFile;
+}
+
+IOManager::stringListType
+IOManager::discoverVars( std::string _inputFile )
+{
+  return discoverVars(_inputFile, "/current");
+}
+
+
 void IOManager::setSinglePrecOut(void)
 {
   H5floatFileType = H5T_IEEE_F32LE;

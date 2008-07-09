@@ -6,6 +6,7 @@
 #include <limits>
 #include <cassert>
 
+#include "typedefs.h"
 #ifdef SPHLATCH_PARALLEL
 #include "communication_manager.h"
 #endif
