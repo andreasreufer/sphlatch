@@ -174,6 +174,11 @@ typedef std::set<idvectPtrType>  idvectPtrSetType;
 typedef std::list< std::string > stringListType;
 
 ///
+/// a vector of strings
+///
+typedef std::vector< std::string > stringVectType;
+
+///
 /// a struct with a set of pointers to the
 /// three possible containers for physical
 /// quantities

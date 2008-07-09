@@ -2,9 +2,7 @@
 
 // uncomment for single-precision calculation
 #define SPHLATCH_SINGLEPREC
-
-#define OOSPH_STANDALONE
-#define OOSPH_SINGLE_PRECISION
+#define SPHLATCH_PARALLEL
 
 #include <cstdlib>
 #include <iostream>
@@ -25,6 +23,11 @@ namespace po = boost::program_options;
 
 #include "typedefs.h"
 typedef sphlatch::valueType valueType;
+typedef sphlatch::identType identType;
+typedef sphlatch::matrixType matrixType;
+typedef sphlatch::stringVectType stringVectType;
+typedef sphlatch::valvectType valvectType;
+typedef sphlatch::idvectType idvectType;
 
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
@@ -32,22 +35,55 @@ typedef sphlatch::ParticleManager part_type;
 #include "io_manager.h"
 typedef sphlatch::IOManager io_type;
 
-#include "simulation_trait.h"
-typedef oosph::SimulationTrait<> SimTrait;
-typedef SimTrait::matrix_reference oosph_matrix_ref_type;
-
-#include "iomanager.h"
-typedef oosph::IOManager<SimTrait> oosph_io_type;
-
-#include "memorymanager.h"
-typedef oosph::MemoryManager<SimTrait> oosph_mem_type;
+#include "cdat_reader.h"
+typedef sphlatch::CDATreader cdatreader_type;
 
 #include "particle.h"
 
 using namespace boost::assign;
+using namespace sphlatch::vectindices;
+
+///
+/// quick&dirty helper functions
+///
+void readerToPartMgr( matrixType& _mat,
+                      size_t _j,
+                      cdatreader_type& _rdr,
+                      size_t _idx)
+{
+  const size_t noParts = _mat.size1();
+  for (size_t i = 0; i < noParts; i++)
+    {
+      _mat(i, _j) = _rdr.read(i, _idx);
+    }
+};
+
+void readerToPartMgr( valvectType& _vct,
+                      cdatreader_type& _rdr,
+                      size_t _idx)
+{
+  const size_t noParts = _vct.size();
+  for (size_t i = 0; i < noParts; i++)
+    {
+      _vct(i) = _rdr.read(i, _idx);
+    }
+};
+
+void readerToPartMgr( idvectType& _ivct,
+                      cdatreader_type& _rdr,
+                      size_t _idx)
+{
+  const size_t noParts = _ivct.size();
+  for (size_t i = 0; i < noParts; i++)
+    {
+      _ivct(i) = static_cast<identType>( lrint( _rdr.read(i, _idx) ) );
+    }
+};
 
 int main(int argc, char* argv[])
 {
+  MPI::Init(argc, argv);
+  
   po::options_description Options("Global Options");
   Options.add_options()
   ("help,h", "Produces this Help")
@@ -72,61 +108,134 @@ int main(int argc, char* argv[])
   
   part_type& PartManager(part_type::instance());
   io_type&        IOManager(io_type::instance());
-  oosph_io_type&  OOSPH_IOManager(oosph_io_type::Instance());
-  oosph_mem_type& OOSPH_MemManager(oosph_mem_type::Instance());
+  cdatreader_type cdatReader;
 
   std::string outputFileName = VMap["output-file"].as<std::string>();
-  std::string  inputFileName = VMap["input-file"].as<std::string>();
-
-  OOSPH_IOManager.LoadCDAT(inputFileName);
-  oosph_matrix_ref_type Data(OOSPH_MemManager.Data);
-
-  const size_t noParts = Data.size1();
-
-  PartManager.useGravity();
-  PartManager.useBasicSPH();
-
+  std::string  inputFilename = VMap["input-file"].as<std::string>();
+  
+  cdatReader.open(inputFilename);
+  
+  const size_t noParts = cdatReader.getNoParts();
   PartManager.setNoParts(noParts, 0);
-  PartManager.resizeAll();
-
-  sphlatch::rangeType partRange(0, noParts);
-
-  sphlatch::matrixRefType pos( PartManager.pos );
-  sphlatch::rangeType posRange(oosph::X, oosph::X+3);
-  pos = sphlatch::matrixRangeType( Data, partRange, posRange );
+  PartManager.step = 0;
   
-  sphlatch::matrixRefType vel( PartManager.vel );
-  sphlatch::rangeType velRange(oosph::VX, oosph::VX+3);
-  vel = sphlatch::matrixRangeType( Data, partRange, posRange );
-
-  sphlatch::valvectRefType h( PartManager.h );
-  h   = sphlatch::quantColumnType( Data, oosph::H );
+  PartManager.attributes = cdatReader.getAttrs();
   
-  sphlatch::valvectRefType m( PartManager.m );
-  m   = sphlatch::quantColumnType( Data, oosph::M );
-  
-  sphlatch::valvectRefType eps( PartManager.eps );
-  eps = sphlatch::quantColumnType( Data, oosph::GRAVEPS );
-
-  sphlatch::idvectRefType id( PartManager.id );
-  for (size_t i = 0; i < noParts; i++)
-  {
-    id(i) = lrint( Data(i, oosph::ID) );
-  }
+  stringVectType vars = cdatReader.getVars(); 
 
   using namespace boost::assign;
   sphlatch::quantsType saveQuants;
-  saveQuants.vects += &pos, &vel;
-  saveQuants.scalars += &h, &m, &eps;
-  saveQuants.ints  += &id;
+  for (size_t curIdx = 0; curIdx < vars.size(); curIdx++)
+  {
+    if ( vars[curIdx] == "x" || vars[curIdx] == "y" || vars[curIdx] == "z" )
+    {
+      std::cout << vars[curIdx] << " ";
+      saveQuants.vects += &PartManager.pos;
+    }
 
-  PartManager.attributes["time"] = 0.0;
-  PartManager.step = 0;
+    if ( vars[curIdx] == "vx" || vars[curIdx] == "vy" || vars[curIdx] == "vz" )
+    {
+      std::cout << vars[curIdx] << " ";
+      PartManager.useGravity();
+      saveQuants.vects += &PartManager.vel;
+    }
+
+    if ( vars[curIdx] == "ax" || vars[curIdx] == "ay" || vars[curIdx] == "az" )
+    {
+      std::cout << vars[curIdx] << " ";
+      PartManager.useGravity();
+      saveQuants.vects += &PartManager.acc;
+    }
+    
+    if ( vars[curIdx] == "m" || vars[curIdx] == "mass")
+    {
+      std::cout << vars[curIdx] << " ";
+      PartManager.useGravity();
+      saveQuants.scalars += &PartManager.m;
+    }
+    
+    if ( vars[curIdx] == "graveps" )
+    {
+      std::cout << vars[curIdx] << " ";
+      PartManager.useGravity();
+      saveQuants.scalars += &PartManager.eps;
+    }
+    
+    if ( vars[curIdx] == "h" )
+    {
+      std::cout << vars[curIdx] << " ";
+      PartManager.useBasicSPH();
+      saveQuants.scalars += &PartManager.h;
+    }
+    
+    if ( vars[curIdx] == "p" )
+    {
+      std::cout << vars[curIdx] << " ";
+      PartManager.useBasicSPH();
+      saveQuants.scalars += &PartManager.p;
+    }
+    
+    if ( vars[curIdx] == "rho" )
+    {
+      std::cout << vars[curIdx] << " ";
+      PartManager.useBasicSPH();
+      saveQuants.scalars += &PartManager.rho;
+    }
+    
+    if ( vars[curIdx] == "u" )
+    {
+      std::cout << vars[curIdx] << " ";
+      PartManager.useEnergy();
+      saveQuants.scalars += &PartManager.u;
+    }
+  }
+  std::cout << "\n";
+
+  PartManager.resizeAll();
+
+  for (size_t curIdx = 0; curIdx < vars.size(); curIdx++)
+  {
+    if ( vars[curIdx] == "id" )
+      readerToPartMgr( PartManager.id, cdatReader, curIdx );
+
+    if ( vars[curIdx] == "x" )
+      readerToPartMgr( PartManager.pos, X, cdatReader, curIdx );
+    if ( vars[curIdx] == "y" )
+      readerToPartMgr( PartManager.pos, Y, cdatReader, curIdx );
+    if ( vars[curIdx] == "z" )
+      readerToPartMgr( PartManager.pos, Z, cdatReader, curIdx );
+    
+    if ( vars[curIdx] == "vx" )
+      readerToPartMgr( PartManager.vel, X, cdatReader, curIdx );
+    if ( vars[curIdx] == "vy" )
+      readerToPartMgr( PartManager.vel, Y, cdatReader, curIdx );
+    if ( vars[curIdx] == "vz" )
+      readerToPartMgr( PartManager.vel, Z, cdatReader, curIdx );
+    
+    if ( vars[curIdx] == "ax" )
+      readerToPartMgr( PartManager.acc, X, cdatReader, curIdx );
+    if ( vars[curIdx] == "ay" )
+      readerToPartMgr( PartManager.acc, Y, cdatReader, curIdx );
+    if ( vars[curIdx] == "az" )
+      readerToPartMgr( PartManager.acc, Z, cdatReader, curIdx );
+
+    if ( vars[curIdx] == "m" || vars[curIdx] == "mass" )
+      readerToPartMgr( PartManager.m, cdatReader, curIdx );
+    if ( vars[curIdx] == "h" )
+      readerToPartMgr( PartManager.h, cdatReader, curIdx );
+    if ( vars[curIdx] == "p" )
+      readerToPartMgr( PartManager.p, cdatReader, curIdx );
+    if ( vars[curIdx] == "rho" )
+      readerToPartMgr( PartManager.rho, cdatReader, curIdx );
+    if ( vars[curIdx] == "u" )
+      readerToPartMgr( PartManager.u, cdatReader, curIdx );
+  }
+  cdatReader.close();
   
-  //IOManager.setSinglePrecOut();
-  IOManager.setDoublePrecOut();
+  IOManager.setSinglePrecOut();
   IOManager.saveDump( outputFileName, saveQuants );
 
+  MPI::Finalize();
   return EXIT_SUCCESS;
 }
 
