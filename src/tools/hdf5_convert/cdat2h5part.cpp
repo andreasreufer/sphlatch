@@ -38,8 +38,6 @@ typedef sphlatch::IOManager io_type;
 #include "cdat_reader.h"
 typedef sphlatch::CDATreader cdatreader_type;
 
-#include "particle.h"
-
 using namespace boost::assign;
 using namespace sphlatch::vectindices;
 
@@ -154,7 +152,7 @@ int main(int argc, char* argv[])
       saveQuants.scalars += &PartManager.m;
     }
     
-    if ( vars[curIdx] == "graveps" )
+    if ( vars[curIdx] == "graveps" || vars[curIdx] == "eps" )
     {
       std::cout << vars[curIdx] << " ";
       PartManager.useGravity();
@@ -229,6 +227,8 @@ int main(int argc, char* argv[])
       readerToPartMgr( PartManager.rho, cdatReader, curIdx );
     if ( vars[curIdx] == "u" )
       readerToPartMgr( PartManager.u, cdatReader, curIdx );
+    if ( vars[curIdx] == "graveps" || vars[curIdx] == "eps" )
+      readerToPartMgr( PartManager.eps, cdatReader, curIdx );
   }
   cdatReader.close();
   
