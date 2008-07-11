@@ -253,7 +253,6 @@ int main(int argc, char* argv[])
     }
   }
 
-
   MPI::Finalize();
   return EXIT_SUCCESS;
 }

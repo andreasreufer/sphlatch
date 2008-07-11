@@ -13,6 +13,7 @@
 #include "bhtree_generic_node.h"
 #include "bhtree_particle_node.h"
 #include "bhtree_cell_node.h"
+#include "bhtree_errhandler.h"
 
 #ifdef SPHLATCH_PARALLEL
 #include "communication_manager.h"
@@ -359,6 +360,12 @@ private:
 ///
 void insertParticleRecursor(size_t _newPartIdx)
 {
+  ///
+  /// if the recursor is deeper than 1000, something's fishy
+  ///
+  if ( curNodePtr->depth > 1000 )
+    throw TreeTooDeep( curNodePtr->depth, _newPartIdx, rootPtr );
+
   size_t targetOctant = 0;
 
   targetOctant += ( pos(_newPartIdx, X) <

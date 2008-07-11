@@ -22,20 +22,27 @@
 
 #include "typedefs.h"
 
+//
 // generic BHtree methods
+//
 #include "bhtree_generic.h"
+#include "bhtree_errhandler.h"
 
+//
 // specialized BHtree methods for 
 // desired degree of series expansion
+//
 #include "bhtree_monopoles.h"
 #include "bhtree_quadrupoles.h"
 #include "bhtree_octupoles.h"
 
+//
 // a specialization without any
 // multipole moments or gravity
 // functionality
 //
 // useful to use the tree for other purposes
+//
 #include "bhtree_nomultipoles.h"
 
 #endif
