@@ -12,6 +12,7 @@
 
 #include "typedefs.h"
 #include "particle_manager.h"
+#include "neighsearch_errhandler.h"
 
 namespace sphlatch {
 class Rankspace {
@@ -44,10 +45,8 @@ private:
 partsIndexVectType indicesRankedX, indicesRankedY, indicesRankedZ,
                    rsIndicesX, rsIndicesY, rsIndicesZ;
 
-
-// replace later on by valVectType
-std::valarray<valueType> cellMinX, cellMinY, cellMinZ,
-                         cellMaxX, cellMaxY, cellMaxZ;
+valvectType cellMinX, cellMinY, cellMinZ,
+            cellMaxX, cellMaxY, cellMaxZ;
 
 size_t noParts, noCells1D, noCells2D, noCells3D, partsPerCell1D;
 domainPartsIndexType rankspaceCells;
@@ -223,7 +222,7 @@ void prepare()
 
 public:
 partsIndexVectType neighbourList;
-std::valarray<valueType> neighDistList;
+valvectType neighDistList;
 
 private:
 valueType curPartX, curPartY, curPartZ;
@@ -242,6 +241,12 @@ void findNeighbours(const size_t& _curPartIndex,
   maxCellY = rsIndicesY[_curPartIndex];
   minCellZ = rsIndicesZ[_curPartIndex];
   maxCellZ = rsIndicesZ[_curPartIndex];
+
+#ifdef SPHLATCH_CHECKNONEIGHBOURS
+  /// the first index is used for neighbour counting
+  /// and cannot be used for a neighbour
+  const int noMaxNeighs = neighbourList.size() - 1;
+#endif
 
   ///
   /// determine min. and max. rank in each dimension
@@ -318,8 +323,17 @@ void findNeighbours(const size_t& _curPartIndex,
                   if (neighDistPow2 < searchRadPow2)
                     {
                       noNeighbours++;
+#ifdef SPHLATCH_CHECKNONEIGHBOURS
+                      if ( noNeighbours > noMaxNeighs )
+                        throw TooManyNeighs( _curPartIndex,
+                                             noNeighbours,
+                                             neighbourList,
+                                             neighDistList );
+#endif
+                      
                       neighbourList[noNeighbours] = neighIndex;
-                      neighDistList[noNeighbours] = sqrt(neighDistPow2);
+                      neighDistList(noNeighbours) = sqrt(neighDistPow2);
+
                     }
                 }
             }

@@ -16,6 +16,8 @@
 
 //#define SPHLATCH_RANKSPACESERIALIZE
 
+// enable checking of bounds for the neighbour lists
+//#define SPHLATCH_CHECKNONEIGHBOURS
 
 #include <cstdlib>
 #include <iostream>

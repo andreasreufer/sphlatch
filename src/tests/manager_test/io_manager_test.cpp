@@ -44,6 +44,8 @@ namespace po = boost::program_options;
 #include "typedefs.h"
 typedef sphlatch::valueType valueType;
 typedef sphlatch::stringListType stringListType;
+typedef sphlatch::valvectType valvectType;
+typedef sphlatch::matrixType matrixType;
 
 #include "mpi.h"
 
@@ -116,7 +118,27 @@ int main(int argc, char* argv[])
     varItr++;
   }
 
+  PartManager.useBasicSPH();
+
   IOManager.loadDump(inputFileName);
+
+  sphlatch::quantsType saveQuants;
+  saveQuants.vects += &PartManager.pos;
+  saveQuants.scalars += &PartManager.m;
+
+  IOManager.saveDump(outputFileName, saveQuants);
+  valvectType vect(10);
+  matrixType matr(10, 3);
+  
+  for (size_t i = 0; i < vect.size(); i++)
+  {
+    vect(i) = i;
+    matr(i, 0) = i + 11;
+    matr(i, 1) = i + 21;
+    matr(i, 2) = i + 31;
+  }
+  IOManager.savePrimitive( vect, "haba", "test.hdf5" );
+  IOManager.savePrimitive( matr, "haba2", "test.hdf5" );
 
   MPI::Finalize();
   return EXIT_SUCCESS;

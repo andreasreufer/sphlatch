@@ -14,6 +14,7 @@
 #include "bhtree_particle_node.h"
 #include "bhtree_cell_node.h"
 #include "bhtree_errhandler.h"
+#include "neighsearch_errhandler.h"
 
 #ifdef SPHLATCH_PARALLEL
 #include "communication_manager.h"
@@ -973,6 +974,12 @@ void findNeighbours(const size_t& _curPartIdx,
   searchRadPow2 = _search_radius * _search_radius;
   noNeighbours = 0;
 
+#ifdef SPHLATCH_CHECKNONEIGHBOURS
+  ///the first index is used for neighbour counting
+  /// and cannot be used for a neighbour
+  const int noMaxNeighs = neighbourList.size() - 1;
+#endif
+
   ///
   /// go to parent cell. while the search sphere is not completely
   /// inside the cell and we still can go up, go up
@@ -1006,6 +1013,13 @@ void findNeighbourRecursor()
           /// add the particle to the neighbour list
           ///
           noNeighbours++;
+#ifdef SPHLATCH_CHECKNONEIGHBOURS
+          if ( noNeighbours > noMaxNeighs )
+            throw TooManyNeighs(_curPartIndex,
+                                noNeighbours,
+                                neighbourList,
+                                neighDistList);
+#endif
           neighbourList[noNeighbours] = curNodePtr->ident;
           neighDistList(noNeighbours) = sqrt(partPartDistPow2);
         }

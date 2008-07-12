@@ -13,6 +13,7 @@
 #include "typedefs.h"
 #include "log_manager.h"
 #include "particle_manager.h"
+#include "io_manager.h"
 
 namespace sphlatch
 {
@@ -21,19 +22,23 @@ class GenericError
 public:
 typedef sphlatch::LogManager logType;
 typedef sphlatch::ParticleManager partManagerType;
+typedef sphlatch::IOManager ioManagerType;
 
 GenericError();
 ~GenericError();
 
 protected:
-logType& Logger;
+logType&         Logger;
 partManagerType& PartManager;
+ioManagerType&   IOManager;
 };
 
 GenericError::GenericError(void)
-  : Logger(logType::instance()), PartManager(partManagerType::instance())
+  : Logger(logType::instance()),
+    PartManager(partManagerType::instance()),
+    IOManager(ioManagerType::instance())
 {
-  Logger << "SPHLATCH!!! some error has occured ...";
+  Logger << "SPHLATCH!!! an error has occured ...";
 };
 
 GenericError::~GenericError(void)
