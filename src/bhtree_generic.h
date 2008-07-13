@@ -958,6 +958,8 @@ public:
 ///
 partsIndexVectType neighbourList;
 valvectType neighDistList;
+size_t curPartIndex;
+int noMaxNeighs;
 void findNeighbours(const size_t& _curPartIdx,
                     const valueType& _search_radius)
 {
@@ -977,7 +979,7 @@ void findNeighbours(const size_t& _curPartIdx,
 #ifdef SPHLATCH_CHECKNONEIGHBOURS
   ///the first index is used for neighbour counting
   /// and cannot be used for a neighbour
-  const int noMaxNeighs = neighbourList.size() - 1;
+  noMaxNeighs = neighbourList.size() - 1;
 #endif
 
   ///
@@ -1015,7 +1017,7 @@ void findNeighbourRecursor()
           noNeighbours++;
 #ifdef SPHLATCH_CHECKNONEIGHBOURS
           if ( noNeighbours > noMaxNeighs )
-            throw TooManyNeighs(_curPartIndex,
+            throw TooManyNeighs(curPartIndex,
                                 noNeighbours,
                                 neighbourList,
                                 neighDistList);

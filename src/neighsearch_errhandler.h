@@ -30,7 +30,7 @@ TooManyNeighs(size_t _part,
 ~TooManyNeighs();
 private:
   idvectType   neighID, partID;
-  valvectType  neighDist;
+  valvectType  neighDist, partH;
   matrixType neighPos, partPos;
 
   std::string dumpFile;
@@ -42,22 +42,32 @@ TooManyNeighs::TooManyNeighs(size_t _part,
                              valvectRefType _neighDist)
 {
   using namespace sphlatch::vectindices;
-  idvectRefType id(PartManager.id);
   matrixRefType pos(PartManager.pos);
-
-  neighID.resize(_noNeighs);
-  partID.resize(1);
-
-  neighDist.resize(_noNeighs);
-  neighPos.resize(_noNeighs, 3);
-  partPos.resize(1,3);
-
+  idvectRefType id(PartManager.id);
+  valvectRefType h(PartManager.h);
+  
   dumpFile.clear();
   dumpFile.append("neighbours_part");
   dumpFile.append( boost::lexical_cast<std::string>( id(_part) ) );
   dumpFile.append(".hdf5");
 
+  Logger.stream << "error: particle " << id(_part)
+                << " has too many neighbours ("
+                << _noNeighs << "), store them to "
+                << dumpFile;
+  Logger.flushStream();
+  Logger.destroy();
+
+  neighID.resize(_noNeighs);
+  partID.resize(1);
+  partH.resize(1);
+
+  neighDist.resize(_noNeighs);
+  neighPos.resize(_noNeighs, 3);
+  partPos.resize(1,3);
+
   partID(0) = id(_part);
+  partH(0)  = h(_part);
   partPos(0, X) = pos(_part, X);
   partPos(0, Y) = pos(_part, Y);
   partPos(0, Z) = pos(_part, Z);
@@ -73,18 +83,12 @@ TooManyNeighs::TooManyNeighs(size_t _part,
     neighPos(i, Z) = pos( curNeigh, Z);
   }
 
-  IOManager.savePrimitive( partID,    "part_id",   dumpFile);
-  IOManager.savePrimitive( partPos,   "part_pos",  dumpFile);
+  IOManager.savePrimitive( partID,    "part_id",     dumpFile);
+  IOManager.savePrimitive( partH,     "part_h",      dumpFile);
+  IOManager.savePrimitive( partPos,   "part_pos",    dumpFile);
   IOManager.savePrimitive( neighID,   "neighs_id",   dumpFile);
   IOManager.savePrimitive( neighPos,  "neighs_pos",  dumpFile);
   IOManager.savePrimitive( neighDist, "neighs_dist", dumpFile);
-
-  Logger.stream << "error: particle " << id(_part)
-                << " has too many neighbours ("
-                << _noNeighs << "), stored them to "
-                << dumpFile;
-  Logger.flushStream();
-  Logger.destroy();
 };
 
 TooManyNeighs::~TooManyNeighs()

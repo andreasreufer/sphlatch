@@ -100,9 +100,9 @@ valvectType m, h, dhdt, rho, drhodt, p, u, dudt, A, dAdt, alpha, dalphadt,
 idvectType id, noneigh;
 
 ///
-/// the integration step
+/// the integration step and the substep of the integrator
 ///
-size_t step;
+size_t step, substep;
 
 protected:
 ParticleManager(void);

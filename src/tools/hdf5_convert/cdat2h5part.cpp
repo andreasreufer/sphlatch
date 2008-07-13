@@ -125,6 +125,12 @@ int main(int argc, char* argv[])
   sphlatch::quantsType saveQuants;
   for (size_t curIdx = 0; curIdx < vars.size(); curIdx++)
   {
+    if ( vars[curIdx] == "id" )
+    {
+      std::cout << vars[curIdx] << " ";
+      saveQuants.ints += &PartManager.id;
+    }
+
     if ( vars[curIdx] == "x" || vars[curIdx] == "y" || vars[curIdx] == "z" )
     {
       std::cout << vars[curIdx] << " ";

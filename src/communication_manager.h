@@ -528,6 +528,7 @@ void CommunicationManager::queuedExch(T& _src, T& _target,
           qItr++;
         }
     }
+  barrier();
 };
 
 void CommunicationManager::sendChunk(const idvectRefType _src,

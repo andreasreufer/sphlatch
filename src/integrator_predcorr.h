@@ -341,6 +341,7 @@ void integrate(void)
       (*integItr)->prepare();
       integItr++;
     }
+  PartManager.substep = 0;
 
   /// particles are freshly moved
   /// derivative
@@ -360,6 +361,7 @@ void integrate(void)
 
   valueRefType time(PartManager.attributes["time"]);
   time += dt;
+  PartManager.substep = 1;
   derivFunc();
   
   /// correct
@@ -369,6 +371,7 @@ void integrate(void)
       (*integItr)->correct(dt);
       integItr++;
     }
+  PartManager.step++;
 };
 
 void regIntegration(valvectRefType _var,

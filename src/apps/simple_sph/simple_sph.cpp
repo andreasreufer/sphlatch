@@ -110,9 +110,9 @@ valueType timeStep()
 
   valueRefType time(PartManager.attributes["time"]);
   size_t& step(PartManager.step);
-
-
+  size_t& substep(PartManager.substep);
   const size_t noParts = PartManager.getNoLocalParts();
+  const size_t myDomain = CommManager.getMyDomain();
 
   ///
   /// don't go further than one smoothing length
@@ -240,6 +240,7 @@ valueType timeStep()
       IOManager.saveDump(fileName, saveQuants);
     }
 
+
   return dtGlob;
 }
 
@@ -247,6 +248,7 @@ void derivate()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
+  io_type& IOManager(io_type::instance());
   costzone_type& CostZone(costzone_type::instance());
   log_type& Logger(log_type::instance());
 
@@ -269,14 +271,16 @@ void derivate()
 
   const size_t noParts = PartManager.getNoLocalParts();
   const size_t noTotParts = noParts + PartManager.getNoGhostParts();
+  size_t& step(PartManager.step);
+  size_t& substep(PartManager.substep);
 
-  //size_t& step(PartManager.step);
+//size_t& step(PartManager.step);
   const size_t myDomain = CommManager.getMyDomain();
 
-  /// little helper vector to zero a 3D quantity
+/// little helper vector to zero a 3D quantity
   const zerovalvectType zero(3);
 
-  /// send ghosts to other domains
+/// send ghosts to other domains
   CommManager.sendGhosts(pos);
   CommManager.sendGhosts(vel);
   CommManager.sendGhosts(id);
@@ -285,44 +289,46 @@ void derivate()
   CommManager.sendGhosts(eps);
   Logger << " sent to ghosts: pos, vel, id, m, h, eps";
 
-  const valueType gravTheta = 0.7;
-  const valueType gravConst = 1.0;
+  /*
+     const valueType gravTheta = 0.7;
+     const valueType gravConst = 1.0;
 
-  sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
-                                               gravConst,
-                                               CostZone.getDepth(),
-                                               CostZone.getCenter(),
-                                               CostZone.getSidelength()
-                                               );
+     sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
+                                             gravConst,
+                                             CostZone.getDepth(),
+                                             CostZone.getCenter(),
+                                             CostZone.getSidelength()
+                                             );
 
-  ///
-  /// fill up tree, determine ordering, calculate multipoles
-  ///
-  for (size_t i = 0; i < noTotParts; i++)
-    {
-      Tree.insertParticle(i);
-    }
+     ///
+     /// fill up tree, determine ordering, calculate multipoles
+     ///
+     for (size_t i = 0; i < noTotParts; i++)
+     {
+     Tree.insertParticle(i);
+     }
 
-  Tree.detParticleOrder();
-  Tree.calcMultipoles();
-  Logger << "Tree ready";
+     Tree.detParticleOrder();
+     Tree.calcMultipoles();
+     Logger << "Tree ready";
 
-  for (size_t i = 0; i < noParts; i++)
-    {
-      const size_t curIdx = Tree.particleOrder[i];
-      Tree.calcGravity(curIdx);
-    }
-  Logger << "gravity calculated";
+     for (size_t i = 0; i < noParts; i++)
+     {
+     const size_t curIdx = Tree.particleOrder[i];
+     Tree.calcGravity(curIdx);
+     }
+     Logger << "gravity calculated";
+   */
 
-  ///
-  /// define kernel and neighbour search algorithm
-  ///
+///
+/// define kernel and neighbour search algorithm
+///
   sphlatch::CubicSpline3D Kernel;
   sphlatch::Rankspace RSSearch;
 
   RSSearch.prepare();
-  RSSearch.neighbourList.resize(8192);
-  RSSearch.neighDistList.resize(8192);
+  RSSearch.neighbourList.resize(1024);
+  RSSearch.neighDistList.resize(1024);
 
   Logger << "Rankspace prepared";
 
@@ -344,6 +350,15 @@ void derivate()
 
       static valueType rhoi;
       rhoi = 0.;
+
+      //if (id(i) == 125664)
+      /*if (id(i) == 2292)
+        {
+          std::cerr << "part" << id(i) << ":  "
+                    << h(i) << "   " << dhdt(i) << "   "
+                    << noneigh(i) << "   "
+                    << pos(i, X) << " " << pos(i, Y) << " " << pos(i, Z) << "   " << myDomain << "\n";
+        }*/
 
       ///
       /// SPH density sum
@@ -496,6 +511,7 @@ void derivate()
   const valueType noNeighMax = (5. / 3.) * static_cast<valueType>(noNeighOpt);
   const valueType cDivvMax = divvMax;
 
+  const valueType czAtomicLength = CostZone.getAtomicLength();
   for (size_t i = 0; i < noParts; i++)
     {
       const valueType noNeighCur = static_cast<valueType>(noneigh(i));
@@ -510,8 +526,18 @@ void derivate()
 
       dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
                  - k2 * static_cast<valueType>(1. / 3.) * divv(i)) * h(i);
+
+      ///
+      /// hard upper limit
+      ///
+      if (2.5 * h(i) > czAtomicLength)
+        {
+          dhdt(i) = 0.;
+          h(i) = czAtomicLength / 2.5;
+        }
     }
-  Logger << "adapted smoothing length";
+  Logger.stream << "adapted smoothing length (2.5h < " << czAtomicLength << ")";
+  Logger.flushStream();
 };
 
 
@@ -536,7 +562,7 @@ int main(int argc, char* argv[])
   //std::string loadDumpFile = "shocktube_t30.h5part";
   //std::string loadDumpFile = "test1_small.h5part";
   std::string loadDumpFile = "initial.h5part";
-  const valueType maxTime = 20.;
+  const valueType maxTime = 5.;
 
   ///
   /// define what we're doing
@@ -648,7 +674,6 @@ int main(int argc, char* argv[])
       Logger.stream << "finished step " << step << ", now at t = " << time;
       Logger.flushStream();
       Logger.zeroRelTime();
-      step++;
 
       if (myDomain == 0)
         {
