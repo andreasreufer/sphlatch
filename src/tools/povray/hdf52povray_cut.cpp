@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
 
       const valueType sphereRad = 0.5 * k * h(i);
 
-      if (curY < 0)
+      if (curY < sphereRad)
         {
           if (curY > -sphereRad)
             {
@@ -148,18 +148,16 @@ int main(int argc, char* argv[])
           fout << "}\n} \n";
           if (curY > -sphereRad)
             {
-              const valueType boxSide =
-                sqrt(sphereRad * sphereRad - curY * curY);
               fout << "box { <"
-                   << curX - boxSide
+                   << curX - sphereRad
                    << ",0,"
-                   << curZ - boxSide
+                   << curZ - sphereRad
                    << "> , <"
-                   << curX + boxSide
+                   << curX + sphereRad
                    << ","
-                   << boxSide
+                   << 2.*sphereRad
                    << ","
-                   << curZ + boxSide
+                   << curZ + sphereRad
                    << "> pigment{ color ";
               if (id(i) >= 1e6)
                 fout << redString;
