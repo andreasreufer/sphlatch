@@ -83,34 +83,7 @@ CDATreader::~CDATreader()
 
 void CDATreader::open( std::string _filename )
 {
-  /*matrix_reference Data(MemoryManager.Data);
-  string_reference Name(MemoryManager.Name);
-
-  using boost::lexical_cast;
-
-#ifndef OOSPH_STANDALONE
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
-  const size_t SIZE = MPI::COMM_WORLD.Get_size();
-#else
-  const size_t RANK = 0;
-  const size_t SIZE = 1;
-#endif
-*/
-#ifdef SPHLATCH_PARALLEL
-    const size_t noDomains = CommManager.getNoDomains();
-    const size_t myDomain = CommManager.getMyDomain();
-#else
-    const size_t noDomains = 1;
-    const size_t myDomain = 0;
-#endif
- 
   fin.open( _filename.c_str(), std::ios::in | std::ios::binary);
-  /*if (*fin)
-  {
-    std::cerr << "error loading " << _filename << "\n";
-    return;
-  }*/
-
   std::string curLine;
   curLine = readLine(fin); /// reads the name, currently not used
   

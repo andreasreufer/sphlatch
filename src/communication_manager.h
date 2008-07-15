@@ -271,7 +271,7 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
       ///
       /// resize the quantitiy and copy buffer to particle manager
       ///
-      PartManager.resize(**intsItr);
+      PartManager.resize(**intsItr, false);
       idvectRangeType idLocal(**intsItr, newLocRange);
       idLocal = idRecvBuff;
 
@@ -310,7 +310,7 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
       ///
       /// resize the quantitiy and copy buffer to particle manager
       ///
-      PartManager.resize(**scalItr);
+      PartManager.resize(**scalItr, false);
       valvectRangeType scalLocal(**scalItr, newLocRange);
       scalLocal = scalRecvBuff;
 
@@ -360,7 +360,7 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
       ///
       /// resize the quantitiy and copy buffer to particle manager
       ///
-      PartManager.resize(**vectItr);
+      PartManager.resize(**vectItr, false);
       rangeType secDimRange(0, (**vectItr).size2());
       matrixRangeType vectLocal(**vectItr, newLocRange, secDimRange);
       vectLocal = vectRecvBuff;

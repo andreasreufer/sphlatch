@@ -19,38 +19,59 @@
 
 namespace sphlatch
 {
-class TreeTooDeep : public GenericError
+class PartsTooClose : public GenericError
 {
 public:
 typedef genericNode* nodePtrT;
 typedef genericCellNode* cellPtrT;
 
-TreeTooDeep(size_t _depth, size_t _part, nodePtrT _rootPtr);
-~TreeTooDeep();
+PartsTooClose(size_t _depth, size_t _resPart, size_t _newPart, nodePtrT _rootPtr);
+~PartsTooClose();
 };
 
-TreeTooDeep::TreeTooDeep(size_t _depth, size_t _part, nodePtrT _rootPtr)
+PartsTooClose::PartsTooClose(size_t _depth,
+                                   size_t _resPart,
+                                   size_t _newPart,
+                                   nodePtrT _rootPtr)
 {
   using namespace sphlatch::vectindices;
   matrixRefType pos(PartManager.pos);
+  idvectRefType id(PartManager.id);
+  const rootSize =  static_cast<cellPtrT>(_rootPtr)->cellSize;
 
-  Logger.stream << "error: tree too deep, part " << _part << " ["
-                << pos(_part, X) << ","
-                << pos(_part, Y) << ","
-                << pos(_part, Z) << "]"
-                << " insert at depth " << _depth
+  Logger.stream << "error: tree too deep (" << _depth << "), part ID "
+                << id(_resPart) << " ["
+                << pos(_resPart, X) << ","
+                << pos(_resPart, Y) << ","
+                << pos(_resPart, Z) << "]"
+                << " and part ID "
+                << id(_newPart) << " ["
+                << pos(_newPart, X) << ","
+                << pos(_newPart, Y) << ","
+                << pos(_newPart, Z) << "]"
+                << " too close "
                 << " (tree root: ["
-                << static_cast<cellPtrT>(_rootPtr)->xCenter << ","
-                << static_cast<cellPtrT>(_rootPtr)->yCenter << ","
-                << static_cast<cellPtrT>(_rootPtr)->zCenter << "] size "
-                << static_cast<cellPtrT>(_rootPtr)->cellSize << ")";
+                << static_cast<cellPtrT>(_rootPtr)->xCenter - 0.5*rootSize
+                << ","
+                << static_cast<cellPtrT>(_rootPtr)->yCenter - 0.5*rootSize
+                << ","
+                << static_cast<cellPtrT>(_rootPtr)->zCenter - 0.5*rootSize
+                << "] - [ "
+                << static_cast<cellPtrT>(_rootPtr)->xCenter + 0.5*rootSize
+                << ","
+                << static_cast<cellPtrT>(_rootPtr)->yCenter + 0.5*rootSize
+                << ","
+                << static_cast<cellPtrT>(_rootPtr)->zCenter + 0.5*rootSize
+                << "] )";
   Logger.flushStream();
   Logger.destroy();
 };
 
-TreeTooDeep::~TreeTooDeep()
+PartsTooClose::~PartsTooClose()
 {
 };
+
+
 };
 
 #endif

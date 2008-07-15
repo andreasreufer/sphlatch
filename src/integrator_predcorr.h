@@ -137,7 +137,6 @@ void correct(const valueType& _dt)
   valvectRefType  ov(odVar);
   
   x = ox + 0.5*_dt*( v + ov );
-  //v = zero;  << does that belong to the integrator?
 }
 private:
 valvectType oVar, odVar;

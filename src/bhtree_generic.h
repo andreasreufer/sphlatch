@@ -66,7 +66,7 @@ BHtree(valueType _thetaMAC,
   pos(PartManager.pos),
   acc(PartManager.acc),
   eps(PartManager.eps),
-    m(PartManager.m)
+  m(PartManager.m)
 {
   if (_thetaMAC < 0.)
     {
@@ -138,7 +138,7 @@ BHtree(valueType _thetaMAC,
   ///
   /// prepare the list of local particles
   ///
-  noLocParts  = PartManager.getNoLocalParts();
+  noLocParts = PartManager.getNoLocalParts();
   partProxies.resize(noLocParts);
 };
 
@@ -155,9 +155,9 @@ BHtree(valueType _thetaMAC,
 
 protected:
 #ifdef SPHLATCH_PARALLEL
-commManagerType& CommManager;
+commManagerType & CommManager;
 #endif
-partManagerType& PartManager;
+partManagerType & PartManager;
 
 protected:
 nodePtrT curNodePtr, rootPtr;
@@ -340,12 +340,15 @@ void insertParticle(size_t _newPartIdx)
 {
   goRoot();
   insertParticleRecursor(_newPartIdx);
-      
-  if ( _newPartIdx >= noLocParts ) {
-    ghostCounter++;
-  } else {
-    partCounter++;
-  }
+
+  if (_newPartIdx >= noLocParts)
+    {
+      ghostCounter++;
+    }
+  else
+    {
+      partCounter++;
+    }
 }
 
 private:
@@ -361,19 +364,13 @@ private:
 ///
 void insertParticleRecursor(size_t _newPartIdx)
 {
-  ///
-  /// if the recursor is deeper than 1000, something's fishy
-  ///
-  if ( curNodePtr->depth > 1000 )
-    throw TreeTooDeep( curNodePtr->depth, _newPartIdx, rootPtr );
-
   size_t targetOctant = 0;
 
-  targetOctant += ( pos(_newPartIdx, X) <
+  targetOctant += (pos(_newPartIdx, X) <
                    static_cast<cellPtrT>(curNodePtr)->xCenter) ? 0 : 1;
-  targetOctant += ( pos(_newPartIdx, Y) <
+  targetOctant += (pos(_newPartIdx, Y) <
                    static_cast<cellPtrT>(curNodePtr)->yCenter) ? 0 : 2;
-  targetOctant += ( pos(_newPartIdx, Z) <
+  targetOctant += (pos(_newPartIdx, Z) <
                    static_cast<cellPtrT>(curNodePtr)->zCenter) ? 0 : 4;
 
 ///
@@ -386,19 +383,22 @@ void insertParticleRecursor(size_t _newPartIdx)
       newPartChild(targetOctant);
       goChild(targetOctant);
 
-      if ( _newPartIdx >= noLocParts ) {
-        curNodePtr->isLocal = false;
-      } else {
-        curNodePtr->isLocal = true;
-        /// save the particle's proxy
-        partProxies[_newPartIdx] = curNodePtr;
-      }
+      if (_newPartIdx >= noLocParts)
+        {
+          curNodePtr->isLocal = false;
+        }
+      else
+        {
+          curNodePtr->isLocal = true;
+          /// save the particle's proxy
+          partProxies[_newPartIdx] = curNodePtr;
+        }
 
       /// particle saves its position to node directly
       static_cast<partPtrT>(curNodePtr)->xPos = pos(_newPartIdx, X);
       static_cast<partPtrT>(curNodePtr)->yPos = pos(_newPartIdx, Y);
       static_cast<partPtrT>(curNodePtr)->zPos = pos(_newPartIdx, Z);
-      static_cast<partPtrT>(curNodePtr)->mass =   m(_newPartIdx);
+      static_cast<partPtrT>(curNodePtr)->mass = m(_newPartIdx);
 
       /// ident saves the rowIndex of the particle
       curNodePtr->ident = _newPartIdx;
@@ -438,6 +438,15 @@ void insertParticleRecursor(size_t _newPartIdx)
 
       /// and try to insert both particles again
       goChild(targetOctant);
+      ///
+      /// check whether we are too deep
+      ///
+      if (curNodePtr->depth > 128)
+        throw PartsTooClose(curNodePtr->depth,
+                            residentIdx,
+                            _newPartIdx,
+                            rootPtr);
+
       insertParticleRecursor(residentIdx);
       insertParticleRecursor(_newPartIdx);
       goUp();
@@ -829,7 +838,7 @@ void calcGravity(const size_t _partIdx)
   curGravParticleAY = 0.;
   curGravParticleAZ = 0.;
 
-  epsilonSquare = eps(_partIdx)*eps(_partIdx);
+  epsilonSquare = eps(_partIdx) * eps(_partIdx);
 
 #ifdef SPHLATCH_TREE_PROFILE
   calcGravityPartsCounter = 0;
@@ -967,7 +976,7 @@ void findNeighbours(const size_t& _curPartIdx,
   /// set up some vars and go to particles node
   ///
   curNodePtr = partProxies[_curPartIdx];
-  
+
   curNeighParticleX = static_cast<partPtrT>(curNodePtr)->xPos;
   curNeighParticleY = static_cast<partPtrT>(curNodePtr)->yPos;
   curNeighParticleZ = static_cast<partPtrT>(curNodePtr)->zPos;
@@ -1016,7 +1025,7 @@ void findNeighbourRecursor()
           ///
           noNeighbours++;
 #ifdef SPHLATCH_CHECKNONEIGHBOURS
-          if ( noNeighbours > noMaxNeighs )
+          if (noNeighbours > noMaxNeighs)
             throw TooManyNeighs(curPartIndex,
                                 noNeighbours,
                                 neighbourList,
@@ -1127,7 +1136,7 @@ public:
 ///   contains at least enough mass m
 ///   r_c is the distance between the cell center and the cell
 ///   corner with the biggest distance to the particle
-/// 
+///
 /// this algorithm gives a maximal smoothing length for each particle:
 /// when each particle has mass m = 1, then the masses of the cells
 /// give directly the number of particles contained in them
@@ -1146,37 +1155,37 @@ valueType maxMassEncloseRad(const size_t& _curPartIdx,
   ///
   /// go up (if possible) until minimal mass is reached
   ///
-  while ( curNodePtr->parent != NULL )
-  {
-    goUp();
-    asLeaf().cellToVect(cellVect);
-    if ( cellVect[3] > _minMass )
+  while (curNodePtr->parent != NULL)
     {
-      break;
+      goUp();
+      asLeaf().cellToVect(cellVect);
+      if (cellVect[3] > _minMass)
+        {
+          break;
+        }
     }
-  }
 
   ///
   /// determine the farthest corner of the cell relative to the particle,
   /// determine its distance to the particle and return it
-  /// 
+  ///
   valueType cornerX = static_cast<cellPtrT>(curNodePtr)->xCenter;
   valueType cornerY = static_cast<cellPtrT>(curNodePtr)->yCenter;
   valueType cornerZ = static_cast<cellPtrT>(curNodePtr)->zCenter;
 
-  const valueType halfCellSize = 
-    0.5*static_cast<cellPtrT>(curNodePtr)->cellSize;
+  const valueType halfCellSize =
+    0.5 * static_cast<cellPtrT>(curNodePtr)->cellSize;
 
-  cornerX = ( partX < cornerX ) ?
-    cornerX + halfCellSize : cornerX - halfCellSize;
-  cornerY = ( partY < cornerY ) ?
-    cornerY + halfCellSize : cornerY - halfCellSize;
-  cornerZ = ( partZ < cornerZ ) ?
-    cornerZ + halfCellSize : cornerZ - halfCellSize;
+  cornerX = (partX < cornerX) ?
+            cornerX + halfCellSize : cornerX - halfCellSize;
+  cornerY = (partY < cornerY) ?
+            cornerY + halfCellSize : cornerY - halfCellSize;
+  cornerZ = (partZ < cornerZ) ?
+            cornerZ + halfCellSize : cornerZ - halfCellSize;
 
-  return sqrt( ( cornerX - partX )*( cornerX - partX )
-              +( cornerY - partY )*( cornerY - partY )
-              +( cornerZ - partZ )*( cornerZ - partZ ) );
+  return sqrt((cornerX - partX) * (cornerX - partX)
+              + (cornerY - partY) * (cornerY - partY)
+              + (cornerZ - partZ) * (cornerZ - partZ));
 }
 // end of find maximal mass enclosing radius stuff
 
@@ -1478,7 +1487,6 @@ void emptyRecursor()
     }
 };
 // end of empty() stuff
-
 };
 };
 

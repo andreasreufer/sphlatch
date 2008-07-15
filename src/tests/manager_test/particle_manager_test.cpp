@@ -227,10 +227,9 @@ int main(int argc, char* argv[])
 
   //std::cout << myDomain << ": " << PartManager.getNoLocalParts() << " parts\n";
 
-  quantsType exchQuants;
-  exchQuants.vects += &pos, &vel;
-  exchQuants.ints += &id, &noneigh;
-  exchQuants.scalars += &m, &h;
+  ComManager.exchangeQuants.vects += &pos, &vel;
+  ComManager.exchangeQuants.ints += &id, &noneigh;
+  ComManager.exchangeQuants.scalars += &m, &h;
 
   /*for (size_t i = 0; i < 16; i++)
     {
@@ -360,11 +359,7 @@ int main(int argc, char* argv[])
     std::cout << "no of parts to domain 1    " << domainPartsIndex[0].size() << "\n";
   }
 
-  ComManager.exchange( domainPartsIndex,
-                       //domainGhostIndex,
-                       10,
-                       exchQuants );
-
+  ComManager.exchange( domainPartsIndex, 10);
   ComManager.sendGhostsPrepare( domainGhostIndex );
   
   /*if ( myDomain == 1 )

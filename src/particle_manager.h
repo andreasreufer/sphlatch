@@ -49,11 +49,14 @@ void useAVTimedepAlpha(void);
 void setNoParts(size_t _noParts, size_t _noGhostParts);
 void setNoParts(size_t _noParts);
 
-void resize(matrixRefType _matrixRef);
-void resize(valvectRefType _valvectRef);
-void resize(idvectRefType _idvectRef);
+void addParts(size_t _addNoParts);
 
+void resizeAll(bool _keep);
 void resizeAll(void);
+
+void resize(matrixRefType _matrixRef, bool _keep);
+void resize(valvectRefType _valvectRef, bool _keep);
+void resize(idvectRefType _idvectRef, bool _keep);
 
 ///
 /// get the name of a int/scalar/vect value reference
@@ -132,6 +135,7 @@ size_t getNoTotalParts();
 ///
 private:
 stringSet isGhostVarSet;
+
 bool isGhostVar(std::string _searchString);
 
 ///
@@ -314,37 +318,51 @@ void ParticleManager::setNoParts(size_t _noLocParts)
 }
 
 ///
+///
+//
+void ParticleManager::addParts(size_t _addNoParts)
+{
+  setNoParts(getNoLocalParts() + _addNoParts, 0);
+  resizeAll(true);
+}
+
+///
 /// resize ALL quantities
 ///
-void ParticleManager::resizeAll()
+void ParticleManager::resizeAll(bool _keep)
 {
   matrixPtrMap::iterator vectorsItr = usedVectors.begin();
 
   while (vectorsItr != usedVectors.end())
     {
-      resize( *(vectorsItr->second) );
+      resize( *(vectorsItr->second), _keep);
       vectorsItr++;
     }
 
   valVectPtrMap::iterator scalarsItr = usedScalars.begin();
   while (scalarsItr != usedScalars.end())
     {
-      resize( *(scalarsItr->second) );
+      resize( *(scalarsItr->second), _keep);
       scalarsItr++;
     }
 
   idVectPtrMap::iterator intsItr = usedIntegers.begin();
   while (intsItr != usedIntegers.end())
     {
-      resize( *(intsItr->second) );
+      resize( *(intsItr->second), _keep);
       intsItr++;
     }
+}
+
+void ParticleManager::resizeAll()
+{
+  resizeAll(false);
 }
 
 ///
 /// resize a vectorial quantitiy
 ///
-void ParticleManager::resize(matrixRefType _matrix)
+void ParticleManager::resize(matrixRefType _matrix, bool _keep)
 {
   std::string matrixName = getName(_matrix);
   size_t newSize;
@@ -360,14 +378,14 @@ void ParticleManager::resize(matrixRefType _matrix)
 
   if (_matrix.size1() != newSize)
     {
-      _matrix.resize(newSize, _matrix.size2(), false);
+      _matrix.resize(newSize, _matrix.size2(), _keep);
     }
 }
 
 ///
 /// resize a scalar quantitiy
 ///
-void ParticleManager::resize(valvectRefType _valvect)
+void ParticleManager::resize(valvectRefType _valvect, bool _keep)
 {
   std::string vectName = getName(_valvect);
   size_t newSize;
@@ -383,14 +401,14 @@ void ParticleManager::resize(valvectRefType _valvect)
 
   if (_valvect.size() != newSize)
     {
-      _valvect.resize(newSize, false);
+      _valvect.resize(newSize, _keep);
     }
 }
 
 ///
 /// resize an integer quantitiy
 ///
-void ParticleManager::resize(idvectRefType _idvect)
+void ParticleManager::resize(idvectRefType _idvect, bool _keep)
 {
   std::string vectName = getName(_idvect);
   size_t newSize;
@@ -406,7 +424,7 @@ void ParticleManager::resize(idvectRefType _idvect)
 
   if (_idvect.size() != newSize)
     {
-      _idvect.resize(newSize, false);
+      _idvect.resize(newSize, _keep);
     }
 }
 
