@@ -468,6 +468,7 @@ void CommunicationManager::queuedExch(T& _src, T& _target,
                                       countsVectType _offsets,
                                       countsVectType _noRecvParts)
 {
+  barrier();
   ///
   /// setup send queue iterators and send buffer
   ///

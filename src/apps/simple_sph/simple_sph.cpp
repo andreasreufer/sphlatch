@@ -20,13 +20,26 @@
 //#define SPHLATCH_CHECKNONEIGHBOURS
 
 // enable selfgravity?
-#define SPHLATCH_GRAVITY
+//#define SPHLATCH_GRAVITY
 
 // time dependent energy?
 //#define SPHLATCH_TIMEDEP_ENERGY
 
 // time dependent smoothing length?
 //#define SPHLATCH_TIMEDEP_SMOOTHING
+
+// do we need the veolicty divergence?
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
+
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
 
 #include <cstdlib>
 #include <iostream>
@@ -113,6 +126,9 @@ valueType timeStep()
   valvectRefType dudt(PartManager.dudt);
   valvectRefType dhdt(PartManager.dhdt);
   valvectRefType divv(PartManager.divv);
+#ifdef SPHLATCH_GRAVITY
+  valvectRefType eps(PartManager.eps);
+#endif
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
@@ -197,6 +213,7 @@ valueType timeStep()
   ///
   /// distance to next saveItrvl
   ///
+  //const valueType saveItrvl = 0.1;
   const valueType saveItrvl = 0.1;
   std::string fileName = "saveDump000000.h5part";
   const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
@@ -222,6 +239,9 @@ valueType timeStep()
   dtGlob *= courantNumber;
   dtGlob = dtSave < dtGlob ? dtSave : dtGlob;
 
+  /// fix it to 0.002
+  dtGlob = 0.002;
+
   Logger.stream << "dtA: " << dtA
 #ifdef SPHLATCH_TIMEDEP_ENERGY
                 << " dtU: " << dtU
@@ -239,9 +259,19 @@ valueType timeStep()
   ///
   quantsType saveQuants;
   saveQuants.vects += &pos, &vel, &acc;
-  saveQuants.scalars += &m, &rho, &u, &p, &h, &divv, &dudt, &dhdt;
+  saveQuants.scalars += &m, &rho, &u, &p, &h;
   saveQuants.ints += &id, &noneigh;
 
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+  saveQuants.scalars += &dudt;
+
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+  saveQuants.scalars += &dhdt;
+#endif
+#ifdef SPHLATCH_GRAVITY
+  saveQuants.scalars += &eps;
+#endif
 
   const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
                                 * saveItrvl;
@@ -281,7 +311,9 @@ void derivate()
   valvectRefType dudt(PartManager.dudt);
   valvectRefType dhdt(PartManager.dhdt);
   valvectRefType divv(PartManager.divv);
+#ifdef SPHLATCH_GRAVITY
   valvectRefType eps(PartManager.eps);
+#endif
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
@@ -301,7 +333,9 @@ void derivate()
   CommManager.sendGhosts(id);
   CommManager.sendGhosts(m);
   CommManager.sendGhosts(h);
+#ifdef SPHLATCH_GRAVITY
   CommManager.sendGhosts(eps);
+#endif
   Logger << " sent to ghosts: pos, vel, id, m, h, eps";
 
   const valueType gravTheta = PartManager.attributes["gravtheta"];
@@ -421,9 +455,13 @@ void derivate()
 
   valvectType curAcc(3);
 
-  valueType curPow = 0., curVelDiv = 0.;
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+  valueType curPow = 0.;
+#endif
+#ifdef SPHLATCH_VELDIV
+  valueType curVelDiv = 0.;
   valueType divvMax = std::numeric_limits<valueType>::min();
-
+#endif
   for (size_t i = 0; i < noParts; i++)
     {
       const valueType hi = h(i);
@@ -442,7 +480,7 @@ void derivate()
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       curPow = 0.;
 #endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+#ifdef SPHLATCH_VELDIV
       curVelDiv = 0.;
 #endif
       const particleRowType veli(vel, i);
@@ -492,17 +530,19 @@ void derivate()
           /// acceleration
           curAcc -= (m(j) * accTerm * Kernel.derive(rij, hij, Ri - Rj));
 
+#ifdef SPHLATCH_VELDIV
           /// m_j * v_ij * divW_ij
           const valueType mjvijdivWij = m(j) * (
             boost::numeric::ublas::inner_prod(veli - velj,
                                               Kernel.derivative));
+#endif
 
 #ifdef SPHLATCH_TIMEDEP_ENERGY
           /// pdV + AV heating
           curPow += (0.5 * accTerm * mjvijdivWij);
 #endif
 
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+#ifdef SPHLATCH_VELDIV
           /// velocity divergence
           curVelDiv += mjvijdivWij;
 #endif
@@ -512,24 +552,30 @@ void derivate()
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       dudt(i) = curPow;
 #endif
+#ifdef SPHLATCH_VELDIV
       divv(i) = curVelDiv / rho(i);
       divvMax = divv(i) > divvMax ? divv(i) : divvMax;
+#endif
     }
+#ifdef SPHLATCH_VELDIV
   CommManager.max(divvMax);
-
+#endif
+  
   Logger << "SPH sum: acc, pow, divv";
 
-  /// define desired number of neighbours
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
+  /// define desired number of neighbours
   const size_t noNeighOpt = 50;
 
   const valueType noNeighMin = (2. / 3.) * static_cast<valueType>(noNeighOpt);
   const valueType noNeighMax = (5. / 3.) * static_cast<valueType>(noNeighOpt);
   const valueType cDivvMax = divvMax;
+#endif
 
   const valueType czAtomicLength = CostZone.getAtomicLength();
   for (size_t i = 0; i < noParts; i++)
     {
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
       const valueType noNeighCur = static_cast<valueType>(noneigh(i));
 
       const valueType A = exp((noNeighCur - noNeighMin) / 5.);
@@ -542,19 +588,20 @@ void derivate()
 
       dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
                  - k2 * static_cast<valueType>(1. / 3.) * divv(i)) * h(i);
-
+#endif
       ///
       /// hard upper limit
       ///
       if (2.5 * h(i) > czAtomicLength)
         {
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
           dhdt(i) = 0.;
+#endif
           h(i) = czAtomicLength / 2.5;
         }
     }
   Logger.stream << "adapted smoothing length (2.5h < " << czAtomicLength << ")";
   Logger.flushStream();
-#endif
 };
 
 
@@ -581,7 +628,8 @@ int main(int argc, char* argv[])
   PartManager.attributes["courant"] = 0.3;
 
   std::string loadDumpFile = "initial.h5part";
-  const valueType maxTime = 5.;
+  //const valueType maxTime = 5.;
+  const valueType maxTime = 1.0;
 
   ///
   /// define what we're doing
@@ -614,7 +662,9 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
   valvectRefType dhdt(PartManager.dhdt);
 #endif
+#ifdef SPHLATCH_GRAVITY
   valvectRefType eps(PartManager.eps);
+#endif
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
@@ -628,8 +678,15 @@ int main(int argc, char* argv[])
   /// register the quantites to be exchanged
   ///
   CommManager.exchangeQuants.vects += &pos, &vel;
-  CommManager.exchangeQuants.scalars += &m, &u, &h, &eps;
-  CommManager.exchangeQuants.ints += &id, &noneigh;
+  CommManager.exchangeQuants.scalars += &m, &u, &h;
+  CommManager.exchangeQuants.ints += &id;
+  
+#ifdef SPHLATCH_GRAVITY
+  CommManager.exchangeQuants.scalars += &eps;
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+  CommManager.exchangeQuants.ints += &noneigh;
+#endif
 
   ///
   /// instantate the MetaIntegrator

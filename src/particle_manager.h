@@ -223,6 +223,8 @@ void ParticleManager::useBasicSPH()
   usedScalars[ "h" ] = &h;
   usedScalars[ "rho" ] = &rho;
   usedScalars[ "p" ] = &p;
+  
+  usedIntegers[ "noneigh" ] = &noneigh;
 }
 
 ///
@@ -264,7 +266,6 @@ void ParticleManager::useTimedepH()
 {
   usedScalars[ "dhdt" ] = &dhdt;
   usedScalars[ "divv" ] = &divv;
-  usedIntegers[ "noneigh" ] = &noneigh;
 }
 
 ///

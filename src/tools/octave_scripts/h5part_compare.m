@@ -38,7 +38,7 @@ function delta = h5part_compare(ref, cmp)
     end
 
     if ( useKey )
-      printf("delta of %s\n", refKey);
+      #printf("delta of %s\n", refKey);
       delta = setfield( delta, strcat("d_", refKey),
         refVal(:,ref.idx_sorted) -
         (getfield( cmp, refKey ))(:,cmp.idx_sorted) );
