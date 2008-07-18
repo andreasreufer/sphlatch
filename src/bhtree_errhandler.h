@@ -16,7 +16,6 @@
 #include "bhtree_generic_node.h"
 #include "bhtree_cell_node.h"
 
-
 namespace sphlatch
 {
 class PartsTooClose : public GenericError
@@ -25,19 +24,25 @@ public:
 typedef genericNode* nodePtrT;
 typedef genericCellNode* cellPtrT;
 
-PartsTooClose(size_t _depth, size_t _resPart, size_t _newPart, nodePtrT _rootPtr);
+PartsTooClose(size_t _depth,
+              size_t _resPart,
+              size_t _newPart,
+              nodePtrT _rootPtr);
 ~PartsTooClose();
 };
 
 PartsTooClose::PartsTooClose(size_t _depth,
-                                   size_t _resPart,
-                                   size_t _newPart,
-                                   nodePtrT _rootPtr)
+                             size_t _resPart,
+                             size_t _newPart,
+                             nodePtrT _rootPtr)
 {
   using namespace sphlatch::vectindices;
   matrixRefType pos(PartManager.pos);
   idvectRefType id(PartManager.id);
-  const rootSize =  static_cast<cellPtrT>(_rootPtr)->cellSize;
+  const valueType rootSize =  static_cast<cellPtrT>(_rootPtr)->cellSize;
+  const valueType rootX     = static_cast<cellPtrT>(_rootPtr)->xCenter;
+  const valueType rootY     = static_cast<cellPtrT>(_rootPtr)->yCenter;
+  const valueType rootZ     = static_cast<cellPtrT>(_rootPtr)->zCenter;
 
   Logger.stream << "error: tree too deep (" << _depth << "), part ID "
                 << id(_resPart) << " ["
@@ -51,17 +56,17 @@ PartsTooClose::PartsTooClose(size_t _depth,
                 << pos(_newPart, Z) << "]"
                 << " too close "
                 << " (tree root: ["
-                << static_cast<cellPtrT>(_rootPtr)->xCenter - 0.5*rootSize
+                << rootX - 0.5*rootSize
                 << ","
-                << static_cast<cellPtrT>(_rootPtr)->yCenter - 0.5*rootSize
+                << rootY - 0.5*rootSize
                 << ","
-                << static_cast<cellPtrT>(_rootPtr)->zCenter - 0.5*rootSize
+                << rootZ - 0.5*rootSize
                 << "] - [ "
-                << static_cast<cellPtrT>(_rootPtr)->xCenter + 0.5*rootSize
+                << rootX + 0.5*rootSize
                 << ","
-                << static_cast<cellPtrT>(_rootPtr)->yCenter + 0.5*rootSize
+                << rootY + 0.5*rootSize
                 << ","
-                << static_cast<cellPtrT>(_rootPtr)->zCenter + 0.5*rootSize
+                << rootZ + 0.5*rootSize
                 << "] )";
   Logger.flushStream();
   Logger.destroy();
@@ -71,6 +76,54 @@ PartsTooClose::~PartsTooClose()
 {
 };
 
+
+class PartOutsideTree : public GenericError
+{
+public:
+typedef genericNode* nodePtrT;
+typedef genericCellNode* cellPtrT;
+
+PartOutsideTree(size_t _newPart,
+              nodePtrT _rootPtr);
+~PartOutsideTree();
+};
+
+PartOutsideTree::PartOutsideTree(size_t _newPart,
+                                 nodePtrT _rootPtr)
+{
+  using namespace sphlatch::vectindices;
+  matrixRefType pos(PartManager.pos);
+  idvectRefType id(PartManager.id);
+  const valueType rootSize =  static_cast<cellPtrT>(_rootPtr)->cellSize;
+  const valueType rootX     = static_cast<cellPtrT>(_rootPtr)->xCenter;
+  const valueType rootY     = static_cast<cellPtrT>(_rootPtr)->yCenter;
+  const valueType rootZ     = static_cast<cellPtrT>(_rootPtr)->zCenter;
+
+  Logger.stream << "error: partID "
+                << id(_newPart) << " ["
+                << pos(_newPart, X) << ","
+                << pos(_newPart, Y) << ","
+                << pos(_newPart, Z) << "]"
+                << " outside tree (tree root: ["
+                << rootX - 0.5*rootSize
+                << ","
+                << rootY - 0.5*rootSize
+                << ","
+                << rootZ - 0.5*rootSize
+                << "] - [ "
+                << rootX + 0.5*rootSize
+                << ","
+                << rootY + 0.5*rootSize
+                << ","
+                << rootZ + 0.5*rootSize
+                << "] )";
+  Logger.flushStream();
+  Logger.destroy();
+};
+
+PartOutsideTree::~PartOutsideTree()
+{
+};
 
 };
 

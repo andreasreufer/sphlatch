@@ -338,6 +338,29 @@ public:
 ///
 void insertParticle(size_t _newPartIdx)
 {
+  ///
+  /// check whether the particle comes to lie in the root cell
+  ///
+  const valueType curX = pos(_newPartIdx, X);
+  const valueType curY = pos(_newPartIdx, Y);
+  const valueType curZ = pos(_newPartIdx, Z);
+  const valueType rootSize = static_cast<cellPtrT>(rootPtr)->cellSize;
+  const valueType rootX = static_cast<cellPtrT>(rootPtr)->xCenter;
+  const valueType rootY = static_cast<cellPtrT>(rootPtr)->yCenter;
+  const valueType rootZ = static_cast<cellPtrT>(rootPtr)->zCenter;
+
+  if (curX < rootX - 0.5*rootSize ||
+      curX > rootX + 0.5*rootSize ||
+      curY < rootY - 0.5*rootSize ||
+      curY > rootY + 0.5*rootSize ||
+      curZ < rootZ - 0.5*rootSize ||
+      curZ > rootZ + 0.5*rootSize )
+    throw PartOutsideTree(_newPartIdx, rootPtr);
+
+  ///
+  /// everything seems to be fine, so let's try
+  /// to insert the particle
+  ///
   goRoot();
   insertParticleRecursor(_newPartIdx);
 
