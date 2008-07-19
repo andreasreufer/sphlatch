@@ -1436,8 +1436,8 @@ void toptreeDumpRecursor()
   dumpFile << std::fixed << std::right << std::setw(6);
   dumpFile << curNodePtr->ident;
   dumpFile << "   ";
-  //dumpFile << ! curNodePtr->isEmpty ;
-  //dumpFile << "   ";
+  dumpFile << ! curNodePtr->isEmpty ;
+  dumpFile << "   ";
   dumpFile << curNodePtr->depth;
   dumpFile << "   ";
   dumpFile << std::setprecision(15) << std::setw(20);

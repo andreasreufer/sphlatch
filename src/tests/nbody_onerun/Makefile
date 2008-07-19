@@ -1,5 +1,5 @@
 all: onerun
 
 onerun:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lboost_program_options -o nbody_onerun nbody_onerun.cpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options -o nbody_onerun nbody_onerun.cpp
 

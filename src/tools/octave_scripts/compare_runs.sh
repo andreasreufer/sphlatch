@@ -10,8 +10,7 @@ CMPDIR=$2
 
 REFFILES=`cd $REFDIR && find . -maxdepth 1 -iname '*.h5part'|sed 's/\.\///'|sort`
 
-
-OCTSCRIPT=`tempfile`
+OCTSCRIPT=`mktemp /tmp/XXXXXXX`
 
 cat >$OCTSCRIPT<<EOT
 arg_list = argv();
