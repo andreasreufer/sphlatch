@@ -42,6 +42,8 @@ function delta = h5part_compare(ref, cmp)
       delta = setfield( delta, strcat("d_", refKey),
         refVal(:,ref.idx_sorted) -
         (getfield( cmp, refKey ))(:,cmp.idx_sorted) );
+      delta = setfield( delta, strcat("r_", refKey),
+        getfield( delta, strcat("d_", refKey) ) ./ refVal(:,ref.idx_sorted) );
     endif
 
   endfor

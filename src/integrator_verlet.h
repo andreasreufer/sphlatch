@@ -101,9 +101,6 @@ void drift(const valueType& _dt)
 
   /// oa = a
   oa.swap(a);
-
-  /// a = 0;
-  a = zero;
 }
 
 void kick(const valueType& _dt)
@@ -275,6 +272,7 @@ void integrate()
       (*integItr)->prepare();
       integItr++;
     }
+  PartManager.substep = 0;
 
   /// particles are freshly moved
   /// calculate derivative
@@ -297,7 +295,8 @@ void integrate()
       (*integItr)->drift(dt);
       integItr++;
     }
-
+  
+  PartManager.step++;
   valueRefType time( PartManager.attributes["time"] );
   time += dt;
 };

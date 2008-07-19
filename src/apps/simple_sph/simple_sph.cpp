@@ -240,7 +240,7 @@ valueType timeStep()
   dtGlob = dtSave < dtGlob ? dtSave : dtGlob;
 
   /// fix it to 0.002
-  dtGlob = 0.002;
+  //dtGlob = 0.002;
 
   Logger.stream << "dtA: " << dtA
 #ifdef SPHLATCH_TIMEDEP_ENERGY
@@ -286,7 +286,6 @@ valueType timeStep()
 
       IOManager.saveDump(fileName, saveQuants);
     }
-
 
   return dtGlob;
 }
@@ -334,7 +333,7 @@ void derivate()
   CommManager.sendGhosts(m);
   CommManager.sendGhosts(h);
 #ifdef SPHLATCH_GRAVITY
-  CommManager.sendGhosts(eps);
+  CommManager.sendGhosts(eps); // << eps is not used for interacting partners!
 #endif
   Logger << " sent to ghosts: pos, vel, id, m, h, eps";
 

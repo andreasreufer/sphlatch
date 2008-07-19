@@ -16,12 +16,18 @@
 
 //#define SPHLATCH_RANKSPACESERIALIZE
 
+// enable checking of bounds for the neighbour lists
+//#define SPHLATCH_CHECKNONEIGHBOURS
+
+// enable selfgravity?
+#define SPHLATCH_GRAVITY
 
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
 #include <string>
+#include <cmath>
 
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/cmdline.hpp>
@@ -38,7 +44,13 @@ namespace po = boost::program_options;
 
 #include "typedefs.h"
 typedef sphlatch::valueType valueType;
+typedef sphlatch::valueRefType valueRefType;
+typedef sphlatch::valvectType valvectType;
+typedef sphlatch::zerovalvectType zerovalvectType;
 typedef sphlatch::valvectRefType valvectRefType;
+
+typedef sphlatch::particleRowType particleRowType;
+
 typedef sphlatch::idvectRefType idvectRefType;
 typedef sphlatch::matrixRefType matrixRefType;
 typedef sphlatch::partsIndexVectType partsIndexVectType;
@@ -56,82 +68,160 @@ typedef sphlatch::CommunicationManager comm_type;
 #include "costzone.h"
 typedef sphlatch::CostZone costzone_type;
 
+#include "log_manager.h"
+typedef sphlatch::LogManager log_type;
+
 #include "integrator_verlet.h"
 
 #include <boost/progress.hpp>
 #include <vector>
 
-// tree stuff
+/// tree stuff
 #include "bhtree.h"
 
 using namespace sphlatch::vectindices;
+using namespace boost::assign;
 
 valueType timeStep()
 {
-  const valueType dt = 138.e6 / 50.;
-  return dt;
+  part_type& PartManager(part_type::instance());
+  //comm_type& CommManager(comm_type::instance());
+  log_type& Logger(log_type::instance());
+  io_type& IOManager(io_type::instance());
+
+  matrixRefType pos(PartManager.pos);
+  matrixRefType vel(PartManager.vel);
+  matrixRefType acc(PartManager.acc);
+
+  valvectRefType m(PartManager.m);
+  valvectRefType eps(PartManager.eps);
+
+  idvectRefType id(PartManager.id);
+
+  valueRefType time(PartManager.attributes["time"]);
+  size_t& step(PartManager.step);
+  //size_t& substep(PartManager.substep);
+  //const size_t noParts = PartManager.getNoLocalParts();
+  //const size_t myDomain = CommManager.getMyDomain();
+
+  ///
+  /// timestep dictated by acceleration
+  ///
+  const valueType dtA = 0.002;
+
+  ///
+  /// distance to next saveItrvl
+  ///
+  //const valueType saveItrvl = 0.1;
+  const valueType saveItrvl = 0.1;
+  std::string fileName = "saveDump000000.h5part";
+  const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
+                                  + 1.) * saveItrvl;
+  valueType dtSave = nextSaveTime - time;
+
+  ///
+  /// determine global minimum.
+  /// by parallelly minimizing the timesteps, we
+  /// can estimate which ones are dominant
+  ///
+  valueType dtGlob = std::numeric_limits<valueType>::max();
+  
+  dtGlob = dtA < dtGlob ? dtA : dtGlob;
+  dtGlob = dtSave < dtGlob ? dtSave : dtGlob;
+
+  Logger.stream << "dtA: " << dtA
+                << " dtSave: " << dtSave
+                << "   dtGlob: " << dtGlob;
+  Logger.flushStream();
+
+  ///
+  /// define the quantities to save in a dump
+  ///
+  quantsType saveQuants;
+  saveQuants.vects += &pos, &vel, &acc;
+  saveQuants.scalars += &m, &eps;
+  saveQuants.ints += &id;
+
+  const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
+                                * saveItrvl;
+  if (fabs(curSaveTime - time) < 1.e-9)
+    {
+      Logger << "save dump";
+
+      std::string stepString = boost::lexical_cast<std::string>(step);
+
+      fileName.replace(fileName.size() - 7 - stepString.size(),
+                       stepString.size(), stepString);
+
+      IOManager.saveDump(fileName, saveQuants);
+    }
+
+  return dtGlob;
 }
 
 void derivate()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
+  //io_type& IOManager(io_type::instance());
   costzone_type& CostZone(costzone_type::instance());
-  
-  //matrixRefType pos(PartManager.pos);
-  //matrixRefType vel(PartManager.vel);
-  //matrixRefType acc(PartManager.acc);
-  
+  log_type& Logger(log_type::instance());
+
+  matrixRefType pos(PartManager.pos);
+
   valvectRefType m(PartManager.m);
-  
+  valvectRefType eps(PartManager.eps);
+
   idvectRefType id(PartManager.id);
 
   const size_t noParts = PartManager.getNoLocalParts();
   const size_t noTotParts = noParts + PartManager.getNoGhostParts();
+  //size_t& step(PartManager.step);
+  //size_t& substep(PartManager.substep);
   //const size_t myDomain = CommManager.getMyDomain();
-  
-  //const valueType gravTheta = 0.7;
-  const valueType gravTheta = 0.7;
-  const valueType gravConst = 6.674e-11;
 
-//sphlatch::BHtree<sphlatch::Monopoles>   Tree(gravTheta,
+/// little helper vector to zero a 3D quantity
+  const zerovalvectType zero(3);
+
+/// send ghosts to other domains
+  CommManager.sendGhosts(pos);
+  CommManager.sendGhosts(id);
+  CommManager.sendGhosts(m);
+  CommManager.sendGhosts(eps); // << eps is not used for interacting partners!
+  Logger << " sent to ghosts: pos, id, m, eps";
+
+  const valueType gravTheta = PartManager.attributes["gravtheta"];
+  const valueType gravConst = PartManager.attributes["gravconst"];
+
   sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
-//sphlatch::BHtree<sphlatch::Octupoles>   Tree(gravTheta,
                                                gravConst,
                                                CostZone.getDepth(),
                                                CostZone.getCenter(),
                                                CostZone.getSidelength()
                                                );
 
-
+#ifdef SPHLATCH_GRAVITY
   ///
   /// fill up tree, determine ordering, calculate multipoles
   ///
   for (size_t i = 0; i < noTotParts; i++)
-  {
-    Tree.insertParticle(i);
-  }
+    {
+      Tree.insertParticle(i);
+    }
 
   Tree.detParticleOrder();
   Tree.calcMultipoles();
-  
-  ///
-  /// calculate the accelerations
-  ///
+  Logger << "Tree ready";
+
   for (size_t i = 0; i < noParts; i++)
-  {
-    const size_t curIndex = Tree.particleOrder[i];
-    ///
-    /// don't calculate the acceleration for particle with ID = 1 (star)
-    ///
-    if ( lrint( id(curIndex) ) != 1 )
     {
-      Tree.calcGravity( curIndex );
+      const size_t curIdx = Tree.particleOrder[i];
+      Tree.calcGravity(curIdx);
     }
-  }
+  Logger << "gravity calculated";
+#endif
 };
 
-using namespace boost::assign;
 
 int main(int argc, char* argv[])
 {
@@ -144,6 +234,17 @@ int main(int argc, char* argv[])
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
   costzone_type& CostZone(costzone_type::instance());
+  log_type& Logger(log_type::instance());
+
+  ///
+  /// some simulation parameters
+  /// attributes will be overwritten, when defined in file
+  ///
+  PartManager.attributes["gravconst"] = 1.0;
+  PartManager.attributes["gravtheta"] = 0.7;
+
+  std::string loadDumpFile = "initial.h5part";
+  const valueType maxTime = 1.0;
 
   ///
   /// define what we're doing
@@ -161,34 +262,33 @@ int main(int argc, char* argv[])
   valvectRefType eps(PartManager.eps);
 
   idvectRefType id(PartManager.id);
-  
+
   size_t& step(PartManager.step);
-  
+  valueRefType time(PartManager.attributes["time"]);
+
   const size_t myDomain = CommManager.getMyDomain();
 
   ///
   /// register the quantites to be exchanged
   ///
   CommManager.exchangeQuants.vects += &pos, &vel;
-  CommManager.exchangeQuants.scalars += &eps, &m;
+  CommManager.exchangeQuants.scalars += &m, &eps;
   CommManager.exchangeQuants.ints += &id;
-
+  
   ///
-  /// instantate the MetaIntegrator and
-  /// register spatial integration
+  /// instantate the MetaIntegrator
   ///
   sphlatch::VerletMetaIntegrator Integrator(derivate, timeStep);
+  //sphlatch::PredCorrMetaIntegrator Integrator(derivate, timeStep);
+
+  ///
+  /// register spatial, energy and smoothing length integration
+  ///
   Integrator.regIntegration(pos, vel, acc);
 
-  IOManager.loadDump("nbody_small.h5part");
-
-  ///
-  /// define the quantities to save in a dump
-  ///
-  quantsType saveQuants;
-  saveQuants.vects   += &pos, &vel;
-  saveQuants.scalars += &eps, &m;
-  saveQuants.ints    += &id;
+  IOManager.loadDump(loadDumpFile);
+  Logger.stream << "loaded " << loadDumpFile;
+  Logger.flushStream();
 
   ///
   /// exchange particles
@@ -198,60 +298,56 @@ int main(int argc, char* argv[])
                        CostZone.getNoGhosts());
 
   ///
-  /// prepare ghost sends and send ghosts
+  /// prepare ghost sends
   ///
   CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-  
-  CommManager.sendGhosts(pos);
-  CommManager.sendGhosts(id);
-  CommManager.sendGhosts(m);
-
-  ///
-  /// define some simulation parameters
-  /// 
-  //const size_t maxSteps = 500000;
-  //const size_t saveSteps =  5000;
-  const size_t maxStep = 100;
-  const size_t saveSteps =  10;
+  Logger.stream << "distributed particles: "
+                << PartManager.getNoLocalParts() << " parts. & "
+                << PartManager.getNoGhostParts() << " ghosts";
+  Logger.flushStream();
 
   ///
   /// bootstrap the integrator
   ///
   Integrator.bootstrap();
+  Logger << "integrator bootstrapped";
 
   ///
   /// the integration loop
   ///
-  while ( step < maxStep )
-  {
-    ///
-    /// exchange particles and ghosts
-    ///
-    CostZone.createDomainPartsIndex();
-    CommManager.exchange(CostZone.domainPartsIndex,
-                         CostZone.getNoGhosts());
-    
-    CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-  
-    CommManager.sendGhosts(pos);
-    CommManager.sendGhosts(id);
-    CommManager.sendGhosts(m);
-   
-    ///
-    /// integrate
-    ///
-    Integrator.integrate();
-    step++;
-
-    ///
-    /// save a dump
-    ///
-    if ( ( step % saveSteps ) == 0 )
+  //valueType nextSaveTime = time;
+  while (time <= maxTime)
     {
-      std::cerr << "save dump!\n";
-      IOManager.saveDump("saveDump.h5part", saveQuants);
+      ///
+      /// exchange particles and ghosts
+      /// \todo: only do this, when necessary
+      ///
+      CostZone.createDomainPartsIndex();
+      CommManager.exchange(CostZone.domainPartsIndex,
+                           CostZone.getNoGhosts());
+
+      CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
+      Logger.stream << "distributed particles: "
+                    << PartManager.getNoLocalParts() << " parts. & "
+                    << PartManager.getNoGhostParts() << " ghosts";
+      Logger.flushStream();
+
+      ///
+      /// integrate
+      ///
+      Integrator.integrate();
+
+      Logger.stream << "finished step " << step << ", now at t = " << time;
+      Logger.flushStream();
+      Logger.zeroRelTime();
+
+      if (myDomain == 0)
+        {
+          std::cout << "t = " << std::fixed << std::right
+                    << std::setw(12) << std::setprecision(6)
+                    << time << " (" << step << ")\n";
+        }
     }
-  }
 
   MPI::Finalize();
   return EXIT_SUCCESS;
