@@ -134,8 +134,8 @@ valueType timeStep()
   idvectRefType noneigh(PartManager.noneigh);
 
   valueRefType time(PartManager.attributes["time"]);
-  size_t& step(PartManager.step);
-  //size_t& substep(PartManager.substep);
+  int& step(PartManager.step);
+  //int& substep(PartManager.substep);
   const size_t noParts = PartManager.getNoLocalParts();
   //const size_t myDomain = CommManager.getMyDomain();
 
@@ -319,8 +319,8 @@ void derivate()
 
   const size_t noParts = PartManager.getNoLocalParts();
   const size_t noTotParts = noParts + PartManager.getNoGhostParts();
-  //size_t& step(PartManager.step);
-  //size_t& substep(PartManager.substep);
+  //int& step(PartManager.step);
+  //int& substep(PartManager.substep);
   //const size_t myDomain = CommManager.getMyDomain();
 
 /// little helper vector to zero a 3D quantity
@@ -668,7 +668,7 @@ int main(int argc, char* argv[])
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
 
-  size_t& step(PartManager.step);
+  int& step(PartManager.step);
   valueRefType time(PartManager.attributes["time"]);
 
   const size_t myDomain = CommManager.getMyDomain();
