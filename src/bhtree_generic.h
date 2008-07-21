@@ -224,6 +224,7 @@ void newCellChild(const size_t _n)
 
           curNodePtr->isParticle = false;
           curNodePtr->isEmpty = true;
+          curNodePtr->isLocal = false;
           curNodePtr->depth = curNodePtr->parent->depth + 1;
 
           curNodePtr->ident =
@@ -308,6 +309,7 @@ void buildToptreeRecursor(void)
 
               ///
               /// assume a toptree cell never to be local
+              /// before global summation
               ///
               curNodePtr->isLocal = false;
               buildToptreeRecursor();
@@ -349,12 +351,12 @@ void insertParticle(size_t _newPartIdx)
   const valueType rootY = static_cast<cellPtrT>(rootPtr)->yCenter;
   const valueType rootZ = static_cast<cellPtrT>(rootPtr)->zCenter;
 
-  if (curX < rootX - 0.5*rootSize ||
-      curX > rootX + 0.5*rootSize ||
-      curY < rootY - 0.5*rootSize ||
-      curY > rootY + 0.5*rootSize ||
-      curZ < rootZ - 0.5*rootSize ||
-      curZ > rootZ + 0.5*rootSize )
+  if (curX < rootX - 0.5 * rootSize ||
+      curX > rootX + 0.5 * rootSize ||
+      curY < rootY - 0.5 * rootSize ||
+      curY > rootY + 0.5 * rootSize ||
+      curZ < rootZ - 0.5 * rootSize ||
+      curZ > rootZ + 0.5 * rootSize)
     throw PartOutsideTree(_newPartIdx, rootPtr);
 
   ///
@@ -488,7 +490,7 @@ public:
 ///  - call the multipole recursor
 ///  - exchange toptrees
 ///
-void calcMultipoles(void)
+void calcMultipoles()
 {
   goRoot();
   calcMPbottomtreeRecursor();
@@ -549,11 +551,10 @@ void calcMPbottomtreeRecursor(void)
 /// determine locality of cell node
 /// this function does not check, whether current node is actually a cell!
 ///
-void detLocality(void)
+void detLocality()
 {
   //
   // check locality of current cell node:
-  // - if node is in the toptree, the node is local
   // - if node is below toptree, the parent node is local if
   // any child is local ( ... or ... or ... or ... )
   //
@@ -1237,19 +1238,25 @@ private:
 ///
 void treeDOTDumpRecursor()
 {
-  dumpFile << curNodePtr->ident
+  if (curNodePtr->isParticle)
+    {
+      dumpFile << "P";
+    }
+  else
+    {
+      dumpFile << "C";
+    }
+  dumpFile << abs(curNodePtr->ident)
            << " [";
   dumpFile << "label=\"\",";
 
   if (curNodePtr->isParticle)
     {
-      //dumpFile << "label=\"\",";
       //dumpFile << "label=\"" << lrint( static_cast<partPtrT>(curNodePtr)->mass ) << "\",";
       dumpFile << "shape=circle";
     }
   else
     {
-      //dumpFile << "label=\"\",";
       //dumpFile << "label=\"" << lrint( static_cast<monopoleCellNode*>(curNodePtr)->mass)
       //         << "\",";
       //dumpFile << "label=\"" << curNodePtr->ident << ": "
@@ -1297,10 +1304,18 @@ void treeDOTDumpRecursor()
         {
           if (static_cast<cellPtrT>(curNodePtr)->child[i] != NULL)
             {
-              dumpFile << curNodePtr->ident
-                       << " -> "
-                       << static_cast<cellPtrT>(curNodePtr)->child[i]->ident
-                       << "\n";
+              dumpFile << "C" << abs(curNodePtr->ident)
+                       << " -> ";
+              if (static_cast<cellPtrT>(curNodePtr)->child[i]->isParticle)
+                {
+                  dumpFile << "P";
+                }
+              else
+                {
+                  dumpFile << "C";
+                }
+              dumpFile << abs(static_cast<cellPtrT>(curNodePtr)->child[i]->ident)
+                       << " \n";
               goChild(i);
               treeDOTDumpRecursor();
               goUp();
@@ -1436,7 +1451,7 @@ void toptreeDumpRecursor()
   dumpFile << std::fixed << std::right << std::setw(6);
   dumpFile << curNodePtr->ident;
   dumpFile << "   ";
-  dumpFile << ! curNodePtr->isEmpty ;
+  dumpFile << !curNodePtr->isEmpty;
   dumpFile << "   ";
   dumpFile << curNodePtr->depth;
   dumpFile << "   ";

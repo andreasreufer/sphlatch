@@ -110,9 +110,9 @@ int main(int argc, char* argv[])
   /// some useful references
   ///
   idvectRefType id(PartManager.id);
-  
+
   matrixRefType pos(PartManager.pos);
-  matrixRefType vel(PartManager.vel);
+  //matrixRefType vel(PartManager.vel);
   matrixRefType acc(PartManager.acc);
 
   valvectRefType m(PartManager.m);
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
   ///
   /// register the quantites to be exchanged
   ///
-  CommManager.exchangeQuants.vects += &pos, &vel;
+  CommManager.exchangeQuants.vects += &pos;
   CommManager.exchangeQuants.scalars += &m, &eps;
   CommManager.exchangeQuants.ints += &id;
 
@@ -151,78 +151,85 @@ int main(int argc, char* argv[])
   CommManager.sendGhosts(id);
   CommManager.sendGhosts(m);
   CommManager.sendGhosts(eps); // << eps is not used for interacting partners!
-  Logger << " sent to ghosts: pos, vel, id, m, eps";
+  Logger << " sent to ghosts: pos, id, m, eps";
 
-  const valueType gravTheta = PartManager.attributes["gravtheta"];
-  const valueType gravConst = PartManager.attributes["gravconst"];
-
-  //sphlatch::BHtree<sphlatch::Monopoles> Tree(gravTheta,
-  sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
-                                               gravConst,
-                                               CostZone.getDepth(),
-                                               CostZone.getCenter(),
-                                               CostZone.getSidelength()
-                                               );
-
-  ///
-  /// fill up tree, determine ordering, calculate multipoles
-  ///
-  for (size_t i = 0; i < noTotParts; i++)
+  for (size_t i = 0; i < 2; i++)
     {
-      Tree.insertParticle(i);
+      PartManager.step = i;
+
+      const valueType gravTheta = PartManager.attributes["gravtheta"];
+      const valueType gravConst = PartManager.attributes["gravconst"];
+
+      //sphlatch::BHtree<sphlatch::Monopoles> Tree(gravTheta,
+      sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
+                                                   gravConst,
+                                                   CostZone.getDepth(),
+                                                   CostZone.getCenter(),
+                                                   CostZone.getSidelength()
+                                                   );
+
+      ///
+      /// fill up tree, determine ordering, calculate multipoles
+      ///
+      for (size_t i = 0; i < noTotParts; i++)
+        {
+          Tree.insertParticle(i);
+        }
+
+      const size_t myDomain = CommManager.getMyDomain();
+      std::string domString = "step";
+      domString.append(boost::lexical_cast<std::string>(PartManager.step));
+      domString.append(".domain");
+      domString.append(boost::lexical_cast<std::string>(myDomain));
+      std::string treeDumpfile;
+
+      treeDumpfile = "treeDump_preMP.";
+      treeDumpfile.append(domString);
+      treeDumpfile.append(".dot");
+      Tree.treeDOTDump(treeDumpfile);
+      Logger.stream << "tree dumped to " << treeDumpfile;
+      Logger.flushStream();
+
+      ///
+      /// determine particle order and calculate multipoles
+      ///
+      Tree.detParticleOrder();
+      Tree.calcMultipoles();
+      Logger << "Tree ready";
+
+      ///
+      /// inspect the tree
+      ///
+      std::string toptreeDumpfile = "toptreeDump.";
+      toptreeDumpfile.append(domString);
+      Tree.toptreeDump(toptreeDumpfile);
+      Logger.stream << "toptree dumped to " << toptreeDumpfile;
+      Logger.flushStream();
+
+      treeDumpfile = "treeDump_postMP.";
+      treeDumpfile.append(domString);
+      treeDumpfile.append(".dot");
+      Tree.treeDOTDump(treeDumpfile);
+      Logger.stream << "tree dumped to " << treeDumpfile;
+      Logger.flushStream();
+
+
+      ///
+      /// calc gravity
+      ///
+      for (size_t i = 0; i < noParts; i++)
+        {
+          const size_t curIdx = Tree.particleOrder[i];
+          Tree.calcGravity(curIdx);
+        }
+      Logger << "gravity calculated";
     }
-
-  const size_t myDomain = CommManager.getMyDomain();
-  std::string domString = "domain";
-  domString.append( boost::lexical_cast<std::string>( myDomain ) );
-  std::string treeDumpfile;
-  
-  treeDumpfile = "treeDump_preMP.";
-  treeDumpfile.append( domString );
-  treeDumpfile.append( ".dot" );
-  Tree.treeDOTDump( treeDumpfile );
-  Logger.stream << "tree dumped to " << treeDumpfile;
-  Logger.flushStream();
- 
-  ///
-  /// determine particle order and calculate multipoles
-  ///
-  Tree.detParticleOrder();
-  Tree.calcMultipoles();
-  Logger << "Tree ready";
-
-  ///
-  /// inspect the tree
-  ///
-  std::string toptreeDumpfile = "toptreeDump.";
-  toptreeDumpfile.append( domString );
-  Tree.toptreeDump( toptreeDumpfile );
-  Logger.stream << "toptree dumped to " << toptreeDumpfile;
-  Logger.flushStream();
-  
-  treeDumpfile = "treeDump_postMP.";
-  treeDumpfile.append( domString );
-  treeDumpfile.append( ".dot" );
-  Tree.treeDOTDump( treeDumpfile );
-  Logger.stream << "tree dumped to " << treeDumpfile;
-  Logger.flushStream();
-
-
-  ///
-  /// calc gravity
-  ///
-  for (size_t i = 0; i < noParts; i++)
-    {
-      const size_t curIdx = Tree.particleOrder[i];
-      Tree.calcGravity(curIdx);
-    }
-  Logger << "gravity calculated";
 
   ///
   /// define the quantities to save in a dump
   ///
   quantsType saveQuants;
-  saveQuants.vects += &pos, &vel, &acc;
+  saveQuants.vects += &pos, &acc;
   saveQuants.scalars += &m, &eps;
   saveQuants.ints += &id;
 

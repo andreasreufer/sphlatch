@@ -469,7 +469,7 @@ void IOManager::saveDump(std::string _outputFile,
   ///
   /// determine group name and check whether the group exists
   ///
-  const size_t step = PartManager.step;
+  const int step = PartManager.step;
   std::string stepString = boost::lexical_cast<std::string>(step);
   std::string stepName = "/Step#";
   stepName.append(stepString);

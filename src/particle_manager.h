@@ -105,7 +105,7 @@ idvectType id, noneigh;
 ///
 /// the integration step and the substep of the integrator
 ///
-size_t step, substep;
+int step, substep;
 
 protected:
 ParticleManager(void);
@@ -183,7 +183,7 @@ ParticleManager::ParticleManager(void)
   /// integers:
   isGhostVarSet += "id";
 
-  step = 0;
+  step = 0, substep = 0;
 }
 
 

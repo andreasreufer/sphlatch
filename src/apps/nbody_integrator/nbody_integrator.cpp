@@ -99,8 +99,8 @@ valueType timeStep()
   idvectRefType id(PartManager.id);
 
   valueRefType time(PartManager.attributes["time"]);
-  size_t& step(PartManager.step);
-  //size_t& substep(PartManager.substep);
+  int& step(PartManager.step);
+  //int& substep(PartManager.substep);
   //const size_t noParts = PartManager.getNoLocalParts();
   //const size_t myDomain = CommManager.getMyDomain();
 
@@ -113,7 +113,7 @@ valueType timeStep()
   /// distance to next saveItrvl
   ///
   //const valueType saveItrvl = 0.1;
-  const valueType saveItrvl = 0.1;
+  const valueType saveItrvl = 0.002;
   std::string fileName = "saveDump000000.h5part";
   const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
                                   + 1.) * saveItrvl;
@@ -176,8 +176,8 @@ void derivate()
 
   const size_t noParts = PartManager.getNoLocalParts();
   const size_t noTotParts = noParts + PartManager.getNoGhostParts();
-  //size_t& step(PartManager.step);
-  //size_t& substep(PartManager.substep);
+  //int& step(PartManager.step);
+  //int& substep(PartManager.substep);
   //const size_t myDomain = CommManager.getMyDomain();
 
 /// little helper vector to zero a 3D quantity
@@ -244,7 +244,7 @@ int main(int argc, char* argv[])
   PartManager.attributes["gravtheta"] = 0.7;
 
   std::string loadDumpFile = "initial.h5part";
-  const valueType maxTime = 1.0;
+  const valueType maxTime = 0.01;
 
   ///
   /// define what we're doing
@@ -263,7 +263,7 @@ int main(int argc, char* argv[])
 
   idvectRefType id(PartManager.id);
 
-  size_t& step(PartManager.step);
+  int& step(PartManager.step);
   valueRefType time(PartManager.attributes["time"]);
 
   const size_t myDomain = CommManager.getMyDomain();

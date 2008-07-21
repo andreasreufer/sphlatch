@@ -251,6 +251,7 @@ void bootstrap()
       integItr++;
     }
   
+  PartManager.step++;
   valueRefType time( PartManager.attributes["time"] );
   time += dt;
 };
