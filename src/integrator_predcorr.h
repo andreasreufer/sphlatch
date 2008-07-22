@@ -47,12 +47,6 @@ virtual void predict(const valueType& _dt) = 0;
 ///  x_1 = x_0 + 0.5(  v_p + v_0 )*dt
 ///
 virtual void correct(const valueType& _dt) = 0;
-
-///
-/// prepare:
-///  resize internal temporaries
-///
-virtual void prepare() = 0;
 };
 
 ///
@@ -84,18 +78,6 @@ PredCorrScalO1(valvectRefType _var,
 };
 
 public:
-void prepare()
-{
-  valvectRefType v(*dVar);
-
-  noParts = v.size();
-  if (zero.size() != noParts)
-    {
-      zero.resize(noParts);
-    }
-  v = zero;
-}
-
 void bootstrap()
 {
   valvectRefType   v(*dVar);
@@ -111,8 +93,8 @@ void bootstrap()
 
 void predict(const valueType& _dt)
 {
-  valvectRangeType x(*var,  rangeType(0, noParts));
   valvectRefType  ox(oVar);
+  valvectRangeType x(*var,  rangeType(0, ox.size()));
   
   valvectRefType   v(*dVar);
   valvectRefType  ov(odVar);
@@ -125,13 +107,12 @@ void predict(const valueType& _dt)
   /// ov = v
   /// v = 0;
   ov.swap(v);
-  v = zero;
 }
 
 void correct(const valueType& _dt)
 {
-  valvectRangeType x(*var,  rangeType(0, noParts));
   valvectRefType  ox(oVar);
+  valvectRangeType x(*var,  rangeType(0, ox.size()));
   
   valvectRefType   v(*dVar);
   valvectRefType  ov(odVar);
@@ -141,8 +122,6 @@ void correct(const valueType& _dt)
 private:
 valvectType oVar, odVar;
 valvectPtrType var, dVar;
-zerovalvectType zero;
-size_t noParts;
 };
 
 
@@ -163,8 +142,6 @@ PredCorrVectO2(matrixRefType _var,
    odVar.resize(0, var->size2());
   oddVar.resize(0, var->size2());
   
-  zero.resize(0, var->size2());
-
   /// take name of the variables, prefix with "o"
   /// and register it to PartManager for resizing
   PartManager.regQuantity(  oVar, "o" + PartManager.getName(  *var));
@@ -186,27 +163,13 @@ PredCorrVectO2(matrixRefType _var,
 };
 
 public:
-void prepare()
-{
-  matrixRefType a(*ddVar);
-
-  noParts = a.size1();
-  if (zero.size1() != noParts)
-    {
-      zero.resize(noParts, a.size2());
-    }
-
-  /// a = 0;
-  a = zero;
-}
-
 void bootstrap()
 {
   matrixRefType  a(*ddVar);
   matrixRefType oa(oddVar);
   
-  matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
   matrixRefType  ov(odVar);
+  matrixRangeType v(*dVar, rangeType(0, ov.size1()), rangeType(0, dVar->size2()));
 
   ///
   /// set the old variables to the current ones, with that
@@ -219,11 +182,11 @@ void bootstrap()
 
 void predict(const valueType& _dt)
 {
-  matrixRangeType x(*var,  rangeType(0, noParts), rangeType(0, var->size2()));
   matrixRefType  ox(oVar);
+  matrixRangeType x(*var,  rangeType(0, ox.size1()), rangeType(0, var->size2()));
   
-  matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
   matrixRefType  ov(odVar);
+  matrixRangeType v(*dVar, rangeType(0, ov.size1()), rangeType(0, dVar->size2()));
 
   matrixRefType   a(*ddVar);
   matrixRefType  oa(oddVar);
@@ -240,17 +203,17 @@ void predict(const valueType& _dt)
   
   /// oa = a
   /// a = 0;
+
   oa.swap(a);
-  a = zero;
 }
 
 void correct(const valueType& _dt)
 {
-  matrixRangeType x(*var,  rangeType(0, noParts), rangeType(0, var->size2()));
   matrixRefType  ox(oVar);
+  matrixRangeType x(*var,  rangeType(0, ox.size1()), rangeType(0, var->size2()));
   
-  matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
   matrixRefType  ov(odVar);
+  matrixRangeType v(*dVar, rangeType(0, ov.size1()), rangeType(0, dVar->size2()));
 
   matrixRefType   a(*ddVar);
   matrixRefType  oa(oddVar);
@@ -261,8 +224,6 @@ void correct(const valueType& _dt)
 private:
 matrixType oVar, odVar, oddVar;
 matrixPtrType var, dVar, ddVar;
-zeromatrixType zero;
-size_t noParts;
 };
 
 ///
@@ -305,17 +266,10 @@ PredCorrMetaIntegrator(void(*_deriv)(void), valueType(*_timing)(void))
 public:
 void bootstrap()
 {
-  integEnd = integrators.end();
-
-  integItr = integrators.begin();
-  while (integItr != integEnd)
-    {
-      (*integItr)->prepare();
-      integItr++;
-    }
-
+  PartManager.substep = -1;
   derivFunc();
   
+  integEnd = integrators.end();
   integItr = integrators.begin();
   while (integItr != integEnd)
     {
@@ -331,23 +285,11 @@ void integrate(void)
 {
   integEnd = integrators.end();
 
-  ///
-  /// resize the containers again
-  ///
-  integItr = integrators.begin();
-  while (integItr != integEnd)
-    {
-      (*integItr)->prepare();
-      integItr++;
-    }
-  PartManager.substep = 0;
-
-  /// particles are freshly moved
   /// derivative
+  PartManager.substep = 0;
   derivFunc();
 
-  ///
-  /// timestepping belongs here
+  /// timestepping
   const valueType dt = timingFunc();
 
   /// predict
@@ -360,6 +302,8 @@ void integrate(void)
 
   valueRefType time(PartManager.attributes["time"]);
   time += dt;
+  
+  /// derivative
   PartManager.substep = 1;
   derivFunc();
   

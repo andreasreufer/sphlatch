@@ -499,12 +499,6 @@ void CostZone::centerOfTheUniverse(void)
 #endif
                std::max(std::max(xMax - xMin, yMax - yMin), zMax - zMin);
 
-  ///
-  /// safety factor, so that particles do not leave costzone during
-  /// integration steps, which fucks up the tree
-  ///
-  sidelength *= 1.10;
-
   xCenter = (xMin + xMax) / 2.;
   yCenter = (yMin + yMax) / 2.;
   zCenter = (zMin + zMax) / 2.;
