@@ -1,7 +1,7 @@
 // some defs
 
 // uncomment for single-precision calculation
-//#define SPHLATCH_SINGLEPREC
+#define SPHLATCH_SINGLEPREC
 
 #include <iostream>
 #include <iomanip>
@@ -18,39 +18,12 @@ int main(int argc, char* argv[])
 
   CubicSpline3D myKernel;
   
-  valvectType rvec(3);
-  rvec(X) = 0.;
-  rvec(Y) = 0.;
-  rvec(Z) = 0.;
-
-  const size_t steps = 1000;
-  const valueType h = 1.e-9;
+  const size_t steps = 200;
+  const valueType h = 17.;
   
   valueType kernelVal = 0;
-  valvectType derivVal(3);
-  derivVal(X) = 0.;
-  derivVal(Y) = 0.;
-  derivVal(Z) = 0.;
-  
-  /*for (size_t i = 0; i < steps; i++)
-  {
-    const valueType x = 4.5*( static_cast<valueType>( rand() ) / RAND_MAX ) - 2.25; 
-    const valueType y = 4.5*( static_cast<valueType>( rand() ) / RAND_MAX ) - 2.25; 
-    const valueType z = 4.5*( static_cast<valueType>( rand() ) / RAND_MAX ) - 2.25; 
-    
-    const valueType r = sqrt( x*x + y*y + z*z );
-  
-    rvec(X) = x;
-    rvec(Y) = y;
-    rvec(Z) = z;
 
-    kernelVal += myKernel.value( r, h )*4.5*4.5*4.5;
-    derivVal  += myKernel.derive( r, h, rvec )*4.5*4.5*4.5;
-  
-  }
-  kernelVal /= static_cast<valueType>( steps );
-  derivVal  /= static_cast<valueType>( steps );
-  */
+  valueType derivValX = 0., derivValY = 0., derivValZ = 0.;
   
   const valueType dx = 4.5*h / static_cast<valueType>(steps);
   const valueType vol = 4.5*4.5*4.5*h*h*h;
@@ -67,12 +40,12 @@ int main(int argc, char* argv[])
 
         const valueType r = sqrt( x*x + y*y + z*z );
   
-        rvec(X) = x;
-        rvec(Y) = y;
-        rvec(Z) = z;
-
         kernelVal += myKernel.value( r, h )*vol;
-        derivVal  += myKernel.derive( r, h, rvec )*vol;
+
+        myKernel.derive( r, h, x, y, z );
+        derivValX  += myKernel.derivX * vol;
+        derivValY  += myKernel.derivY * vol;
+        derivValZ  += myKernel.derivZ * vol;
       }
     }
     std::cout << i << " " << std::flush;
@@ -80,10 +53,20 @@ int main(int argc, char* argv[])
   std::cout << "\n";
 
   kernelVal /= static_cast<valueType>( steps*steps*steps );
-  derivVal  /= static_cast<valueType>( steps*steps*steps );
+  derivValX  /= static_cast<valueType>( steps*steps*steps );
+  derivValY  /= static_cast<valueType>( steps*steps*steps );
+  derivValZ  /= static_cast<valueType>( steps*steps*steps );
 
   std::cout << "kernel       integral: " << kernelVal << "\n";
-  std::cout << "kernel deriv integral: " << derivVal << "\n";
+  std::cout << "kernel deriv integral: " << derivValX << " " << derivValY << " " << derivValZ << "\n";
+
+
+  const valueType r = 3.0;
+  const valueType x = 2.0000;
+  const valueType y = 1.4142;
+  const valueType z = 1.7321;
+  myKernel.derive( r, h, x, y, z );
+  std::cout << "kernel deriv: [" << myKernel.derivX << "," << myKernel.derivY << "," << myKernel.derivZ << "]\n";
 
   return EXIT_SUCCESS;
 }

@@ -339,8 +339,8 @@ void derivate()
 
   const size_t noParts = PartManager.getNoLocalParts();
   const size_t noTotParts = noParts + PartManager.getNoGhostParts();
-  //int& step(PartManager.step);
-  //int& substep(PartManager.substep);
+  int& step(PartManager.step);
+  int& substep(PartManager.substep);
   //const size_t myDomain = CommManager.getMyDomain();
 
   /// send ghosts to other domains
@@ -621,7 +621,8 @@ void derivate()
       if (2.5 * h(i) > czAtomicLength)
         {
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-          dhdt(i) = 0.;
+          if ( dhdt(i) > 0. )
+            dhdt(i) = 0.;
 #endif
           h(i) = czAtomicLength / 2.5;
         }
