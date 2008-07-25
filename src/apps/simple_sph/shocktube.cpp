@@ -1,9 +1,9 @@
 // some defs
 
-#define SPHLATCH_CARTESIAN_XYZ
+//#define SPHLATCH_CARTESIAN_XYZ
 //#define SPHLATCH_CARTESIAN_YZX
 //#define SPHLATCH_CARTESIAN_ZXY
-//#define SPHLATCH_HILBERT3D
+#define SPHLATCH_HILBERT3D
 
 // uncomment for single-precision calculation
 //#define SPHLATCH_SINGLEPREC
@@ -18,6 +18,28 @@
 
 // enable checking of bounds for the neighbour lists
 //#define SPHLATCH_CHECKNONEIGHBOURS
+
+// enable selfgravity?
+//#define SPHLATCH_GRAVITY
+
+// time dependent energy?
+#define SPHLATCH_TIMEDEP_ENERGY
+
+// time dependent smoothing length?
+#define SPHLATCH_TIMEDEP_SMOOTHING
+
+// do we need the veolicty divergence?
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
+
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
 
 #include <cstdlib>
 #include <iostream>
@@ -43,10 +65,7 @@ namespace po = boost::program_options;
 typedef sphlatch::valueType valueType;
 typedef sphlatch::valueRefType valueRefType;
 typedef sphlatch::valvectType valvectType;
-typedef sphlatch::zerovalvectType zerovalvectType;
 typedef sphlatch::valvectRefType valvectRefType;
-
-typedef sphlatch::particleRowType particleRowType;
 
 typedef sphlatch::idvectRefType idvectRefType;
 typedef sphlatch::matrixRefType matrixRefType;
@@ -105,20 +124,24 @@ valueType timeStep()
   valvectRefType dhdt(PartManager.dhdt);
   valvectRefType divv(PartManager.divv);
 
+#ifdef SPHLATCH_GRAVITY
+  valvectRefType eps(PartManager.eps);
+#endif
+
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
 
   valueRefType time(PartManager.attributes["time"]);
-  size_t& step(PartManager.step);
-
-
+  int& step(PartManager.step);
+  //int& substep(PartManager.substep);
   const size_t noParts = PartManager.getNoLocalParts();
+  //const size_t myDomain = CommManager.getMyDomain();
 
   ///
-  /// don't go further than one smoothing length
+  /// timestep criterion for acceleration
+  /// ( see Wetzstein et. al 2008 )
   ///
   valueType dtA = std::numeric_limits<valueType>::max();
-
   for (size_t i = 0; i < noParts; i++)
     {
       const valueType ai = sqrt(acc(i, X) * acc(i, X) +
@@ -131,42 +154,51 @@ valueType timeStep()
           dtA = dtAi < dtA ? dtAi : dtA;
         }
     }
+  dtA *= 0.5;
+  CommManager.min(dtA);
 
+#ifdef SPHLATCH_TIMEDEP_ENERGY
   ///
+  /// limit oooling speed in integration time
   /// energy integration
   ///
   valueType dtU = std::numeric_limits<valueType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType absdudti = dudt(i);
-      const valueType dtUi = (u(i)) / absdudti;
-
-      if (absdudti > 0.)
+      if (dudt(i) < 0.)
         {
+          const valueType dtUi = -u(i) / dudt(i);
           dtU = dtUi < dtU ? dtUi : dtU;
         }
     }
+  CommManager.min(dtU);
+#endif
 
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
   ///
-  /// smoothing length integration
+  /// timestep criterion for smoothing length integration
+  /// ( see Wetzstein et. al 2008 )
   ///
   valueType dtH = std::numeric_limits<valueType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType absdhdti = dhdt(i);
-      const valueType dtHi = (h(i)) / absdhdti;
+      const valueType absdtHi = fabs(h(i) / dhdt(i));
 
-      if (absdhdti > 0.)
+      if (absdtHi > 0.)
         {
-          dtH = dtHi < dtH ? dtHi : dtH;
+          dtH = absdtHi < dtH ? absdtHi : dtH;
         }
     }
+  dtH *= 0.15;
+  CommManager.min(dtH);
+#endif
 
   ///
   /// CFL condition
   ///
   valueType dtCFL = std::numeric_limits<valueType>::max();
-  const valueType gamma = 1.4;
+  const valueType gamma = PartManager.attributes["gamma"];
+  const valueType courantNumber = PartManager.attributes["courant"];
   for (size_t i = 0; i < noParts; i++)
     {
       const valueType ci = sqrt(p(i) * gamma / rho(i));
@@ -177,13 +209,14 @@ valueType timeStep()
           dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
         }
     }
+  dtCFL *= courantNumber;
+  CommManager.min(dtCFL);
 
   ///
   /// distance to next saveItrvl
   ///
   const valueType saveItrvl = 10.;
   std::string fileName = "saveDump000000.h5part";
-
   const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
                                   + 1.) * saveItrvl;
   valueType dtSave = nextSaveTime - time;
@@ -195,23 +228,23 @@ valueType timeStep()
   ///
   valueType dtGlob = std::numeric_limits<valueType>::max();
 
-  CommManager.min(dtA);
-  CommManager.min(dtU);
-  CommManager.min(dtH);
-  CommManager.min(dtCFL);
-
-  const valueType courantNumber = 0.3;
   dtGlob = dtA < dtGlob ? dtA : dtGlob;
-  dtGlob = dtU < dtGlob ? dtU : dtGlob;
-  dtGlob = dtH < dtGlob ? dtH : dtGlob;
   dtGlob = dtCFL < dtGlob ? dtCFL : dtGlob;
-  dtGlob *= courantNumber;
-
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+  dtGlob = dtU < dtGlob ? dtU : dtGlob;
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+  dtGlob = dtH < dtGlob ? dtH : dtGlob;
+#endif
   dtGlob = dtSave < dtGlob ? dtSave : dtGlob;
 
   Logger.stream << "dtA: " << dtA
+#ifdef SPHLATCH_TIMEDEP_ENERGY
                 << " dtU: " << dtU
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
                 << " dtH: " << dtH
+#endif
                 << " dtCFL: " << dtCFL
                 << " dtSave: " << dtSave
                 << "   dtGlob: " << dtGlob;
@@ -222,13 +255,23 @@ valueType timeStep()
   ///
   quantsType saveQuants;
   saveQuants.vects += &pos, &vel, &acc;
-  saveQuants.scalars += &m, &rho, &u, &p, &h, &divv, &dudt, &dhdt;
+  saveQuants.scalars += &m, &rho, &u, &p, &h;
   saveQuants.ints += &id, &noneigh;
 
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+  saveQuants.scalars += &dudt;
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+  saveQuants.scalars += &dhdt;
+  saveQuants.scalars += &divv;
+#endif
+#ifdef SPHLATCH_GRAVITY
+  saveQuants.scalars += &eps;
+#endif
 
-  const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9) )
+  const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
                                 * saveItrvl;
-  if ( fabs(curSaveTime - time) < 1.e-9)
+  if (fabs(curSaveTime - time) < 1.e-9)
     {
       Logger << "save dump";
 
@@ -247,7 +290,8 @@ void derivate()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
-  //costzone_type& CostZone(costzone_type::instance());
+  //io_type& IOManager(io_type::instance());
+  costzone_type& CostZone(costzone_type::instance());
   log_type& Logger(log_type::instance());
 
   matrixRefType pos(PartManager.pos);
@@ -263,17 +307,35 @@ void derivate()
   valvectRefType dhdt(PartManager.dhdt);
   valvectRefType divv(PartManager.divv);
 
+#ifdef SPHLATCH_GRAVITY
+  valvectRefType eps(PartManager.eps);
+#endif
+
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
 
+  ///
+  /// exchange particle data
+  ///
+  CostZone.createDomainPartsIndex();
+  Logger << "new domain decomposition";
+  CommManager.exchange(CostZone.domainPartsIndex,
+                       CostZone.getNoGhosts());
+
+  ///
+  /// prepare ghost sends
+  ///
+  CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
+  Logger.stream << "distributed particles: "
+                << PartManager.getNoLocalParts() << " parts. & "
+                << PartManager.getNoGhostParts() << " ghosts";
+  Logger.flushStream();
+
   const size_t noParts = PartManager.getNoLocalParts();
   const size_t noTotParts = noParts + PartManager.getNoGhostParts();
-  
-  //size_t& step(PartManager.step);
-  const size_t myDomain = CommManager.getMyDomain();
-
-  /// little helper vector to zero a 3D quantity
-  const zerovalvectType zero(3);
+  int& step(PartManager.step);
+  int& substep(PartManager.substep);
+  //const size_t myDomain = CommManager.getMyDomain();
 
   /// send ghosts to other domains
   CommManager.sendGhosts(pos);
@@ -281,62 +343,96 @@ void derivate()
   CommManager.sendGhosts(id);
   CommManager.sendGhosts(m);
   CommManager.sendGhosts(h);
+#ifdef SPHLATCH_GRAVITY
+  CommManager.sendGhosts(eps); // << eps is not yet used for interacting partners!
+#endif
+  Logger << " sent to ghosts: pos, vel, id, m, h, eps";
 
   ///
-  /// boundary conditions
+  /// zero the derivatives
   ///
-  for (size_t i = 0; i < noTotParts; i++)
+  for (size_t i = 0; i < noParts; i++)
     {
-      vel(i, 0) = 0.;
-      vel(i, 1) = 0.;
-      
-      if (pos(i, 2) < 5. || pos(i, 2) > 295.)
-        {
-          vel(i, 2) = 0.;
-        }
+      acc(i, X) = 0.;
+      acc(i, Y) = 0.;
+      acc(i, Z) = 0.;
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+      dudt(i) = 0.;
+#endif
+
+      ///
+      /// shocktube boundary conditions
+      ///
+      vel(i, X) = 0.;
+      vel(i, Y) = 0.;
+
+      if (pos(i, Z) < 5. || pos(i, Z) > 295.)
+        vel(i, Z) = 0.;
     }
 
-/*
-   const valueType gravTheta = 1.0;
-   const valueType gravConst = 0.0;
 
-   sphlatch::BHtree<sphlatch::NoMultipoles> Tree(gravTheta,
+#ifdef SPHLATCH_GRAVITY
+  const valueType gravTheta = PartManager.attributes["gravtheta"];
+  const valueType gravConst = PartManager.attributes["gravconst"];
+
+  sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
                                                gravConst,
                                                CostZone.getDepth(),
                                                CostZone.getCenter(),
                                                CostZone.getSidelength()
                                                );
 
-
-   ///
-   /// fill up tree, determine ordering, calculate multipoles
-   ///
-   for (size_t i = 0; i < noTotParts; i++)
+  ///
+  /// fill up tree, determine ordering, calculate multipoles
+  ///
+  for (size_t k = 0; k < noTotParts; k++)
     {
-      Tree.insertParticle(i);
+      Tree.insertParticle(k);
     }
 
-   Tree.detParticleOrder();
-   Tree.calcMultipoles();
-   Logger << "Tree ready";
- */
-///
-/// define kernel and neighbour search algorithm
-///
+  Tree.detParticleOrder();
+  Tree.calcMultipoles();
+  Logger << "Tree ready";
+
+  for (size_t k = 0; k < noParts; k++)
+    {
+      const size_t i = Tree.particleOrder[k];
+      Tree.calcGravity(i);
+    }
+  Logger << "gravity calculated";
+#endif
+
+  ///
+  /// define kernel and neighbour search algorithm
+  ///
   sphlatch::CubicSpline3D Kernel;
   sphlatch::Rankspace RSSearch;
 
+  ///
+  /// the size of the neighbour list doesn't really
+  /// affect the performance of the neighbour search,
+  /// so it can be choosen quite large
+  ///
   RSSearch.prepare();
-  RSSearch.neighbourList.resize(512);
-  RSSearch.neighDistList.resize(512);
-
+  RSSearch.neighbourList.resize(1024);
+  RSSearch.neighDistList.resize(1024);
   Logger << "Rankspace prepared";
 
-  for (size_t i = 0; i < noParts; i++)
+  ///
+  /// 1st SPH sum: density
+  /// I need    : pos, h, m
+  /// I provide : rho
+  ///
+  for (size_t k = 0; k < noParts; k++)
     {
       ///
       /// find neighbours
       ///
+#ifdef SPHLATCH_GRAVITY
+      const size_t i = Tree.particleOrder[k];
+#else
+      const size_t i = k;
+#endif
       const valueType hi = h(i);
       const valueType srchRad = 2. * hi;
       RSSearch.findNeighbours(i, srchRad);
@@ -352,9 +448,7 @@ void derivate()
       rhoi = 0.;
 
       ///
-      /// SPH density sum
-      /// I need    : pos, h, m
-      /// I provide : rho
+      /// sum over neighbours
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
@@ -369,12 +463,14 @@ void derivate()
     }
   Logger << "SPH sum: rho";
   CommManager.sendGhosts(rho);
-  Logger << " density sent to ghosts";
+  Logger << " sent to ghosts: rho";
 
+#ifdef SPHLATCH_TIMEDEP_ENERGY
   ///
   /// lower temperature bound
   ///
-  const valueType uMin = 0.1;
+
+  const valueType uMin = PartManager.attributes["umin"];
   for (size_t i = 0; i < noParts; i++)
     {
       if (u(i) < uMin)
@@ -382,33 +478,44 @@ void derivate()
           u(i) = uMin;
         }
     }
-  Logger << "assure minimal temperature";
+  Logger.stream << "assure minimal temperature (umin = " << uMin << ")";
+  Logger.flushStream();
+#endif
   CommManager.sendGhosts(u);
-  Logger << " temperature sent to ghosts";
+  Logger << " sent to ghosts: u";
 
   ///
   /// pressure
-  ///
   /// I need    : u, rho
   /// I provide : p
   ///
-  const valueType gamma = 1.4;
+  const valueType gamma = PartManager.attributes["gamma"];
   p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
   Logger << "pressure";
 
   ///
-  /// acceleration, power and velocity divergence
+  /// 2st SPH sum: acceleration, specific power & velocity divergence
+  /// I need    : pos, vel, h, m, rho, u
+  /// I provide : acc, dudt, divv
   ///
   const valueType alpha = 1;
-  const valueType beta = 1;
+  const valueType beta = 2;
 
-  valvectType curAcc(3);
-
-  valueType curPow = 0., curVelDiv = 0.;
+  valueType curAccX = 0., curAccY = 0., curAccZ = 0.;
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+  valueType curPow = 0.;
+#endif
+#ifdef SPHLATCH_VELDIV
+  valueType curVelDiv = 0.;
   valueType divvMax = std::numeric_limits<valueType>::min();
-
-  for (size_t i = 0; i < noParts; i++)
+#endif
+  for (size_t k = 0; k < noParts; k++)
     {
+#ifdef SPHLATCH_GRAVITY
+      const size_t i = Tree.particleOrder[k];
+#else
+      const size_t i = k;
+#endif
       const valueType hi = h(i);
       const valueType rhoi = rho(i);
       const valueType pi = p(i);
@@ -421,20 +528,27 @@ void derivate()
 
       const size_t noNeighs = RSSearch.neighbourList[0];
 
-      curAcc = zero;
+      curAccX = 0.;
+      curAccY = 0.;
+      curAccZ = 0.;
+#ifdef SPHLATCH_TIMEDEP_ENERGY
       curPow = 0.;
+#endif
+#ifdef SPHLATCH_VELDIV
       curVelDiv = 0.;
+#endif
+      const valueType viX = vel(i, X);
+      const valueType viY = vel(i, Y);
+      const valueType viZ = vel(i, Z);
 
-      const particleRowType veli(vel, i);
-      const particleRowType Ri(pos, i);
+      const valueType riX = pos(i, X);
+      const valueType riY = pos(i, Y);
+      const valueType riZ = pos(i, Z);
 
-      const valueType ci = sqrt(gamma * p(i) / rho(i));
+      const valueType ci = sqrt(gamma * pi / rhoi);
 
       ///
-      /// SPH acceleration and specific power sum
-      ///
-      /// I need    : pos, vel, h, m, rho, u
-      /// I provide : acc, dhdu, divv
+      /// sum over the neighbours
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
@@ -446,77 +560,104 @@ void derivate()
 
           const valueType hij = 0.5 * (hi + h(j));
 
-          const particleRowType velj(vel, j);
-          const particleRowType Rj(pos, j);
+          const valueType rijX = riX - pos(j, X);
+          const valueType rijY = riY - pos(j, Y);
+          const valueType rijZ = riZ - pos(j, Z);
+
+          const valueType vijX = viX - vel(j, X);
+          const valueType vijY = viY - vel(j, Y);
+          const valueType vijZ = viZ - vel(j, Z);
 
           /// replace by scalar expressions?
-          const valueType vijrij =
-            boost::numeric::ublas::inner_prod(velj - veli, Rj - Ri);
+          const valueType vijrij = rijX * vijX + rijY * vijY + rijZ * vijZ;
 
           valueType av = 0;
 
           /// AV
           if (vijrij < 0.)
             {
-              const valueType rijrij =
-                boost::numeric::ublas::inner_prod(Ri - Rj, Ri - Rj);
+              const valueType rijrij = rijX * rijX + rijY * rijY + rijZ * rijZ;
               const valueType rhoij = 0.5 * (rhoi + rhoj);
-              const valueType cij = 0.5 * (ci + sqrt(gamma * p(j) / rhoj));
+              const valueType cij = 0.5 * (ci + sqrt(gamma * pj / rhoj));
               const valueType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
 
               av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
             }
 
           const valueType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
+          const valueType mj = m(j);
 
           /// acceleration
-          curAcc -= (m(j) * accTerm * Kernel.derive(rij, hij, Ri - Rj));
+          Kernel.derive(rij, hij, rijX, rijY, rijZ);
 
+          curAccX -= mj * accTerm * Kernel.derivX;
+          curAccY -= mj * accTerm * Kernel.derivY;
+          curAccZ -= mj * accTerm * Kernel.derivZ;
+
+#ifdef SPHLATCH_VELDIV
+          ///
           /// m_j * v_ij * divW_ij
-          const valueType mjvijdivWij = m(j) * (
-            boost::numeric::ublas::inner_prod(veli - velj,
-                                              Kernel.derivative));
+          ///
+          const valueType mjvijdivWij = mj * (vijX * Kernel.derivX +
+                                              vijY * Kernel.derivY +
+                                              vijZ * Kernel.derivZ);
+#endif
 
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+          ///
           /// pdV + AV heating
+          ///
           curPow += (0.5 * accTerm * mjvijdivWij);
+#endif
 
+#ifdef SPHLATCH_VELDIV
+          ///
           /// velocity divergence
+          ///
           curVelDiv += mjvijdivWij;
+#endif
         }
+      acc(i, X) += curAccX;
+      acc(i, Y) += curAccY;
+      acc(i, Z) += curAccZ;
 
       ///
-      /// a_x = a_y = 0.
-      /// hold both shocktube ends:
-      /// a_z = 0. if z < z_min || z > z_max
-      /// z_min = 5.
-      /// z_max = 295.
+      /// shocktube boundary condition
       ///
-      curAcc(0) = 0.;
-      curAcc(1) = 0.;
-      if (pos(i, 2) < 5. || pos(i, 2) > 295.)
-        {
-          curAcc(2) = 0.;
-        }
+      if (pos(i, Z) < 5. || pos(i, Z) > 295.)
+        acc(i, Z) = 0.;
 
-      particleRowType(acc, i) += curAcc;
+#ifdef SPHLATCH_TIMEDEP_ENERGY
       dudt(i) = curPow;
+#endif
+#ifdef SPHLATCH_VELDIV
       divv(i) = curVelDiv / rho(i);
-
       divvMax = divv(i) > divvMax ? divv(i) : divvMax;
+#endif
     }
+#ifdef SPHLATCH_VELDIV
   CommManager.max(divvMax);
+#endif
 
   Logger << "SPH sum: acc, pow, divv";
 
-  /// define desired number of neighbours
-  const size_t noNeighOpt = 50;
-
-  const valueType noNeighMin = (2. / 3.) * static_cast<valueType>(noNeighOpt);
-  const valueType noNeighMax = (5. / 3.) * static_cast<valueType>(noNeighOpt);
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+  ///
+  /// time derivative of smoothing length, limit smoothing
+  /// length if necessary
+  /// I need    : divv, noneigh
+  /// I provide : h, dhdt
+  ///
+  const valueType noNeighOpt = PartManager.attributes["noneigh"];
+  const valueType noNeighMin = (2. / 3.) * noNeighOpt;
+  const valueType noNeighMax = (5. / 3.) * noNeighOpt;
   const valueType cDivvMax = divvMax;
+#endif
 
+  const valueType czAtomicLength = CostZone.getAtomicLength();
   for (size_t i = 0; i < noParts; i++)
     {
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
       const valueType noNeighCur = static_cast<valueType>(noneigh(i));
 
       const valueType A = exp((noNeighCur - noNeighMin) / 5.);
@@ -529,8 +670,25 @@ void derivate()
 
       dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
                  - k2 * static_cast<valueType>(1. / 3.) * divv(i)) * h(i);
+#endif
+      ///
+      /// hard upper limit
+      ///
+      if (2.5 * h(i) > czAtomicLength)
+        {
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+          if (dhdt(i) > 0.)
+            dhdt(i) = 0.;
+#endif
+          h(i) = czAtomicLength / 2.5;
+        }
     }
-  Logger << "adapted smoothing length";
+  Logger.stream << "adapted smoothing length (2.5h < " << czAtomicLength
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+                << ", divvmax " << cDivvMax
+#endif
+                << ")";
+  Logger.flushStream();
 };
 
 
@@ -549,13 +707,16 @@ int main(int argc, char* argv[])
 
   ///
   /// some simulation parameters
+  /// attributes will be overwritten, when defined in file
   ///
+  PartManager.attributes["gamma"] = 1.4;
+  PartManager.attributes["courant"] = 0.3;
 
-  std::string loadDumpFile = "shocktube270k.h5part";
-  //std::string loadDumpFile = "shocktube_t30.h5part";
+  PartManager.attributes["noneigh"] = 50.;
+  PartManager.attributes["umin"] = 0.1;
 
-  const valueType maxTime = 50.;
-  const valueType saveItrvl = 10.;
+  std::string loadDumpFile = "initial.h5part";
+  const valueType maxTime = 100.;
 
   ///
   /// define what we're doing
@@ -564,8 +725,13 @@ int main(int argc, char* argv[])
   PartManager.useBasicSPH();
   PartManager.useAVMonaghan();
   PartManager.useEnergy();
+
+#ifdef SPHLATCH_TIMEDEP_ENERGY
   PartManager.useTimedepEnergy();
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
   PartManager.useTimedepH();
+#endif
 
   ///
   /// some useful references
@@ -575,19 +741,22 @@ int main(int argc, char* argv[])
   matrixRefType acc(PartManager.acc);
 
   valvectRefType m(PartManager.m);
-  valvectRefType rho(PartManager.rho);
   valvectRefType u(PartManager.u);
+#ifdef SPHLATCH_TIMEDEP_ENERGY
   valvectRefType dudt(PartManager.dudt);
+#endif
   valvectRefType h(PartManager.h);
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
   valvectRefType dhdt(PartManager.dhdt);
-  valvectRefType p(PartManager.p);
+#endif
+#ifdef SPHLATCH_GRAVITY
   valvectRefType eps(PartManager.eps);
-  valvectRefType divv(PartManager.divv);
+#endif
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
 
-  size_t& step(PartManager.step);
+  int& step(PartManager.step);
   valueRefType time(PartManager.attributes["time"]);
 
   const size_t myDomain = CommManager.getMyDomain();
@@ -597,12 +766,15 @@ int main(int argc, char* argv[])
   ///
   CommManager.exchangeQuants.vects += &pos, &vel;
   CommManager.exchangeQuants.scalars += &m, &u, &h;
-  CommManager.exchangeQuants.ints += &id, &noneigh;
+  CommManager.exchangeQuants.ints += &id;
+
+#ifdef SPHLATCH_GRAVITY
+  CommManager.exchangeQuants.scalars += &eps;
+#endif
 
   ///
   /// instantate the MetaIntegrator
   ///
-
   //sphlatch::VerletMetaIntegrator Integrator(derivate, timestep);
   sphlatch::PredCorrMetaIntegrator Integrator(derivate, timeStep);
 
@@ -610,27 +782,15 @@ int main(int argc, char* argv[])
   /// register spatial, energy and smoothing length integration
   ///
   Integrator.regIntegration(pos, vel, acc);
+#ifdef SPHLATCH_TIMEDEP_ENERGY
   Integrator.regIntegration(u, dudt);
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
   Integrator.regIntegration(h, dhdt);
+#endif
 
   IOManager.loadDump(loadDumpFile);
   Logger.stream << "loaded " << loadDumpFile;
-  Logger.flushStream();
-
-  ///
-  /// exchange particles
-  ///
-  CostZone.createDomainPartsIndex();
-  CommManager.exchange(CostZone.domainPartsIndex,
-                       CostZone.getNoGhosts());
-
-  ///
-  /// prepare ghost sends
-  ///
-  CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-  Logger.stream << "distributed particles: "
-                << PartManager.getNoLocalParts() << " parts. & "
-                << PartManager.getNoGhostParts() << " ghosts";
   Logger.flushStream();
 
   ///
@@ -646,20 +806,6 @@ int main(int argc, char* argv[])
   while (time <= maxTime)
     {
       ///
-      /// exchange particles and ghosts
-      /// \todo: only do this, when necessary
-      ///
-      CostZone.createDomainPartsIndex();
-      CommManager.exchange(CostZone.domainPartsIndex,
-                           CostZone.getNoGhosts());
-
-      CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-      Logger.stream << "distributed particles: "
-                    << PartManager.getNoLocalParts() << " parts. & "
-                    << PartManager.getNoGhostParts() << " ghosts";
-      Logger.flushStream();
-
-      ///
       /// integrate
       ///
       Integrator.integrate();
@@ -667,7 +813,6 @@ int main(int argc, char* argv[])
       Logger.stream << "finished step " << step << ", now at t = " << time;
       Logger.flushStream();
       Logger.zeroRelTime();
-      step++;
 
       if (myDomain == 0)
         {

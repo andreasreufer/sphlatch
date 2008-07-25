@@ -65,10 +65,7 @@ namespace po = boost::program_options;
 typedef sphlatch::valueType valueType;
 typedef sphlatch::valueRefType valueRefType;
 typedef sphlatch::valvectType valvectType;
-typedef sphlatch::zerovalvectType zerovalvectType;
 typedef sphlatch::valvectRefType valvectRefType;
-
-typedef sphlatch::particleRowType particleRowType;
 
 typedef sphlatch::idvectRefType idvectRefType;
 typedef sphlatch::matrixRefType matrixRefType;
@@ -168,11 +165,11 @@ valueType timeStep()
   valueType dtU = std::numeric_limits<valueType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
-      if ( dudt(i) < 0. )
-      {
-        const valueType dtUi = - u(i) / dudt(i);
-        dtU = dtUi < dtU ? dtUi : dtU;
-      }
+      if (dudt(i) < 0.)
+        {
+          const valueType dtUi = -u(i) / dudt(i);
+          dtU = dtUi < dtU ? dtUi : dtU;
+        }
     }
   CommManager.min(dtU);
 #endif
@@ -185,7 +182,7 @@ valueType timeStep()
   valueType dtH = std::numeric_limits<valueType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType absdtHi = fabs( h(i) / dhdt(i) );
+      const valueType absdtHi = fabs(h(i) / dhdt(i));
 
       if (absdtHi > 0.)
         {
@@ -200,7 +197,7 @@ valueType timeStep()
   /// CFL condition
   ///
   valueType dtCFL = std::numeric_limits<valueType>::max();
-  const valueType gamma         = PartManager.attributes["gamma"];
+  const valueType gamma = PartManager.attributes["gamma"];
   const valueType courantNumber = PartManager.attributes["courant"];
   for (size_t i = 0; i < noParts; i++)
     {
@@ -317,9 +314,6 @@ void derivate()
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
 
-  /// little helper vector to zero a 3D quantity
-  const zerovalvectType zero(3);
-
   ///
   /// exchange particle data
   ///
@@ -350,10 +344,13 @@ void derivate()
   CommManager.sendGhosts(m);
   CommManager.sendGhosts(h);
 #ifdef SPHLATCH_GRAVITY
-  CommManager.sendGhosts(eps); // << eps is not used for interacting partners!
+  CommManager.sendGhosts(eps); // << eps is not yet used for interacting partners!
 #endif
   Logger << " sent to ghosts: pos, vel, id, m, h, eps";
 
+  ///
+  /// zero the derivatives
+  ///
   for (size_t i = 0; i < noParts; i++)
     {
       acc(i, X) = 0.;
@@ -378,19 +375,19 @@ void derivate()
   ///
   /// fill up tree, determine ordering, calculate multipoles
   ///
-  for (size_t i = 0; i < noTotParts; i++)
+  for (size_t k = 0; k < noTotParts; k++)
     {
-      Tree.insertParticle(i);
+      Tree.insertParticle(k);
     }
 
   Tree.detParticleOrder();
   Tree.calcMultipoles();
   Logger << "Tree ready";
 
-  for (size_t i = 0; i < noParts; i++)
+  for (size_t k = 0; k < noParts; k++)
     {
-      const size_t curIdx = Tree.particleOrder[i];
-      Tree.calcGravity(curIdx);
+      const size_t i = Tree.particleOrder[k];
+      Tree.calcGravity(i);
     }
   Logger << "gravity calculated";
 #endif
@@ -401,17 +398,31 @@ void derivate()
   sphlatch::CubicSpline3D Kernel;
   sphlatch::Rankspace RSSearch;
 
+  ///
+  /// the size of the neighbour list doesn't really
+  /// affect the performance of the neighbour search,
+  /// so it can be choosen quite large
+  ///
   RSSearch.prepare();
   RSSearch.neighbourList.resize(1024);
   RSSearch.neighDistList.resize(1024);
-
   Logger << "Rankspace prepared";
 
-  for (size_t i = 0; i < noParts; i++)
+  ///
+  /// 1st SPH sum: density
+  /// I need    : pos, h, m
+  /// I provide : rho
+  ///
+  for (size_t k = 0; k < noParts; k++)
     {
       ///
       /// find neighbours
       ///
+#ifdef SPHLATCH_GRAVITY
+      const size_t i = Tree.particleOrder[k];
+#else
+      const size_t i = k;
+#endif
       const valueType hi = h(i);
       const valueType srchRad = 2. * hi;
       RSSearch.findNeighbours(i, srchRad);
@@ -427,9 +438,7 @@ void derivate()
       rhoi = 0.;
 
       ///
-      /// SPH density sum
-      /// I need    : pos, h, m
-      /// I provide : rho
+      /// sum over neighbours
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
@@ -450,7 +459,8 @@ void derivate()
   ///
   /// lower temperature bound
   ///
-  const valueType uMin = 1000.;
+
+  const valueType uMin = PartManager.attributes["umin"];
   for (size_t i = 0; i < noParts; i++)
     {
       if (u(i) < uMin)
@@ -458,14 +468,14 @@ void derivate()
           u(i) = uMin;
         }
     }
-  Logger << "assure minimal temperature";
+  Logger.stream << "assure minimal temperature (umin = " << uMin << ")";
+  Logger.flushStream();
 #endif
   CommManager.sendGhosts(u);
   Logger << " sent to ghosts: u";
 
   ///
   /// pressure
-  ///
   /// I need    : u, rho
   /// I provide : p
   ///
@@ -474,13 +484,14 @@ void derivate()
   Logger << "pressure";
 
   ///
-  /// acceleration, power and velocity divergence
+  /// 2st SPH sum: acceleration, specific power & velocity divergence
+  /// I need    : pos, vel, h, m, rho, u
+  /// I provide : acc, dudt, divv
   ///
   const valueType alpha = 1;
   const valueType beta = 2;
 
-  valvectType curAcc(3);
-
+  valueType curAccX = 0., curAccY = 0., curAccZ = 0.;
 #ifdef SPHLATCH_TIMEDEP_ENERGY
   valueType curPow = 0.;
 #endif
@@ -488,8 +499,13 @@ void derivate()
   valueType curVelDiv = 0.;
   valueType divvMax = std::numeric_limits<valueType>::min();
 #endif
-  for (size_t i = 0; i < noParts; i++)
+  for (size_t k = 0; k < noParts; k++)
     {
+#ifdef SPHLATCH_GRAVITY
+      const size_t i = Tree.particleOrder[k];
+#else
+      const size_t i = k;
+#endif
       const valueType hi = h(i);
       const valueType rhoi = rho(i);
       const valueType pi = p(i);
@@ -502,23 +518,27 @@ void derivate()
 
       const size_t noNeighs = RSSearch.neighbourList[0];
 
-      curAcc = zero;
+      curAccX = 0.;
+      curAccY = 0.;
+      curAccZ = 0.;
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       curPow = 0.;
 #endif
 #ifdef SPHLATCH_VELDIV
       curVelDiv = 0.;
 #endif
-      const particleRowType veli(vel, i);
-      const particleRowType Ri(pos, i);
+      const valueType viX = vel(i, X);
+      const valueType viY = vel(i, Y);
+      const valueType viZ = vel(i, Z);
 
-      const valueType ci = sqrt(gamma * p(i) / rho(i));
+      const valueType riX = pos(i, X);
+      const valueType riY = pos(i, Y);
+      const valueType riZ = pos(i, Z);
+
+      const valueType ci = sqrt(gamma * pi / rhoi);
 
       ///
-      /// SPH acceleration and specific power sum
-      ///
-      /// I need    : pos, vel, h, m, rho, u
-      /// I provide : acc, dhdu, divv
+      /// sum over the neighbours
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
@@ -530,51 +550,66 @@ void derivate()
 
           const valueType hij = 0.5 * (hi + h(j));
 
-          const particleRowType velj(vel, j);
-          const particleRowType Rj(pos, j);
+          const valueType rijX = riX - pos(j, X);
+          const valueType rijY = riY - pos(j, Y);
+          const valueType rijZ = riZ - pos(j, Z);
+
+          const valueType vijX = viX - vel(j, X);
+          const valueType vijY = viY - vel(j, Y);
+          const valueType vijZ = viZ - vel(j, Z);
 
           /// replace by scalar expressions?
-          const valueType vijrij =
-            boost::numeric::ublas::inner_prod(velj - veli, Rj - Ri);
+          const valueType vijrij = rijX * vijX + rijY * vijY + rijZ * vijZ;
 
           valueType av = 0;
 
           /// AV
           if (vijrij < 0.)
             {
-              const valueType rijrij =
-                boost::numeric::ublas::inner_prod(Ri - Rj, Ri - Rj);
+              const valueType rijrij = rijX * rijX + rijY * rijY + rijZ * rijZ;
               const valueType rhoij = 0.5 * (rhoi + rhoj);
-              const valueType cij = 0.5 * (ci + sqrt(gamma * p(j) / rhoj));
+              const valueType cij = 0.5 * (ci + sqrt(gamma * pj / rhoj));
               const valueType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
 
               av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
             }
 
           const valueType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
+          const valueType mj = m(j);
 
           /// acceleration
-          curAcc -= (m(j) * accTerm * Kernel.derive(rij, hij, Ri - Rj));
+          Kernel.derive(rij, hij, rijX, rijY, rijZ);
+
+          curAccX -= mj * accTerm * Kernel.derivX;
+          curAccY -= mj * accTerm * Kernel.derivY;
+          curAccZ -= mj * accTerm * Kernel.derivZ;
 
 #ifdef SPHLATCH_VELDIV
+          ///
           /// m_j * v_ij * divW_ij
-          const valueType mjvijdivWij = m(j) * (
-            boost::numeric::ublas::inner_prod(veli - velj,
-                                              Kernel.derivative));
+          ///
+          const valueType mjvijdivWij = mj * (vijX * Kernel.derivX +
+                                              vijY * Kernel.derivY +
+                                              vijZ * Kernel.derivZ);
 #endif
 
 #ifdef SPHLATCH_TIMEDEP_ENERGY
+          ///
           /// pdV + AV heating
+          ///
           curPow += (0.5 * accTerm * mjvijdivWij);
 #endif
 
 #ifdef SPHLATCH_VELDIV
+          ///
           /// velocity divergence
+          ///
           curVelDiv += mjvijdivWij;
 #endif
         }
-
-      particleRowType(acc, i) += curAcc;
+      acc(i, X) += curAccX;
+      acc(i, Y) += curAccY;
+      acc(i, Z) += curAccZ;
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       dudt(i) = curPow;
 #endif
@@ -590,11 +625,15 @@ void derivate()
   Logger << "SPH sum: acc, pow, divv";
 
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-  /// define desired number of neighbours
-  const size_t noNeighOpt = 50;
-
-  const valueType noNeighMin = (2. / 3.) * static_cast<valueType>(noNeighOpt);
-  const valueType noNeighMax = (5. / 3.) * static_cast<valueType>(noNeighOpt);
+  ///
+  /// time derivative of smoothing length, limit smoothing
+  /// length if necessary
+  /// I need    : divv, noneigh
+  /// I provide : h, dhdt
+  ///
+  const valueType noNeighOpt = PartManager.attributes["noneigh"];
+  const valueType noNeighMin = (2. / 3.) * noNeighOpt;
+  const valueType noNeighMax = (5. / 3.) * noNeighOpt;
   const valueType cDivvMax = divvMax;
 #endif
 
@@ -621,7 +660,7 @@ void derivate()
       if (2.5 * h(i) > czAtomicLength)
         {
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-          if ( dhdt(i) > 0. )
+          if (dhdt(i) > 0.)
             dhdt(i) = 0.;
 #endif
           h(i) = czAtomicLength / 2.5;
@@ -657,6 +696,9 @@ int main(int argc, char* argv[])
   PartManager.attributes["gravconst"] = 1.0;
   PartManager.attributes["gravtheta"] = 0.7;
   PartManager.attributes["courant"] = 0.3;
+
+  PartManager.attributes["noneigh"] = 50.;
+  PartManager.attributes["umin"] = 1000.;
 
   std::string loadDumpFile = "initial.h5part";
   const valueType maxTime = 5.;

@@ -20,12 +20,7 @@ class CubicSpline3D
 {
 
 public:
-CubicSpline3D()
-{
-  derivative.resize(3);
-  zero.resize(3);
-};
-
+CubicSpline3D() {};
 ~CubicSpline3D() {};
 
 valueType value(const valueType& _r, const valueType& _h)
@@ -51,7 +46,8 @@ valueType value(const valueType& _r, const valueType& _h)
   }
 }
 
-valvectType derive( const valueType& _r, const valueType& _h, const valvectType& _R)
+void derive( const valueType& _r, const valueType& _h,
+             const valueType& _rx, const valueType& _ry, const valueType& _rz)
 {
   const valueType q = _r / _h;
 
@@ -60,29 +56,39 @@ valvectType derive( const valueType& _r, const valueType& _h, const valvectType&
   /// 
   if ( q > 2. || q == 0.)
   {
-    //derivative(X) = 0.;
-    //derivative(Y) = 0.;
-    //derivative(Z) = 0.;
-    return derivative = zero;
+    derivX = 0.;
+    derivY = 0.;
+    derivZ = 0.;
+    return;
   }
   else
   {
-    const valueType k2 = _h*_h*_h*_h*M_PI*_r ;
-    derivative = _R / k2;
+    const valueType k2 = 1. / ( _h*_h*_h*_h*M_PI*_r );
+
+    derivX = _rx * k2;
+    derivY = _ry * k2;
+    derivZ = _rz * k2;
 
     if ( q > 1. )
     {
-      return derivative *= -0.75*( 2. - q )*( 2. - q );
+      const valueType k3 = -0.75*( 2. - q )*( 2. - q );
+      derivX *= k3;
+      derivY *= k3;
+      derivZ *= k3;
+      return;
     }
     else
     {
-      return derivative *= ( - 3.*q + 2.25*q*q );
+      const valueType k3 = - 3.*q + 2.25*q*q;
+      derivX *= k3;
+      derivY *= k3;
+      derivZ *= k3;
+      return;
     }
   } 
 }
 
-valvectType derivative;
-zerovalvectType zero;
+valueType derivX, derivY, derivZ;
 
 };
 };
