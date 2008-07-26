@@ -46,6 +46,8 @@ void useAVBalsara(void);
 void useAVHernquist(void);
 void useAVTimedepAlpha(void);
 
+void useMaterials(void);
+
 void setNoParts(size_t _noParts, size_t _noGhostParts);
 void setNoParts(size_t _noParts);
 
@@ -100,7 +102,7 @@ valvectType m, h, dhdt, rho, drhodt, p, u, dudt, A, dAdt, alpha, dalphadt,
 ///
 /// integers
 ///
-idvectType id, noneigh;
+idvectType id, noneigh, mat;
 
 ///
 /// the integration step and the substep of the integrator
@@ -302,6 +304,14 @@ void ParticleManager::useAVBalsara()
 void ParticleManager::useAVHernquist()
 {
   usedScalars[ "q" ] = &q;
+}
+
+///
+/// the material variable
+///
+void ParticleManager::useMaterials()
+{
+  usedIntegers[ "mat" ] = &mat;
 }
 
 void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)

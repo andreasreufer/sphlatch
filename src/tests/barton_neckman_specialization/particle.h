@@ -1,1 +1,1 @@
-../../particle.h
+../../oosph_headers/particle.h
