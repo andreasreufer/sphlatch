@@ -1,8 +1,8 @@
-#ifndef SPHLATCH_EOS_IDEALGAS
-#define SPHLATCH_EOS_IDEALGAS
+#ifndef SPHLATCH_EOS_MIE_GRUENEISEN
+#define SPHLATCH_EOS_MIE_GRUENEISEN
 
 /*
- *  eos_idealgas.h
+ *  eos_mie_grueneisen.h
  *
  *
  *  Created by Andreas Reufer on 26.07.08.
@@ -15,7 +15,7 @@
 
 namespace sphlatch {
 
-class IdealGas : public EOS<IdealGas> {
+class MieGrueneisen : public EOS<MieGrueneisen> {
 
 public:
 void init()

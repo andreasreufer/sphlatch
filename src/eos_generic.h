@@ -27,10 +27,17 @@ partManagerType& PartManager;
 typedef sphlatch::LogManager logManagerType;
 logManagerType& Logger;
 
+valvectRefType rho, p, u;
+idvectRefType mat;
+
 public:
 EOS() :
 PartManager(partManagerType::instance()),
-Logger(logManagerType::instance())
+Logger(logManagerType::instance()),
+rho(PartManager.rho),
+p(PartManager.p),
+u(PartManager.u),
+mat(PartManager.mat)
 {
   asLeaf().init();
 };
@@ -42,9 +49,19 @@ Logger(logManagerType::instance())
 static EOS<T_leaftype>& instance();
 static EOS<T_leaftype>* _instance;
 
-void pressure()
+valueType getPressure(const size_t& _i)
 {
-  asLeaf().pressure();
+  return asLeaf().getPressure(_i);
+};
+
+valueType getSpeedOfSound(const size_t& _i)
+{
+  return asLeaf().getSpeedOfSound(_i);
+};
+
+void init()
+{
+  asLeaf().init();
 };
 
 private:
@@ -67,7 +84,7 @@ EOS<T_leaftype>& EOS<T_leaftype>::instance(void)
       _instance = new EOS;
       return *_instance;
     }
-}
+};
 
 }
 #endif
