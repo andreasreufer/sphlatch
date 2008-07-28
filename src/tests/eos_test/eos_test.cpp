@@ -67,26 +67,32 @@ int main(int argc, char* argv[])
   m.Ecv   = 1.800e+11;
 
   const size_t idx = 0;
-  rho(0) = 6.000e+00;
+  rho(0) = 1.500e+00;
   //u(0)   = 3.000e+10;
   u(0)   = 0.000e+10;
 
   double rhom1, cs, T, press;
   int material = 0;
 
-  for (size_t i = 0; i < 2048; i++)
+  sphlatch::valueType sphlatchP, sphlatchCs;
+
+  for (size_t i = 0; i < 1024; i++)
   {
     rhom1 = 1. / rho(0);
     parasphTillotson( rho(0), rhom1, u(0), material, press, cs,
                       T, m );
 
+    myEOS3.getPressCs(idx, sphlatchP, sphlatchCs);
+
+
     std::cout << rho(0) << " " << u(0) << " "
-              << myEOS3.getPressure(idx) << " "
-              << press
-              << "\n";
+              << sphlatchP << " "
+              << press << " "
+              << sphlatchCs << " "
+              << cs << "\n";
     
     //rho(0) += 0.005;
-    u(0)   += 0.04e+10;
+    u(0)   += 0.02e+10;
   }
 
   MPI::Finalize();

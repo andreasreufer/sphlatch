@@ -42,7 +42,6 @@ void parasphTillotson(const ftype &rho, const ftype &rhom1, const ftype &u,
       cs += P * rhom1 * (m.a + m.b * c2 * c2 * ex2);
       if (cs < 0.) cs = 0.;
     }
-
  
   ///
   /// not completely vaporized, PC needed
@@ -64,13 +63,20 @@ void parasphTillotson(const ftype &rho, const ftype &rhom1, const ftype &u,
           ftype e3 = 1. / (m.Ecv - m.Eiv);
           P = (e2 * P + e1 * PC) * e3;
           cs = (e2 * cs + e1 * csC) * e3;
+          //std::cerr << "Pe & Pc";
         }
       else
         {
           P = PC;
           cs = csC;
+          //std::cerr << "Pc";
         }
     }
+    else
+    {
+      //std::cerr << "Pe";
+    }
+  //std::cerr << "   " << P << "   " << rho << "\n";
   if (cs < csmin) cs = csmin;
   if (P < Pmin) P = Pmin;
   cs = sqrt(cs);
