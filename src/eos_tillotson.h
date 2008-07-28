@@ -84,7 +84,7 @@ valueType getPressure(const size_t& _i)
   ///
   /// hybrid regime (between compressed & expanded)
   ///
-  return(((curE - Eiv) / Pe + (Ecv - curE) / Pc) / (Ecv - Eiv));
+  return(((curE - Eiv) * Pe + (Ecv - curE) * Pc) / (Ecv - Eiv));
 };
 
 ///
