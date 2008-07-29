@@ -37,19 +37,24 @@ static Tillotson& instance();
 static Tillotson* _instance;
 
 ///
-/// get the pressure for particle _i
+/// get the pressure & speed of sound for particle _i
 ///
 /// the expressions for the speed of sound ( cc && ce )
 /// are copied from ParaSPH. in the hybrid regime, the square
-/// roots for both cc and ce are already pulled, in opposite
-/// to the scheme in ParaSPH.
+/// roots for both cc and ce are already taken, in opposite
+/// to the scheme in ParaSPH where the square root of the hybrid
+/// formula is taken.
 ///
-void getPressCs(const size_t& _i, valueType& _P, valueType& _cs)
+void operator()(const size_t _i, valueType& _P, valueType& _cs)
 {
   const valueType curE = u(_i);
   const valueType curRho = rho(_i);
   const identType curMat = mat(_i);
 
+  ///
+  /// load the correct material, when
+  /// in the cache
+  ///
   if (curMat != loadedMat)
     loadMat(curMat);
 
@@ -129,7 +134,6 @@ void getPressCs(const size_t& _i, valueType& _P, valueType& _cs)
   /// hybrid regime
   ///
   _P = ((curE - Eiv) * Pe + (Ecv - curE) * Pc) / (Ecv - Eiv);
-
   const valueType chy = ((curE - Eiv) * ce + (Ecv - curE) * cc) / (Ecv - Eiv);
   if (chy < cmin)
     _cs = cmin;
@@ -143,7 +147,9 @@ void loadMat(const size_t _mat)
 {
   ///
   /// mat index is shifted by one to ensure
-  /// compatibility with FORTRAN codes
+  /// compatibility with FORTRAN codes which
+  /// use the mat index to directly index
+  /// arrays
   ///
   const size_t matIdx = _mat - 1;
 

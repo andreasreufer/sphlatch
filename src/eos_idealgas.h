@@ -14,35 +14,50 @@
 #include "eos_generic.h"
 
 namespace sphlatch {
+class IdealGas : public EOS {
+public:
+IdealGas()
+{
+  loadGamma();
+};
 
-class IdealGas : public EOS<IdealGas> {
+~IdealGas()
+{
+};
+
+static IdealGas& instance();
+static IdealGas* _instance;
+
+///
+/// get the pressure and speed of sound for particle _i
+///
+void operator()(const size_t _i, valueType& _P, valueType& _cs)
+{
+  _P = gammaone * (u(_i) * rho(_i));
+  _cs = sqrt(p(_i) * gamma / rho(_i));
+  //_T = uToT*u(_i);
+  return;
+};
 
 public:
-void init()
+void loadGamma()
 {
   gamma = PartManager.attributes["gamma"];
-  gammamone = gamma - 1.;
-  uToT = gammamone*PartManager.attributes["KperU"];
-};
-
-valueType getPressure(const size_t& _i)
-{
-  return gammamone * ( u(_i) * rho(_i) );
-};
-
-valueType getSpeedOfSound(const size_t& _i)
-{
-  return sqrt( p(_i)*gamma / rho(_i) );
-};
-
-valueType getTemperature(const size_t& _i)
-{
-  return uToT*u(_i);
+  gammaone = gamma - 1.;
+  Logger.stream << "ideal gas EOS with gamma " << gamma;
+  Logger.flushStream();
 };
 
 private:
-valueType gamma, gammamone, uToT;
+valueType gamma, gammaone;
+};
 
+IdealGas * IdealGas::_instance = NULL;
+IdealGas& IdealGas::instance()
+{
+  if (_instance == NULL)
+    _instance = new IdealGas;
+  return *_instance;
 };
 }
 #endif

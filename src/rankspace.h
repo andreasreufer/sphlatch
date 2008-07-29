@@ -228,7 +228,7 @@ private:
 valueType curPartX, curPartY, curPartZ;
 size_t minCellX, maxCellX, minCellY, maxCellY, minCellZ, maxCellZ;
 public:
-void findNeighbours(const size_t& _curPartIndex,
+void findNeighbours(const size_t _curPartIndex,
                     const valueType _search_radius)
 {
   curPartX = pos(_curPartIndex, X);

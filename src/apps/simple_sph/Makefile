@@ -1,10 +1,12 @@
-all: simpleSph shockTube
+all: simpleSphGHU shockTube
 variants: simpleSph simpleSphG simpleSphGH simpleSphGHU simpleSph_HU
 
 shockTube:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options -o shocktube shocktube.cpp
-
-
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -DSPHLATCH_SHOCKTUBE \
+				      -o shocktube simple_sph.cpp
 simpleSph:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -o simple_sph____ simple_sph.cpp

@@ -387,7 +387,7 @@ private:
 ///   call recursor for existing and new
 ///   particle.
 ///
-void insertParticleRecursor(size_t _newPartIdx)
+void insertParticleRecursor(const size_t _newPartIdx)
 {
   size_t targetOctant = 0;
 
@@ -431,11 +431,10 @@ void insertParticleRecursor(size_t _newPartIdx)
       goUp();
     }
 
-
-///
-/// ... or if existing child is a node, then try to place the particle
-/// as a child of this node
-///
+  ///
+  /// ... or if existing child is a node, then try to place the particle
+  /// as a child of this node
+  ///
   else if (not
            static_cast<cellPtrT>(curNodePtr)->child[targetOctant]->isParticle)
     {
@@ -510,7 +509,7 @@ private:
 ///
 /// recursor for bottomtree multipole calculation
 ///
-void calcMPbottomtreeRecursor(void)
+void calcMPbottomtreeRecursor()
 {
   ///
   /// stop recursion if:
@@ -576,7 +575,7 @@ void detLocality()
     }
 }
 
-void toptreeLeafsToBufferRecursor(void)
+void toptreeLeafsToBufferRecursor()
 {
   ///
   /// stop recursion and copy cell to buffer, if:
@@ -584,7 +583,8 @@ void toptreeLeafsToBufferRecursor(void)
   ///
   if (curNodePtr->depth == toptreeDepth)
     {
-      localIsFilled[toptreeLeafCounter] = (!(curNodePtr->isEmpty) && curNodePtr->isLocal);
+      localIsFilled[toptreeLeafCounter] = (!(curNodePtr->isEmpty)
+                                           && curNodePtr->isLocal);
       asLeaf().cellToVect(cellVect);
       particleRowType(localCells, toptreeLeafCounter) = cellVect;
       toptreeLeafCounter++;
@@ -603,7 +603,7 @@ void toptreeLeafsToBufferRecursor(void)
     }
 };
 
-void bufferToToptreeLeafsRecursor(void)
+void bufferToToptreeLeafsRecursor()
 {
   ///
   /// stop recursion and copy buffer to cell, if:
@@ -634,7 +634,7 @@ void bufferToToptreeLeafsRecursor(void)
 ///
 /// recursor for bottomtree multipole calculation
 ///
-void calcMPtoptreeRecursor(void)
+void calcMPtoptreeRecursor()
 {
   ///
   /// stop recursion if:
@@ -849,9 +849,6 @@ public:
 /// - call the gravity calculation recursor
 /// - write back resulting acceleration
 ///
-
-// what about a ref?
-//void calcGravity(const partProxyPtrT _curParticle)
 void calcGravity(const size_t _partIdx)
 {
   curGravParticleX = pos(_partIdx, X);
@@ -993,8 +990,8 @@ partsIndexVectType neighbourList;
 valvectType neighDistList;
 size_t curPartIndex;
 int noMaxNeighs;
-void findNeighbours(const size_t& _curPartIdx,
-                    const valueType& _search_radius)
+void findNeighbours(const size_t _curPartIdx,
+                    const valueType _search_radius)
 {
   ///
   /// set up some vars and go to particles node
@@ -1165,8 +1162,8 @@ public:
 /// when each particle has mass m = 1, then the masses of the cells
 /// give directly the number of particles contained in them
 ///
-valueType maxMassEncloseRad(const size_t& _curPartIdx,
-                            const valueType& _minMass)
+valueType maxMassEncloseRad(const size_t _curPartIdx,
+                            const valueType _minMass)
 {
   ///
   /// set up some vars and go to particle node

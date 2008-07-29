@@ -28,6 +28,9 @@
 // time dependent smoothing length?
 //#define SPHLATCH_TIMEDEP_SMOOTHING
 
+// shocktube boundary conditions?
+//#define SPHLATCH_SHOCKTUBE
+
 // do we need the veolicty divergence?
 #ifdef SPHLATCH_TIMEDEP_ENERGY
 #ifndef SPHLATCH_VELDIV
@@ -88,18 +91,25 @@ typedef sphlatch::CostZone costzone_type;
 typedef sphlatch::LogManager log_type;
 
 #include "integrator_verlet.h"
+//typedef sphlatch::VerletMetaIntegrator integrator_type;
+
 #include "integrator_predcorr.h"
+typedef sphlatch::PredCorrMetaIntegrator integrator_type;
+
+#include "eos_idealgas.h"
+typedef sphlatch::IdealGas eos_type;
 
 #include <boost/progress.hpp>
 #include <vector>
 
 #include "kernel_cubicspline3d.h"
+typedef sphlatch::CubicSpline3D kernel_type;
 
-/// tree stuff
 #include "bhtree.h"
+typedef sphlatch::BHtree<sphlatch::Quadrupoles> tree_type;
 
-/// neighbour search
 #include "rankspace.h"
+typedef sphlatch::Rankspace neighsearch_type;
 
 using namespace sphlatch::vectindices;
 using namespace boost::assign;
@@ -119,6 +129,7 @@ valueType timeStep()
   valvectRefType h(PartManager.h);
   valvectRefType p(PartManager.p);
   valvectRefType u(PartManager.u);
+  valvectRefType cs(PartManager.cs);
   valvectRefType rho(PartManager.rho);
   valvectRefType dudt(PartManager.dudt);
   valvectRefType dhdt(PartManager.dhdt);
@@ -201,10 +212,9 @@ valueType timeStep()
   const valueType courantNumber = PartManager.attributes["courant"];
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType ci = sqrt(p(i) * gamma / rho(i));
-      const valueType dtCFLi = h(i) / ci;
-
-      if (ci > 0.)
+      const valueType dtCFLi = h(i) / cs(i);
+      dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
+      if (cs(i) > 0.)
         {
           dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
         }
@@ -255,7 +265,7 @@ valueType timeStep()
   ///
   quantsType saveQuants;
   saveQuants.vects += &pos, &vel, &acc;
-  saveQuants.scalars += &m, &rho, &u, &p, &h;
+  saveQuants.scalars += &m, &rho, &u, &p, &h, &cs;
   saveQuants.ints += &id, &noneigh;
 
 #ifdef SPHLATCH_TIMEDEP_ENERGY
@@ -293,6 +303,7 @@ void derivate()
   //io_type& IOManager(io_type::instance());
   costzone_type& CostZone(costzone_type::instance());
   log_type& Logger(log_type::instance());
+  eos_type& EOS(eos_type::instance());
 
   matrixRefType pos(PartManager.pos);
   matrixRefType vel(PartManager.vel);
@@ -302,6 +313,7 @@ void derivate()
   valvectRefType h(PartManager.h);
   valvectRefType p(PartManager.p);
   valvectRefType u(PartManager.u);
+  valvectRefType cs(PartManager.cs);
   valvectRefType rho(PartManager.rho);
   valvectRefType dudt(PartManager.dudt);
   valvectRefType dhdt(PartManager.dhdt);
@@ -359,18 +371,25 @@ void derivate()
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       dudt(i) = 0.;
 #endif
+#ifdef SPHLATCH_SHOCKTUBE
+      ///
+      /// shocktube boundary condition
+      ///
+      vel(i, X) = 0.;
+      vel(i, Y) = 0.;
+
+      if (pos(i, Z) < 5. || pos(i, Z) > 295.)
+        vel(i, Z) = 0;
+#endif
     }
 
 #ifdef SPHLATCH_GRAVITY
   const valueType gravTheta = PartManager.attributes["gravtheta"];
   const valueType gravConst = PartManager.attributes["gravconst"];
 
-  sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
-                                               gravConst,
-                                               CostZone.getDepth(),
-                                               CostZone.getCenter(),
-                                               CostZone.getSidelength()
-                                               );
+  tree_type Tree(gravTheta, gravConst,
+                 CostZone.getDepth(), CostZone.getCenter(),
+                 CostZone.getSidelength());
 
   ///
   /// fill up tree, determine ordering, calculate multipoles
@@ -395,17 +414,17 @@ void derivate()
   ///
   /// define kernel and neighbour search algorithm
   ///
-  sphlatch::CubicSpline3D Kernel;
-  sphlatch::Rankspace RSSearch;
+  kernel_type Kernel;
+  neighsearch_type Nsearch;
 
   ///
   /// the size of the neighbour list doesn't really
   /// affect the performance of the neighbour search,
   /// so it can be choosen quite large
   ///
-  RSSearch.prepare();
-  RSSearch.neighbourList.resize(1024);
-  RSSearch.neighDistList.resize(1024);
+  Nsearch.prepare();
+  Nsearch.neighbourList.resize(1024);
+  Nsearch.neighDistList.resize(1024);
   Logger << "Rankspace prepared";
 
   ///
@@ -425,9 +444,9 @@ void derivate()
 #endif
       const valueType hi = h(i);
       const valueType srchRad = 2. * hi;
-      RSSearch.findNeighbours(i, srchRad);
+      Nsearch.findNeighbours(i, srchRad);
 
-      const size_t noNeighs = RSSearch.neighbourList[0];
+      const size_t noNeighs = Nsearch.neighbourList[0];
 
       ///
       /// store the number of neighbours
@@ -442,8 +461,8 @@ void derivate()
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
-          const valueType r = RSSearch.neighDistList[curNeigh];
-          const size_t j = RSSearch.neighbourList[curNeigh];
+          const valueType r = Nsearch.neighDistList[curNeigh];
+          const size_t j = Nsearch.neighbourList[curNeigh];
 
           const valueType hij = 0.5 * (hi + h(j));
 
@@ -477,11 +496,14 @@ void derivate()
   ///
   /// pressure
   /// I need    : u, rho
-  /// I provide : p
+  /// I provide : p, cs
   ///
-  const valueType gamma = PartManager.attributes["gamma"];
-  p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
-  Logger << "pressure";
+  for (size_t k = 0; k < noParts; k++)
+    {
+      EOS(k, p(k), cs(k));
+    }
+  CommManager.sendGhosts(cs);
+  Logger << " sent to ghosts: cs";
 
   ///
   /// 2st SPH sum: acceleration, specific power & velocity divergence
@@ -514,9 +536,9 @@ void derivate()
 
       /// find the neighbours
       const valueType srchRad = 2. * hi;
-      RSSearch.findNeighbours(i, srchRad);
+      Nsearch.findNeighbours(i, srchRad);
 
-      const size_t noNeighs = RSSearch.neighbourList[0];
+      const size_t noNeighs = Nsearch.neighbourList[0];
 
       curAccX = 0.;
       curAccY = 0.;
@@ -535,15 +557,15 @@ void derivate()
       const valueType riY = pos(i, Y);
       const valueType riZ = pos(i, Z);
 
-      const valueType ci = sqrt(gamma * pi / rhoi);
+      const valueType ci = cs(i);
 
       ///
       /// sum over the neighbours
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
-          const valueType rij = RSSearch.neighDistList[curNeigh];
-          const size_t j = RSSearch.neighbourList[curNeigh];
+          const valueType rij = Nsearch.neighDistList[curNeigh];
+          const size_t j = Nsearch.neighbourList[curNeigh];
 
           const valueType rhoj = rho(j);
           const valueType pj = p(j);
@@ -568,7 +590,7 @@ void derivate()
             {
               const valueType rijrij = rijX * rijX + rijY * rijY + rijZ * rijZ;
               const valueType rhoij = 0.5 * (rhoi + rhoj);
-              const valueType cij = 0.5 * (ci + sqrt(gamma * pj / rhoj));
+              const valueType cij = 0.5 * (ci + cs(j));
               const valueType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
 
               av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
@@ -599,7 +621,6 @@ void derivate()
           ///
           curPow += (0.5 * accTerm * mjvijdivWij);
 #endif
-
 #ifdef SPHLATCH_VELDIV
           ///
           /// velocity divergence
@@ -616,6 +637,13 @@ void derivate()
 #ifdef SPHLATCH_VELDIV
       divv(i) = curVelDiv / rho(i);
       divvMax = divv(i) > divvMax ? divv(i) : divvMax;
+#endif
+#ifdef SPHLATCH_SHOCKTUBE
+      ///
+      /// shocktube boundary condition
+      ///
+      if (pos(i, Z) < 5. || pos(i, Z) > 295.)
+        acc(i, Z) = 0.;
 #endif
     }
 #ifdef SPHLATCH_VELDIV

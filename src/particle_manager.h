@@ -97,7 +97,7 @@ matrixType pos, vel, acc, rotv, M, I, S;
 /// scalar quantities
 ///
 valvectType m, h, dhdt, rho, drhodt, p, u, dudt, A, dAdt, alpha, dalphadt,
-            divv, mumax, q, eps, dtav, dt;
+            divv, mumax, q, eps, dtav, dt, cs;
 
 ///
 /// integers
@@ -181,7 +181,8 @@ ParticleManager::ParticleManager(void)
   ///
   isGhostVarSet += "pos", "vel", "rotv";
   /// scalar quantities:
-  isGhostVarSet += "m", "h", "rho", "p", "u", "A", "alpha", "divv", "eps";
+  isGhostVarSet += "m", "h", "rho", "p", "u", "A",
+                    "alpha", "divv", "eps", "cs";
   /// integers:
   isGhostVarSet += "id";
 
@@ -225,6 +226,7 @@ void ParticleManager::useBasicSPH()
   usedScalars[ "h" ] = &h;
   usedScalars[ "rho" ] = &rho;
   usedScalars[ "p" ] = &p;
+  usedScalars[ "cs" ] = &cs;
   
   usedIntegers[ "noneigh" ] = &noneigh;
 }
