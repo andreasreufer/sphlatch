@@ -10,3 +10,7 @@ tomsasciitoh5part:
 
 hdf5toh5part:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I./h5part -lhdf5 -lz -lboost_program_options -o hdf52h5part hdf52h5part.cpp
+
+fuchsbintoh5part:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options -o fuchsbin2h5part fuchsbin2h5part.cpp
+
