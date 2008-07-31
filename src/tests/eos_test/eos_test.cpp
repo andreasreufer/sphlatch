@@ -11,87 +11,98 @@
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
 
-#include "eos_idealgas.h"
-typedef sphlatch::IdealGas eos_idealgas_type;
+#include "io_manager.h"
+typedef sphlatch::IOManager io_type;
+
+//#include "eos_idealgas.h"
+//typedef sphlatch::IdealGas eos_type;
 
 #include "eos_tillotson.h"
-typedef sphlatch::Tillotson eos_tillotson_type;
+typedef sphlatch::Tillotson eos_type;
 
-#include "eos_mie_grueneisen.h"
-typedef sphlatch::MieGrueneisen eos_miegrueneisen_type;
+//#include "eos_mie_grueneisen.h"
+//typedef sphlatch::MieGrueneisen eos_type;
 
 #include "parasph_eos.cc"
+
+using namespace sphlatch::vectindices;
 
 int main(int argc, char* argv[])
 {
   MPI::Init(argc, argv);
 
   part_type& PartManager(part_type::instance());
+  io_type& IOManager(io_type::instance());
 
   PartManager.useBasicSPH();
   PartManager.useEnergy();
   PartManager.useMaterials();
-  
-  PartManager.setNoParts(1);
-  PartManager.resizeAll();
 
-
-  PartManager.attributes["gamma"] = 1.4;
-  PartManager.attributes["KperU"] = 2.068e4;
-
-  eos_miegrueneisen_type& myEOS1(eos_miegrueneisen_type::instance());
-  eos_idealgas_type&      myEOS2(eos_idealgas_type::instance());
-  eos_tillotson_type&     myEOS3(eos_tillotson_type::instance());
-  
-  //sphlatch::Tillotson myEOS3;
-
-  
+  sphlatch::matrixRefType  pos(PartManager.pos);  
   sphlatch::valvectRefType rho(PartManager.rho);
   sphlatch::valvectRefType   u(PartManager.u);
   sphlatch::idvectRefType  mat(PartManager.mat);
-
-  mat(0) = 1;
   
-  eosMat m;
-  m.rho0  = 2.680e+00;
-  m.A     = 1.800e+11;
-  m.B     = 1.800e+11;
-  m.a     = 0.5;
-  m.b     = 1.3;
-  m.alpha = 5.0;
-  m.beta  = 5.0;
-  m.u0    = 1.600e+11;
-  m.Eiv   = 3.500e+10;
-  m.Ecv   = 1.800e+11;
+  IOManager.loadDump("initials.h5part");
 
-  const size_t idx = 0;
-  rho(0) = 1.500e+00;
-  //u(0)   = 3.000e+10;
-  u(0)   = 0.000e+10;
+  eos_type& EOS(eos_type::instance());
+  
+  eosMat dunite;
+  dunite.rho0  = 3.320e+00;
+  dunite.A     = 1.290e+12;
+  dunite.B     = 1.290e+12;
+  dunite.a     = 0.5;
+  dunite.b     = 1.5;
+  dunite.alpha = 5.0;
+  dunite.beta  = 5.0;
+  dunite.u0    = 4.870e+12;
+  dunite.Eiv   = 4.720e+10;
+  dunite.Ecv   = 1.820e+11;
 
-  double rhom1, cs, T, press;
-  int material = 0;
+  eosMat iron;
+  iron.rho0  = 7.860e+00;
+  iron.A     = 1.280e+12;
+  iron.B     = 1.050e+12;
+  iron.a     = 0.5;
+  iron.b     = 1.5;
+  iron.alpha = 5.0;
+  iron.beta  = 5.0;
+  iron.u0    = 9.500e+10;
+  iron.Eiv   = 1.420e+10;
+  iron.Ecv   = 8.450e+10;
+  
+  sphlatch::valueType sP = 0., sCs = 0.;
+  
+  double pP = 0., pCs = 0., rhom1 = 0., T = 0.;
 
-  sphlatch::valueType sphlatchP, sphlatchCs;
-
-  for (size_t i = 0; i < 1024; i++)
+  const size_t noParts = PartManager.getNoLocalParts();
+  //for (size_t i = 0; i < 1024; i++)
+  for (size_t i = 0; i < noParts; i++)
   {
-    rhom1 = 1. / rho(0);
-    parasphTillotson( rho(0), rhom1, u(0), material, press, cs,
-                      T, m );
-
-    //myEOS3.getPressCs(idx, sphlatchP, sphlatchCs);
-    myEOS3(idx, sphlatchP, sphlatchCs);
-
-
-    std::cout << rho(0) << " " << u(0) << " "
-              << sphlatchP << " "
-              << press << " "
-              << sphlatchCs << " "
-              << cs << "\n";
+    rhom1 = 1. / rho(i);
     
-    //rho(0) += 0.005;
-    u(0)   += 0.02e+10;
+    if ( mat(i) == 4 )
+      parasphTillotson( rho(i), rhom1, u(i), mat(i),
+                        pP, pCs, T, dunite );
+    else if ( mat(i) == 5 )
+      parasphTillotson( rho(i), rhom1, u(i), mat(i),
+                        pP, pCs, T, iron );
+
+    EOS(i, sP, sCs);
+   
+    std::cout << i << "   "
+              << pos(i, X) << "   "
+              << pos(i, Y) << "   "
+              << pos(i, Z) << "   "
+              << mat(i) << "   "    //  5
+              << u(i) << "   "
+              << rho(i) << "   "
+              << pP << "   "        //  8
+              << pCs << "   "       //  9
+              << sP << "   "        // 10
+              << sCs << "   "       // 11
+              << pP - sP << "    "  // 12
+              << pCs - sCs << "\n"; // 13
   }
 
   MPI::Finalize();

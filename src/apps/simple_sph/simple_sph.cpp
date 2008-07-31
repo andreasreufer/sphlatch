@@ -90,14 +90,19 @@ typedef sphlatch::CostZone costzone_type;
 #include "log_manager.h"
 typedef sphlatch::LogManager log_type;
 
-#include "integrator_verlet.h"
+//#include "integrator_verlet.h"
 //typedef sphlatch::VerletMetaIntegrator integrator_type;
 
 #include "integrator_predcorr.h"
 typedef sphlatch::PredCorrMetaIntegrator integrator_type;
 
+#ifdef SPHLATCH_TILLOTSON
+#include "eos_tillotson.h"
+typedef sphlatch::Tillotson eos_type;
+#else
 #include "eos_idealgas.h"
 typedef sphlatch::IdealGas eos_type;
+#endif
 
 #include <boost/progress.hpp>
 #include <vector>
@@ -141,6 +146,9 @@ valueType timeStep()
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
+#ifdef SPHLATCH_TILLOTSON
+  idvectRefType mat(PartManager.mat);
+#endif
 
   valueRefType time(PartManager.attributes["time"]);
   int& step(PartManager.step);
@@ -208,7 +216,6 @@ valueType timeStep()
   /// CFL condition
   ///
   valueType dtCFL = std::numeric_limits<valueType>::max();
-  const valueType gamma = PartManager.attributes["gamma"];
   const valueType courantNumber = PartManager.attributes["courant"];
   for (size_t i = 0; i < noParts; i++)
     {
@@ -225,7 +232,8 @@ valueType timeStep()
   ///
   /// distance to next saveItrvl
   ///
-  const valueType saveItrvl = 0.1;
+  //const valueType saveItrvl = 0.1;
+  const valueType saveItrvl = 5.0;
   std::string fileName = "saveDump000000.h5part";
   const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
                                   + 1.) * saveItrvl;
@@ -277,6 +285,9 @@ valueType timeStep()
 #endif
 #ifdef SPHLATCH_GRAVITY
   saveQuants.scalars += &eps;
+#endif
+#ifdef SPHLATCH_TILLOTSON
+  saveQuants.ints += &mat;
 #endif
 
   const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
@@ -490,8 +501,6 @@ void derivate()
   Logger.stream << "assure minimal temperature (umin = " << uMin << ")";
   Logger.flushStream();
 #endif
-  CommManager.sendGhosts(u);
-  Logger << " sent to ghosts: u";
 
   ///
   /// pressure
@@ -502,8 +511,10 @@ void derivate()
     {
       EOS(k, p(k), cs(k));
     }
+  Logger << "calculated pressure";
+  CommManager.sendGhosts(p);
   CommManager.sendGhosts(cs);
-  Logger << " sent to ghosts: cs";
+  Logger << " sent to ghosts: p, cs";
 
   ///
   /// 2st SPH sum: acceleration, specific power & velocity divergence
@@ -729,7 +740,8 @@ int main(int argc, char* argv[])
   PartManager.attributes["umin"] = 1000.;
 
   std::string loadDumpFile = "initial.h5part";
-  const valueType maxTime = 5.;
+  //const valueType maxTime = 5.;
+  const valueType maxTime = 100.;
 
   ///
   /// define what we're doing
@@ -744,6 +756,9 @@ int main(int argc, char* argv[])
 #endif
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
   PartManager.useTimedepH();
+#endif
+#ifdef SPHLATCH_TILLOTSON
+  PartManager.useMaterials();
 #endif
 
   ///
@@ -765,6 +780,9 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_GRAVITY
   valvectRefType eps(PartManager.eps);
 #endif
+#ifdef SPHLATCH_TILLOTSON
+  idvectRefType mat(PartManager.mat);
+#endif
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
@@ -783,6 +801,9 @@ int main(int argc, char* argv[])
 
 #ifdef SPHLATCH_GRAVITY
   CommManager.exchangeQuants.scalars += &eps;
+#endif
+#ifdef SPHLATCH_TILLOTSON
+  CommManager.exchangeQuants.ints += &mat;
 #endif
 
   ///

@@ -30,3 +30,10 @@ simpleSph_HU:
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -o simple_sph_UH_ simple_sph.cpp
+tillotson:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -DSPHLATCH_TILLOTSON \
+				      -o simple_sph_tillotson simple_sph.cpp

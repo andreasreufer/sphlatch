@@ -161,6 +161,7 @@ int main(int argc, char* argv[])
         switch(j)
         {
           case 0:
+            id(i) = static_cast<identType>(i);
             pos(i, X) = static_cast<valueType>( readDbl( fin ) );
             break;
           case 1:
@@ -200,7 +201,7 @@ int main(int argc, char* argv[])
             readDbl(fin); /// alpha?
             break;
           case 13:
-            mat(i) = static_cast<identType>( readInt( fin ) );
+            mat(i) = static_cast<identType>( lrint( readInt( fin ) ) );
             break;
         }
       } 
