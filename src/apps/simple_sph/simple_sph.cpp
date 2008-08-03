@@ -591,9 +591,9 @@ void derivate()
           const valueType vijY = viY - vel(j, Y);
           const valueType vijZ = viZ - vel(j, Z);
 
-          /// replace by scalar expressions?
           const valueType vijrij = rijX * vijX + rijY * vijY + rijZ * vijZ;
 
+          /// make that a static or define outside of loop?
           valueType av = 0;
 
           /// AV
