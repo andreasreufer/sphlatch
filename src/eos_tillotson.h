@@ -39,25 +39,28 @@ static Tillotson* _instance;
 ///
 /// get the pressure & speed of sound for particle _i
 ///
+/// common EOS interface
+///
+void operator()(const size_t _i, valueType& _P, valueType& _cs)
+{
+  this->operator()(rho(_i), u(_i), mat(_i), _P, _cs);
+}
+
+///
+/// get the pressure & speed of sound for given parameters
+///
 /// the expressions for the speed of sound ( cc && ce )
 /// are copied from ParaSPH. in the hybrid regime, the square
 /// roots for both cc and ce are already taken, in opposite
 /// to the scheme in ParaSPH where the square root of the hybrid
 /// formula is taken.
 ///
-
-void operator()(const size_t _i, valueType& _P, valueType& _cs)
-{
-  this->operator()(rho(_i), u(_i), mat(_i), _P, _cs);
-}
-
-//void operator()(const size_t _i, valueType& _P, valueType& _cs)
 void operator()(const valueType _rho, const valueType _u, const identType _mat,
                 valueType& _P, valueType& _cs)
 {
-  const valueType curRho = rho(_i);
-  const valueType curE = u(_i);
-  const identType curMat = mat(_i);
+  const valueType curRho = _rho;
+  const valueType curE   = _u;
+  const identType curMat = _mat;
 
   ///
   /// load the correct material, when

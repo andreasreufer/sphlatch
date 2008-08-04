@@ -11,12 +11,13 @@
  */
 
 #include "typedefs.h"
-#include "eos_generic.h"
+#include "eos_tillotson.h"
 
 namespace sphlatch {
 class LagrangeSphere1DSolver {
 public:
-LagrangeSphere1DSolver()
+LagrangeSphere1DSolver() :
+EOS(eosType::instance())
 {
   firstStep = true;
   time = 0.;
@@ -31,6 +32,7 @@ LagrangeSphere1DSolver()
   u.resize(noCells);
   p.resize(noCells);
   m.resize(noCells);
+  cs.resize(noCells);
   mat.resize(noCells);
   rhoOld.resize(noCells);
   qOld.resize(noCells);
@@ -47,13 +49,16 @@ public:
 void integrateTo(valueType _t);
 
 public:
-valvectType r, v, rho, q, u, p, m;
+valvectType r, v, rho, q, u, p, m, cs;
 idvectType mat;
 valueType time;
 
 private:
 void integrate();
-void detTimestep();
+valueType detTimestep();
+
+typedef sphlatch::Tillotson eosType;
+eosType& EOS;
 
 private:
 size_t noCells, noEdges;
@@ -61,7 +66,7 @@ size_t noCells, noEdges;
 valvectType rhoOld, qOld;
 
 valueType avAlpha, avBeta;
-valueType dt, dtOld, dtMiddle;
+valueType dtp05, dtm05;
 valueType gravConst;
 
 bool firstStep;
@@ -71,14 +76,14 @@ bool firstStep;
 void LagrangeSphere1DSolver::integrateTo(valueType _t)
 {
 
+  detTimestep();
 
 }
 
 void LagrangeSphere1DSolver::integrate()
 {
-  detTimestep();
-
   const valueType pi4 = M_PI*4.;
+  const valueType dtc00 = 0.5(dtp05+dtm05);
 
   ///
   /// update velocity
@@ -99,7 +104,7 @@ void LagrangeSphere1DSolver::integrate()
     mSum += m(i-1);
     const valueType accG = gravConst*mSum / ( r(i)*r(i) );
 
-    v(i) -= ( ( gradP + gradQ ) / dmk + accG )*dtMiddle;
+    v(i) -= ( ( gradP + gradQ ) / dmk + accG )*dtc00;
   }
   v(0) = 0.;
   v(noEdges - 1) = 0.;
@@ -110,7 +115,7 @@ void LagrangeSphere1DSolver::integrate()
   r(0) = 0.;
   for (size_t i = 1; i < noEdges; i++)
   {
-    r(i) += v(i)*dt;
+    r(i) += v(i)*dtp05;
   }
   
   ///
@@ -134,13 +139,29 @@ void LagrangeSphere1DSolver::integrate()
   ///
   /// update internal energy
   ///
+  valueType pPrime = 0.;
   for (size_t i = 0; i < noCells; i++)
   {
-    const valueType dmk = 0.5*( m(i-1) + m(i) );
     const valueType Ak = pi4*r(i)*r(i);
     const valueType Akp10 = pi4*r(i+1)*r(i+1);
     const valueType Akp05 = 0.5*(Akp10 + Ak);
+
+    ///
+    /// try uPrime and guess pPrime
+    ///
+    const valueType dVol = (Akp10*v(i+1) - Ak*v(i))*(dtp05/m(i));
+    const valueType uPrime = u(i) - p(i)*dVol;
+    EOS(rho(i), uPrime, mat(i), pPrime, cs(i) );
+    p(i) = 0.5*(p(i) + pPrime);
+    q(i) = 0.5*(q(i) + qOld(i));
+
+    ///
+    /// AV heating
+    ///
+    const valueType dQ = (v(i+1)*(3.*Akp05-Akp10) - v(i)*(3.*Akp05-Ak))
+                         *(dtp05/m(i));
     
+    u(i) =- (p(i)*dVol + dQ);
   }
 
   ///
@@ -148,26 +169,29 @@ void LagrangeSphere1DSolver::integrate()
   ///
   for (size_t i = 0; i < noCells; i++)
   {
+    EOS(rho(i), u(i), mat(i), p(i), cs(i) );
   }
 }
 
-void LagrangeSphere1DSolver::detTimestep()
+valueType LagrangeSphere1DSolver::detTimestep()
 {
   ///
-  /// calculate current timestep dt
+  /// calculate current timestep dtp05
   ///
 
   dt = 0.;
 
   if (firstStep)
   {
-    dtMiddle = dt;
+    dtc00 = dt05;
     firstStep = false;
   }
   else
   {
-    dtMiddle = 0.5*(dt + dtOld);
+    dtc00 = 0.5*(dtp05 + dtm05);
   }
+
+  return 0.;
 }
 
 }
