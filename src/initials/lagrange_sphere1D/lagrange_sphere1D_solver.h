@@ -136,6 +136,11 @@ void LagrangeSphere1DSolver::integrate()
   ///
   for (size_t i = 0; i < noCells; i++)
   {
+    const valueType dmk = 0.5*( m(i-1) + m(i) );
+    const valueType Ak = pi4*r(i)*r(i);
+    const valueType Akp10 = pi4*r(i+1)*r(i+1);
+    const valueType Akp05 = 0.5*(Akp10 + Ak);
+    
   }
 
   ///
@@ -164,9 +169,6 @@ void LagrangeSphere1DSolver::detTimestep()
     dtMiddle = 0.5*(dt + dtOld);
   }
 }
-
-/*void LagrangeSphere1DSolver::EOS()
-{};*/
 
 }
 #endif

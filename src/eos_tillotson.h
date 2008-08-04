@@ -45,10 +45,18 @@ static Tillotson* _instance;
 /// to the scheme in ParaSPH where the square root of the hybrid
 /// formula is taken.
 ///
+
 void operator()(const size_t _i, valueType& _P, valueType& _cs)
 {
-  const valueType curE = u(_i);
+  this->operator()(rho(_i), u(_i), mat(_i), _P, _cs);
+}
+
+//void operator()(const size_t _i, valueType& _P, valueType& _cs)
+void operator()(const valueType _rho, const valueType _u, const identType _mat,
+                valueType& _P, valueType& _cs)
+{
   const valueType curRho = rho(_i);
+  const valueType curE = u(_i);
   const identType curMat = mat(_i);
 
   ///
