@@ -61,7 +61,50 @@ int main(int argc, char* argv[])
   io_type&        IOManager(io_type::instance());
   part_type&      PartManager(part_type::instance());
 
-  lg1D_solver_type Solver;
+  const size_t noCells = 100;
+  const valueType dr = 6.e8 / noCells;
+
+  lg1D_solver_type Solver(noCells);
+
+  Solver.uMin = 1.e9;
+  //Solver.gravConst = 0.;
+
+  for (size_t i = 0; i < noCells; i++)
+  {
+    Solver.r(i) = dr*(i+10);
+    Solver.v(i) = 0.;
+    
+    Solver.rho(i) = 12.;
+    Solver.u(i)   = 3.5e10;
+    Solver.mat(i) = 4;
+  }
+  Solver.r(0) = 0.;
+  Solver.r(noCells) = (noCells+10)*dr;
+  Solver.v(noCells) = 0.;
+  
+  /*for (size_t i = 400; i < 600; i++)
+  {
+    Solver.u(i) = 7.0e10;
+  }*/
+  
+  Solver.densityToMass();
+
+  std::string dumpfilename;
+  dumpfilename = "dump01.hdf5";
+  IOManager.savePrimitive( Solver.r, "r", dumpfilename);
+  IOManager.savePrimitive( Solver.v, "v", dumpfilename);
+  IOManager.savePrimitive( Solver.m, "m", dumpfilename);
+  IOManager.savePrimitive( Solver.u, "u", dumpfilename);
+  IOManager.savePrimitive( Solver.rho, "rho", dumpfilename);
+  
+  Solver.integrateTo(5.e4);
+  
+  dumpfilename = "dump02.hdf5";
+  IOManager.savePrimitive( Solver.r, "r", dumpfilename);
+  IOManager.savePrimitive( Solver.v, "v", dumpfilename);
+  IOManager.savePrimitive( Solver.m, "m", dumpfilename);
+  IOManager.savePrimitive( Solver.u, "u", dumpfilename);
+  IOManager.savePrimitive( Solver.rho, "rho", dumpfilename);
 
   sphlatch::quantsType saveQuants;
   PartManager.step = 0;
