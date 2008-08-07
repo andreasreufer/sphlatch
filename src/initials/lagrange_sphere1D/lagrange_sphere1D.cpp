@@ -1,7 +1,7 @@
 // some defs
 
 // uncomment for single-precision calculation
-#define SPHLATCH_SINGLEPREC
+//#define SPHLATCH_SINGLEPREC
 
 #include <cstdlib>
 #include <iostream>
@@ -61,25 +61,36 @@ int main(int argc, char* argv[])
   io_type&        IOManager(io_type::instance());
   part_type&      PartManager(part_type::instance());
 
-  const size_t noCells = 100;
+  const size_t noCells = 400;
   const valueType dr = 6.e8 / noCells;
 
   lg1D_solver_type Solver(noCells);
 
-  Solver.uMin = 1.e9;
+  Solver.uMin = 1.e4;
   //Solver.gravConst = 0.;
+  Solver.friction = 1.e-2;
 
   for (size_t i = 0; i < noCells; i++)
   {
-    Solver.r(i) = dr*(i+10);
+    Solver.r(i) = dr*(i);
     Solver.v(i) = 0.;
-    
-    Solver.rho(i) = 12.;
-    Solver.u(i)   = 3.5e10;
-    Solver.mat(i) = 4;
+   
+    if ( i < 200 )
+    {
+      Solver.rho(i) = 6.;
+      Solver.u(i)   = 1.e10;
+      Solver.mat(i) = 5;
+    }
+    else
+    {
+      Solver.rho(i) = 3.;
+      Solver.u(i)   = 1.e10;
+      Solver.mat(i) = 4;
+    }
+
   }
   Solver.r(0) = 0.;
-  Solver.r(noCells) = (noCells+10)*dr;
+  Solver.r(noCells) = (noCells)*dr;
   Solver.v(noCells) = 0.;
   
   /*for (size_t i = 400; i < 600; i++)
@@ -95,15 +106,17 @@ int main(int argc, char* argv[])
   IOManager.savePrimitive( Solver.v, "v", dumpfilename);
   IOManager.savePrimitive( Solver.m, "m", dumpfilename);
   IOManager.savePrimitive( Solver.u, "u", dumpfilename);
+  IOManager.savePrimitive( Solver.p, "p", dumpfilename);
   IOManager.savePrimitive( Solver.rho, "rho", dumpfilename);
   
-  Solver.integrateTo(5.e4);
+  Solver.integrateTo(5.e3);
   
   dumpfilename = "dump02.hdf5";
   IOManager.savePrimitive( Solver.r, "r", dumpfilename);
   IOManager.savePrimitive( Solver.v, "v", dumpfilename);
   IOManager.savePrimitive( Solver.m, "m", dumpfilename);
   IOManager.savePrimitive( Solver.u, "u", dumpfilename);
+  IOManager.savePrimitive( Solver.p, "p", dumpfilename);
   IOManager.savePrimitive( Solver.rho, "rho", dumpfilename);
 
   sphlatch::quantsType saveQuants;
