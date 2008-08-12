@@ -1,0 +1,83 @@
+#
+# input file for the Tillotson equation of state
+# each non-empty and non-commented line represents a material, use
+# any combination of whitespaces to separate the numbers
+#
+# the parameters are
+# rho0:           initial density
+# A:              bulk modulus
+# B:              non-linear Tillotson compression coefficient
+# a,b,alpha,beta: Tillotson parameters (dimensionless)
+# E0:             initial energy
+# Eiv:            energy of incipient vaporization
+# Ecv:            energy of complete vaporization
+#
+# ... in the following order:
+# rho0       A           B            a      b    alpha  beta    E0          Eiv         Ecv
+#
+# the number of materials in this file:
+21
+
+# mat=1, granite, cgs-units
+2.680e+00   1.800e+11   1.800e+11    0.5    1.3    5.0    5.0   1.600e+11   3.500e+10   1.800e+11
+
+# mat=2, basalt, cgs-units
+2.700e+00   2.670e+11   2.670e+11    0.5    1.5    5.0    5.0   4.870e+12   4.720e+10   1.820e+11
+
+# mat=3, aluminum, cgs-units
+2.700e+00   7.520e+11   6.500e+11    0.5    1.6    5.0    5.0   5.000e+10   2.700e+10   1.410e+11
+
+# mat=4, dunite, cgs-units
+3.320e+00   1.290e+12   1.290e+12    0.5    1.5    5.0    5.0   4.870e+12   4.720e+10   1.820e+11
+
+# mat=5, iron 130pt, cgs-units
+7.860e+00   1.280e+12   1.050e+12    0.5    1.5    5.0    5.0   9.500e+10   1.420e+10   8.450e+10
+
+# mat=6, lucite, cgs-units
+1.180e+00   1.010e+11   3.380e+10    0.6    2.0   10.0    5.0   7.000e+10   2.000e+10   2.400e+10
+
+# mat=7, limestone, cgs-units
+2.700e+00   4.000e+11   6.700e+11    0.5    0.6    5.0    5.0   1.000e+11   2.500e+10   1.400e+11
+
+# mat=8, halite, cgs-units
+2.160e+00   2.500e+11   3.000e+11    0.5    0.6    5.0    5.0   5.000e+10   2.000e+10   1.500e+11
+
+# mat=9, oil shale, cgs-units
+2.300e+00   2.800e+11   1.100e+11    0.5    1.0    5.0    5.0   1.100e+11   3.200e+10   1.600e+11
+
+# mat=10, wet tuff, cgs-units
+1.970e+00   1.000e+11   6.000e+10    0.5    1.3    5.0    5.0   1.100e+11   3.200e+10   1.600e+11
+
+# mat=11, dry tuff, cgs-units
+1.700e+00   4.500e+10   3.000e+10    0.5    1.3    5.0    5.0   6.000e+10   3.500e+10   1.800e+11
+
+# mat=12, alluvium, cgs-units
+2.600e+00   3.000e+11   1.000e+11    0.5    0.8    5.0    5.0   6.000e+10   3.500e+10   1.800e+11
+
+# mat=13, anorthosite 1pp, cgs-units
+2.867e+00   7.100e+11   7.500e+11    0.5    1.5    5.0    5.0   4.870e+12   4.720e+10   1.820e+11
+
+# mat=14, anorthosite hpp, cgs-units
+3.970e+00   2.400e+12   1.300e+12    0.5    1.3    5.0    5.0   1.800e+13   3.190e+10   1.680e+11
+
+# mat=15, andesite, cgs-units
+2.700e+00   1.800e+11   1.800e+11    0.5    1.3    5.0    5.0   1.600e+11   3.500e+10   1.800e+11
+
+# mat=16, water, cgs-units
+9.980e-01   2.180e+10   1.330e+11    0.7    0.1   10.0    5.0   7.000e+10   4.190e+09   2.690e+10
+
+# mat=17, pure ice, cgs-units
+9.170e-01   9.470e+10   9.470e+10    0.3    0.1   10.0    5.0   1.000e+11   7.730e+09   3.040e+10
+
+# mat=18, 5% silicate ice, cgs-units
+9.480e-01   6.500e+10   1.330e+11    0.3    0.1   10.0    5.0   1.000e+11   7.730e+09   3.040e+10
+
+# mat=19, 30% silicate ice, cgs-units
+1.141e+00   8.440e+10   1.330e+11    0.3    0.1   10.0    5.0   1.000e+11   7.730e+09   3.040e+10
+
+# mat=20, special, cgs-units
+2.700e+00   2.670e+11   2.670e+11    0.5    1.5    5.0    5.0   4.870e+12   4.720e+10   1.820e+11
+
+# mat=21, oldbasalt, cgs-units
+2.700e+00   2.670e+11   2.670e+11    0.5    1.5    5.0    5.0   4.870e+12   4.720e+10   1.820e+11
+

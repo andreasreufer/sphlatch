@@ -19,9 +19,6 @@ namespace sphlatch
 class TooManyNeighs : public GenericError
 {
 public:
-typedef genericNode* nodePtrT;
-typedef genericCellNode* cellPtrT;
-
 TooManyNeighs(size_t _part,
               size_t _noNeighs,
               partsIndexVectType _neighList,
