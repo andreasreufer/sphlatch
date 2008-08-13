@@ -99,10 +99,12 @@ int main(int argc, char* argv[])
   PartManager.setNoParts(partsCount);
   PartManager.resizeAll();
   
-  const valueType unitVolume = pow(latticeLength,3.)*fillingFactor;
+  const valueType totVolume = (4.*M_PI/3.)*pow(rMax, 3.);
+  const valueType partVolume = totVolume / partsCount;
   const valueType smoLength  = 1.*latticeLength;
 
-  std::cout << "tot volume " << partsCount*unitVolume << "\n";
+
+  std::cerr << partVolume << " " << totVolume << "\n";
 
   partsCount = 0;
   Lattice.first();
@@ -117,12 +119,12 @@ int main(int argc, char* argv[])
           pos(partsCount, Z) = Lattice.zCur;
 
           ///
-          /// the unit volume is stored in the mass variable
+          /// the particle volume is stored in the mass variable
           ///
           /// so, multiplied with the density, one gets the
           /// particle mass
           ///
-          m(partsCount) = unitVolume;
+          m(partsCount) = partVolume;
           h(partsCount) = smoLength;
 
           partsCount++;

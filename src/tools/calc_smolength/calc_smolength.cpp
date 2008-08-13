@@ -200,6 +200,26 @@ int main(int argc, char* argv[])
       assert(noMaxNeighs - noGuessNeighs + noDesNeighs < noMaxNeighs);
       h(curIndex) = Tree.neighDistList(noMaxNeighs - 1 - noGuessNeighs
                                        + noDesNeighs) / csLength;
+      
+      const size_t idx = noMaxNeighs - 1 - noGuessNeighs + noDesNeighs;
+      
+      Tree.findNeighbours(curIndex, 2.*h(curIndex));
+      std::cout << h(curIndex) << " "
+                << Tree.neighDistList(idx-1)
+                << "   "
+                << Tree.neighDistList(idx)
+                << "   "
+                << Tree.neighDistList(idx+1)
+                << "   \n";
+
+      /*std::cout << "noneighs "
+                << Tree.neighbourList[0]
+                << " idx "
+                << idx
+                << " " << h(curIndex)
+                << "\n";*/
+
+
     }
 
   ///
