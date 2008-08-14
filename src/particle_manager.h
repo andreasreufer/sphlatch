@@ -40,6 +40,7 @@ void useEntropy(void);
 void useTimedepEntropy(void);
 void useTimedepH(void);
 void useGravity(void);
+void useIntegratedRho(void);
 
 void useAVMonaghan(void);
 void useAVBalsara(void);
@@ -314,6 +315,14 @@ void ParticleManager::useAVHernquist()
 void ParticleManager::useMaterials()
 {
   usedIntegers[ "mat" ] = &mat;
+}
+
+///
+/// the material variable
+///
+void ParticleManager::useIntegratedRho()
+{
+  usedScalars[ "drhodt" ] = &drhodt;
 }
 
 void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)

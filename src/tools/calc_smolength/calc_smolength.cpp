@@ -118,6 +118,7 @@ int main(int argc, char* argv[])
   valvectRefType m(PartManager.m);
   valvectRefType h(PartManager.h);
   idvectRefType id(PartManager.id);
+  idvectRefType noneigh(PartManager.noneigh);
 
   ///
   /// register the quantites to be exchanged
@@ -187,39 +188,27 @@ int main(int argc, char* argv[])
 
       const valueType maxRad = Tree.maxMassEncloseRad(curIndex, minMass);
 
+      ///
       /// the tree does not guarantee valid entries in the neighbour list
-      /// and the neighbour dist list above the number of neighbours, so
-      /// zero the dist list before searching the neighbours
+      /// and the neighbour dist list above the number of actual neighbours,
+      /// so zero the dist list before searching the neighbours
+      ///
       Tree.neighDistList = zeroVect;
       Tree.findNeighbours(curIndex, maxRad);
 
       const size_t noGuessNeighs = Tree.neighbourList[0];
 
+      ///
+      /// sort neighbour list in ascending order
+      ///
       std::sort(Tree.neighDistList.begin(), Tree.neighDistList.end());
 
       assert(noMaxNeighs - noGuessNeighs + noDesNeighs < noMaxNeighs);
-      h(curIndex) = Tree.neighDistList(noMaxNeighs - 1 - noGuessNeighs
+      h(curIndex) = 1.01*Tree.neighDistList(noMaxNeighs - 1 - noGuessNeighs
                                        + noDesNeighs) / csLength;
       
-      const size_t idx = noMaxNeighs - 1 - noGuessNeighs + noDesNeighs;
-      
-      Tree.findNeighbours(curIndex, 2.*h(curIndex));
-      std::cout << h(curIndex) << " "
-                << Tree.neighDistList(idx-1)
-                << "   "
-                << Tree.neighDistList(idx)
-                << "   "
-                << Tree.neighDistList(idx+1)
-                << "   \n";
-
-      /*std::cout << "noneighs "
-                << Tree.neighbourList[0]
-                << " idx "
-                << idx
-                << " " << h(curIndex)
-                << "\n";*/
-
-
+      Tree.findNeighbours(curIndex, csLength*h(curIndex));
+      noneigh(curIndex) = Tree.neighbourList[0];
     }
 
   ///
@@ -227,6 +216,7 @@ int main(int argc, char* argv[])
   ///
   quantsType saveQuants;
   saveQuants.scalars += &h;
+  saveQuants.ints += &noneigh;
   IOManager.saveDump(filename, saveQuants);
 
   MPI::Finalize();

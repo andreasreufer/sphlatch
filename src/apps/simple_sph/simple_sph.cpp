@@ -31,7 +31,10 @@
 // shocktube boundary conditions?
 //#define SPHLATCH_SHOCKTUBE
 
-// do we need the veolicty divergence?
+// integrate rho instead of using the SPH sum?
+//#define SPHLATCH_INTEGRATERHO
+
+// do we need the velocity divergence?
 #ifdef SPHLATCH_TIMEDEP_ENERGY
 #ifndef SPHLATCH_VELDIV
 #define SPHLATCH_VELDIV
@@ -39,6 +42,12 @@
 #endif
 
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
+
+#ifdef SPHLATCH_INTEGRATERHO
 #ifndef SPHLATCH_VELDIV
 #define SPHLATCH_VELDIV
 #endif
@@ -143,6 +152,9 @@ valueType timeStep()
 #ifdef SPHLATCH_GRAVITY
   valvectRefType eps(PartManager.eps);
 #endif
+#ifdef SPHLATCH_INTEGRATERHO
+  valvectRefType drhodt(PartManager.drhodt);
+#endif
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
@@ -233,7 +245,7 @@ valueType timeStep()
   /// distance to next saveItrvl
   ///
   //const valueType saveItrvl = 0.1;
-  const valueType saveItrvl = 5.0;
+  const valueType saveItrvl = 50.0;
   std::string fileName = "saveDump000000.h5part";
   const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
                                   + 1.) * saveItrvl;
@@ -289,6 +301,9 @@ valueType timeStep()
 #ifdef SPHLATCH_TILLOTSON
   saveQuants.ints += &mat;
 #endif
+#ifdef SPHLATCH_INTEGRATERHO
+  saveQuants.scalars += &drhodt;
+#endif
 
   const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
                                 * saveItrvl;
@@ -332,6 +347,9 @@ void derivate()
 
 #ifdef SPHLATCH_GRAVITY
   valvectRefType eps(PartManager.eps);
+#endif
+#ifdef SPHLATCH_INTEGRATERHO
+  valvectRefType drhodt(PartManager.drhodt);
 #endif
 
   idvectRefType id(PartManager.id);
@@ -438,6 +456,7 @@ void derivate()
   Nsearch.neighDistList.resize(1024);
   Logger << "Rankspace prepared";
 
+#ifndef SPHLATCH_INTEGRATERHO
   ///
   /// 1st SPH sum: density
   /// I need    : pos, h, m
@@ -459,11 +478,6 @@ void derivate()
 
       const size_t noNeighs = Nsearch.neighbourList[0];
 
-      ///
-      /// store the number of neighbours
-      ///
-      noneigh(i) = noNeighs;
-
       static valueType rhoi;
       rhoi = 0.;
 
@@ -482,6 +496,7 @@ void derivate()
       rho(i) = rhoi;
     }
   Logger << "SPH sum: rho";
+#endif
   CommManager.sendGhosts(rho);
   Logger << " sent to ghosts: rho";
 
@@ -529,7 +544,7 @@ void derivate()
   valueType curPow = 0.;
 #endif
 #ifdef SPHLATCH_VELDIV
-  valueType curVelDiv = 0.;
+  valueType curDrhoDt = 0.;
   valueType divvMax = std::numeric_limits<valueType>::min();
 #endif
   for (size_t k = 0; k < noParts; k++)
@@ -549,7 +564,11 @@ void derivate()
       const valueType srchRad = 2. * hi;
       Nsearch.findNeighbours(i, srchRad);
 
+      ///
+      /// store the number of neighbours
+      ///
       const size_t noNeighs = Nsearch.neighbourList[0];
+      noneigh(i) = noNeighs;
 
       curAccX = 0.;
       curAccY = 0.;
@@ -558,7 +577,7 @@ void derivate()
       curPow = 0.;
 #endif
 #ifdef SPHLATCH_VELDIV
-      curVelDiv = 0.;
+      curDrhoDt = 0.;
 #endif
       const valueType viX = vel(i, X);
       const valueType viY = vel(i, Y);
@@ -636,7 +655,7 @@ void derivate()
           ///
           /// velocity divergence
           ///
-          curVelDiv += mjvijdivWij;
+          curDrhoDt += mjvijdivWij;
 #endif
         }
       acc(i, X) += curAccX;
@@ -646,8 +665,11 @@ void derivate()
       dudt(i) = curPow;
 #endif
 #ifdef SPHLATCH_VELDIV
-      divv(i) = curVelDiv / rho(i);
+      divv(i) = curDrhoDt / rho(i);
       divvMax = divv(i) > divvMax ? divv(i) : divvMax;
+#endif
+#ifdef SPHLATCH_INTEGRATERHO
+      drhodt(i) = -curDrhoDt;
 #endif
 #ifdef SPHLATCH_SHOCKTUBE
       ///
@@ -741,7 +763,7 @@ int main(int argc, char* argv[])
 
   std::string loadDumpFile = "initial.h5part";
   //const valueType maxTime = 5.;
-  const valueType maxTime = 100.;
+  const valueType maxTime = 10000.;
 
   ///
   /// define what we're doing
@@ -759,6 +781,9 @@ int main(int argc, char* argv[])
 #endif
 #ifdef SPHLATCH_TILLOTSON
   PartManager.useMaterials();
+#endif
+#ifdef SPHLATCH_INTEGRATERHO
+  PartManager.useIntegratedRho();
 #endif
 
   ///
@@ -783,6 +808,10 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_TILLOTSON
   idvectRefType mat(PartManager.mat);
 #endif
+#ifdef SPHLATCH_INTEGRATERHO
+  valvectRefType rho(PartManager.rho);
+  valvectRefType drhodt(PartManager.drhodt);
+#endif
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
@@ -805,6 +834,9 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_TILLOTSON
   CommManager.exchangeQuants.ints += &mat;
 #endif
+#ifdef SPHLATCH_INTEGRATERHO
+  CommManager.exchangeQuants.scalars += &rho;
+#endif
 
   ///
   /// instantate the MetaIntegrator
@@ -821,6 +853,9 @@ int main(int argc, char* argv[])
 #endif
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
   Integrator.regIntegration(h, dhdt);
+#endif
+#ifdef SPHLATCH_INTEGRATERHO
+  Integrator.regIntegration(rho, drhodt);
 #endif
 
   IOManager.loadDump(loadDumpFile);

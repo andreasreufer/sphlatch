@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
   
   const valueType totVolume = (4.*M_PI/3.)*pow(rMax, 3.);
   const valueType partVolume = totVolume / partsCount;
-  const valueType smoLength  = 1.*latticeLength;
+  const valueType smoLength  = 0.85*latticeLength;
 
 
   std::cerr << partVolume << " " << totVolume << "\n";

@@ -153,12 +153,12 @@ IOManager::IOManager(void) :
   , CommManager(CommManagerType::instance())
 #endif
 {
-  setSinglePrecOut();
-
 #ifdef SPHLATCH_SINGLEPREC
   H5floatMemType = H5T_NATIVE_FLOAT;
+  setSinglePrecOut();
 #else
   H5floatMemType = H5T_NATIVE_DOUBLE;
+  setDoublePrecOut();
 #endif
 
   /// use the HDF5 type corresponding to the definition

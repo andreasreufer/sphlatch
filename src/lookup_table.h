@@ -15,8 +15,8 @@
  */
 
 #include "typedefs.h"
-
 namespace sphlatch {
+template<class T_leaftype>
 class LookupTable {
 public:
 LookupTable(valvectType _x, valvectType _f)
@@ -45,13 +45,20 @@ public:
 valueType operator()(valueType _x);
 
 private:
+T_leaftype& asLeaf()
+{
+  return static_cast<T_leaftype&>(*this);
+};
+
+protected:
 valueType xMin, xMax;
 valueType yMin, yMax;
 valvectType f, x;
 size_t noPoints;
 };
 
-valueType LookupTable::operator()(valueType _x)
+template<class T_leaftype>
+valueType LookupTable<T_leaftype>::operator()(valueType _x)
 {
   ///
   /// return a constant extrapolation
@@ -80,14 +87,12 @@ valueType LookupTable::operator()(valueType _x)
   ///
   /// linearly interpolate
   ///
-  const valueType xLo = x(iLo);
-  const valueType xHi = x(iHi);
-
-  const valueType kHi = (_x - xLo) / (xHi - xLo);
-  const valueType kLo = 1. - kHi;
-
-  return(kLo * f(iLo) + kHi * f(iHi));
+  return ( asLeaf().interpolate( iLo, iHi, _x) );
 };
 }
+
+#include "lookup_table_interpol_linear.h"
+#include "lookup_table_interpol_stepwise.h"
+
 #endif
 
