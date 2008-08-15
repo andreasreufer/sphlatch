@@ -190,8 +190,10 @@ int main(int argc, char* argv[])
   costzone_type&  CostZone(costzone_type::instance());
 
   const valueType mTot = 5.3014e27;
-  const valueType mCore = 0.30 * mTot;
+  const valueType mCore   = 0.30 * mTot;
   const valueType mMantle = 0.70 * mTot;
+  /*const valueType mCore = 1.00 * mTot;
+  const valueType mMantle = 0.00 * mTot;*/
 
   const identType matCore = 5;
   const identType matMantle = 4;
@@ -202,19 +204,22 @@ int main(int argc, char* argv[])
   const valueType rhoCore = 6.;
   const valueType rhoMantle = 3.;
 
-  const valueType rCoreGuess = pow(0.75 * mCore / (M_PI * rhoCore), 1. / 3.);
+  /*const valueType rCoreGuess = pow(0.75 * mCore / (M_PI * rhoCore), 1. / 3.);
   const valueType rMantleGuess = pow(0.75 * mMantle / (M_PI * rhoMantle)
-                                + pow(rCoreGuess, 3.), 1. / 3.);
+                                + pow(rCoreGuess, 3.), 1. / 3.);*/
   const size_t noCells = 200;
   const size_t noEdges = noCells + 1;
 
-  const size_t noCoreCells = lrint(noCells * (rCoreGuess / rMantleGuess));
+  const valueType dm = mTot / static_cast<valueType>(noCells);
+
+  //const size_t noCoreCells = lrint(noCells * (rCoreGuess / rMantleGuess));
+  const size_t noCoreCells = lrint(noCells * (mCore / mTot));
   const size_t noMantleCells = noCells - noCoreCells;
 
   lg1D_solver_type Solver(noCells);
 
-  const valueType drCore = rCoreGuess / noCoreCells;
-  const valueType drMantle = (rMantleGuess - rCoreGuess) / noMantleCells;
+  /*const valueType drCore = rCoreGuess / noCoreCells;
+  const valueType drMantle = (rMantleGuess - rCoreGuess) / noMantleCells;*/
 
   ///
   /// set the shell edges
@@ -223,11 +228,16 @@ int main(int argc, char* argv[])
   Solver.v(0) = 0.;
   for (size_t i = 1; i < noEdges; i++)
     {
+      valueType rhoCur = 0.;
       if (i <= noCoreCells)
-        Solver.r(i) = Solver.r(i - 1) + drCore;
+        rhoCur = rhoCore;
+        //Solver.r(i) = Solver.r(i - 1) + drCore;
       else
-        Solver.r(i) = Solver.r(i - 1) + drMantle;
-
+        rhoCur = rhoMantle;
+        //Solver.r(i) = Solver.r(i - 1) + drMantle;
+      Solver.r(i) = pow( pow(Solver.r(i-1),3.) +
+                         (3./(4*M_PI))*(dm / rhoCur), 1./3.);
+      std::cout << Solver.r(i) << "\n";
       Solver.v(i) = 0.;
     }
 
@@ -236,20 +246,23 @@ int main(int argc, char* argv[])
   ///
   for (size_t i = 0; i < noCells; i++)
     {
-      const valueType rI = Solver.r(i);
+      /*const valueType rI = Solver.r(i);
       const valueType rO = Solver.r(i + 1);
       const valueType rC = 0.5 * (rI + rO);
 
-      const valueType vol = (4. * M_PI / 3.) * (rO * rO * rO - rI * rI * rI);
+      const valueType vol = (4. * M_PI / 3.) * (rO * rO * rO - rI * rI * rI);*/
 
-      if (rC < rCoreGuess)
+      Solver.m(i) = dm;
+
+      //if (rC < rCoreGuess)
+      if (i < noCoreCells)
         {
-          Solver.m(i) = vol * rhoCore;
+          //Solver.m(i) = vol * rhoCore;
           Solver.mat(i) = 5;
         }
       else
         {
-          Solver.m(i) = vol * rhoMantle;
+          //Solver.m(i) = vol * rhoMantle;
           Solver.mat(i) = 4;
         }
 
@@ -267,6 +280,8 @@ int main(int argc, char* argv[])
   ///
   std::cerr << " start 1D Lagrange solver\n";
   Solver.integrateTo(5.e3); /// replace by option
+  //Solver.integrateTo(4.e0); /// replace by option
+  std::cerr << " ... finished\n";
 
   valvectType rCen;
   rCen.resize(noCells);
@@ -276,7 +291,7 @@ int main(int argc, char* argv[])
       rCen(i) = 0.5 * (Solver.r(i) + Solver.r(i + 1));
     }
 
-  std::string dumpfilename = "dump.hdf5";
+  std::string dumpfilename = "profile.hdf5";
   IOManager.savePrimitive(Solver.r, "r", dumpfilename);
   IOManager.savePrimitive(rCen, "rCen", dumpfilename);
   IOManager.savePrimitive(Solver.v, "v", dumpfilename);
@@ -362,10 +377,10 @@ int main(int argc, char* argv[])
       rho(k) = curRho;
       u(k) = uLUT(curRad);
 
-      if (curRad < rCore)
+      //if (curRad < rCore)
         mat(k) = matCore;
-      else
-        mat(k) = matMantle;
+      //else
+      //  mat(k) = matMantle;
     }
 
   std::cerr << " initial guess for particle masses, now calc. SPH density ...\n";

@@ -410,6 +410,9 @@ void derivate()
       if (pos(i, Z) < 5. || pos(i, Z) > 295.)
         vel(i, Z) = 0;
 #endif
+#ifdef SPHLATCH_GRAVITY
+      eps(i) = 0.7*h(i);
+#endif
     }
 
 #ifdef SPHLATCH_GRAVITY
