@@ -1,5 +1,5 @@
 #
-# h5part_slice.m, Andreas Reufer, 06.07.2008
+# h5part_dist.m, Andreas Reufer, 06.07.2008
 #
 # _dist = h5part_dist( _in)
 #
