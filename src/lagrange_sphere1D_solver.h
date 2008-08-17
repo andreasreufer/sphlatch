@@ -145,6 +145,7 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
       const valueType rkp1pow3 = r(i + 1) * r(i + 1) * r(i + 1);
       rho(i) = 3. * m(i) / (pi4 * (rkp1pow3 - rkpow3));
     }
+  rho(noCells-1) = 0.; /// vacuum boundary condition
 
   ///
   /// update q-factor
@@ -206,6 +207,7 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
     {
       EOS(rho(i), u(i), mat(i), p(i), cs(i));
     }
+  p(noCells-1) = 0.; /// vacuum boundary condition
 
   dtm05 = dtp05;
   time += dtp05;
@@ -257,6 +259,8 @@ void LagrangeSphere1DSolver::bootstrap()
       rho(i) = 3. * m(i) / (pi4 * (rkp1pow3 - rkpow3));
       rhoOld(i) = rho(i);
     }
+  rho(noCells-1) = 0.; /// vacuum boundary condition
+  rhoOld(noCells-1) = 0.; /// vacuum boundary condition
   
   ///
   /// update pressure and speed of sound
@@ -265,6 +269,7 @@ void LagrangeSphere1DSolver::bootstrap()
     {
       EOS(rho(i), u(i), mat(i), p(i), cs(i));
     }
+  p(noCells-1) = 0.; /// vacuum boundary condition
   
   ///
   /// zero stuff

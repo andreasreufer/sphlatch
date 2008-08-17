@@ -190,10 +190,10 @@ int main(int argc, char* argv[])
   costzone_type&  CostZone(costzone_type::instance());
 
   const valueType mTot = 5.3014e27;
-  const valueType mCore   = 0.30 * mTot;
-  const valueType mMantle = 0.70 * mTot;
-  /*const valueType mCore = 1.00 * mTot;
-  const valueType mMantle = 0.00 * mTot;*/
+  /*const valueType mCore   = 0.30 * mTot;
+  const valueType mMantle = 0.70 * mTot;*/
+  const valueType mCore = 1.00 * mTot;
+  const valueType mMantle = 0.00 * mTot;
 
   const identType matCore = 5;
   const identType matMantle = 4;
@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
   /*const valueType rCoreGuess = pow(0.75 * mCore / (M_PI * rhoCore), 1. / 3.);
   const valueType rMantleGuess = pow(0.75 * mMantle / (M_PI * rhoMantle)
                                 + pow(rCoreGuess, 3.), 1. / 3.);*/
-  const size_t noCells = 200;
+  const size_t noCells = 1000;
   const size_t noEdges = noCells + 1;
 
   const valueType dm = mTot / static_cast<valueType>(noCells);
@@ -237,7 +237,6 @@ int main(int argc, char* argv[])
         //Solver.r(i) = Solver.r(i - 1) + drMantle;
       Solver.r(i) = pow( pow(Solver.r(i-1),3.) +
                          (3./(4*M_PI))*(dm / rhoCur), 1./3.);
-      std::cout << Solver.r(i) << "\n";
       Solver.v(i) = 0.;
     }
 
@@ -266,8 +265,9 @@ int main(int argc, char* argv[])
           Solver.mat(i) = 4;
         }
 
-      Solver.u(i) = 1.e10;
+      Solver.u(i) = 5.e9;
     }
+  Solver.m(noCells-1) = 0.;
 
   ///
   /// set some constants
@@ -280,7 +280,6 @@ int main(int argc, char* argv[])
   ///
   std::cerr << " start 1D Lagrange solver\n";
   Solver.integrateTo(5.e3); /// replace by option
-  //Solver.integrateTo(4.e0); /// replace by option
   std::cerr << " ... finished\n";
 
   valvectType rCen;
