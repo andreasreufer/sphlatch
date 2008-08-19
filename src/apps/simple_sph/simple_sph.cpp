@@ -34,6 +34,9 @@
 // integrate rho instead of using the SPH sum?
 //#define SPHLATCH_INTEGRATERHO
 
+// linear velocity damping term?
+//#define SPHLATCH_VELDAMPING
+
 // do we need the velocity divergence?
 #ifdef SPHLATCH_TIMEDEP_ENERGY
 #ifndef SPHLATCH_VELDIV

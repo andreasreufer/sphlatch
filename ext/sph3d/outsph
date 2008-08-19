@@ -1,0 +1,51 @@
+
+
+ the computations are done in the following units
+ units of :  mass       :  1.0000E+00   distance    :  1.0000E+00
+             density    :  1.0000E+00   time        :  1.0000E+00
+             velocity   :  1.0000E+00   energy/mass :  1.0000E+00
+             ang. mom.  :  1.0000E+00
+
+
+
+ variable of state used : density and specific internal energy           
+
+ number of different type of material used :  2
+ type(s) : 17 16
+
+ fracture constants: 
+ material type: 17
+    m=   9.5700E+00    k=   1.2800E+32
+ sig0=   0.0000E+00    0.0000E+00 < k <   0.0000E+00
+ material type: 16
+    m=   9.5700E+00    k=   1.2800E+32
+ sig0=   0.0000E+00    0.0000E+00 < k <   0.0000E+00
+
+ total number of particles used : 141670
+ fraction of total mass         :  3.8441E+03
+ distribution : object 1 :  number of particles : 141392
+                            mass fraction       :   3.8403E+03
+                object 2 :  number of particles :    278
+                            mass fraction       :   3.7754E+00
+
+ Options set during this run:
+ ----------------------------
+ eos type               :  1 mat. strength  :  1
+ fracture               :  1 general damp.  : 0.0
+
+ Numerical constants used during this run:
+ -----------------------------------------
+ artificial viscosity  alpha   :    1.500E+00
+                       beta    :    3.000E+00
+ integration parameters        :
+ courant number                :    1.000E+00
+ maximum time step authorized  :    1.000E+00
+ algorithm for neighbor search :   linked list 
+ limits on number of neighbors :   25 to 100
+
+ Kernel used for this run:  1
+ -------------------------
+
+ name of input file : sphold-
+
+

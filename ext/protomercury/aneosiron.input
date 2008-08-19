@@ -1,0 +1,22 @@
+* new LONG version of IRON 11-2-01
+* ANEOS parameters for Iron (using LONG option, but setting extra parameters
+* to zero)
+*ANEOS 'IRON 2 - GAMMA IRON MELT' TUNIT=EV
+ANEOS1  -5    'IRON-2'              RHUG=-1  THUG=-1     LONG
+ANEOS2      1.    4.    7.85    0.    0.    1.45E12  1.690   -.0400
+ANEOS3     0.0    2.  8.200E10  .15588    0.0     0.0     0.0     0.0
+ANEOS4      0.0    0.0     0.0     0.0     0.0     0.0  2.471E9   0.955
+ANEOS5  0.        0.       0.      0.       0.        0.     0.      0.
+ANEOS6   0              0.        0.            0.     0.     0.     0.   0.
+ANEOS7      26.      1.
+*
+*ANEOS1  -5    'IRON-2'                                       RHUG=-1  THUG=-1
+*          V1     V2     V3     V4     V5     V6      V7      V8
+*ANEOS2      1     4    7.85    0.    0.    1.45E12  1.690   -.0400
+*          V9     V10     V11     V12     V13     V14     V15     V16
+*ANEOS3     0.0    2.  8.200E10  .15588    0.0     0.0     0.0     0.0
+*          V17     V18     V19     V20     V21     V22     V23     V24
+*ANEOS4      0.0    0.0     0.0     0.0     0.0     0.0  2.471E9   0.955
+*          Z(I)     F(I)
+*ANEOS5      26.      1.
+****************************************************************

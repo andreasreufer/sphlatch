@@ -1,0 +1,34 @@
+INITIAL CONDITIONS:  (eos:   1)
+
+
+
+- target characteristics    : 
+     - nb of particles      :    141392
+     - radius (cm)          :   1.0000E+01
+     - mass (g)             :   3.8386E+03
+     - mean density         :   9.1639E-01
+     - core fraction        :   0.0000E+00
+            mat. type       :  17
+            u (erg/g)       :   1.0000E+05
+            frac. damaged   :   0.0000E+00
+     - mantle fraction      :   1.0000E+00
+            mat. type       :  17
+            u (erg/g)       :   1.0000E+05
+            frac. damaged   :   0.0000E+00
+- projectile characteristics: 
+     - nb of particles      :       278
+     - radius (cm)          :   1.0000E+00
+     - mass (g)             :   3.7753E+00
+     - mean density         :   9.0130E-01
+     - core fraction        :   0.0000E+00
+            mat. type       :  16
+            u (erg/g)       :   1.0000E+05
+            frac. damaged   :   0.0000E+00
+     - mantle fraction      :   1.0000E+00
+            mat. type       :  16
+            u (erg/g)       :   1.0000E+05
+            frac. damaged   :   0.0000E+00
+- collision characteristics :
+     - angle of incidence   :   0.0000E+00
+     - relative velocity    :  -6.5200E+04
+     - Q                    :   2.0905E+06

@@ -1,0 +1,69 @@
+* aneos equation of state initialisation file
+*------------------------------------------------------------------------ 
+* The following lines must be present in the correct order
+*materials=2     : number of different material types in file
+*type=4          : material number to initialize
+*type=5          : material number to initialize
+*------------------------------------------------------------------------
+*ANEOS 'Dunite ANEOS without molecules'
+*
+ANEOS -4  'ANEOS DUNITE WITHOUT MOLECULES'  RHUG=-1  THUG=-1.    LONG
+*
+*      nelem  type   rho0  temp0(eV)  press0  B0/-Cbulk  Grun Tdebye(eV)
+ANEOS2   3      4    3.32     0.       0.     -6.6E5     .82    0.057
+*
+*                                   Critical Pt. Adj  Thermal Conduction
+**aneos3  0.86   2.   2.1e11   0.19   0   0   0   0 
+*aneos3  0.86   2.   2.23e11   0.19   0   0   0   0 
+*         S    3*C24   Esep   Tmelt    C53   C54         H0    C41
+*ANEOS3   0.86   2.   1.3E11   0.19     0.    0.         0.     0.
+*ANEOS3   0.86   2.   1.9E11   0.19     0.    0.         0.     0.
+ANEOS3   0.86   2.   2.E11   0.19       0.    0.         0.     0.
+*
+*                 Solid-solid phase transition data
+*       rhomin    D1     D2     D3      D4      D5    Hfusion  -rholiq
+ANEOS4   0.      4.65   4.9   6.6E11  3.5E12  1.3E13     0.       0.
+*
+*     Cold comp. limits     Liquid EOS params       Interpolation params
+*       Up        L0      alpha    beta    gamma     C60     C61    C62
+ANEOS5  0.        0.       0.      0.       0.        0.     0.      0.
+*
+*   Ionization model    Reactive chemistry     Molecular Clusters         Pc
+*       Flag            Eshift     Sshift     Rbond  Ebind  IntDOF  flag  exp
+*ANEOS6   1                0.        0.       1.5E-8    8.     0.     1.  1.25
+*ANEOS6   1              0.        0.       0.E-8    8.     0.     1.  1.14
+*ANEOS6   1              0.        0.       1.5E-8    9.     0.     1.  1.133
+ANEOS6   0              0.        0.       1.5E-8    9.     0.     1.  1.133
+*
+*    Elements in material (number must = nelem)
+*        Z   Atomic Fraction
+ANEOS7   8      0.571
+ANEOS8  12      0.286
+ANEOS9  14      0.143
+*****   END of input for ANEOS *****************
+*
+*
+* new LONG version of IRON 11-2-01
+* ANEOS parameters for Iron (using LONG option, but setting extra parameters
+* to zero)
+*ANEOS 'IRON 2 - GAMMA IRON MELT' TUNIT=EV
+ANEOS1  -5    'IRON-2'              RHUG=-1  THUG=-1     LONG
+*
+*         nelem  type   rho0  T0(eV) P0   B0/-Cbulk  Grun    Tdebye(eV)
+ANEOS2      1.    4.    7.85    0.    0.    1.45E12  1.690   -.0400
+ANEOS3     0.0    2.  8.200E10  .15588    0.0     0.0     0.0     0.0
+ANEOS4      0.0    0.0     0.0     0.0     0.0     0.0  2.471E9   0.955
+ANEOS5  0.        0.       0.      0.       0.        0.     0.      0.
+ANEOS6   0              0.        0.            0.     0.     0.     0.   0.
+ANEOS5      26.      1.
+*
+*ANEOS1  -5    'IRON-2'                                       RHUG=-1  THUG=-1
+*          V1     V2     V3     V4     V5     V6      V7      V8
+*ANEOS2      1     4    7.85    0.    0.    1.45E12  1.690   -.0400
+*          V9     V10     V11     V12     V13     V14     V15     V16
+*ANEOS3     0.0    2.  8.200E10  .15588    0.0     0.0     0.0     0.0
+*          V17     V18     V19     V20     V21     V22     V23     V24
+*ANEOS4      0.0    0.0     0.0     0.0     0.0     0.0  2.471E9   0.955
+*          Z(I)     F(I)
+*ANEOS5      26.      1.
+*****   END of input for ANEOS *****************
