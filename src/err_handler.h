@@ -10,6 +10,8 @@
  *
  */
 
+#include <string>
+
 #include "typedefs.h"
 #include "log_manager.h"
 #include "particle_manager.h"
@@ -44,6 +46,25 @@ GenericError::GenericError(void)
 GenericError::~GenericError(void)
 {
 };
+
+
+class FileNotFound : public GenericError
+{
+public:
+FileNotFound(std::string _filename);
+~FileNotFound();
+
 };
 
+FileNotFound::FileNotFound(std::string _filename)
+{
+  Logger.stream << "file not found: " << _filename;
+  Logger.flushStream();
+};
+
+FileNotFound::~FileNotFound()
+{
+};
+
+};
 #endif

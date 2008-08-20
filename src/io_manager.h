@@ -210,7 +210,7 @@ void IOManager::loadDump(std::string _inputFile)
   H5Aiterate_by_name(curGroup, ".", H5_INDEX_CRT_ORDER,
                      H5_ITER_NATIVE, &n, getAttrsCallback, NULL, H5P_DEFAULT);
 
-  size_t noTotParts;
+  size_t noTotParts, noResParts = 0;
   bool noPartsDet = false;
   hsize_t dimsMem[2], dimsFile[2], offset[2];
 
@@ -249,8 +249,14 @@ void IOManager::loadDump(std::string _inputFile)
           const size_t noLocParts =
             std::min(noPartsChunk, noTotParts - locOffset);
 
-          PartManager.setNoParts(noLocParts);
-          PartManager.resizeAll();
+          ///
+          /// append the particles to be loaded to the existing one
+          /// note: the resizeAll call may be quite slow, as it resizes
+          ///       all containers
+          ///
+          noResParts = PartManager.getNoLocalParts();
+          PartManager.setNoParts(noLocParts + noResParts);
+          PartManager.resizeAll(true);
 
           dimsMem[0] = noLocParts;
           offset[0] = locOffset;
@@ -288,7 +294,7 @@ void IOManager::loadDump(std::string _inputFile)
                                       offset, NULL, dimsMem, NULL);
 
                   H5Dread(curDataset, H5idMemType, memSpace,
-                          fileSpace, accessPropList, &id(0));
+                          fileSpace, accessPropList, &id(noResParts));
 
                   H5Sclose(memSpace);
                 }
@@ -317,7 +323,7 @@ void IOManager::loadDump(std::string _inputFile)
                                       offset, NULL, dimsMem, NULL);
 
                   H5Dread(curDataset, H5floatMemType, memSpace,
-                          fileSpace, accessPropList, &matr(0, 0));
+                          fileSpace, accessPropList, &matr(noResParts, 0));
 
                   H5Sclose(memSpace);
                 }
@@ -343,7 +349,7 @@ void IOManager::loadDump(std::string _inputFile)
                                       offset, NULL, dimsMem, NULL);
 
                   H5Dread(curDataset, H5floatMemType, memSpace,
-                          fileSpace, accessPropList, &vect(0));
+                          fileSpace, accessPropList, &vect(noResParts));
 
                   H5Sclose(memSpace);
                 }

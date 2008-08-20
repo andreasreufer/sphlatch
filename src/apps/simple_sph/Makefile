@@ -1,63 +1,99 @@
-all: variants shockTube tillotson
-variants: simpleSph simpleSphG simpleSphGH simpleSphGHU simpleSph_HU
-tillotson: tillotson_sumrho tillotson_intrho
+all: idealgas tillotson shocktube
 
-shockTube:
+idealgas: simple_sph_______ simple_sph_G_____ simple_sph_GH____ \
+	  simple_sph_GHU___ simple_sph__HU___
+
+tillotson: simple_sph_GHUT__ simple_sph__HUT__ \
+	   simple_sph_GHUTR_ simple_sph__HUTR_ \
+	   simple_sph_GHUT_F simple_sph_GHUTRF
+
+
+shocktube:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_SHOCKTUBE \
 				      -o shocktube simple_sph.cpp
-simpleSph:
+simple_sph_______:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
-				      -o simple_sph____ simple_sph.cpp
-simpleSphG:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
-				      -DSPHLATCH_GRAVITY \
-				      -o simple_sph___G simple_sph.cpp
-simpleSphGH:
+				      -o simple_sph_______ simple_sph.cpp
+
+simple_sph_G_____:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -DSPHLATCH_GRAVITY \
-				      -DSPHLATCH_TIMEDEP_SMOOTHING \
-				      -o simple_sph__HG simple_sph.cpp
-simpleSphGHU:
+				      -o simple_sph_G_____ simple_sph.cpp
+
+simple_sph_GH____:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -DSPHLATCH_GRAVITY \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
-				      -DSPHLATCH_TIMEDEP_ENERGY \
-				      -o simple_sph_UHG simple_sph.cpp
-simpleSph_HU:
+				      -o simple_sph_GH____ simple_sph.cpp
+
+simple_sph_GHU___:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_GRAVITY \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
-				      -o simple_sph_UH_ simple_sph.cpp
-tillotson_sumrho:
+				      -o simple_sph_GHU___ simple_sph.cpp
+
+simple_sph__HU___:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -o simple_sph__HU___ simple_sph.cpp
+
+simple_sph_GHUT__:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -DSPHLATCH_GRAVITY \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_TILLOTSON \
-				      -o simple_sph_tillotson_sumrho simple_sph.cpp
+				      -o simple_sph_GHUT__ simple_sph.cpp
 
-tillotson_intrho:
+simple_sph__HUT__:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -DSPHLATCH_TILLOTSON \
+				      -o simple_sph__HUT__ simple_sph.cpp
+
+simple_sph_GHUTR_:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -DSPHLATCH_GRAVITY \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_TILLOTSON \
 				      -DSPHLATCH_INTEGRATERHO \
-				      -o simple_sph_tillotson_intrho simple_sph.cpp
+				      -o simple_sph_GHUTR_ simple_sph.cpp
 
-tillotson_intrho_isoT:
+simple_sph__HUTR_:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -DSPHLATCH_TILLOTSON \
+				      -DSPHLATCH_INTEGRATERHO \
+				      -o simple_sph__HUTR_ simple_sph.cpp
+
+simple_sph_GHUT_F:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -DSPHLATCH_GRAVITY \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -DSPHLATCH_TILLOTSON \
+				      -DSPHLATCH_FRICTION \
+				      -o simple_sph_GHUT_F simple_sph.cpp
+
+simple_sph_GHUTRF:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_TILLOTSON \
 				      -DSPHLATCH_INTEGRATERHO \
-				      -o simple_sph_tillotson_intrho_isoT simple_sph.cpp
+				      -DSPHLATCH_FRICTION \
+				      -o simple_sph_GHUTRF simple_sph.cpp
 
 clean:
-	rm shocktube simple_sph simple_sph____ simple_sph___G simple_sph__HG \
-	simple_sph_UHG simple_sph_UH_ simple_sph_tillotson_sumrho \
-	simple_sph_tillotson_intrho simple_sph_tillotson_intrho_isoT \
-	2>&1 >/dev/null | true
+	rm simple_sph_* 2>&1 >/dev/null;\
+	rm shocktube 2>&1 >/dev/null | true
+

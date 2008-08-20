@@ -15,6 +15,7 @@
 
 #include "typedefs.h"
 #include "eos_generic.h"
+#include "err_handler.h"
 
 namespace sphlatch {
 class Tillotson : public EOS {
@@ -186,6 +187,9 @@ void initParams(std::string _filename)
   std::fstream fin;
 
   fin.open(_filename.c_str(), std::ios::in);
+
+  if ( !fin )
+    throw FileNotFound( _filename );
 
   size_t entry = 0, i = 0, noEntries = 0, noParams = 10;
   bool noEntriesRead = false;

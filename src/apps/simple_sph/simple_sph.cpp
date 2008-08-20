@@ -35,7 +35,7 @@
 //#define SPHLATCH_INTEGRATERHO
 
 // linear velocity damping term?
-//#define SPHLATCH_VELDAMPING
+//#define SPHLATCH_FRICTION
 
 // do we need the velocity divergence?
 #ifdef SPHLATCH_TIMEDEP_ENERGY
@@ -677,6 +677,12 @@ void derivate()
 #ifdef SPHLATCH_INTEGRATERHO
       drhodt(i) = -curDrhoDt;
 #endif
+#ifdef SPHLATCH_FRICTION
+      const valueType fricCoeff = 1. / PartManager.attributes["frictime"];
+      acc(i, X) -= vel(i, X)*fricCoeff;
+      acc(i, Y) -= vel(i, Y)*fricCoeff;
+      acc(i, Z) -= vel(i, Z)*fricCoeff;
+#endif
 #ifdef SPHLATCH_SHOCKTUBE
       ///
       /// shocktube boundary condition
@@ -766,7 +772,10 @@ int main(int argc, char* argv[])
 
   PartManager.attributes["noneigh"] = 50.;
   PartManager.attributes["umin"] = 1000.;
-
+#ifdef SPHLATCH_FRICTION
+  PartManager.attributes["frictime"] = 200.;
+#endif
+  
   std::string loadDumpFile = "initial.h5part";
   //const valueType maxTime = 5.;
   const valueType maxTime = 10000.;
@@ -854,16 +863,47 @@ int main(int argc, char* argv[])
   /// register spatial, energy and smoothing length integration
   ///
   Integrator.regIntegration(pos, vel, acc);
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-  Integrator.regIntegration(u, dudt);
-#endif
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
   Integrator.regIntegration(h, dhdt);
+#endif
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+  Integrator.regIntegration(u, dudt);
 #endif
 #ifdef SPHLATCH_INTEGRATERHO
   Integrator.regIntegration(rho, drhodt);
 #endif
 
+  ///
+  /// log program compilation time
+  ///
+  Logger.stream << "executable compiled from " << __FILE__
+                << " on " << __DATE__
+                << " at " << __TIME__ << "\n\n"
+                << "    features: \n"
+#ifdef SPHLATCH_GRAVITY
+                << "     gravity  \n"
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+                << "     time dependent smoothing length\n"
+#endif
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+                << "     time dependent specific energy\n"
+#endif
+#ifdef SPHLATCH_TILLOTSON
+                << "     Tillotson EOS\n"
+#endif
+#ifdef SPHLATCH_INTEGRATERHO
+                << "     integrated density\n"
+#endif    
+#ifdef SPHLATCH_FRICTION
+                << "     friction\n"
+#endif
+                << "     basic SPH\n";
+  Logger.flushStream();
+
+  ///
+  /// load particles
+  ///
   IOManager.loadDump(loadDumpFile);
   Logger.stream << "loaded " << loadDumpFile;
   Logger.flushStream();
