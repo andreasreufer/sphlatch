@@ -45,7 +45,6 @@ typedef sphlatch::ParticleManager PartManagerType;
 typedef sphlatch::CommunicationManager CommManagerType;
 #endif
 
-
 static self_reference instance();
 
 ///
@@ -74,6 +73,15 @@ void savePrimitive(valvectRefType _valvect,
 void savePrimitive(idvectRefType _idvect,
                    std::string _name,
                    std::string _outputFile);
+
+
+void loadPrimitive(valvectRefType _vect,
+                   std::string _name,
+                   std::string _inputFile);
+
+valueType loadAttribute(std::string _name, std::string _inputFile);
+void      saveAttribute(valueType _attr, std::string _name,
+                        std::string _inputFile);
 
 ///
 /// discover stored vars in a step group
@@ -112,6 +120,17 @@ void saveVar(matrixRefType _matr, std::string _name, hid_t _group,
              size_t _noLocParts, size_t _noTotParts, size_t _locOffset,
              hid_t _writeProplist);
 
+void readAttr();
+
+///
+/// very simple error handler
+///
+class FileNotFound {
+public:
+FileNotFound(std::string _filename);
+~FileNotFound();
+};
+
 ///
 /// does this object exist in the fileHandle?
 ///
@@ -120,7 +139,8 @@ bool objectExist(hid_t &_fileHandle, std::string &_objPath);
 ///
 /// get me a local HDF5 filehandle
 ///
-hid_t getLocFilehandle(std::string _outputFile);
+hid_t getLocFilehandleRW(std::string _outputFile);
+hid_t getLocFilehandleRO(std::string _inputFile);
 
 static herr_t getObsCallback(hid_t locId, const char *name,
                              const H5L_info_t *info, void *opData);
@@ -143,6 +163,7 @@ IOManager::self_reference IOManager::instance(void)
       return *_instance;
     }
 }
+
 
 IOManager::stringListType IOManager::datasetsInFile;
 IOManager::stringListType IOManager::attributesInFile;
@@ -596,7 +617,7 @@ void IOManager::savePrimitive(matrixRefType _matr,
                               std::string _name,
                               std::string _outputFile)
 {
-  hid_t fileHandle = getLocFilehandle(_outputFile);
+  hid_t fileHandle = getLocFilehandleRW(_outputFile);
   hid_t accessPropList = H5Pcreate(H5P_DATASET_XFER);
   hid_t rootGroup = H5Gopen(fileHandle, "/", H5P_DEFAULT);
 
@@ -613,7 +634,7 @@ void IOManager::savePrimitive(valvectRefType _valvect,
                               std::string _name,
                               std::string _outputFile)
 {
-  hid_t fileHandle = getLocFilehandle(_outputFile);
+  hid_t fileHandle = getLocFilehandleRW(_outputFile);
   hid_t accessPropList = H5Pcreate(H5P_DATASET_XFER);
   hid_t rootGroup = H5Gopen(fileHandle, "/", H5P_DEFAULT);
 
@@ -630,7 +651,7 @@ void IOManager::savePrimitive(idvectRefType _idvect,
                               std::string _name,
                               std::string _outputFile)
 {
-  hid_t fileHandle = getLocFilehandle(_outputFile);
+  hid_t fileHandle = getLocFilehandleRW(_outputFile);
   hid_t accessPropList = H5Pcreate(H5P_DATASET_XFER);
   hid_t rootGroup = H5Gopen(fileHandle, "/", H5P_DEFAULT);
 
@@ -638,6 +659,115 @@ void IOManager::savePrimitive(idvectRefType _idvect,
           _idvect.size(), _idvect.size(), 0,
           accessPropList);
 
+  H5Gclose(rootGroup);
+  H5Pclose(accessPropList);
+  H5Fclose(fileHandle);
+}
+
+void IOManager::loadPrimitive(valvectRefType _vect,
+                              std::string _name,
+                              std::string _inputFile)
+{
+  hsize_t dimsMem[2], dimsFile[2], offset[2];
+
+  offset[0] = 0;
+  offset[1] = 0;
+
+  ///
+  /// open file, group and dataset
+  ///
+  hid_t fileHandle = getLocFilehandleRW(_inputFile);
+  hid_t accessPropList = H5Pcreate(H5P_DATASET_XFER);
+  hid_t rootGroup = H5Gopen(fileHandle, "/", H5P_DEFAULT);
+  hid_t dataset = H5Dopen(rootGroup, _name.c_str(), H5P_DEFAULT);
+
+  hid_t fileSpace = H5Dget_space(dataset);
+  H5Sget_simple_extent_dims(fileSpace, dimsFile, NULL);
+
+  ///
+  /// prepare vector its memspace
+  ///
+  _vect.resize(dimsFile[0]);
+  dimsMem[0] = dimsFile[0];
+  dimsMem[1] = 1;
+  hid_t memSpace = H5Screate_simple(1, dimsMem, NULL);
+
+  ///
+  /// select hyperslab in file and read it
+  ///
+  H5Sselect_hyperslab(fileSpace, H5S_SELECT_SET,
+                      offset, NULL, dimsMem, NULL);
+
+  H5Dread(dataset, H5floatMemType, memSpace,
+          fileSpace, accessPropList, &_vect(0));
+
+  ///
+  /// housekeeping
+  ///
+  H5Sclose(memSpace);
+  H5Sclose(fileSpace);
+  H5Dclose(dataset);
+  H5Gclose(rootGroup);
+  H5Pclose(accessPropList);
+  H5Fclose(fileHandle);
+}
+
+valueType IOManager::loadAttribute(std::string _name, std::string _inputFile)
+{
+  hsize_t dimsMem[1];
+
+  dimsMem[0] = 1;
+  valueType attrBuff;
+
+  ///
+  /// open file, group and dataset
+  ///
+  hid_t fileHandle = getLocFilehandleRW(_inputFile);
+  hid_t accessPropList = H5Pcreate(H5P_DATASET_XFER);
+  hid_t rootGroup = H5Gopen(fileHandle, "/", H5P_DEFAULT);
+
+  hid_t curAttr = H5Aopen(rootGroup, _name.c_str(), H5P_DEFAULT);
+  H5Aread(curAttr, H5floatMemType, &attrBuff);
+  H5Aclose(curAttr);
+
+  ///
+  /// housekeeping
+  ///
+  H5Gclose(rootGroup);
+  H5Pclose(accessPropList);
+  H5Fclose(fileHandle);
+
+  return attrBuff;
+}
+
+void IOManager::saveAttribute(valueType _attr, std::string _name,
+                         std::string _inputFile)
+{
+  hsize_t dimsMem[1];
+  dimsMem[0] = 1;
+
+  ///
+  /// open file, group
+  ///
+  hid_t fileHandle = getLocFilehandleRW(_inputFile);
+  hid_t accessPropList = H5Pcreate(H5P_DATASET_XFER);
+  hid_t rootGroup = H5Gopen(fileHandle, "/", H5P_DEFAULT);
+  hid_t memspace = H5Screate_simple(1, dimsMem, NULL);
+
+  ///
+  /// write attribute
+  ///
+  hid_t curAttr = H5Acreate_by_name(rootGroup, ".", _name.c_str(),
+                                    H5floatFileType, memspace,
+                                    H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  H5Awrite(curAttr, H5floatMemType, &_attr);
+
+  ///
+  /// housekeeping
+  ///
+  H5Aclose(curAttr);
+
+  H5Sclose(memspace);
   H5Gclose(rootGroup);
   H5Pclose(accessPropList);
   H5Fclose(fileHandle);
@@ -857,7 +987,7 @@ bool IOManager::objectExist(hid_t &_fileHandle, std::string &_objPath)
     }
 }
 
-hid_t IOManager::getLocFilehandle(std::string _outputFile)
+hid_t IOManager::getLocFilehandleRW(std::string _outputFile)
 {
   hid_t filePropList = H5Pcreate(H5P_FILE_ACCESS);
 
@@ -872,6 +1002,25 @@ hid_t IOManager::getLocFilehandle(std::string _outputFile)
   else
     {
       fileHandle = H5Fopen(_outputFile.c_str(), H5F_ACC_RDWR, filePropList);
+    }
+  H5Pclose(filePropList);
+  return fileHandle;
+}
+
+hid_t IOManager::getLocFilehandleRO(std::string _inputFile)
+{
+  hid_t filePropList = H5Pcreate(H5P_FILE_ACCESS);
+
+  struct stat statBuff;
+  hid_t fileHandle;
+
+  if (stat(_inputFile.c_str(), &statBuff) == -1)
+    {
+      throw FileNotFound(_inputFile);
+    }
+  else
+    {
+      fileHandle = H5Fopen(_inputFile.c_str(), H5F_ACC_RDONLY, filePropList);
     }
   H5Pclose(filePropList);
   return fileHandle;
@@ -901,5 +1050,13 @@ herr_t IOManager::getAttrsCallback(hid_t _loc, const char *_name,
   return err;
 }
 
+IOManager::FileNotFound::FileNotFound(std::string _filename)
+{
+  std::cerr << "file not found: " << _filename << "\n";
+};
+
+IOManager::FileNotFound::~FileNotFound()
+{
+};
 };
 #endif

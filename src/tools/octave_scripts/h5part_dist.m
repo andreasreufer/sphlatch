@@ -17,7 +17,7 @@ function _out = h5part_dist( _in )
   _in.dist = sqrt(
             ( _in.pos(1,:) ).*( _in.pos(1,:) ) +
             ( _in.pos(2,:) ).*( _in.pos(2,:) ) +
-            ( _in.pos(3,:) ).*( _in.pos(3,:) );
+            ( _in.pos(3,:) ).*( _in.pos(3,:) ) );
   _out = _in;
 endfunction
 

@@ -70,26 +70,23 @@ typedef sphlatch::LookupTable<sphlatch::InterpolateStepwise> lut_type;
 using namespace boost::assign;
 using namespace sphlatch::vectindices;
 
-void densPress()
+void density()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
-  costzone_type& CostZone(costzone_type::instance());
+  //costzone_type& CostZone(costzone_type::instance());
 
   matrixRefType pos(PartManager.pos);
 
   valvectRefType m(PartManager.m);
   valvectRefType h(PartManager.h);
-  valvectRefType u(PartManager.u);
-  valvectRefType p(PartManager.p);
-  valvectRefType cs(PartManager.cs);
   valvectRefType rho(PartManager.rho);
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
 
   const size_t noParts = PartManager.getNoLocalParts();
-  const size_t noTotParts = noParts + PartManager.getNoGhostParts();
+  //const size_t noTotParts = noParts + PartManager.getNoGhostParts();
 
   /// send ghosts to other domains
   CommManager.sendGhosts(pos);
@@ -111,7 +108,7 @@ void densPress()
   /// I need    : pos, h, m
   /// I provide : rho
   ///
-/*  for (size_t k = 0; k < noParts; k++)
+  for (size_t k = 0; k < noParts; k++)
     {
       ///
       /// find neighbours
@@ -144,13 +141,23 @@ void densPress()
           rhoi += m(j) * Kernel.value(r, hij);
         }
       rho(i) = rhoi;
-    }*/
+    }
 
 
+}
+
+void pressure()
+{
+  part_type& PartManager(part_type::instance());
+  eos_type& EOS(eos_type::instance());
+
+  valvectRefType p(PartManager.p);
+  valvectRefType cs(PartManager.cs);
+
+  const size_t noParts = PartManager.getNoLocalParts();
   ///
   /// calculate pressure
   ///
-  eos_type& EOS(eos_type::instance());
   for (size_t k = 0; k < noParts; k++)
     {
       EOS(k, p(k), cs(k));
@@ -164,8 +171,9 @@ int main(int argc, char* argv[])
   po::options_description Options("Global Options");
   Options.add_options()
   ("help,h", "Produces this Help")
-  ("output-file,o", po::value<std::string>(), "output file")
-  ("input-file,i", po::value<std::string>(), "input  file");
+  ("output-file,o", po::value<std::string>(), "output  file")
+  ("profile-file,p", po::value<std::string>(), "profile file")
+  ("input-file,i", po::value<std::string>(), "input   file");
 
   po::variables_map VMap;
   po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
@@ -177,7 +185,9 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
     }
 
-  if (!VMap.count("output-file"))
+  if (!VMap.count("output-file") ||
+      !VMap.count("profile-file") ||
+      !VMap.count("input-file"))
     {
       std::cerr << Options << std::endl;
       return EXIT_FAILURE;
@@ -187,109 +197,6 @@ int main(int argc, char* argv[])
   part_type&      PartManager(part_type::instance());
   comm_type&      CommManager(comm_type::instance());
   costzone_type&  CostZone(costzone_type::instance());
-
-  const valueType mTot = 5.3014e27;
-  const valueType mCore   = 0.30 * mTot;
-  const valueType mMantle = 0.70 * mTot;
-
-  const identType matCore = 5;
-  const identType matMantle = 4;
-
-  ///
-  /// guess for the density
-  ///
-  const valueType rhoCore = 6.;
-  const valueType rhoMantle = 3.;
-
-  const size_t noCells = 1000;
-  const size_t noEdges = noCells + 1;
-
-  const valueType dm = mTot / static_cast<valueType>(noCells);
-
-  const size_t noCoreCells = lrint(noCells * (mCore / mTot));
-  const size_t noMantleCells = noCells - noCoreCells;
-
-  lg1D_solver_type Solver(noCells);
-
-  ///
-  /// set the shell edges
-  ///
-  Solver.r(0) = 0.;
-  Solver.v(0) = 0.;
-  for (size_t i = 1; i < noEdges; i++)
-    {
-      valueType rhoCur = 0.;
-      if (i <= noCoreCells)
-        rhoCur = rhoCore;
-      else
-        rhoCur = rhoMantle;
-      Solver.r(i) = pow( pow(Solver.r(i-1),3.) +
-                         (3./(4*M_PI))*(dm / rhoCur), 1./3.);
-      Solver.v(i) = 0.;
-    }
-
-  ///
-  /// set the shell centered values
-  ///
-  for (size_t i = 0; i < noCells; i++)
-    {
-      Solver.m(i) = dm;
-
-      if (i < noCoreCells)
-        {
-          Solver.mat(i) = 5;
-        }
-      else
-        {
-          Solver.mat(i) = 4;
-        }
-
-      Solver.u(i) = 5.e10;
-    }
-  Solver.m(noCells-1) = 0.;
-
-  ///
-  /// set some constants
-  ///
-  Solver.uMin = 1.e4;
-  Solver.friction = 1.e-2;
-
-  ///
-  /// integrate for a certain physical time
-  ///
-  std::cerr << " start 1D Lagrange solver\n";
-  Solver.integrateTo(5.e3); /// replace by option
-  std::cerr << " ... finished\n";
-  
-  ///
-  /// the last cell contains vacuum, which will assign
-  /// far outside zero mass. circumvent this, by setting
-  /// the same density and temperature like on the second
-  /// to last cell
-  ///
-  Solver.rho(noCells-1) = Solver.rho(noCells-2);
-  Solver.u(noCells-1) = Solver.u(noCells-2);
-
-  ///
-  /// calculate the position of the cell centers
-  ///
-  valvectType rCen;
-  rCen.resize(noCells);
-
-  for (size_t i = 0; i < noCells; i++)
-    {
-      rCen(i) = 0.5 * (Solver.r(i) + Solver.r(i + 1));
-    }
-
-  std::string dumpfilename = "profile.hdf5";
-  IOManager.savePrimitive(Solver.r, "r", dumpfilename);
-  IOManager.savePrimitive(rCen, "rCen", dumpfilename);
-  IOManager.savePrimitive(Solver.v, "v", dumpfilename);
-  IOManager.savePrimitive(Solver.m, "m", dumpfilename);
-  IOManager.savePrimitive(Solver.u, "u", dumpfilename);
-  IOManager.savePrimitive(Solver.p, "p", dumpfilename);
-  IOManager.savePrimitive(Solver.mat, "mat", dumpfilename);
-  IOManager.savePrimitive(Solver.rho, "rho", dumpfilename);
 
   matrixRefType pos(PartManager.pos);
   matrixRefType vel(PartManager.vel);
@@ -313,7 +220,7 @@ int main(int argc, char* argv[])
   ///
   std::string inputFilename = VMap["input-file"].as<std::string>();
   IOManager.loadDump(inputFilename);
-  std::cerr << " read " << inputFilename << "\n";
+  std::cerr << " read particle positions from: " << inputFilename << "\n";
 
   ///
   /// exchange particle data
@@ -324,18 +231,25 @@ int main(int argc, char* argv[])
   CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
 
   ///
+  /// load profile
+  ///
+  std::string profileFilename = VMap["profile-file"].as<std::string>();
+  valvectType rProf;
+  IOManager.loadPrimitive(rProf, "r", profileFilename);
+  valvectType uProf;
+  IOManager.loadPrimitive(uProf, "u", profileFilename);
+  valvectType rhoProf;
+  IOManager.loadPrimitive(rhoProf, "rho", profileFilename);
+  valvectType matProf;
+  IOManager.loadPrimitive(matProf, "mat", profileFilename);
+  std::cerr << " read profile from:            " << profileFilename << "\n";
+
+  ///
   /// scale position, specific volume and smoothing length
   ///
-  const valueType rScale = Solver.r(noCells);
-  valueType rCore = 0.;
-  for (size_t i = 1; i < noCells; i++)
-  {
-    if ( Solver.mat(i-1) != Solver.mat(i) )
-      rCore = Solver.r(i);
-  }
-  const valueType vScale = pow(rScale, 3.);
-
-  const valueType rhoSet = 3.;
+  const size_t noCells = rProf.size();
+  const valueType rScale = rProf(noCells - 1);
+  const valueType volScale = pow(rScale, 3.);
 
   const size_t noParts = PartManager.getNoLocalParts();
   for (size_t k = 0; k < noParts; k++)
@@ -345,7 +259,7 @@ int main(int argc, char* argv[])
       pos(k, Z) *= rScale;
 
       h(k) *= rScale;
-      m(k) *= vScale;
+      m(k) *= volScale;
     }
 
 
@@ -353,8 +267,9 @@ int main(int argc, char* argv[])
   /// set mass by looking up the density and multiplying
   /// it with the particle volume stored in the mass variable
   ///
-  lut_type rhoLUT(rCen, Solver.rho);
-  lut_type uLUT(rCen, Solver.u);
+  lut_type rhoLUT(rProf, rhoProf);
+  lut_type uLUT(rProf, uProf);
+  lut_type matLUT(rProf, matProf);
 
   for (size_t k = 0; k < noParts; k++)
     {
@@ -366,25 +281,29 @@ int main(int argc, char* argv[])
       m(k) *= curRho;
       rho(k) = curRho;
       u(k) = uLUT(curRad);
-
-      //if (curRad < rCore)
-        mat(k) = matCore;
-      //else
-      //  mat(k) = matMantle;
+      mat(k) = lrint( matLUT(curRad) );
     }
-
-  std::cerr << " initial guess for particle masses, now calc. SPH density ...\n";
-  densPress();
-
+  
+  
   sphlatch::quantsType saveQuants;
-  saveQuants.vects += &pos;
+
+  std::cerr << " SPH density ...\n";
+  density();
+  saveQuants.ints += &noneigh;
+
+  std::cerr << " calulate pressures ...\n";
+  pressure();
+
+  saveQuants.vects += &pos, &vel;
   saveQuants.scalars += &m, &rho, &h, &u, &p;
-  saveQuants.ints += &id, &noneigh, &mat;
+  saveQuants.ints += &id, &mat;
 
   PartManager.step = 0;
   PartManager.attributes["time"] = 0.;
-  PartManager.attributes["gravconst"] = Solver.gravConst;
-  PartManager.attributes["umin"] = Solver.uMin;
+  PartManager.attributes["gravconst"] =
+    IOManager.loadAttribute("gravconst", profileFilename);
+  PartManager.attributes["umin"] =
+    IOManager.loadAttribute("umin", profileFilename);
 
   std::string outputFilename = VMap["output-file"].as<std::string>();
   std::cerr << " -> " << outputFilename << "\n";
