@@ -46,8 +46,16 @@ int main(int argc, char* argv[])
   po::options_description Options("Global Options");
   Options.add_options()
   ("help,h", "Produces this Help")
-  ("output-file,o", po::value<std::string>(), "output file")
-  ("input-file,i", po::value<std::string>(), "input  file");
+  ("output-file,o", po::value<std::string>(), " output file")
+  ("mtot,M", po::value<valueType>(),          " total  mass")
+  ("core-frac,f", po::value<valueType>(),     " core   mass fraction")
+  ("mat-core", po::value<identType>(),        " core   material ")
+  ("mat-mantle", po::value<identType>(),      " mantle material")
+  ("rho-core", po::value<valueType>(),        " core   initial density")
+  ("rho-mantle", po::value<valueType>(),      " mantle initial density ")
+  ("u",          po::value<valueType>(),      " initial specific energy")
+  ("umin",       po::value<valueType>(),      " minimal specific energy")
+  ("fric",       po::value<valueType>(),      " inverse friction timescale");
 
   po::variables_map VMap;
   po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
@@ -67,25 +75,66 @@ int main(int argc, char* argv[])
 
   io_type&        IOManager(io_type::instance());
 
-  const valueType mTot = 5.3014e27;
-  const valueType mCore   = 0.30 * mTot;
+  valueType mTot = 5.3014e27;
+  if (VMap.count("mtot"))
+    mTot = VMap["mtot"].as<valueType>();
+  
+  valueType mCoreFrac = 0.30;
+  if (VMap.count("core-frac"))
+    mCoreFrac = VMap["core-frac"].as<valueType>();
+  
+  const valueType mCore  = mCoreFrac * mTot;
 
-  const identType matCore = 5;
-  const identType matMantle = 4;
+  identType matCore = 5;
+  if (VMap.count("mat-core"))
+    matCore = VMap["mat-core"].as<identType>();
+  
+  identType matMantle = 4;
+  if (VMap.count("mat-mantle"))
+    matMantle = VMap["mat-mantle"].as<identType>();
+
+  valueType rhoCore = 6.;
+  if (VMap.count("rho-core"))
+    rhoCore = VMap["rho-core"].as<valueType>();
+  
+  valueType rhoMantle = 3.;
+  if (VMap.count("rho-mantle"))
+    rhoMantle = VMap["rho-mantle"].as<valueType>();
+  
+  valueType uInit = 5.e10;
+  if (VMap.count("u"))
+    uInit = VMap["u"].as<valueType>();
+  
+  valueType uMin = 1.e4;
+  if (VMap.count("umin"))
+    uMin = VMap["umin"].as<valueType>();
+
+  valueType fric = 1.e-2;
+  if (VMap.count("fric"))
+    fric = VMap["fric"].as<valueType>();
 
   ///
   /// guess for the density
   ///
-  const valueType rhoCore = 6.;
-  const valueType rhoMantle = 3.;
-
   const size_t noCells = 1000;
   const size_t noEdges = noCells + 1;
-
+  const size_t noCoreCells = lrint(noCells * (mCore / mTot));
   const valueType dm = mTot / static_cast<valueType>(noCells);
 
-  const size_t noCoreCells = lrint(noCells * (mCore / mTot));
+  std::cerr << " total  mass:          " << mTot << "\n"
+            << " core   mass:          " << mCore << "   ("
+            << noCoreCells << " cells)\n"
+            << " core   material:      " << matCore << "\n"
+            << " mantle mass:          " << mTot - mCore << "   ("
+            << noCells - noCoreCells << " cells)\n"
+            << " mantle material:      " << matMantle << "\n"
+            << " initial u:            " << uInit     << "\n"
+            << " minimal u:            " << uMin      << "\n"
+            << " inv. fric. timescale: " << fric << "\n\n";
 
+  ///
+  /// instantate solver
+  ///
   lg1D_solver_type Solver(noCells);
 
   ///
@@ -121,21 +170,22 @@ int main(int argc, char* argv[])
           Solver.mat(i) = matMantle;
         }
 
-      Solver.u(i) = 5.e10;
+      Solver.u(i) = uInit;
     }
   Solver.m(noCells-1) = 0.;
 
   ///
   /// set some constants
   ///
-  Solver.uMin = 1.e4;
-  Solver.friction = 1.e-2;
+  Solver.uMin = uMin;
+  Solver.friction = fric;
 
   ///
   /// integrate for a certain physical time
   ///
   std::cerr << " start 1D Lagrange solver\n";
   Solver.integrateTo(5.e3); /// replace by option
+  //Solver.integrateTo(1.e-1); /// replace by option
   std::cerr << " ... finished\n";
   
   ///

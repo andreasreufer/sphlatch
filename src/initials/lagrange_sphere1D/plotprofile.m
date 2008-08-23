@@ -1,3 +1,8 @@
+if (exist("color_idx") )
+  color_idx++;
+else
+  color_idx = 1;
+endif
 
 color = strcat(num2str(color_idx),' ');
 prof = load("profile.hdf5");

@@ -12,7 +12,8 @@
 
 #include "typedefs.h"
 #include "eos_tillotson.h"
-#include <math.h>
+#include <float.h>
+
 
 namespace sphlatch {
 class LagrangeSphere1DSolver {
@@ -29,6 +30,9 @@ LagrangeSphere1DSolver(size_t _noCells) :
 
   noCells = _noCells;
   noEdges = noCells + 1;
+
+  avAlpha = 1.;
+  avBeta = 2.;
 
   rho.resize(noCells);
   q.resize(noCells);
@@ -122,6 +126,7 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
       const valueType accG = gravConst * mSum / (r(i) * r(i));
 
       v(i) -= ((gradP + gradQ) / dmk + accG + friction*v(i)) * dtc00;
+      assert(!isnan(v(i)));
     }
   v(0) = 0.;
   v(noEdges - 1) = v(noEdges - 2);
@@ -133,6 +138,7 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
   for (size_t i = 1; i < noEdges; i++)
     {
       r(i) += v(i) * dtp05;
+      assert(!isnan(r(i)));
     }
 
   ///
@@ -144,6 +150,7 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
       const valueType rkpow3 = r(i) * r(i) * r(i);
       const valueType rkp1pow3 = r(i + 1) * r(i + 1) * r(i + 1);
       rho(i) = 3. * m(i) / (pi4 * (rkp1pow3 - rkpow3));
+      assert(!isnan(rho(i)));
     }
   rho(noCells-1) = 0.; /// vacuum boundary condition
 
@@ -164,6 +171,7 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
           const valueType rhop05 = 0.5*(rho(i) + rhoOld(i));
 
           q(i) = -(3./2.)*rhop05*k1*( avAlpha*cs(i)+ avBeta*avBeta*absDivV );
+          assert(!isinf(q(i)));
         }
         else
           q(i) = 0.;
@@ -172,9 +180,12 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
   ///
   /// update internal energy
   ///
+  /// the last cell is not needed, as it is vacuum anyway
+  ///
   valueType pPrime = 0.;
-  for (size_t i = 0; i < noCells; i++)
+  for (size_t i = 0; i < noCells-1; i++)
     {
+      pPrime = 0.;
       const valueType Ak = pi4 * r(i) * r(i);
       const valueType Akp10 = pi4 * r(i + 1) * r(i + 1);
       const valueType Akp05 = 0.5 * (Akp10 + Ak);
@@ -187,6 +198,9 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
       EOS(rho(i), uPrime, mat(i), pPrime, cs(i));
       p(i) = 0.5 * (p(i) + pPrime);
       q(i) = 0.5 * (q(i) + qOld(i));
+      assert(!isnan(pPrime));
+      assert(!isnan(uPrime));
+      assert(!isnan(q(i)));
 
       ///
       /// AV heating
@@ -195,6 +209,8 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
                             - v(i) * (3. * Akp05 - Ak)) / m(i);
       u(i) -= (p(i) * dVol + dQ) * dtp05;
       pow(i) = -(p(i) * dVol + dQ);
+      assert(!isnan(u(i)));
+      assert(!isnan(pow(i)));
 
       if (u(i) < uMin)
         u(i) = uMin;
@@ -206,6 +222,8 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
   for (size_t i = 0; i < noCells; i++)
     {
       EOS(rho(i), u(i), mat(i), p(i), cs(i));
+      assert(!isnan(p(i)));
+      assert(!isnan(cs(i)));
     }
   p(noCells-1) = 0.; /// vacuum boundary condition
 

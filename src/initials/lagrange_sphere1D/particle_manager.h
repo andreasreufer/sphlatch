@@ -1,1 +1,1 @@
-link ../../particle_manager.h
+../../particle_manager.h
