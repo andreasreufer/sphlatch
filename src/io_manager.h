@@ -74,7 +74,6 @@ void savePrimitive(idvectRefType _idvect,
                    std::string _name,
                    std::string _outputFile);
 
-
 void loadPrimitive(valvectRefType _vect,
                    std::string _name,
                    std::string _inputFile);
@@ -99,6 +98,11 @@ PartManagerType& PartManager;
 #ifdef SPHLATCH_PARALLEL
 CommManagerType& CommManager;
 #endif
+
+///
+/// public variable to store the saving interval
+///
+valueType saveItrvl;
 
 protected:
 IOManager(void);

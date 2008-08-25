@@ -1,3 +1,8 @@
+
+if (! exist("filename") )
+  filename="profile.hdf5";
+endif
+
 if (exist("color_idx") )
   color_idx++;
 else
@@ -5,7 +10,7 @@ else
 endif
 
 color = strcat(num2str(color_idx),' ');
-prof = load("profile.hdf5");
+prof = load(filename);
 
 subplot(2,2,1);
 plot( prof.r, prof.rho, color);

@@ -166,8 +166,11 @@ valueType timeStep()
 #endif
 
   valueRefType time(PartManager.attributes["time"]);
+  valueRefType saveItrvl(IOManager.saveItrvl);
+
   int& step(PartManager.step);
   //int& substep(PartManager.substep);
+
   const size_t noParts = PartManager.getNoLocalParts();
   //const size_t myDomain = CommManager.getMyDomain();
 
@@ -245,14 +248,10 @@ valueType timeStep()
   CommManager.min(dtCFL);
 
   ///
-  /// distance to next saveItrvl
+  /// distance to next save time
   ///
-  //const valueType saveItrvl = 0.1;
-  const valueType saveItrvl = 50.0;
-  std::string fileName = "saveDump000000.h5part";
-  const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
-                                  + 1.) * saveItrvl;
-  valueType dtSave = nextSaveTime - time;
+  const valueType dtSave = (floor((time / saveItrvl) + 1.e-6)
+                            + 1.) * saveItrvl - time;
 
   ///
   /// determine global minimum.
@@ -307,17 +306,27 @@ valueType timeStep()
 #ifdef SPHLATCH_INTEGRATERHO
   saveQuants.scalars += &drhodt;
 #endif
-
   const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
                                 * saveItrvl;
   if (fabs(curSaveTime - time) < 1.e-9)
     {
       Logger << "save dump";
 
-      std::string stepString = boost::lexical_cast<std::string>(step);
+      std::string fileName = "dumpT";
 
-      fileName.replace(fileName.size() - 7 - stepString.size(),
-                       stepString.size(), stepString);
+      std::ostringstream timeSS;
+      timeSS << std::setprecision(3) << std::scientific << time;
+
+      ///
+      /// pad to a size of 11 characters
+      /// (sign 1, mantissa 1, '.' 1, prec 3, 'e+' 2, exponent 3)
+      ///
+      for (size_t i = timeSS.str().size(); i < 11; i++)
+        {
+          fileName.append("0");
+        }
+      fileName.append(timeSS.str());
+      fileName.append(".h5part");
 
       IOManager.saveDump(fileName, saveQuants);
     }
@@ -414,7 +423,7 @@ void derivate()
         vel(i, Z) = 0;
 #endif
 #ifdef SPHLATCH_GRAVITY
-      eps(i) = 0.7*h(i);
+      eps(i) = 0.7 * h(i);
 #endif
     }
 
@@ -679,9 +688,9 @@ void derivate()
 #endif
 #ifdef SPHLATCH_FRICTION
       const valueType fricCoeff = 1. / PartManager.attributes["frictime"];
-      acc(i, X) -= vel(i, X)*fricCoeff;
-      acc(i, Y) -= vel(i, Y)*fricCoeff;
-      acc(i, Z) -= vel(i, Z)*fricCoeff;
+      acc(i, X) -= vel(i, X) * fricCoeff;
+      acc(i, Y) -= vel(i, Y) * fricCoeff;
+      acc(i, Z) -= vel(i, Z) * fricCoeff;
 #endif
 #ifdef SPHLATCH_SHOCKTUBE
       ///
@@ -750,6 +759,33 @@ void derivate()
 
 int main(int argc, char* argv[])
 {
+  ///
+  /// parse program options
+  ///
+  po::options_description Options("<input-file> <save-time> <stop-time>\n ... or use options");
+  Options.add_options()
+  ("input-file,i", po::value<std::string>(), "input file")
+  ("save-time,s", po::value<valueType>(), "save dumps when (time) modulo (save time) = 0.")
+  ("stop-time,S", po::value<valueType>(), "stop simulaton at this time");
+
+  po::positional_options_description posDesc;
+  posDesc.add("input-file", 1);
+  posDesc.add("save-time", 1);
+  posDesc.add("stop-time", 1);
+
+  po::variables_map poMap;
+  po::store(po::command_line_parser(argc, argv).options(Options).positional(posDesc).run(), poMap);
+  po::notify(poMap);
+
+  if ( !poMap.count("input-file") || !poMap.count("save-time") || !poMap.count("stop-time") )
+  {
+    std::cerr << Options << "\n";
+    return EXIT_SUCCESS;
+  }
+
+  ///
+  /// everythings set, now start the parallel envirnoment
+  ///
   MPI::Init(argc, argv);
 
   ///
@@ -765,6 +801,10 @@ int main(int argc, char* argv[])
   /// some simulation parameters
   /// attributes will be overwritten, when defined in file
   ///
+  std::string loadDumpFile = poMap["input-file"].as<std::string>();
+  const valueType maxTime =  poMap["stop-time"].as<valueType>();
+  IOManager.saveItrvl = poMap["save-time"].as<valueType>();
+  
   PartManager.attributes["gamma"] = 5. / 3.;
   PartManager.attributes["gravconst"] = 1.0;
   PartManager.attributes["gravtheta"] = 0.7;
@@ -775,10 +815,7 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_FRICTION
   PartManager.attributes["frictime"] = 200.;
 #endif
-  
-  std::string loadDumpFile = "initial.h5part";
-  //const valueType maxTime = 5.;
-  const valueType maxTime = 10000.;
+
 
   ///
   /// define what we're doing
@@ -894,7 +931,7 @@ int main(int argc, char* argv[])
 #endif
 #ifdef SPHLATCH_INTEGRATERHO
                 << "     integrated density\n"
-#endif    
+#endif
 #ifdef SPHLATCH_FRICTION
                 << "     friction\n"
 #endif

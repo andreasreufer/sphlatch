@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 #include <boost/lexical_cast.hpp>
 
 #ifdef SPHLATCH_PARALLEL
