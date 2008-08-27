@@ -581,6 +581,11 @@ void IOManager::saveDump(std::string _outputFile,
       dimsMem[0] = 1;
 
       hid_t memspace = H5Screate_simple(1, dimsMem, NULL);
+      
+      if ( H5Aexists(stepGroup,  (attrItr->first).c_str()) )
+      {
+        H5Adelete(stepGroup,  (attrItr->first).c_str());
+      }
 
       curAttr = H5Acreate_by_name(stepGroup, ".", (attrItr->first).c_str(),
                                   H5floatFileType, memspace,
@@ -759,11 +764,20 @@ void IOManager::saveAttribute(valueType _attr, std::string _name,
   hid_t memspace = H5Screate_simple(1, dimsMem, NULL);
 
   ///
+  /// if attribute already exists, delete it
+  ///
+  if ( H5Aexists(rootGroup, _name.c_str()) )
+  {
+    H5Adelete(rootGroup, _name.c_str());
+  }
+
+  ///
   /// write attribute
   ///
   hid_t curAttr = H5Acreate_by_name(rootGroup, ".", _name.c_str(),
                                     H5floatFileType, memspace,
                                     H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
   H5Awrite(curAttr, H5floatMemType, &_attr);
 
   ///
