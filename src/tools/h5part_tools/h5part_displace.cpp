@@ -33,6 +33,8 @@ using namespace sphlatch::vectindices;
 
 int main(int argc, char* argv[])
 {
+  MPI::Init(argc, argv);
+
   po::options_description Options("Global Options");
 
   Options.add_options() ("help,h", "Produces this Help")
@@ -105,7 +107,7 @@ int main(int argc, char* argv[])
       changed = true;
     }
 
-  if (VMap.count("vel"))
+  if (VMap.count("id"))
     {
       idvectRefType id(PartManager.id);
       identType did = VMap[ "id" ].as<identType>();
@@ -123,7 +125,8 @@ int main(int argc, char* argv[])
 
   if (changed)
     IOManager.saveDump(inputFileName, saveQuants);
-
+  
+  MPI::Finalize();
   return EXIT_SUCCESS;
 }
 

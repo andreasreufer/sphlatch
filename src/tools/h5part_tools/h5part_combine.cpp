@@ -1,3 +1,4 @@
+#define SPHLATCH_PARALLEL
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
@@ -29,6 +30,7 @@ using namespace sphlatch::vectindices;
 
 int main(int argc, char* argv[])
 {
+  MPI::Init(argc, argv);
   po::options_description Options("Global Options");
 
   Options.add_options() ("help,h", "Produces this Help")
@@ -57,6 +59,7 @@ int main(int argc, char* argv[])
   PartManager.useBasicSPH();
   PartManager.useMaterials();
   PartManager.useEnergy();
+  PartManager.useGravity();
 
   using namespace sphlatch;
   using namespace boost::assign;
@@ -69,17 +72,19 @@ int main(int argc, char* argv[])
 
   valvectRefType m(PartManager.m);
   valvectRefType u(PartManager.u);
+  valvectRefType h(PartManager.h);
+  valvectRefType eps(PartManager.eps);
 
   quantsType saveQuants;
   saveQuants.ints += &id, &mat;
   saveQuants.vects += &pos, &vel;
-  saveQuants.scalars += &m, &u;
+  saveQuants.scalars += &m, &u, &h, &eps;
 
   IOManager.loadDump(inputAFileName);
   IOManager.loadDump(inputBFileName);
   IOManager.saveDump(outputFileName, saveQuants);
 
-
+  MPI::Finalize();
   return EXIT_SUCCESS;
 }
 
