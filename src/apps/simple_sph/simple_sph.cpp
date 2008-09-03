@@ -17,7 +17,7 @@
 //#define SPHLATCH_RANKSPACESERIALIZE
 
 // enable checking of bounds for the neighbour lists
-//#define SPHLATCH_CHECKNONEIGHBOURS
+#define SPHLATCH_CHECKNONEIGHBOURS
 
 // enable selfgravity?
 //#define SPHLATCH_GRAVITY
@@ -312,8 +312,21 @@ valueType timeStep()
     {
       Logger << "save dump";
 
-      std::string fileName = "dumpT";
+      std::string fileName = "dump";
 
+      std::ostringstream stepSS;
+      stepSS << step;
+
+      ///
+      /// pad step number to 7 numbers
+      ///
+      for (size_t i = stepSS.str().size(); i < 7; i++)
+        {
+          fileName.append("0");
+        }
+      fileName.append(stepSS.str());
+
+      fileName.append("_T");
       std::ostringstream timeSS;
       timeSS << std::setprecision(3) << std::scientific << time;
 
@@ -540,6 +553,9 @@ void derivate()
   for (size_t k = 0; k < noParts; k++)
     {
       EOS(k, p(k), cs(k));
+
+      if (p(k) < 0.)
+        p(k) = 0.;
     }
   Logger << "calculated pressure";
   CommManager.sendGhosts(p);

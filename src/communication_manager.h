@@ -191,8 +191,8 @@ CommunicationManager::~CommunicationManager(void)
 ///
 /// buffer size in bytes, MPI transfers will have on average this size
 ///
-//size_t CommunicationManager::commBuffSize =  131072;  //  128 kByte
-size_t CommunicationManager::commBuffSize = 1048576;    // 1024 kByte
+size_t CommunicationManager::commBuffSize =  131072;  //  128 kByte
+//size_t CommunicationManager::commBuffSize = 1048576;    // 1024 kByte
 //size_t CommunicationManager::commBuffSize = 8388608;  // 8096 kByte
 
 ///
