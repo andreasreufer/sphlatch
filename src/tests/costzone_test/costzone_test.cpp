@@ -1,7 +1,67 @@
+// some defs
+
+//#define SPHLATCH_CARTESIAN_XYZ
+//#define SPHLATCH_CARTESIAN_YZX
+//#define SPHLATCH_CARTESIAN_ZXY
+#define SPHLATCH_HILBERT3D
+
+// uncomment for single-precision calculation
+//#define SPHLATCH_SINGLEPREC
+
+// enable parallel version
+#define SPHLATCH_PARALLEL
+
+// enable intensive logging for toptree global summation
+//#define SPHLATCH_TREE_LOGSUMUPMP
+
+//#define SPHLATCH_RANKSPACESERIALIZE
+
+// enable checking of bounds for the neighbour lists
+#define SPHLATCH_CHECKNONEIGHBOURS
+
+// enable selfgravity?
+//#define SPHLATCH_GRAVITY
+
+// time dependent energy?
+//#define SPHLATCH_TIMEDEP_ENERGY
+
+// time dependent smoothing length?
+//#define SPHLATCH_TIMEDEP_SMOOTHING
+
+// shocktube boundary conditions?
+//#define SPHLATCH_SHOCKTUBE
+
+// integrate rho instead of using the SPH sum?
+//#define SPHLATCH_INTEGRATERHO
+
+// linear velocity damping term?
+//#define SPHLATCH_FRICTION
+
+// do we need the velocity divergence?
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
+
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
+
+#ifdef SPHLATCH_INTEGRATERHO
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
+
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 #include <string>
-#include <vector>
+#include <cmath>
 
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/cmdline.hpp>
@@ -9,200 +69,155 @@
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/positional_options.hpp>
-namespace po = boost::program_options;
 
 #include <boost/assign/std/vector.hpp>
-using namespace boost::assign;
 
-#define SPHLATCH_SINGLEPREC
-#define SPHLATCH_PARALLEL
-#define SPHLATCH_HILBERT3D
+#include <boost/mpl/vector_c.hpp>
 
-#include "particle.h"
-#include "iomanager.h"
+namespace po = boost::program_options;
+
+#include "typedefs.h"
+typedef sphlatch::valueType valueType;
+typedef sphlatch::valueRefType valueRefType;
+typedef sphlatch::valvectType valvectType;
+typedef sphlatch::valvectRefType valvectRefType;
+
+typedef sphlatch::idvectRefType idvectRefType;
+typedef sphlatch::matrixRefType matrixRefType;
+typedef sphlatch::partsIndexVectType partsIndexVectType;
+typedef sphlatch::quantsType quantsType;
+
+#include "io_manager.h"
 typedef sphlatch::IOManager io_type;
-#include "memorymanager.h"
-typedef sphlatch::MemoryManager mem_type;
-#include "communicationmanager.h"
+
+#include "particle_manager.h"
+typedef sphlatch::ParticleManager part_type;
+
+#include "communication_manager.h"
 typedef sphlatch::CommunicationManager comm_type;
+
 #include "costzone.h"
 typedef sphlatch::CostZone costzone_type;
 
-#include "spacefillingcurve.h"
+#include "log_manager.h"
+typedef sphlatch::LogManager log_type;
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/progress.hpp>
+#include <vector>
+
+using namespace sphlatch::vectindices;
+using namespace boost::assign;
 
 int main(int argc, char* argv[])
 {
-#ifdef SPHLATCH_PARALLEL
+  ///
+  /// parse program options
+  ///
+  po::options_description Options("<input-file>\n ... or use options");
+
+  Options.add_options()
+  ("input-file,i", po::value<std::string>(), "input file");
+
+  po::positional_options_description posDesc;
+  posDesc.add("input-file", 1);
+
+  po::variables_map poMap;
+  po::store(po::command_line_parser(argc, argv).options(Options).positional(posDesc).run(), poMap);
+  po::notify(poMap);
+
+  if (!poMap.count("input-file") )
+    {
+      std::cerr << Options << "\n";
+      return EXIT_SUCCESS;
+    }
+
+  ///
+  /// everythings set, now start the parallel envirnoment
+  ///
   MPI::Init(argc, argv);
-#endif
-  po::options_description Options("Global Options");
-  Options.add_options() ("help,h", "Produces this Help blabla...")
-  ("input-file,i", po::value<std::string>(), "InputFile");
 
-  po::positional_options_description POD;
-  POD.add("input-file", 1);
-
-  po::variables_map VMap;
-  po::store(po::command_line_parser(argc, argv).options(Options).positional(POD).run(), VMap);
-  po::notify(VMap);
-
-  if (VMap.count("help"))
-    {
-      std::cout << Options << std::endl;
-      return EXIT_FAILURE;
-    }
-
-  if (!VMap.count("input-file"))
-    {
-      std::cout << Options << std::endl;
-      return EXIT_FAILURE;
-    }
-
+  ///
+  /// instantate managers
+  ///
   io_type& IOManager(io_type::instance());
-  mem_type& MemManager(mem_type::instance());
+  part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
   costzone_type& CostZone(costzone_type::instance());
+  log_type& Logger(log_type::instance());
 
-  sphlatch::matrixRefType Data(MemManager.Data);
-  sphlatch::matrixRefType GData(MemManager.GData);
+  ///
+  /// some simulation parameters
+  /// attributes will be overwritten, when defined in file
+  ///
+  std::string loadDumpFile = poMap["input-file"].as<std::string>();
 
-  std::string InputFileName = VMap["input-file"].as<std::string>();
+  ///
+  /// define what we're doing
+  ///
+  PartManager.useBasicSPH();
 
-  Data.resize(Data.size1(), sphlatch::SIZE);
-  GData.resize(0, sphlatch::SIZE);
-  IOManager.loadCDAT(InputFileName);
 
-  const size_t RANK = MPI::COMM_WORLD.Get_rank();
-  const size_t SIZE = MPI::COMM_WORLD.Get_size();
-  const size_t noParts = Data.size1();
+  ///
+  /// some useful references
+  ///
+  matrixRefType pos(PartManager.pos);
+  valvectRefType m(PartManager.m);
+  idvectRefType id(PartManager.id);
 
-  /*sphlatch::domainPartsIndexType partsDomainMapping;
-
-  size_t sendtoRank = (RANK + 1) % SIZE; // send to next rank
-
-  partsDomainMapping.resize(SIZE);
-
-  for (size_t i = 0; i < noParts; i++)
-    {
-      (partsDomainMapping[sendtoRank]).push_back(i);
-    }
-*/
-
-  // particles are all distributed now
-  using namespace boost::posix_time;
-  ptime TimeStart, TimeStop;
-  // set up logging stuff
-  std::string logFilename = "logRank000";
-  std::string rankString = boost::lexical_cast<std::string>(RANK);
-  logFilename.replace(logFilename.size() - 0 - rankString.size(),
-                      rankString.size(), rankString);
-
-  std::fstream logFile;
-  logFile.open(logFilename.c_str(), std::ios::out);
-  //logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
-  //        << MPI_Wtime() - logStartTime << "    start log\n";
-
-  /*std::cout << "RANK " << RANK << ": " << Data(0,0) << "   " << Data(0,1) << "\n\n\n";
-  for (size_t i = 0; i < SIZE; i++)
-    {
-      TimeStart = microsec_clock::local_time();
-      CommManager.exchange(Data, partsDomainMapping, Data);
-      TimeStop = microsec_clock::local_time();
-      logFile << "communication " << (TimeStop - TimeStart) << "\n";
-      std::cout << "RANK " << RANK << ": " << Data(0,0) << "   " << Data(0,1) << "\n";
-    }
-
-  sphlatch::countsVectType counts;
-  counts.resize(32768);
-
-  long int locCounter = 0;
-  for (size_t i = 0; i < counts.size(); i++)
-  {
-    counts[i] = ( rand() / 32768 ) % ( 7*(RANK+3) ) ;
-    locCounter += counts[i];
-  }
-  std::cout << "RANK " << RANK << ": " << locCounter << "\n";
-  
-  TimeStart = microsec_clock::local_time();
-  CommManager.sumUpCounts(counts);
-  TimeStop = microsec_clock::local_time();
-  logFile << "summing up " << (TimeStop - TimeStart) << "\n";
-
-  locCounter = 0;
-  for (size_t i = 0; i < counts.size(); i++)
-  {
-    locCounter += counts[i];
-  }
-  std::cout << "RANK " << RANK << ": " << locCounter << "\n";*/
-
-  /*TimeStart = microsec_clock::local_time();
-  if ( RANK % 2 == 0 )
-  {
-    CommManager.sendMatrix(Data, RANK+1);
-  } else {
-    CommManager.recvMatrix(Data, RANK-1);
-  }
-  TimeStop = microsec_clock::local_time();
-  logFile << "exchange matrices " << (TimeStop - TimeStart) << "\n";
-  
-
-  std::vector<long double> intVect(500000);
-  TimeStart = microsec_clock::local_time();
-  if ( RANK % 2 == 0 )
-  {
-    CommManager.sendVector<long double>(intVect, RANK+1);
-  } else {
-    CommManager.recvVector<long double>(intVect, RANK-1);
-  }
-  TimeStop = microsec_clock::local_time();
-  logFile << "exchange vects " << (TimeStop - TimeStart) << "\n";
-  
-  sphlatch::bitsetType myBitset(3000000);
-  TimeStart = microsec_clock::local_time();
-  if ( RANK % 2 == 0 )
-  {
-    CommManager.sendBitset(myBitset, RANK+1);
-  } else {
-    CommManager.recvBitset(myBitset, RANK-1);
-  }
-  TimeStop = microsec_clock::local_time();
-  logFile << "exchange bitsets " << (TimeStop - TimeStart) << "\n";
-
-  logFile.close();*/
-
-  TimeStart = microsec_clock::local_time();
-  CommManager.exchange(Data, CostZone.createDomainPartsIndex(), Data);
-  TimeStop = microsec_clock::local_time();
-  logFile << "exchange particles " << (TimeStop - TimeStart) << "\n";
-  
-  TimeStart = microsec_clock::local_time();
-  CostZone.createDomainGhostIndex();
-  TimeStop = microsec_clock::local_time();
-  logFile << "determine ghost    " << (TimeStop - TimeStart) << "\n";
-  
-  TimeStart = microsec_clock::local_time();
-  CommManager.exchange(Data, CostZone.domainGhostIndex, GData);
-  TimeStop = microsec_clock::local_time();
-  logFile << "distribute ghosts  " << (TimeStop - TimeStart) << "   " << GData.size1() << " " << Data.size1() << "\n";
-  
   const size_t myDomain = CommManager.getMyDomain();
 
-  for (size_t i = 0; i < Data.size1(); i++)
-  {
-    Data(i, sphlatch::ID) = myDomain;
-  }
+  ///
+  /// register the quantites to be exchanged
+  ///
+  CommManager.exchangeQuants.vects += &pos;
+  CommManager.exchangeQuants.scalars += &m;
+  CommManager.exchangeQuants.ints += &id;
 
-  using namespace sphlatch;
-  std::vector<int> outputAttrSet;
-  outputAttrSet += ID, X, Y, Z, AX, AY, AZ, M;
-  IOManager.saveCDAT("out.cdat", outputAttrSet);
+  ///
+  /// log program compilation time
+  ///
+  Logger.stream << "executable compiled from " << __FILE__
+                << " on " << __DATE__
+                << " at " << __TIME__ << "\n\n"
+                << "    features: \n"
+                << "     basic SPH\n";
+  Logger.flushStream();
 
-  #ifdef SPHLATCH_PARALLEL
+  ///
+  /// load particles
+  ///
+  IOManager.loadDump(loadDumpFile);
+  Logger.stream << "loaded " << loadDumpFile;
+  Logger.flushStream();
+
+  ///
+  /// exchange particle data
+  ///
+  CostZone.createDomainPartsIndex();
+  Logger << "new domain decomposition";
+  //CommManager.exchange(CostZone.domainPartsIndex,
+  //                     CostZone.getNoGhosts());
+
+  ///
+  /// prepare ghost sends
+  ///
+  /*CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
+  Logger.stream << "distributed particles: "
+                << PartManager.getNoLocalParts() << " parts. & "
+                << PartManager.getNoGhostParts() << " ghosts";
+  Logger.flushStream();
+
+  const size_t noParts = PartManager.getNoLocalParts();
+  const size_t noTotParts = noParts + PartManager.getNoGhostParts();
+
+  ///
+  /// send ghosts to other domains
+  ///
+  CommManager.sendGhosts(pos);
+  CommManager.sendGhosts(id);
+  CommManager.sendGhosts(m);*/
+
   MPI::Finalize();
-  #endif
-
   return EXIT_SUCCESS;
 }
+
+

@@ -1,7 +1,7 @@
 all: costzone_test
 	
 costzone_test:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lboost_program_options -o costzone_test costzone_test.cpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options -o costzone_test costzone_test.cpp
 
 clean: 
 	touch costzone_test
