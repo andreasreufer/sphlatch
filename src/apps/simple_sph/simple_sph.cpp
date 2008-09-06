@@ -480,8 +480,8 @@ void derivate()
   /// so it can be choosen quite large
   ///
   Nsearch.prepare();
-  Nsearch.neighbourList.resize(1024);
-  Nsearch.neighDistList.resize(1024);
+  Nsearch.neighbourList.resize(16384);
+  Nsearch.neighDistList.resize(16384);
   Logger << "Rankspace prepared";
 
 #ifndef SPHLATCH_INTEGRATERHO
@@ -719,7 +719,6 @@ void derivate()
 #ifdef SPHLATCH_VELDIV
   CommManager.max(divvMax);
 #endif
-
   Logger << "SPH sum: acc, pow, divv";
 
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
@@ -741,13 +740,12 @@ void derivate()
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
       const valueType noNeighCur = static_cast<valueType>(noneigh(i));
 
-      const valueType A = exp((noNeighCur - noNeighMin) / 5.);
-      const valueType B = exp((noNeighCur - noNeighMax) / 5.);
-
-      const valueType k1 = 1. / (A * (A + (1. / A)));
-      const valueType k2 = (A / (A + (1. / A)))
-                           + 1. / (B * (B + (1. / B))) - 1.;
-      const valueType k3 = B / (B + (1. / B));
+      ///
+      /// k1: too few neighbours   k2: number ok   k3: too many neighbours
+      ///
+      const valueType k1 = 0.5 * (1 + tanh((noNeighCur - noNeighMin) / -5.));
+      const valueType k3 = 0.5 * (1 + tanh((noNeighCur - noNeighMax) / 5.));
+      const valueType k2 = 1. - k1 - k3;
 
       dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
                  - k2 * static_cast<valueType>(1. / 3.) * divv(i)) * h(i);
@@ -772,13 +770,13 @@ void derivate()
   Logger.flushStream();
 };
 
-
 int main(int argc, char* argv[])
 {
   ///
   /// parse program options
   ///
   po::options_description Options("<input-file> <save-time> <stop-time>\n ... or use options");
+
   Options.add_options()
   ("input-file,i", po::value<std::string>(), "input file")
   ("save-time,s", po::value<valueType>(), "save dumps when (time) modulo (save time) = 0.")
@@ -793,11 +791,11 @@ int main(int argc, char* argv[])
   po::store(po::command_line_parser(argc, argv).options(Options).positional(posDesc).run(), poMap);
   po::notify(poMap);
 
-  if ( !poMap.count("input-file") || !poMap.count("save-time") || !poMap.count("stop-time") )
-  {
-    std::cerr << Options << "\n";
-    return EXIT_SUCCESS;
-  }
+  if (!poMap.count("input-file") || !poMap.count("save-time") || !poMap.count("stop-time"))
+    {
+      std::cerr << Options << "\n";
+      return EXIT_SUCCESS;
+    }
 
   ///
   /// everythings set, now start the parallel envirnoment
@@ -818,9 +816,9 @@ int main(int argc, char* argv[])
   /// attributes will be overwritten, when defined in file
   ///
   std::string loadDumpFile = poMap["input-file"].as<std::string>();
-  const valueType maxTime =  poMap["stop-time"].as<valueType>();
+  const valueType maxTime = poMap["stop-time"].as<valueType>();
   IOManager.saveItrvl = poMap["save-time"].as<valueType>();
-  
+
   PartManager.attributes["gamma"] = 5. / 3.;
   PartManager.attributes["gravconst"] = 1.0;
   PartManager.attributes["gravtheta"] = 0.7;

@@ -55,12 +55,12 @@ TooManyNeighs::TooManyNeighs(size_t _part,
   Logger.flushStream();
   Logger.destroy();
 
-  neighID.resize(_noNeighs);
+  neighID.resize(_noNeighs-1);
   partID.resize(1);
   partH.resize(1);
 
-  neighDist.resize(_noNeighs);
-  neighPos.resize(_noNeighs, 3);
+  neighDist.resize(_noNeighs-1);
+  neighPos.resize(_noNeighs-1, 3);
   partPos.resize(1,3);
 
   partID(0) = id(_part);
@@ -69,7 +69,7 @@ TooManyNeighs::TooManyNeighs(size_t _part,
   partPos(0, Y) = pos(_part, Y);
   partPos(0, Z) = pos(_part, Z);
 
-  for (size_t i = 0; i < _noNeighs; i++)
+  for (size_t i = 0; i < _noNeighs-1; i++)
   {
     const size_t curNeigh = _neighList[i+1];
     neighID(i) = id( curNeigh );

@@ -324,7 +324,7 @@ void findNeighbours(const size_t _curPartIndex,
                     {
                       noNeighbours++;
 #ifdef SPHLATCH_CHECKNONEIGHBOURS
-                      if ( noNeighbours > noMaxNeighs )
+                      if ( static_cast<int>(noNeighbours) > noMaxNeighs )
                         throw TooManyNeighs( _curPartIndex,
                                              noNeighbours,
                                              neighbourList,
