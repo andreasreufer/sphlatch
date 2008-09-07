@@ -106,6 +106,11 @@ valvectType m, h, dhdt, rho, drhodt, p, u, dudt, A, dAdt, alpha, dalphadt,
 idvectType id, noneigh, mat;
 
 ///
+/// blacklist for particles to be deleted
+///
+bitsetType blacklisted;
+
+///
 /// the integration step and the substep of the integrator
 ///
 int step, substep;
@@ -374,6 +379,9 @@ void ParticleManager::resizeAll(bool _keep)
       resize( *(intsItr->second), _keep);
       intsItr++;
     }
+
+  blacklisted.resize(noLocalParts);
+  blacklisted.reset();
 }
 
 void ParticleManager::resizeAll()

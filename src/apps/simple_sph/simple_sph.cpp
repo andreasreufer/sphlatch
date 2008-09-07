@@ -381,6 +381,25 @@ void derivate()
   idvectRefType noneigh(PartManager.noneigh);
 
   ///
+  /// blacklist particles too far out
+  ///
+  /*const valueType maxRad = 3.e9;
+  const size_t noPreParts = PartManager.getNoLocalParts();
+  for (size_t i = 0; i < noPreParts; i++)
+    {
+      const valueType curRad = sqrt(pos(i, X) * pos(i, X) +
+                                    pos(i, Y) * pos(i, Y) +
+                                    pos(i, Z) * pos(i, Z));
+      if (curRad > maxRad)
+        {
+          PartManager.blacklisted[i] = true;
+          ///
+          /// store deleted particles
+          ///
+        }
+    }*/
+
+  ///
   /// exchange particle data
   ///
   CostZone.createDomainPartsIndex();

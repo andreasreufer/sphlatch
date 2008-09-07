@@ -129,9 +129,9 @@ CostZone::CostZone(void) :
   //const size_t defaultDepth = 1;
   //const size_t defaultDepth = 2;
   //const size_t defaultDepth = 3;
-  const size_t defaultDepth = 4;
+  //const size_t defaultDepth = 4;
 
-  //const size_t defaultDepth = 5;
+  const size_t defaultDepth = 5;
 
   resize(defaultDepth);
 
@@ -454,6 +454,7 @@ domainPartsIndexRefType CostZone::createDomainGhostIndex(void)
 void CostZone::centerOfTheUniverse(void)
 {
   matrixRefType pos(PartManager.pos);
+  bitsetRefType blk(PartManager.blacklisted);
   const size_t noParts = PartManager.getNoLocalParts();
 
   valueType xMin = std::numeric_limits<valueType>::max();
@@ -466,6 +467,12 @@ void CostZone::centerOfTheUniverse(void)
 
   for (size_t i = 0; i < noParts; i++)
     {
+      ///
+      /// if particle is blacklisted, skip it
+      ///
+      if (blk[i])
+        continue;
+
       xMin = pos(i, X) < xMin ? pos(i, X) : xMin;
       xMax = pos(i, X) > xMax ? pos(i, X) : xMax;
 
@@ -510,6 +517,7 @@ void CostZone::centerOfTheUniverse(void)
 void CostZone::fillCostzoneCells()
 {
   matrixRefType pos(PartManager.pos);
+  bitsetRefType blk(PartManager.blacklisted);
   const size_t noParts = PartManager.getNoLocalParts();
 
   ///
@@ -537,6 +545,12 @@ void CostZone::fillCostzoneCells()
   ///
   for (size_t i = 0; i < noParts; i++)
     {
+      ///
+      /// if particle is blacklisted, skip it
+      ///
+      if (blk[i])
+        continue;
+
       const size_t xIndex = lrint((pos(i, X) - xMin) * lengthToIndex - 0.5);
       const size_t yIndex = lrint((pos(i, Y) - yMin) * lengthToIndex - 0.5);
       const size_t zIndex = lrint((pos(i, Z) - zMin) * lengthToIndex - 0.5);

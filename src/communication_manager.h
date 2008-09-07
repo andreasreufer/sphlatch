@@ -44,10 +44,7 @@ PartManagerType& PartManager;
 ///
 /// this is the central exchange part
 ///
-void exchange(domainPartsIndexRefType _partsIndices,
-              //size_t _noGhosts,
-              //quantsRefType _quantities);
-              size_t _noGhosts);
+void exchange(domainPartsIndexRefType _partsIndices, size_t _noGhosts);
 
 quantsType exchangeQuants;
 
@@ -197,13 +194,15 @@ size_t CommunicationManager::commBuffSize =  131072;  //  128 kByte
 
 ///
 /// buffer size in particles for the exchange() functions
+/// 16k gives about 0.7MB for a 3D double precision vector
 /// 64k gives about 1.5MB for a 3D double precision vector
 ///
 /// you may want to lower this value, when you plan to transmit
 /// higher dimension vectors like tensors
 ///
 //size_t CommunicationManager::noBuffParts =   200; // for testing purposes
-size_t CommunicationManager::noBuffParts = 65536;
+size_t CommunicationManager::noBuffParts = 16384;
+//size_t CommunicationManager::noBuffParts = 65536;
 
 void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
                                     //size_t _noGhosts,
@@ -468,7 +467,6 @@ void CommunicationManager::queuedExch(T& _src, T& _target,
                                       countsVectType _offsets,
                                       countsVectType _noRecvParts)
 {
-  barrier();
   ///
   /// setup send queue iterators and send buffer
   ///
@@ -488,24 +486,37 @@ void CommunicationManager::queuedExch(T& _src, T& _target,
         }
     }
 
+  ///
+  /// wait for everybody to setup their receivers
+  ///
+  barrier();
 
   bool commFinished = false;
   while (!commFinished)
     {
-      // Assume we have finished, prove otherwise
+      ///
+      /// Assume we have finished, prove otherwise
+      ///
       commFinished = true;
 
-      // check for arrived particles
+      ///
+      /// check for excpected particles
+      ///
       for (size_t i = 0; i < noDomains; i++)
         {
           if (_noRecvParts[i] > 0)
             {
               commFinished = false;
+              ///
+              /// check for arrived particles
+              ///
               if (recvReqs[i].Test())
                 {
                   _noRecvParts[i] -= std::min(noBuffParts,
                                               static_cast<size_t>(_noRecvParts[i]));
-                  // wire new receiver if we are still expecting particles
+                  ///
+                  /// wire new receiver in case we are still expecting particles
+                  ///
                   if (_noRecvParts[i] > 0)
                     {
                       _offsets[i] += noBuffParts;
@@ -553,7 +564,7 @@ void CommunicationManager::sendChunk(const idvectRefType _src,
   ///             when another send follows immediately trying to use
   ///             the same buffer?)
   ///
-  MPI::COMM_WORLD.Ssend(&idSendBuff(0), count * identTypeSize, MPI::BYTE,
+  MPI::COMM_WORLD.Send(&idSendBuff(0), count * identTypeSize, MPI::BYTE,
                         _qelem.sendRank, myRank);
 };
 
@@ -573,7 +584,7 @@ void CommunicationManager::sendChunk(const valvectRefType _src,
       count++;
     }
 
-  MPI::COMM_WORLD.Ssend(&scalSendBuff(0), count * valueTypeSize, MPI::BYTE,
+  MPI::COMM_WORLD.Send(&scalSendBuff(0), count * valueTypeSize, MPI::BYTE,
                         _qelem.sendRank, myRank);
 };
 
@@ -594,7 +605,7 @@ void CommunicationManager::sendChunk(const matrixRefType _src,
       count++;
     }
 
-  MPI::COMM_WORLD.Ssend(&vectSendBuff(0, 0),
+  MPI::COMM_WORLD.Send(&vectSendBuff(0, 0),
                         count * vectSendBuff.size2() * valueTypeSize,
                         MPI::BYTE,
                         _qelem.sendRank, myRank);
