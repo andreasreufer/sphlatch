@@ -17,8 +17,11 @@ typedef sphlatch::IOManager io_type;
 //#include "eos_idealgas.h"
 //typedef sphlatch::IdealGas eos_type;
 
-#include "eos_tillotson.h"
-typedef sphlatch::Tillotson eos_type;
+//#include "eos_tillotson.h"
+//typedef sphlatch::Tillotson eos_type;
+
+#include "eos_aneos.h"
+typedef sphlatch::ANEOS eos_type;
 
 //#include "eos_mie_grueneisen.h"
 //typedef sphlatch::MieGrueneisen eos_type;
