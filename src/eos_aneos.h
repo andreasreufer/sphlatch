@@ -47,12 +47,13 @@ class ANEOS : public EOS {
 public:
 ANEOS()
 {
-  Logger.stream << "init ANEOS EOS with "
-                << " materials";
-  Logger.flushStream();
-
   std::string matFilename = "aneos.input";
+
   aneosinit_(matFilename.c_str(), matFilename.size());
+
+  Logger.stream << "init ANEOS EOS with file "
+                << matFilename;
+  Logger.flushStream();
 };
 
 ~ANEOS()
@@ -69,14 +70,14 @@ static ANEOS* _instance;
 ///
 void operator()(const size_t _i, valueType& _P, valueType& _cs)
 {
-  this->operator()(rho (_i), u (_i), mat (_i), _P, _cs);
+  this->operator()(rho (_i), u (_i), mat (_i), _P, _cs, PartManager.phase (_i));
 }
 
 ///
 /// get the pressure & speed of sound for given parameters
 ///
 void operator()(const valueType _rho, const valueType _u, const identType _mat,
-                valueType& _P, valueType& _cs)
+                valueType& _P, valueType& _cs, identType& _phase)
 {
   static double curRho, curU, curP, curCs, curT;
   static int curMat, curPhase;
@@ -87,8 +88,7 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
 
   rooten(curRho, curU, curMat, curT, curP, curCs, curPhase);
 
-  std::cout << curPhase << " ";
-
+  _phase = static_cast<identType>(curPhase);
   _P = static_cast<valueType>(curP);
   _cs = static_cast<valueType>(curCs);
 };
@@ -233,9 +233,9 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
              &_csi, &_kpai, &_mati, &_FME, &_FMA);
       fb = ei - _ui;
     }
-///
-/// arriving here means no convergence
-///
+  ///
+  /// arriving here means no convergence
+  ///
   throw NoConvergence();
 };
 

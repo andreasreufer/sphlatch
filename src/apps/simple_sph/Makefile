@@ -7,6 +7,9 @@ tillotson: simple_sph_GHUT__ simple_sph__HUT__ \
 	   simple_sph_GHUTR_ simple_sph__HUTR_ \
 	   simple_sph_GHUT_F simple_sph_GHUTRF
 
+aneos:     libaneos simple_sph_GHUA__ \
+	   simple_sph__HUA__ simple_sph_GHUA_F
+
 
 shocktube:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
@@ -93,7 +96,35 @@ simple_sph_GHUTRF:
 				      -DSPHLATCH_FRICTION \
 				      -o simple_sph_GHUTRF simple_sph.cpp
 
+simple_sph_GHUA__:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -o simple_sph_GHUA__ simple_sph.cpp
+
+simple_sph__HUA__:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -o simple_sph__HUA__ simple_sph.cpp
+
+simple_sph_GHUA_F:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -DSPHLATCH_FRICTION \
+				      -o simple_sph_GHUA_F simple_sph.cpp
+
+libaneos:
+	$(FC) $(FFLAGS) -c libaneos.f
+
 clean:
 	rm simple_sph_* 2>&1 >/dev/null;\
+	rm libaneos.o 2>&1 >/dev/null;\
 	rm shocktube 2>&1 >/dev/null | true
 

@@ -40,16 +40,18 @@ int main(int argc, char* argv[])
   PartManager.useBasicSPH();
   PartManager.useEnergy();
   PartManager.useMaterials();
+  PartManager.usePhase();
 
-  sphlatch::matrixRefType  pos(PartManager.pos);  
-  sphlatch::valvectRefType rho(PartManager.rho);
-  sphlatch::valvectRefType   u(PartManager.u);
-  sphlatch::idvectRefType  mat(PartManager.mat);
+  sphlatch::matrixRefType   pos(PartManager.pos);  
+  sphlatch::valvectRefType  rho(PartManager.rho);
+  sphlatch::valvectRefType    u(PartManager.u);
+  sphlatch::idvectRefType   mat(PartManager.mat);
+  sphlatch::idvectRefType phase(PartManager.phase);
   
   IOManager.loadDump("initials.h5part");
 
   eos_type& EOS(eos_type::instance());
-  
+
   eosMat dunite;
   dunite.rho0  = 3.320e+00;
   dunite.A     = 1.290e+12;
@@ -105,7 +107,8 @@ int main(int argc, char* argv[])
               << sP << "   "        // 10
               << sCs << "   "       // 11
               << pP - sP << "    "  // 12
-              << pCs - sCs << "\n"; // 13
+              << pCs - sCs << "  "  // 13
+              << phase(i) << "\n";  // 14
   }
 
   MPI::Finalize();

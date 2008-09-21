@@ -48,6 +48,7 @@ void useAVHernquist(void);
 void useAVTimedepAlpha(void);
 
 void useMaterials(void);
+void usePhase(void);
 
 void setNoParts(size_t _noParts, size_t _noGhostParts);
 void setNoParts(size_t _noParts);
@@ -103,7 +104,7 @@ valvectType m, h, dhdt, rho, drhodt, p, u, dudt, A, dAdt, alpha, dalphadt,
 ///
 /// integers
 ///
-idvectType id, noneigh, mat;
+idvectType id, noneigh, mat, phase;
 
 ///
 /// blacklist for particles to be deleted
@@ -320,6 +321,14 @@ void ParticleManager::useAVHernquist()
 void ParticleManager::useMaterials()
 {
   usedIntegers[ "mat" ] = &mat;
+}
+
+///
+/// the material variable
+///
+void ParticleManager::usePhase()
+{
+  usedIntegers[ "phase" ] = &phase;
 }
 
 ///

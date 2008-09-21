@@ -54,6 +54,7 @@ void calcOffsets(domainPartsIndexRefType _indices,
 domainPartsIndexType ghostIndices;
 countsVectType gSendOffsets, gRecvOffsets, gPartsFrom, gPartsTo;
 size_t identSize, floatSize, newNoParts, noSendGhosts;
+MPI_Datatype mpiFloatType;
 
 ///
 /// various little helper functions
@@ -74,6 +75,7 @@ void sumUpCounts(countsVectRefType _indexVect);
 void max(valueRefType _val);
 void min(valueRefType _val);
 void sum(valueRefType _val);
+void sum(valvectRefType _vect);
 
 size_t getMyDomain();
 size_t getNoDomains();
@@ -139,6 +141,12 @@ CommunicationManager::CommunicationManager(void) :
 
   identSize = sizeof(identType);
   floatSize = sizeof(valueType);
+
+#ifdef SPHLATCH_SINGLEPREC
+  mpiFloatType = MPI::FLOAT;
+#else
+  mpiFloatType = MPI::DOUBLE;
+#endif
 }
 
 CommunicationManager::~CommunicationManager(void)
@@ -827,6 +835,20 @@ void CommunicationManager::sum(valueRefType _val)
   doubleBuff = recvDoubleBuff;
 #endif
   _val = static_cast<valueType>(doubleBuff);
+}
+
+void CommunicationManager::sum(valvectRefType _vect)
+{
+  const size_t vectLength = _vect.size();
+#ifdef MPI_IN_PLACE
+  MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE, &_vect(0), vectLength,
+                            mpiFloatType, MPI::SUM);
+#else
+  valvectType recvBuff(_vect);
+  MPI::COMM_WORLD.Allreduce(&_vect(0), &recvBuff(0), vectLength,
+                            mpiFloatType, MPI::SUM);
+  _vect = recvBuff;
+#endif
 }
 
 template<class T>
