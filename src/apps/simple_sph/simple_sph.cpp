@@ -17,7 +17,7 @@
 //#define SPHLATCH_RANKSPACESERIALIZE
 
 // enable checking of bounds for the neighbour lists
-#define SPHLATCH_CHECKNONEIGHBOURS
+//#define SPHLATCH_CHECKNONEIGHBOURS
 
 // enable selfgravity?
 //#define SPHLATCH_GRAVITY
@@ -36,6 +36,9 @@
 
 // linear velocity damping term?
 //#define SPHLATCH_FRICTION
+
+// remove particles on escaping orbits?
+//#define SPHLATCH_REMOVEESCAPING
 
 // do we need the velocity divergence?
 #ifdef SPHLATCH_TIMEDEP_ENERGY
@@ -79,12 +82,16 @@ namespace po = boost::program_options;
 #include "typedefs.h"
 typedef sphlatch::valueType valueType;
 typedef sphlatch::valueRefType valueRefType;
+
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::valvectRefType valvectRefType;
+
+typedef sphlatch::countsType countsType;
 
 typedef sphlatch::idvectRefType idvectRefType;
 typedef sphlatch::matrixRefType matrixRefType;
 typedef sphlatch::partsIndexVectType partsIndexVectType;
+
 typedef sphlatch::quantsType quantsType;
 
 #include "io_manager.h"
@@ -110,9 +117,19 @@ typedef sphlatch::PredCorrMetaIntegrator integrator_type;
 
 #ifdef SPHLATCH_TILLOTSON
 #include "eos_tillotson.h"
+#define SPHLATCH_EOS_DEFINED
 typedef sphlatch::Tillotson eos_type;
-#else
+#endif
+
+#ifdef SPHLATCH_ANEOS
+#include "eos_aneos.h"
+#define SPHLATCH_EOS_DEFINED
+typedef sphlatch::ANEOS eos_type;
+#endif
+
+#ifndef SPHLATCH_EOS_DEFINED
 #include "eos_idealgas.h"
+#define SPHLATCH_EOS_DEFINED
 typedef sphlatch::IdealGas eos_type;
 #endif
 
@@ -162,6 +179,9 @@ valueType timeStep()
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
 #ifdef SPHLATCH_TILLOTSON
+  idvectRefType mat(PartManager.mat);
+#endif
+#ifdef SPHLATCH_ANEOS
   idvectRefType mat(PartManager.mat);
 #endif
 
@@ -303,6 +323,9 @@ valueType timeStep()
 #ifdef SPHLATCH_TILLOTSON
   saveQuants.ints += &mat;
 #endif
+#ifdef SPHLATCH_ANEOS
+  saveQuants.ints += &mat;
+#endif
 #ifdef SPHLATCH_INTEGRATERHO
   saveQuants.scalars += &drhodt;
 #endif
@@ -310,8 +333,6 @@ valueType timeStep()
                                 * saveItrvl;
   if (fabs(curSaveTime - time) < 1.e-9)
     {
-      Logger << "save dump";
-
       std::string fileName = "dump";
 
       std::ostringstream stepSS;
@@ -342,6 +363,8 @@ valueType timeStep()
       fileName.append(".h5part");
 
       IOManager.saveDump(fileName, saveQuants);
+      Logger.stream << "dump saved: " << fileName;
+      Logger.flushStream();
     }
 
   return dtGlob;
@@ -379,25 +402,6 @@ void derivate()
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
-
-  ///
-  /// blacklist particles too far out
-  ///
-  /*const valueType maxRad = 3.e9;
-  const size_t noPreParts = PartManager.getNoLocalParts();
-  for (size_t i = 0; i < noPreParts; i++)
-    {
-      const valueType curRad = sqrt(pos(i, X) * pos(i, X) +
-                                    pos(i, Y) * pos(i, Y) +
-                                    pos(i, Z) * pos(i, Z));
-      if (curRad > maxRad)
-        {
-          PartManager.blacklisted[i] = true;
-          ///
-          /// store deleted particles
-          ///
-        }
-    }*/
 
   ///
   /// exchange particle data
@@ -786,6 +790,8 @@ void derivate()
                 << ", divvmax " << cDivvMax
 #endif
                 << ")";
+
+
   Logger.flushStream();
 };
 
@@ -794,12 +800,16 @@ int main(int argc, char* argv[])
   ///
   /// parse program options
   ///
-  po::options_description Options("<input-file> <save-time> <stop-time>\n ... or use options");
+  po::options_description Options(
+    "<input-file> <save-time> <stop-time>\n ... or use options");
 
   Options.add_options()
-  ("input-file,i", po::value<std::string>(), "input file")
-  ("save-time,s", po::value<valueType>(), "save dumps when (time) modulo (save time) = 0.")
-  ("stop-time,S", po::value<valueType>(), "stop simulaton at this time");
+  ("input-file,i", po::value<std::string>(),
+    "input file")
+  ("save-time,s", po::value<valueType>(),
+    "save dumps when (time) modulo (save time) = 0.")
+  ("stop-time,S", po::value<valueType>(),
+    "stop simulaton at this time");
 
   po::positional_options_description posDesc;
   posDesc.add("input-file", 1);
@@ -810,10 +820,12 @@ int main(int argc, char* argv[])
   po::store(po::command_line_parser(argc, argv).options(Options).positional(posDesc).run(), poMap);
   po::notify(poMap);
 
-  if (!poMap.count("input-file") || !poMap.count("save-time") || !poMap.count("stop-time"))
+  if (!poMap.count("input-file") ||
+      !poMap.count("save-time") ||
+      !poMap.count("stop-time"))
     {
       std::cerr << Options << "\n";
-      return EXIT_SUCCESS;
+      return EXIT_FAILURE;
     }
 
   ///
@@ -849,7 +861,6 @@ int main(int argc, char* argv[])
   PartManager.attributes["frictime"] = 200.;
 #endif
 
-
   ///
   /// define what we're doing
   ///
@@ -865,6 +876,9 @@ int main(int argc, char* argv[])
   PartManager.useTimedepH();
 #endif
 #ifdef SPHLATCH_TILLOTSON
+  PartManager.useMaterials();
+#endif
+#ifdef SPHLATCH_ANEOS
   PartManager.useMaterials();
 #endif
 #ifdef SPHLATCH_INTEGRATERHO
@@ -962,6 +976,9 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_TILLOTSON
                 << "     Tillotson EOS\n"
 #endif
+#ifdef SPHLATCH_ANEOS
+                << "     ANEOS\n"
+#endif
 #ifdef SPHLATCH_INTEGRATERHO
                 << "     integrated density\n"
 #endif
@@ -987,7 +1004,6 @@ int main(int argc, char* argv[])
   ///
   /// the integration loop
   ///
-  //valueType nextSaveTime = time;
   while (time <= maxTime)
     {
       ///

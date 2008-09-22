@@ -154,8 +154,8 @@ double LogManager::getAbsTime()
 #ifdef SPHLATCH_PARALLEL
   return CommManager.wtime() - startTime;
 #else
-  return MPI::Wtime() - startTime; /// todo: use another timer
-                                   /// for serial version;
+  return 0.; /// todo: use another timer
+             /// for serial version;
 #endif
 }
 };

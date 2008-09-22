@@ -37,6 +37,9 @@
 // linear velocity damping term?
 //#define SPHLATCH_FRICTION
 
+// remove particles on escaping orbits?
+//#define SPHLATCH_REMOVEESCAPING
+
 // do we need the velocity divergence?
 #ifdef SPHLATCH_TIMEDEP_ENERGY
 #ifndef SPHLATCH_VELDIV
@@ -79,12 +82,16 @@ namespace po = boost::program_options;
 #include "typedefs.h"
 typedef sphlatch::valueType valueType;
 typedef sphlatch::valueRefType valueRefType;
+
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::valvectRefType valvectRefType;
+
+typedef sphlatch::countsType countsType;
 
 typedef sphlatch::idvectRefType idvectRefType;
 typedef sphlatch::matrixRefType matrixRefType;
 typedef sphlatch::partsIndexVectType partsIndexVectType;
+
 typedef sphlatch::quantsType quantsType;
 
 #include "io_manager.h"
@@ -179,6 +186,9 @@ valueType timeStep()
 #endif
 #ifdef SPHLATCH_ANEOS
   idvectRefType mat(PartManager.mat);
+#endif
+#ifdef SPHLATCH_REMOVEESCAPING
+  valvectRefType ecc(PartManager.ecc);
 #endif
 
   valueRefType time(PartManager.attributes["time"]);
@@ -298,71 +308,6 @@ valueType timeStep()
                 << "   dtGlob: " << dtGlob;
   Logger.flushStream();
 
-  ///
-  /// define the quantities to save in a dump
-  ///
-  quantsType saveQuants;
-  saveQuants.vects += &pos, &vel, &acc;
-  saveQuants.scalars += &m, &rho, &u, &p, &h, &cs;
-  saveQuants.ints += &id, &noneigh;
-
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-  saveQuants.scalars += &dudt;
-#endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-  saveQuants.scalars += &dhdt;
-  saveQuants.scalars += &divv;
-#endif
-#ifdef SPHLATCH_GRAVITY
-  saveQuants.scalars += &eps;
-#endif
-#ifdef SPHLATCH_TILLOTSON
-  saveQuants.ints += &mat;
-#endif
-#ifdef SPHLATCH_ANEOS
-  saveQuants.ints += &mat;
-#endif
-#ifdef SPHLATCH_INTEGRATERHO
-  saveQuants.scalars += &drhodt;
-#endif
-  const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
-                                * saveItrvl;
-  if (fabs(curSaveTime - time) < 1.e-9)
-    {
-      Logger << "save dump";
-
-      std::string fileName = "dump";
-
-      std::ostringstream stepSS;
-      stepSS << step;
-
-      ///
-      /// pad step number to 7 numbers
-      ///
-      for (size_t i = stepSS.str().size(); i < 7; i++)
-        {
-          fileName.append("0");
-        }
-      fileName.append(stepSS.str());
-
-      fileName.append("_T");
-      std::ostringstream timeSS;
-      timeSS << std::setprecision(3) << std::scientific << time;
-
-      ///
-      /// pad to a size of 11 characters
-      /// (sign 1, mantissa 1, '.' 1, prec 3, 'e+' 2, exponent 3)
-      ///
-      for (size_t i = timeSS.str().size(); i < 11; i++)
-        {
-          fileName.append("0");
-        }
-      fileName.append(timeSS.str());
-      fileName.append(".h5part");
-
-      IOManager.saveDump(fileName, saveQuants);
-    }
-
 #ifdef SPHLATCH_REMOVEESCAPING
   ///
   /// estimate center of protoearth by calculating
@@ -405,7 +350,8 @@ valueType timeStep()
   CommManager.max(maxRad);
 
   ///
-  /// bin particle masses according to radius
+  /// bin particle masses according to radius, cumulate mass bins
+  /// and sum them up globally
   ///
   valvectType massRad(noMassBins), massBins(noMassBins);
   for (size_t i = 0; i < noMassBins; i++)
@@ -420,18 +366,18 @@ valueType timeStep()
                                     (pos(i, Y) - comY) * (pos(i, Y) - comY) +
                                     (pos(i, Z) - comZ) * (pos(i, Z) - comZ));
 
-      const size_t curBin = lrint((curRad / maxRad) * noMassBins - 0.5);
+      const size_t curBin = std::max(std::min(
+                                       lrint((curRad / maxRad) * noMassBins - 0.5),
+                                       static_cast<long int>(noMassBins)),
+                                     static_cast<long int>(0));
       massBins(curBin) += m(i);
     }
 
-  ///
-  /// cumulate mass bins, so that bin i contains also the mass
-  /// of bins 0 ... i-1
-  ///
   for (size_t i = 1; i < noMassBins; i++)
     {
       massBins(i) += massBins(i - 1);
     }
+  CommManager.sum(massBins);
 
   ///
   /// create lookup table
@@ -441,7 +387,16 @@ valueType timeStep()
   ///
   /// finally blacklist particles going to escape
   ///
+  /// particles with 
+  ///  e > 1 AND 
+  ///  ( rho < maxFreeDensity OR noneigh <= 1 ) AND
+  ///  t > 0
+  /// are blacklisted
+  ///
   const valueType gravConst = PartManager.attributes["gravconst"];
+  const valueType maxFreeDensity = PartManager.attributes["maxfreedens"];
+  valueType curEscapeesMass = 0.;
+  countsType noEscapees = 0;
   for (size_t i = 0; i < noParts; i++)
     {
       ///
@@ -467,12 +422,95 @@ valueType timeStep()
       const valueType ez = (vivi * rz / mu) - (rivi * vz / mu) - (rz / r);
 
       const valueType e = sqrt(ex * ex + ey * ey + ez * ez);
-    }
+      ecc(i) = e;
 
-  // PartManager.blacklisted[i] = true;
-  // escapeMass += PartManager.attributes["escapedmass"];
-  // PartManager.attributes["escapedmass"] = escapeMass;
+      if ( e > 1. && 
+           ( rho(i) < maxFreeDensity || noneigh(i) <= 1 ) && 
+           time > 0.)
+        {
+          PartManager.blacklisted[i] = true;
+          curEscapeesMass += m(i);
+          noEscapees++;
+          // store the particle to an escapee table
+        }
+    }
+  CommManager.sum(curEscapeesMass);
+  CommManager.sum(noEscapees);
+  
+  PartManager.attributes["escapedmass"] += curEscapeesMass;
+
+  Logger.stream << noEscapees << " parts with a mass of "
+                << curEscapeesMass << " removed";
+  Logger.flushStream();
 #endif
+
+  ///
+  /// define the quantities to save in a dump
+  ///
+  quantsType saveQuants;
+  saveQuants.vects += &pos, &vel, &acc;
+  saveQuants.scalars += &m, &rho, &u, &p, &h, &cs;
+  saveQuants.ints += &id, &noneigh;
+
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+  saveQuants.scalars += &dudt;
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+  saveQuants.scalars += &dhdt;
+  saveQuants.scalars += &divv;
+#endif
+#ifdef SPHLATCH_GRAVITY
+  saveQuants.scalars += &eps;
+#endif
+#ifdef SPHLATCH_TILLOTSON
+  saveQuants.ints += &mat;
+#endif
+#ifdef SPHLATCH_ANEOS
+  saveQuants.ints += &mat;
+#endif
+#ifdef SPHLATCH_INTEGRATERHO
+  saveQuants.scalars += &drhodt;
+#endif
+#ifdef SPHLATCH_REMOVEESCAPING
+  saveQuants.scalars += &ecc;
+#endif
+  const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
+                                * saveItrvl;
+  if (fabs(curSaveTime - time) < 1.e-9)
+    {
+      std::string fileName = "dump";
+
+      std::ostringstream stepSS;
+      stepSS << step;
+
+      ///
+      /// pad step number to 7 numbers
+      ///
+      for (size_t i = stepSS.str().size(); i < 7; i++)
+        {
+          fileName.append("0");
+        }
+      fileName.append(stepSS.str());
+
+      fileName.append("_T");
+      std::ostringstream timeSS;
+      timeSS << std::setprecision(3) << std::scientific << time;
+
+      ///
+      /// pad to a size of 11 characters
+      /// (sign 1, mantissa 1, '.' 1, prec 3, 'e+' 2, exponent 3)
+      ///
+      for (size_t i = timeSS.str().size(); i < 11; i++)
+        {
+          fileName.append("0");
+        }
+      fileName.append(timeSS.str());
+      fileName.append(".h5part");
+
+      IOManager.saveDump(fileName, saveQuants);
+      Logger.stream << "dump saved: " << fileName;
+      Logger.flushStream();
+    }
 
   return dtGlob;
 }
@@ -874,7 +912,7 @@ void derivate()
       /// k1: too few neighbours   k2: number ok   k3: too many neighbours
       ///
       //const valueType k1 = 0.5 * (1 + tanh((noNeighCur - noNeighMin) / -5.));
-      const valueType k1 = 0.;
+      const valueType k1 = 0.; // inhibits h oscillation above hard surfaces
       const valueType k3 = 0.5 * (1 + tanh((noNeighCur - noNeighMax) / 5.));
       const valueType k2 = 1. - k1 - k3;
 
@@ -908,12 +946,16 @@ int main(int argc, char* argv[])
   ///
   /// parse program options
   ///
-  po::options_description Options("<input-file> <save-time> <stop-time>\n ... or use options");
+  po::options_description Options(
+    "<input-file> <save-time> <stop-time>\n ... or use options");
 
   Options.add_options()
-  ("input-file,i", po::value<std::string>(), "input file")
-  ("save-time,s", po::value<valueType>(), "save dumps when (time) modulo (save time) = 0.")
-  ("stop-time,S", po::value<valueType>(), "stop simulaton at this time");
+  ("input-file,i", po::value<std::string>(),
+    "input file")
+  ("save-time,s", po::value<valueType>(),
+    "save dumps when (time) modulo (save time) = 0.")
+  ("stop-time,S", po::value<valueType>(),
+    "stop simulaton at this time");
 
   po::positional_options_description posDesc;
   posDesc.add("input-file", 1);
@@ -924,7 +966,9 @@ int main(int argc, char* argv[])
   po::store(po::command_line_parser(argc, argv).options(Options).positional(posDesc).run(), poMap);
   po::notify(poMap);
 
-  if (!poMap.count("input-file") || !poMap.count("save-time") || !poMap.count("stop-time"))
+  if (!poMap.count("input-file") ||
+      !poMap.count("save-time") ||
+      !poMap.count("stop-time"))
     {
       std::cerr << Options << "\n";
       return EXIT_FAILURE;
@@ -962,8 +1006,11 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_FRICTION
   PartManager.attributes["frictime"] = 200.;
 #endif
-
+#ifdef SPHLATCH_REMOVEESCAPING
   PartManager.attributes["mincoredens"] = 5.0;
+  PartManager.attributes["maxfreedens"] = 0.1;
+  PartManager.attributes["escapedmass"] = 0.0;
+#endif
 
   ///
   /// define what we're doing
@@ -987,6 +1034,9 @@ int main(int argc, char* argv[])
 #endif
 #ifdef SPHLATCH_INTEGRATERHO
   PartManager.useIntegratedRho();
+#endif
+#ifdef SPHLATCH_REMOVEESCAPING
+  PartManager.useEccentricity();
 #endif
 
   ///
@@ -1089,6 +1139,9 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_FRICTION
                 << "     friction\n"
 #endif
+#ifdef SPHLATCH_REMOVEESCAPING
+                << "     removal of particles on escaping orbits\n"
+#endif
                 << "     basic SPH\n";
   Logger.flushStream();
 
@@ -1108,7 +1161,6 @@ int main(int argc, char* argv[])
   ///
   /// the integration loop
   ///
-  //valueType nextSaveTime = time;
   while (time <= maxTime)
     {
       ///

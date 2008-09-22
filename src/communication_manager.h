@@ -54,7 +54,7 @@ void calcOffsets(domainPartsIndexRefType _indices,
 domainPartsIndexType ghostIndices;
 countsVectType gSendOffsets, gRecvOffsets, gPartsFrom, gPartsTo;
 size_t identSize, floatSize, newNoParts, noSendGhosts;
-MPI_Datatype mpiFloatType;
+MPI_Datatype mpiFloatType, mpiCountType;
 
 ///
 /// various little helper functions
@@ -76,6 +76,7 @@ void max(valueRefType _val);
 void min(valueRefType _val);
 void sum(valueRefType _val);
 void sum(valvectRefType _vect);
+void sum(countsRefType _cnt);
 
 size_t getMyDomain();
 size_t getNoDomains();
@@ -147,6 +148,7 @@ CommunicationManager::CommunicationManager(void) :
 #else
   mpiFloatType = MPI::DOUBLE;
 #endif
+  mpiCountType = MPI::INT;
 }
 
 CommunicationManager::~CommunicationManager(void)
@@ -848,6 +850,19 @@ void CommunicationManager::sum(valvectRefType _vect)
   MPI::COMM_WORLD.Allreduce(&_vect(0), &recvBuff(0), vectLength,
                             mpiFloatType, MPI::SUM);
   _vect = recvBuff;
+#endif
+}
+
+void CommunicationManager::sum(countsRefType _cnt)
+{
+#ifdef MPI_IN_PLACE
+  MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE, &_cnt, 1,
+                            mpiCountType, MPI::SUM);
+#else
+  identType countBuff;
+  MPI::COMM_WORLD.Allreduce(&_cnt, &countBuff, 1,
+                            mpiCountType, MPI::SUM);
+  _cnt = countBuff;
 #endif
 }
 

@@ -28,18 +28,18 @@ extern "C" void aneosinit_(const char *, /// materials file
 ///
 extern "C" void aneos_(const double *,  /// T (input)
                        const double *,  /// rho (input)
-                       double *,  /// p
-                       double *,  /// E
-                       double *,  /// S
-                       double *,  /// c_v
-                       double *,  /// dp/dt
-                       double *,  /// dp/dr
-                       double *,  /// fkro (Rosseland mean opacity)
-                       double *,  /// cs
-                       int *,     /// phase (input)
-                       const int *,     /// material
-                       double *,  /// fme (?)
-                       double *  /// fva (?)
+                       double *,    /// p
+                       double *,    /// E
+                       double *,    /// S
+                       double *,    /// c_v
+                       double *,    /// dp/dt
+                       double *,    /// dp/dr
+                       double *,    /// fkro (Rosseland mean opacity)
+                       double *,    /// cs
+                       int *,       /// phase
+                       const int *, /// material (input)
+                       double *,    /// fme (?)
+                       double *     /// fva (?)
                        );
 
 namespace sphlatch {

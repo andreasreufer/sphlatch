@@ -40,6 +40,7 @@ void useEntropy(void);
 void useTimedepEntropy(void);
 void useTimedepH(void);
 void useGravity(void);
+void useEccentricity(void);
 void useIntegratedRho(void);
 
 void useAVMonaghan(void);
@@ -99,7 +100,7 @@ matrixType pos, vel, acc, rotv, M, I, S;
 /// scalar quantities
 ///
 valvectType m, h, dhdt, rho, drhodt, p, u, dudt, A, dAdt, alpha, dalphadt,
-            divv, mumax, q, eps, dtav, dt, cs;
+            divv, mumax, q, eps, dtav, dt, cs, ecc;
 
 ///
 /// integers
@@ -215,6 +216,11 @@ void ParticleManager::useGravity()
 
   usedScalars[ "m" ] = &m;
   usedScalars[ "eps" ] = &eps;
+}
+
+void ParticleManager::useEccentricity()
+{
+  usedScalars[ "ecc" ] = &ecc;
 }
 
 ///
