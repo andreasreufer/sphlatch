@@ -367,7 +367,8 @@ valueType timeStep()
                                     (pos(i, Z) - comZ) * (pos(i, Z) - comZ));
 
       const size_t curBin = std::max(std::min(
-                                       lrint((curRad / maxRad) * noMassBins - 0.5),
+                                       lrint((curRad / maxRad) * noMassBins
+                                             - 0.5),
                                        static_cast<long int>(noMassBins)),
                                      static_cast<long int>(0));
       massBins(curBin) += m(i);
@@ -387,14 +388,15 @@ valueType timeStep()
   ///
   /// finally blacklist particles going to escape
   ///
-  /// particles with 
-  ///  e > 1 AND 
-  ///  ( rho < maxFreeDensity OR noneigh <= 1 ) AND
+  /// particles with
+  ///  e > 1 AND
+  ///  ( rho < maxFreeDensity OR noneigh <= 1 OR outside of > 90% tot mass) AND
   ///  t > 0
   /// are blacklisted
   ///
   const valueType gravConst = PartManager.attributes["gravconst"];
   const valueType maxFreeDensity = PartManager.attributes["maxfreedens"];
+  const valueType totMass = massBins(noMassBins - 1);
   valueType curEscapeesMass = 0.;
   countsType noEscapees = 0;
   for (size_t i = 0; i < noParts; i++)
@@ -415,7 +417,8 @@ valueType timeStep()
       const valueType vivi = vx * vx + vy * vy + vz * vz;
       const valueType rivi = rx * vx + ry * vy + rz * vz;
 
-      const valueType mu = massProf(r) * gravConst;
+      const valueType M = massProf(r);
+      const valueType mu = M * gravConst;
 
       const valueType ex = (vivi * rx / mu) - (rivi * vx / mu) - (rx / r);
       const valueType ey = (vivi * ry / mu) - (rivi * vy / mu) - (ry / r);
@@ -424,9 +427,9 @@ valueType timeStep()
       const valueType e = sqrt(ex * ex + ey * ey + ez * ez);
       ecc(i) = e;
 
-      if ( e > 1. && 
-           ( rho(i) < maxFreeDensity || noneigh(i) <= 1 ) && 
-           time > 0.)
+      if (e > 1. &&
+          (rho(i) < maxFreeDensity || noneigh(i) <= 1 || M > 0.9 * totMass) &&
+          time > 0.)
         {
           PartManager.blacklisted[i] = true;
           curEscapeesMass += m(i);
@@ -436,10 +439,10 @@ valueType timeStep()
     }
   CommManager.sum(curEscapeesMass);
   CommManager.sum(noEscapees);
-  
+
   PartManager.attributes["escapedmass"] += curEscapeesMass;
 
-  Logger.stream << noEscapees << " parts with a mass of "
+  Logger.stream << noEscapees << " parts with a total mass of "
                 << curEscapeesMass << " removed";
   Logger.flushStream();
 #endif
@@ -494,7 +497,7 @@ valueType timeStep()
 
       fileName.append("_T");
       std::ostringstream timeSS;
-      timeSS << std::setprecision(3) << std::scientific << time;
+      timeSS << std::setprecision(4) << std::scientific << time;
 
       ///
       /// pad to a size of 11 characters
@@ -951,11 +954,11 @@ int main(int argc, char* argv[])
 
   Options.add_options()
   ("input-file,i", po::value<std::string>(),
-    "input file")
+   "input file")
   ("save-time,s", po::value<valueType>(),
-    "save dumps when (time) modulo (save time) = 0.")
+   "save dumps when (time) modulo (save time) = 0.")
   ("stop-time,S", po::value<valueType>(),
-    "stop simulaton at this time");
+   "stop simulaton at this time");
 
   po::positional_options_description posDesc;
   posDesc.add("input-file", 1);

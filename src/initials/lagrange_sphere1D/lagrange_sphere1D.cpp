@@ -116,7 +116,11 @@ int main(int argc, char* argv[])
   ///
   /// guess for the density
   ///
+#ifdef SPHLATCH_ANEOS
+  const size_t noCells = 300;
+#else
   const size_t noCells = 1000;
+#endif
   const size_t noEdges = noCells + 1;
   const size_t noCoreCells = lrint(noCells * (mCore / mTot));
   const valueType dm = mTot / static_cast<valueType>(noCells);

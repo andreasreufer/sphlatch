@@ -77,6 +77,16 @@ void operator()(const size_t _i, valueType& _P, valueType& _cs)
 /// get the pressure & speed of sound for given parameters
 ///
 void operator()(const valueType _rho, const valueType _u, const identType _mat,
+                valueType& _P, valueType& _cs)
+{
+  static identType tmpPhase;
+  this->operator()(_rho, _u, _mat, _P, _cs, tmpPhase);
+}
+
+///
+/// get the pressure & speed of sound for given parameters
+///
+void operator()(const valueType _rho, const valueType _u, const identType _mat,
                 valueType& _P, valueType& _cs, identType& _phase)
 {
   static double curRho, curU, curP, curCs, curT;

@@ -11,9 +11,18 @@
  */
 
 #include "typedefs.h"
-#include "eos_tillotson.h"
-#include <float.h>
 
+#ifdef SPHLATCH_TILLOTSON
+#include "eos_tillotson.h"
+typedef sphlatch::Tillotson eosType;
+#endif
+
+#ifdef SPHLATCH_ANEOS
+#include "eos_aneos.h"
+typedef sphlatch::ANEOS eosType;
+#endif
+
+#include <float.h>
 
 namespace sphlatch {
 class LagrangeSphere1DSolver {
@@ -68,7 +77,6 @@ void integrate(valueType _dtMax);
 void bootstrap();
 valueType detTimestep();
 
-typedef sphlatch::Tillotson eosType;
 eosType& EOS;
 
 private:
@@ -219,7 +227,7 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
   ///
   /// update pressure and speed of sound
   ///
-  for (size_t i = 0; i < noCells; i++)
+  for (size_t i = 0; i < noCells-1; i++)
     {
       EOS(rho(i), u(i), mat(i), p(i), cs(i));
       assert(!isnan(p(i)));
@@ -283,7 +291,7 @@ void LagrangeSphere1DSolver::bootstrap()
   ///
   /// update pressure and speed of sound
   ///
-  for (size_t i = 0; i < noCells; i++)
+  for (size_t i = 0; i < noCells-1; i++)
     {
       EOS(rho(i), u(i), mat(i), p(i), cs(i));
     }

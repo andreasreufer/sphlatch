@@ -349,7 +349,7 @@ valueType timeStep()
 
       fileName.append("_T");
       std::ostringstream timeSS;
-      timeSS << std::setprecision(3) << std::scientific << time;
+      timeSS << std::setprecision(4) << std::scientific << time;
 
       ///
       /// pad to a size of 11 characters
