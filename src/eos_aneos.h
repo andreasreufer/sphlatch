@@ -66,28 +66,33 @@ static ANEOS* _instance;
 ///
 /// get the pressure & speed of sound for particle _i
 ///
-/// common EOS interface
+/// common EOS interface for particle use
 ///
 void operator()(const size_t _i, valueType& _P, valueType& _cs)
 {
-  this->operator()(rho (_i), u (_i), mat (_i), _P, _cs, PartManager.phase (_i));
+  this->operator()(rho (_i), u (_i), mat (_i), _P, PartManager.T(_i), _cs, PartManager.phase (_i));
 }
 
 ///
 /// get the pressure & speed of sound for given parameters
+///
+/// common EOS interface for independent use
 ///
 void operator()(const valueType _rho, const valueType _u, const identType _mat,
                 valueType& _P, valueType& _cs)
 {
   static identType tmpPhase;
-  this->operator()(_rho, _u, _mat, _P, _cs, tmpPhase);
+  static valueType tmpT;
+  this->operator()(_rho, _u, _mat, _P, tmpT, _cs, tmpPhase);
 }
 
 ///
 /// get the pressure & speed of sound for given parameters
 ///
+/// specific interface
+///
 void operator()(const valueType _rho, const valueType _u, const identType _mat,
-                valueType& _P, valueType& _cs, identType& _phase)
+                valueType& _P, valueType& _T, valueType& _cs, identType& _phase)
 {
   static double curRho, curU, curP, curCs, curT;
   static int curMat, curPhase;
@@ -101,8 +106,30 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
   _phase = static_cast<identType>(curPhase);
   _P = static_cast<valueType>(curP);
   _cs = static_cast<valueType>(curCs);
+  _T = static_cast<valueType>(curT);
 };
 
+///
+/// get p(rho,T) and u(rho,T)
+///
+void getSpecEnergy(const valueType _rho, const valueType _T,
+                   const identType _mat,
+                   valueType& _p, valueType& _cs, valueType& _u)
+{
+  static double T, rho, p, u, S, cv, dpdt, dpdr, fkros, cs, fme, fma;
+  static int kpa, mat;
+
+  rho = static_cast<double>(_rho);
+  T = static_cast<double>(_T);
+  mat = static_cast<int>(_mat);
+
+  aneos_(&T, &rho, &p, &u, &S, &cv, &dpdt, &dpdr, &fkros,
+         &cs, &kpa, &mat, &fme, &fma);
+
+  _p = static_cast<valueType>(p);
+  _cs = static_cast<valueType>(cs);
+  _u = static_cast<valueType>(u);
+};
 
 private:
 ///
@@ -149,9 +176,7 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
   for (fb = 0.0; fb <= 0.0; Tub *= 3.0)
     {
       if (Tub > 1.e15)
-        {
-          std::cout << "Temperature out of bounds!"; exit(1);
-        }
+        throw TempOutOfBounds();
       b = Tub;
       aneos_(&b, &_rhoi, &_pi, &ei, &_S, &_CV, &_DPDT, &_DPDR, &_FKROS,
              &_csi, &_kpai, &_mati, &_FME, &_FMA);
@@ -278,6 +303,7 @@ TempOutOfBounds()
 };
 };
 
+
 ANEOS * ANEOS::_instance = NULL;
 ANEOS& ANEOS::instance()
 {
@@ -287,4 +313,3 @@ ANEOS& ANEOS::instance()
 };
 }
 #endif
-

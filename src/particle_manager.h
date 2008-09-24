@@ -50,6 +50,7 @@ void useAVTimedepAlpha(void);
 
 void useMaterials(void);
 void usePhase(void);
+void useTemperature(void);
 
 void setNoParts(size_t _noParts, size_t _noGhostParts);
 void setNoParts(size_t _noParts);
@@ -100,7 +101,7 @@ matrixType pos, vel, acc, rotv, M, I, S;
 /// scalar quantities
 ///
 valvectType m, h, dhdt, rho, drhodt, p, u, dudt, A, dAdt, alpha, dalphadt,
-            divv, mumax, q, eps, dtav, dt, cs, ecc;
+            divv, mumax, q, eps, dtav, dt, cs, ecc, T;
 
 ///
 /// integers
@@ -330,7 +331,7 @@ void ParticleManager::useMaterials()
 }
 
 ///
-/// the material variable
+/// use the phase variable
 ///
 void ParticleManager::usePhase()
 {
@@ -338,7 +339,15 @@ void ParticleManager::usePhase()
 }
 
 ///
-/// the material variable
+/// use the temperature variable
+///
+void ParticleManager::useTemperature()
+{
+  usedScalars[ "T" ] = &T;
+}
+
+///
+/// the density time derivative variable
 ///
 void ParticleManager::useIntegratedRho()
 {

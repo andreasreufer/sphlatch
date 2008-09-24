@@ -175,7 +175,6 @@ valueType timeStep()
 #ifdef SPHLATCH_INTEGRATERHO
   valvectRefType drhodt(PartManager.drhodt);
 #endif
-
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
 #ifdef SPHLATCH_TILLOTSON
@@ -183,6 +182,8 @@ valueType timeStep()
 #endif
 #ifdef SPHLATCH_ANEOS
   idvectRefType mat(PartManager.mat);
+  idvectRefType phase(PartManager.phase);
+  valvectRefType T(PartManager.T);
 #endif
 
   valueRefType time(PartManager.attributes["time"]);
@@ -324,7 +325,8 @@ valueType timeStep()
   saveQuants.ints += &mat;
 #endif
 #ifdef SPHLATCH_ANEOS
-  saveQuants.ints += &mat;
+  saveQuants.scalars += &T;
+  saveQuants.ints += &mat, &phase;
 #endif
 #ifdef SPHLATCH_INTEGRATERHO
   saveQuants.scalars += &drhodt;
@@ -766,7 +768,8 @@ void derivate()
       ///
       /// k1: too few neighbours   k2: number ok   k3: too many neighbours
       ///
-      const valueType k1 = 0.5 * (1 + tanh((noNeighCur - noNeighMin) / -5.));
+      //const valueType k1 = 0.5 * (1 + tanh((noNeighCur - noNeighMin) / -5.));
+      const valueType k1 = 0.;
       const valueType k3 = 0.5 * (1 + tanh((noNeighCur - noNeighMax) / 5.));
       const valueType k2 = 1. - k1 - k3;
 
@@ -880,6 +883,8 @@ int main(int argc, char* argv[])
 #endif
 #ifdef SPHLATCH_ANEOS
   PartManager.useMaterials();
+  PartManager.usePhase();
+  PartManager.useTemperature();
 #endif
 #ifdef SPHLATCH_INTEGRATERHO
   PartManager.useIntegratedRho();
@@ -907,6 +912,10 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_TILLOTSON
   idvectRefType mat(PartManager.mat);
 #endif
+#ifdef SPHLATCH_ANEOS
+  idvectRefType mat(PartManager.mat);
+  valvectRefType T(PartManager.T);
+#endif
 #ifdef SPHLATCH_INTEGRATERHO
   valvectRefType rho(PartManager.rho);
   valvectRefType drhodt(PartManager.drhodt);
@@ -932,6 +941,10 @@ int main(int argc, char* argv[])
 #endif
 #ifdef SPHLATCH_TILLOTSON
   CommManager.exchangeQuants.ints += &mat;
+#endif
+#ifdef SPHLATCH_ANEOS
+  CommManager.exchangeQuants.ints += &mat;
+  CommManager.exchangeQuants.scalars += &T;
 #endif
 #ifdef SPHLATCH_INTEGRATERHO
   CommManager.exchangeQuants.scalars += &rho;

@@ -12,7 +12,7 @@
 //#define SPHLATCH_RANKSPACESERIALIZE
 
 // enable checking of bounds for the neighbour lists
-//#define SPHLATCH_CHECKNONEIGHBOURS
+#define SPHLATCH_CHECKNONEIGHBOURS
 
 #include <cstdlib>
 #include <iostream>
@@ -52,17 +52,8 @@ typedef sphlatch::CommunicationManager comm_type;
 #include "costzone.h"
 typedef sphlatch::CostZone costzone_type;
 
-#include "kernel_cubicspline3d.h"
-typedef sphlatch::CubicSpline3D kernel_type;
-
 #include "rankspace.h"
 typedef sphlatch::Rankspace neighsearch_type;
-
-#include "eos_tillotson.h"
-typedef sphlatch::Tillotson eos_type;
-
-#include "lagrange_sphere1D_solver.h"
-typedef sphlatch::LagrangeSphere1DSolver lg1D_solver_type;
 
 #include "lookup_table.h"
 typedef sphlatch::LookupTable<sphlatch::InterpolateStepwise> lut_type;
@@ -70,23 +61,20 @@ typedef sphlatch::LookupTable<sphlatch::InterpolateStepwise> lut_type;
 using namespace boost::assign;
 using namespace sphlatch::vectindices;
 
-void density()
+void nsearch()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
-  //costzone_type& CostZone(costzone_type::instance());
 
   matrixRefType pos(PartManager.pos);
 
   valvectRefType m(PartManager.m);
   valvectRefType h(PartManager.h);
-  valvectRefType rho(PartManager.rho);
 
   idvectRefType id(PartManager.id);
   idvectRefType noneigh(PartManager.noneigh);
 
   const size_t noParts = PartManager.getNoLocalParts();
-  //const size_t noTotParts = noParts + PartManager.getNoGhostParts();
 
   /// send ghosts to other domains
   CommManager.sendGhosts(pos);
@@ -95,18 +83,15 @@ void density()
   CommManager.sendGhosts(h);
 
   ///
-  /// define kernel and neighbour search algorithm
+  /// define neighbour search algorithm
   ///
-  kernel_type Kernel;
   neighsearch_type Nsearch;
   Nsearch.prepare();
   Nsearch.neighbourList.resize(1024);
   Nsearch.neighDistList.resize(1024);
 
   ///
-  /// 1st SPH sum: density
-  /// I need    : pos, h, m
-  /// I provide : rho
+  /// just search the neighbours
   ///
   for (size_t k = 0; k < noParts; k++)
     {
@@ -124,43 +109,6 @@ void density()
       /// store the number of neighbours
       ///
       noneigh(i) = noNeighs;
-
-      static valueType rhoi;
-      rhoi = 0.;
-
-      ///
-      /// sum over neighbours
-      ///
-      for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
-        {
-          const valueType r = Nsearch.neighDistList[curNeigh];
-          const size_t j = Nsearch.neighbourList[curNeigh];
-
-          const valueType hij = 0.5 * (hi + h(j));
-
-          rhoi += m(j) * Kernel.value(r, hij);
-        }
-      rho(i) = rhoi;
-    }
-
-
-}
-
-void pressure()
-{
-  part_type& PartManager(part_type::instance());
-  eos_type& EOS(eos_type::instance());
-
-  valvectRefType p(PartManager.p);
-  valvectRefType cs(PartManager.cs);
-
-  const size_t noParts = PartManager.getNoLocalParts();
-  ///
-  /// calculate pressure
-  ///
-  for (size_t k = 0; k < noParts; k++)
-    {
-      EOS(k, p(k), cs(k));
     }
 }
 
@@ -202,7 +150,6 @@ int main(int argc, char* argv[])
   matrixRefType vel(PartManager.vel);
   valvectRefType m(PartManager.m);
   valvectRefType h(PartManager.h);
-  valvectRefType p(PartManager.p);
   valvectRefType u(PartManager.u);
   valvectRefType rho(PartManager.rho);
 
@@ -287,15 +234,12 @@ int main(int argc, char* argv[])
   
   sphlatch::quantsType saveQuants;
 
-  std::cerr << " SPH density ...\n";
-  density();
+  std::cerr << " search neighbours ...\n";
+  nsearch();
   saveQuants.ints += &noneigh;
 
-  std::cerr << " calulate pressures ...\n";
-  pressure();
-
   saveQuants.vects += &pos, &vel;
-  saveQuants.scalars += &m, &rho, &h, &u, &p;
+  saveQuants.scalars += &m, &rho, &h, &u;
   saveQuants.ints += &id, &mat;
 
   PartManager.step = 0;
