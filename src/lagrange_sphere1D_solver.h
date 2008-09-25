@@ -53,6 +53,10 @@ LagrangeSphere1DSolver(size_t _noCells) :
   mat.resize(noCells);
   rhoOld.resize(noCells);
   qOld.resize(noCells);
+#ifdef SPHLATCH_ANEOS
+  T.resize(noCells);
+  phase.resize(noCells);
+#endif
 
   r.resize(noEdges);
   v.resize(noEdges);
@@ -69,6 +73,10 @@ void densityToMass();
 public:
 valvectType r, v, rho, q, u, p, m, cs, pow;
 idvectType mat;
+#ifdef SPHLATCH_ANEOS
+valvectType T;
+idvectType phase;
+#endif
 valueType time, uMin, friction;
 valueType gravConst, courantNumber;
 
@@ -96,7 +104,10 @@ void LagrangeSphere1DSolver::integrateTo(valueType _t)
   if (firstStep)
     bootstrap();
   while (time < _t)
+  {
+    std::cout << time << "\n";
     integrate(_t - time);
+  }
 }
 
 void LagrangeSphere1DSolver::integrate(valueType _dtMax)
@@ -203,7 +214,11 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
       ///
       const valueType dVol = (Akp10 * v(i + 1) - Ak * v(i)) / m(i);
       const valueType uPrime = u(i) - p(i) * dVol * dtp05;
+#ifdef SPHLATCH_ANEOS
+      EOS(rho(i), uPrime, mat(i), pPrime, cs(i), T(i), phase(i));
+#else
       EOS(rho(i), uPrime, mat(i), pPrime, cs(i));
+#endif
       p(i) = 0.5 * (p(i) + pPrime);
       q(i) = 0.5 * (q(i) + qOld(i));
       assert(!isnan(pPrime));
@@ -229,7 +244,11 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
   ///
   for (size_t i = 0; i < noCells-1; i++)
     {
+#ifdef SPHLATCH_ANEOS
+      EOS(rho(i), u(i), mat(i), p(i), cs(i), T(i), phase(i));
+#else
       EOS(rho(i), u(i), mat(i), p(i), cs(i));
+#endif
       assert(!isnan(p(i)));
       assert(!isnan(cs(i)));
     }
@@ -293,7 +312,11 @@ void LagrangeSphere1DSolver::bootstrap()
   ///
   for (size_t i = 0; i < noCells-1; i++)
     {
+#ifdef SPHLATCH_ANEOS
+      EOS(rho(i), u(i), mat(i), p(i), cs(i), T(i), phase(i));
+#else
       EOS(rho(i), u(i), mat(i), p(i), cs(i));
+#endif
     }
   p(noCells-1) = 0.; /// vacuum boundary condition
   

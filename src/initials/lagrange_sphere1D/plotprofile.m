@@ -27,7 +27,12 @@ semilogy( prof.r, prof.p, color);
 title('pressure');
 hold on;
 
+#subplot(2,2,4);
+#plot( prof.r, prof.mat, strcat('x',color));
+#title('material');
+#hold on;
+
 subplot(2,2,4);
-plot( prof.r, prof.mat, strcat('x',color));
+plot( prof.r, 11700.*prof.T, color);
 title('material');
 hold on;

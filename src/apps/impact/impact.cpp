@@ -151,6 +151,8 @@ typedef sphlatch::LookupTable<sphlatch::InterpolateLinear> lut_type;
 using namespace sphlatch::vectindices;
 using namespace boost::assign;
 
+valueType maxTime;
+
 valueType timeStep()
 {
   part_type& PartManager(part_type::instance());
@@ -393,13 +395,24 @@ valueType timeStep()
   ///  e > 1 AND
   ///  ( rho < maxFreeDensity OR noneigh <= 1 OR outside of > 90% tot mass) AND
   ///  t > 0
-  /// are blacklisted
+  /// are considered escapees and blacklisted
+  ///
+  /// particles with
+  ///  e > 1 AND
+  ///  ( 0.5 t_orbit > 2. t_togo ) AND
+  ///  outside of > 90% tot mass AND
+  ///  t > 0
+  /// are considered disk particles which will not reimpact until
+  /// the end of the simulation
   ///
   const valueType gravConst = PartManager.attributes["gravconst"];
   const valueType maxFreeDensity = PartManager.attributes["maxfreedens"];
   const valueType totMass = massBins(noMassBins - 1);
   valueType curEscapeesMass = 0.;
   countsType noEscapees = 0;
+  const valueType timeToGo = maxTime - time;
+  valueType curDiskRemovedMass = 0.;
+  countsType noDiskRemoved = 0;
   for (size_t i = 0; i < noParts; i++)
     {
       ///
@@ -428,6 +441,13 @@ valueType timeStep()
       const valueType e = sqrt(ex * ex + ey * ey + ez * ez);
       ecc(i) = e;
 
+      ///
+      /// specific energy, semi-major axis and orbital period
+      ///
+      const valueType specE = (vivi/2.) - (mu/r);
+      const valueType a = mu / (2.*specE);
+      const valueType Torbit = 2.*M_PI*sqrt( a*a*a / mu );
+
       if (e > 1. &&
           (rho(i) < maxFreeDensity || noneigh(i) <= 1 || M > 0.9 * totMass) &&
           time > 0.)
@@ -437,14 +457,31 @@ valueType timeStep()
           noEscapees++;
           // store the particle to an escapee table
         }
+
+      if (e < 1. && e > 0.7 &&
+          M > 0.9 * totMass &&
+          Torbit > 4.*timeToGo &&
+          time > 0.)
+        {
+          PartManager.blacklisted[i] = true;
+          curDiskRemovedMass += m(i);
+          noDiskRemoved++;
+          // store the particle to a disk particle table
+        }
     }
   CommManager.sum(curEscapeesMass);
   CommManager.sum(noEscapees);
+  
+  CommManager.sum(curDiskRemovedMass);
+  CommManager.sum(noDiskRemoved);
 
   PartManager.attributes["escapedmass"] += curEscapeesMass;
+  PartManager.attributes["diskremovemass"] += curEscapeesMass;
 
-  Logger.stream << noEscapees << " parts with a total mass of "
-                << curEscapeesMass << " removed";
+  Logger.stream << noEscapees << " escapees with mass of "
+                << curEscapeesMass << "   and "
+                << noDiskRemoved << " disk parts. with a mass of "
+                << curDiskRemovedMass << " removed";
   Logger.flushStream();
 #endif
 
@@ -998,7 +1035,7 @@ int main(int argc, char* argv[])
   /// attributes will be overwritten, when defined in file
   ///
   std::string loadDumpFile = poMap["input-file"].as<std::string>();
-  const valueType maxTime = poMap["stop-time"].as<valueType>();
+  maxTime = poMap["stop-time"].as<valueType>();
   IOManager.saveItrvl = poMap["save-time"].as<valueType>();
 
   PartManager.attributes["gamma"] = 5. / 3.;

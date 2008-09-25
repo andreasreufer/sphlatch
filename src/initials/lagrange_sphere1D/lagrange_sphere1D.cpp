@@ -36,6 +36,11 @@ typedef sphlatch::IOManager io_type;
 #include "lagrange_sphere1D_solver.h"
 typedef sphlatch::LagrangeSphere1DSolver lg1D_solver_type;
 
+#ifdef SPHLATCH_ANEOS
+#include "eos_aneos.h"
+typedef sphlatch::ANEOS eosType;
+#endif
+
 using namespace boost::assign;
 using namespace sphlatch::vectindices;
 
@@ -53,7 +58,11 @@ int main(int argc, char* argv[])
   ("mat-mantle", po::value<identType>(),      " mantle material")
   ("rho-core", po::value<valueType>(),        " core   initial density")
   ("rho-mantle", po::value<valueType>(),      " mantle initial density ")
+#ifdef SPHLATCH_ANEOS
+  ("T",          po::value<valueType>(),      " initial temperature in eV")
+#else
   ("u",          po::value<valueType>(),      " initial specific energy")
+#endif
   ("umin",       po::value<valueType>(),      " minimal specific energy")
   ("fric",       po::value<valueType>(),      " inverse friction timescale");
 
@@ -100,11 +109,17 @@ int main(int argc, char* argv[])
   valueType rhoMantle = 3.;
   if (VMap.count("rho-mantle"))
     rhoMantle = VMap["rho-mantle"].as<valueType>();
-  
+ 
+#ifdef SPHLATCH_ANEOS
+  valueType TInit = 0.1;
+  if (VMap.count("T"))
+    TInit = VMap["T"].as<valueType>();
+#else 
   valueType uInit = 5.e10;
   if (VMap.count("u"))
     uInit = VMap["u"].as<valueType>();
-  
+#endif
+
   valueType uMin = 1.e4;
   if (VMap.count("umin"))
     uMin = VMap["umin"].as<valueType>();
@@ -132,7 +147,11 @@ int main(int argc, char* argv[])
             << " mantle mass:          " << mTot - mCore << "   ("
             << noCells - noCoreCells << " cells)\n"
             << " mantle material:      " << matMantle << "\n"
+#ifdef SPHLATCH_ANEOS
+            << " initial T:            " << TInit     << "\n"
+#else
             << " initial u:            " << uInit     << "\n"
+#endif
             << " minimal u:            " << uMin      << "\n"
             << " inv. fric. timescale: " << fric << "\n\n";
 
@@ -157,26 +176,38 @@ int main(int argc, char* argv[])
                          (3./(4*M_PI))*(dm / rhoCur), 1./3.);
       Solver.v(i) = 0.;
     }
-
+  
   ///
   /// set the shell centered values
   ///
-  for (size_t i = 0; i < noCells; i++)
+#ifdef SPHLATCH_ANEOS
+  eosType EOS(eosType::instance());
+#endif
+for (size_t i = 0; i < noCells-1; i++)
     {
       Solver.m(i) = dm;
 
       if (i < noCoreCells)
         {
           Solver.mat(i) = matCore;
+          Solver.rho(i) = rhoCore;
         }
       else
         {
           Solver.mat(i) = matMantle;
+          Solver.rho(i) = rhoMantle;
         }
-
+#ifdef SPHLATCH_ANEOS
+      static valueType curP, curCs;
+      EOS.getSpecEnergy( Solver.rho(i), TInit, Solver.mat(i),
+                         curP, curCs, Solver.u(i) );
+#else
       Solver.u(i) = uInit;
+#endif
     }
   Solver.m(noCells-1) = 0.;
+  Solver.u(noCells-1) = 0.;
+  Solver.mat(noCells-1) = matMantle;
 
   ///
   /// set some constants
@@ -220,7 +251,10 @@ int main(int argc, char* argv[])
   IOManager.savePrimitive(Solver.p, "p", dumpfilename);
   IOManager.savePrimitive(Solver.mat, "mat", dumpfilename);
   IOManager.savePrimitive(Solver.rho, "rho", dumpfilename);
-
+#ifdef SPHLATCH_ANEOS
+  IOManager.savePrimitive(Solver.T, "T", dumpfilename);
+  IOManager.savePrimitive(Solver.phase, "phase", dumpfilename);
+#endif
   IOManager.saveAttribute(Solver.gravConst, "gravconst", dumpfilename);
   IOManager.saveAttribute(Solver.uMin, "umin", dumpfilename);
 
