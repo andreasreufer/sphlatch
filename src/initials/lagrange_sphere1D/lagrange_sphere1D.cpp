@@ -201,6 +201,8 @@ for (size_t i = 0; i < noCells-1; i++)
       static valueType curP, curCs;
       EOS.getSpecEnergy( Solver.rho(i), TInit, Solver.mat(i),
                          curP, curCs, Solver.u(i) );
+      if (i < noCoreCells)
+        Solver.u(i) *= 2.;
 #else
       Solver.u(i) = uInit;
 #endif

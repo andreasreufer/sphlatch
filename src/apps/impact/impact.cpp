@@ -151,8 +151,6 @@ typedef sphlatch::LookupTable<sphlatch::InterpolateLinear> lut_type;
 using namespace sphlatch::vectindices;
 using namespace boost::assign;
 
-valueType maxTime;
-
 valueType timeStep()
 {
   part_type& PartManager(part_type::instance());
@@ -201,7 +199,7 @@ valueType timeStep()
   //int& substep(PartManager.substep);
 
   const size_t noParts = PartManager.getNoLocalParts();
-  //const size_t myDomain = CommManager.getMyDomain();
+  const size_t myDomain = CommManager.getMyDomain();
 
   ///
   /// timestep criterion for acceleration
@@ -338,6 +336,18 @@ valueType timeStep()
   comY /= comM;
   comZ /= comM;
 
+  if (myDomain == 0)
+    {
+      std::fstream comFile;
+      comFile.open("centerOfMass", std::ios::out | std::ios::app);
+      comFile << time << "\t"
+              << comX << "\t"
+              << comY << "\t"
+              << comZ << "\t"
+              << comM << "\n";
+      comFile.close();
+    }
+
   ///
   /// determine maximal radius relative to center of mass
   ///
@@ -407,12 +417,28 @@ valueType timeStep()
   ///
   const valueType gravConst = PartManager.attributes["gravconst"];
   const valueType maxFreeDensity = PartManager.attributes["maxfreedens"];
+  const valueType maxOrbitTime = PartManager.attributes["maxorbittime"];
+  const valueType rMax = PartManager.attributes["maxradius"];
+
   const valueType totMass = massBins(noMassBins - 1);
   valueType curEscapeesMass = 0.;
   countsType noEscapees = 0;
-  const valueType timeToGo = maxTime - time;
   valueType curDiskRemovedMass = 0.;
   countsType noDiskRemoved = 0;
+
+  std::string domString = boost::lexical_cast<std::string>(myDomain);
+  std::fstream escFile, rmvFile;
+  
+  std::string escFilename = "escDom000";
+  escFilename.replace(escFilename.size() - 0 - domString.size(),
+                      domString.size(), domString);
+  escFile.open(escFilename.c_str(), std::ios::out | std::ios::app);
+  
+  std::string rmvFilename = "rmvDom000";
+  rmvFilename.replace(rmvFilename.size() - 0 - domString.size(),
+                      domString.size(), domString);
+  rmvFile.open(rmvFilename.c_str(), std::ios::out | std::ios::app);
+
   for (size_t i = 0; i < noParts; i++)
     {
       ///
@@ -444,39 +470,93 @@ valueType timeStep()
       ///
       /// specific energy, semi-major axis and orbital period
       ///
-      const valueType specE = (vivi/2.) - (mu/r);
-      const valueType a = mu / (2.*specE);
-      const valueType Torbit = 2.*M_PI*sqrt( a*a*a / mu );
+      const valueType specE = (vivi / 2.) - (mu / r);
+      const valueType a = mu / (2. * specE);
+      const valueType Torbit = 2.*M_PI*sqrt(a * a * a / mu);
 
-      if (e > 1. &&
-          (rho(i) < maxFreeDensity || noneigh(i) <= 1 || M > 0.9 * totMass) &&
-          time > 0.)
+      if (r > rMax && time > 0.)
         {
-          PartManager.blacklisted[i] = true;
-          curEscapeesMass += m(i);
-          noEscapees++;
-          // store the particle to an escapee table
-        }
+          if (e > 1. &&
+              (rho(i) < maxFreeDensity || noneigh(i) <= 1 || M > 0.9 * totMass)
+              )
+            {
+              PartManager.blacklisted[i] = true;
+              curEscapeesMass += m(i);
+              noEscapees++;
 
-      if (e < 1. && e > 0.7 &&
-          M > 0.9 * totMass &&
-          Torbit > 4.*timeToGo &&
-          time > 0.)
-        {
-          PartManager.blacklisted[i] = true;
-          curDiskRemovedMass += m(i);
-          noDiskRemoved++;
-          // store the particle to a disk particle table
+              escFile << time << "\t"
+                      << id(i) << "\t"
+                      << pos(i, X) << "\t"
+                      << pos(i, Y) << "\t"
+                      << pos(i, Z) << "\t"
+                      << vel(i, X) << "\t"
+                      << vel(i, Y) << "\t"
+                      << vel(i, Z) << "\t"
+                      << m(i) << "\t"
+                      << h(i) << "\t"
+                      << u(i) << "\t"
+                      << p(i) << "\t"
+                      << noneigh(i) << "\t"
+                      << e << "\t"
+                      << a << "\t"
+                      << Torbit << "\t"
+#ifdef SPHLATCH_TILLOTSON
+                      << mat(i) << "\t"
+#endif
+#ifdef SPHLATCH_ANEOS
+                      << mat(i) << "\t"
+                      << phase(i) << "\t"
+                      << T(i) << "\t"
+#endif
+                      << "\n";
+            }
+
+          if (e < 1. && e > 0.7 &&
+              M > 0.9 * totMass &&
+              Torbit > maxOrbitTime)
+            {
+              PartManager.blacklisted[i] = true;
+              curDiskRemovedMass += m(i);
+              noDiskRemoved++;
+
+              rmvFile << time << "\t"
+                      << id(i) << "\t"
+                      << pos(i, X) << "\t"
+                      << pos(i, Y) << "\t"
+                      << pos(i, Z) << "\t"
+                      << vel(i, X) << "\t"
+                      << vel(i, Y) << "\t"
+                      << vel(i, Z) << "\t"
+                      << m(i) << "\t"
+                      << h(i) << "\t"
+                      << u(i) << "\t"
+                      << p(i) << "\t"
+                      << noneigh(i) << "\t"
+                      << e << "\t"
+                      << a << "\t"
+                      << Torbit << "\t"
+#ifdef SPHLATCH_TILLOTSON
+                      << mat(i) << "\t"
+#endif
+#ifdef SPHLATCH_ANEOS
+                      << mat(i) << "\t"
+                      << phase(i) << "\t"
+                      << T(i) << "\t"
+#endif
+                      << "\n";
+            }
         }
     }
+  escFile.close();
+  rmvFile.close();
+
   CommManager.sum(curEscapeesMass);
   CommManager.sum(noEscapees);
-  
+  PartManager.attributes["escapedmass"] += curEscapeesMass;
+
   CommManager.sum(curDiskRemovedMass);
   CommManager.sum(noDiskRemoved);
-
-  PartManager.attributes["escapedmass"] += curEscapeesMass;
-  PartManager.attributes["diskremovemass"] += curEscapeesMass;
+  PartManager.attributes["diskremovemass"] += curDiskRemovedMass;
 
   Logger.stream << noEscapees << " escapees with mass of "
                 << curEscapeesMass << "   and "
@@ -1035,7 +1115,7 @@ int main(int argc, char* argv[])
   /// attributes will be overwritten, when defined in file
   ///
   std::string loadDumpFile = poMap["input-file"].as<std::string>();
-  maxTime = poMap["stop-time"].as<valueType>();
+  const valueType maxTime = poMap["stop-time"].as<valueType>();
   IOManager.saveItrvl = poMap["save-time"].as<valueType>();
 
   PartManager.attributes["gamma"] = 5. / 3.;
@@ -1051,6 +1131,8 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_REMOVEESCAPING
   PartManager.attributes["mincoredens"] = 5.0;
   PartManager.attributes["maxfreedens"] = 0.1;
+  PartManager.attributes["maxorbittime"] = 432000.;
+  PartManager.attributes["maxradius"] = 2.e9;
   PartManager.attributes["escapedmass"] = 0.0;
 #endif
 
