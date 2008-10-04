@@ -1,0 +1,18 @@
+path=`pwd`
+CC=`which mpicxx`
+
+SWITCH_STRING=$*
+
+echo "compiling ParaSPH using $CC"
+echo "switches: $SWITCH_STRING"
+$FC -O3 -c libaneos.f
+$CC -O5  $path/src/ParaSPH.cc -o $path/bin/ParaSPH3$* \
+         libaneos.o -lgfortran -lm \
+         $* -DSWITCHES="\"$SWITCH_STRING\""
+
+echo "compiling ParaSPH3 using $CC"
+echo "switches: $SWITCH_STRING"
+
+$path/build
+echo -en "\007"
+

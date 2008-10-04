@@ -1,0 +1,10 @@
+path=`pwd`
+
+echo -n "1+" > tmp
+echo build \#`cat $path/src/numberfile | colrm 1 17`
+cat $path/src/numberfile | colrm 1 17 >> tmp
+
+echo -n "#define BUILDNUM " > $path/src/numberfile
+cat tmp | bc >> $path/src/numberfile
+
+rm tmp 
