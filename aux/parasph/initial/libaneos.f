@@ -1,1 +1,1 @@
-../../ANEOS/libaneos.f
+../../../aux/libaneos/libaneos.f

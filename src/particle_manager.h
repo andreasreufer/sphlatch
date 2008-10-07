@@ -12,7 +12,8 @@ namespace sphlatch
 
 namespace vectindices
 {
-enum Vectindices { X, Y, Z };
+enum VectIndices { X, Y, Z };
+enum TensorIndices { XX, XY, XZ, YY, YZ };
 }
 
 class ParticleManager
@@ -51,6 +52,9 @@ void useAVTimedepAlpha(void);
 void useMaterials(void);
 void usePhase(void);
 void useTemperature(void);
+
+void useStress(void);
+void useDamage(void);
 
 void setNoParts(size_t _noParts, size_t _noGhostParts);
 void setNoParts(size_t _noParts);
@@ -93,20 +97,46 @@ void unRegQuantity(valvectRefType _valvectRef);
 void unRegQuantity(idvectRefType  _idvectRef);
 
 ///
-/// vector quantities
+/// vector quantities:
 ///
-matrixType pos, vel, acc, rotv, M, I, S;
+matrixType pos,     /// position
+           vel,     /// velocity
+           acc,     /// acceleration
+           rotv,    /// vorticity
+           S, dSdt, /// traceless deviatoric stress tensor
+           dR,      /// rotation rate tensor
+           e;       /// strain rate tensor
 
 ///
 /// scalar quantities
 ///
-valvectType m, h, dhdt, rho, drhodt, p, u, dudt, A, dAdt, alpha, dalphadt,
-            divv, mumax, q, eps, dtav, dt, cs, ecc, T;
+valvectType m,              /// mass
+            h, dhdt,        /// smoothing length
+            rho, drhodt,    /// density
+            p,              /// pressurce
+            u, dudt,        /// specific internal energy
+            A, dAdt,        /// entropy
+            alpha, dalphadt,/// artificial viscosity alpha
+            divv,           /// velocity divergence
+            mumax,          /// maximal Monaghan mu
+            q,              /// AV parameter
+            eps,            /// gravitational smoothing
+            dtav,           /// AV timestep
+            dt,             /// timestep
+            cs,             /// speed of sound
+            ecc,            /// eccentricity
+            T,              /// temperature
+            dam, ddamdt,    /// damage
+            kw, mw,         /// Weibull parameters
 
 ///
 /// integers
 ///
-idvectType id, noneigh, mat, phase;
+idvectType id,       /// ID
+           noneigh,  /// number of neighbours
+           mat,      /// material
+           phase,    /// phase
+           noflaws;  /// number of flaws
 
 ///
 /// blacklist for particles to be deleted
@@ -188,7 +218,7 @@ ParticleManager::ParticleManager(void)
   /// define the quantities used for ghosts
   /// vectorial quantities:
   ///
-  isGhostVarSet += "pos", "vel", "rotv";
+  isGhostVarSet += "pos", "vel", "rotv", "S";
   /// scalar quantities:
   isGhostVarSet += "m", "h", "rho", "p", "A",
                     "alpha", "divv", "eps", "cs";
@@ -352,6 +382,34 @@ void ParticleManager::useTemperature()
 void ParticleManager::useIntegratedRho()
 {
   usedScalars[ "drhodt" ] = &drhodt;
+}
+
+///
+/// use variables for the stress tensor
+///
+void ParticleManager::useStress()
+{
+  usedVects[ "S" ] = &S;
+  usedVects[ "dSdt" ] = &dSdt;
+  usedVects[ "e" ] = &e;
+  usedVects[ "dR" ] = &dR;
+  
+  S.resize(0, 5);
+  dSdt.resize(0, 5);
+  e.resize(0, 5);
+  dR.resize(0, 5);
+}
+
+///
+/// use variables for the stress tensor
+///
+void ParticleManager::useDamage()
+{
+  usedScalars[ "dam" ] = &dam;
+  usedScalars[ "ddamdt" ] = &ddamdt;
+  
+  usedScalars[ "young" ] = &young;
+
 }
 
 void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)
