@@ -1,7 +1,0 @@
-all: aneos eosTest
-
-eosTest:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lgfortran libaneos.o -o eos_test eos_test.cpp
-
-aneos:
-	$(FC) $(FFLAGS) -c libaneos.f
