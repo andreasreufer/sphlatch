@@ -23,7 +23,7 @@ public:
 Tillotson()
 {
   initParams("tillotson.txt");
-  loadMat(1);
+  ldMat = getMatParams(1);
   Logger.stream << "init Tillotson EOS with "
                 << param.size1()
                 << " materials";
@@ -36,6 +36,17 @@ Tillotson()
 
 static Tillotson& instance();
 static Tillotson* _instance;
+
+///
+/// struct for material constants
+///
+struct paramType {
+  identType id;
+  valueType rho0, a, b, A, B, alpha, beta, E0, Eiv, Ecv;
+  valueType xmu, umelt, yie, pweib, cweib, J2sl, coh, J2slu;
+};
+
+paramType ldMat;
 
 ///
 /// get the pressure & speed of sound for particle _i
@@ -56,37 +67,37 @@ void operator()(const size_t _i, valueType& _P, valueType& _cs)
 /// to the scheme in ParaSPH where the square root of the hybrid
 /// formula is taken.
 ///
-void operator()(const valueType _rho, const valueType _u, const identType _mat,
-                valueType& _P, valueType& _cs)
+void operator()(const valueType _rho, const valueType _u,
+                const identType _matId, valueType& _P, valueType& _cs)
 {
   const valueType curRho = _rho;
   const valueType curE   = _u;
-  const identType curMat = _mat;
+  const identType curMatId = _matId;
 
   ///
   /// load the correct material, when
   /// in the cache
   ///
-  if (curMat != loadedMat)
-    loadMat(curMat);
+  if (curMatId != ldMat.id)
+    ldMat = getMatParams(curMatId);
 
-  const valueType eta = curRho / rho0;
+  const valueType eta = curRho / ldMat.rho0;
   const valueType mu = eta - 1.;
   const valueType curER = curRho * curE;
-  const valueType cmin = sqrt(0.25 * A / rho0);
+  const valueType cmin = sqrt(0.25 * ldMat.A / ldMat.rho0);
 
-  const valueType k1 = 1. / ((curE / (E0 * eta * eta)) + 1);
-  const valueType k3 = curE / (E0 * eta * eta);
+  const valueType k1 = 1. / ((curE / (ldMat.E0 * eta * eta)) + 1);
+  const valueType k3 = curE / (ldMat.E0 * eta * eta);
 
   ///
   /// calculate Pc,cc
   ///
-  if (eta > 1. || curE < Ecv)
+  if (eta > 1. || curE < ldMat.Ecv)
     {
-      Pc = (a + b * k1) * curER + A * mu + B * mu * mu;
-      cc = sqrt((a * curE + (A + 2. * B * mu) / rho0
-                 + b * curE * (3. * k3 + 1.) * k1 * k1
-                 + (Pc / curRho) * (a + b * k1 * k1)));
+      Pc = (ldMat.a + ldMat.b * k1) * curER + ldMat.A * mu + ldMat.B * mu * mu;
+      cc = sqrt((ldMat.a * curE + (ldMat.A + 2. * ldMat.B * mu) / ldMat.rho0
+                 + ldMat.b * curE * (3. * k3 + 1.) * k1 * k1
+                 + (Pc / curRho) * (ldMat.a + ldMat.b * k1 * k1)));
       if (!(cc > 0.))
         cc = 0.;
 
@@ -94,7 +105,7 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
       /// compressed regime or
       /// expanded, but cold regime
       ///
-      if (eta > 1. || curE < Eiv)
+      if (eta > 1. || curE < ldMat.Eiv)
         {
           _P = Pc;
           if (cc < cmin)
@@ -113,26 +124,27 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
   const valueType k2 = (1. / eta) - 1.;
   const valueType k4 = 1. / eta;
 
-  const valueType exp1 = exp(-beta * k2);
-  const valueType exp2 = exp(-alpha * k2 * k2);
+  const valueType exp1 = exp(-ldMat.beta * k2);
+  const valueType exp2 = exp(-ldMat.alpha * k2 * k2);
 
-  Pe = a * curER
-       + (curER * b * k1 + A * mu * exp1) * exp2;
+  Pe = ldMat.a * curER
+       + (curER * ldMat.b * k1 + ldMat.A * mu * exp1) * exp2;
 
-  ce = sqrt((b * curE * (3. * k3 + 1.) * k1 * k1
-             + 2. * alpha * b * k1 * k2 * k4 * curE
-             + A * exp1 * ((2. * alpha * k2 + beta) * (mu * k4 / curRho)
-                           + (1. / rho0))
+  ce = sqrt((ldMat.b * curE * (3. * k3 + 1.) * k1 * k1
+             + 2. * ldMat.alpha * ldMat.b * k1 * k2 * k4 * curE
+             + ldMat.A * exp1 * ((2. * ldMat.alpha * k2 + ldMat.beta)
+                               * (mu * k4 / curRho)
+                              + (1. / ldMat.rho0))
              ) * exp2
-            + a * curE
-            + (Pe / curRho) * (a + b * exp2 * k1 * k1));
+            + ldMat.a * curE
+            + (Pe / curRho) * (ldMat.a + ldMat.b * exp2 * k1 * k1));
   if (!(ce > 0.))
     ce = 0.;
 
   ///
   /// completely vaporized regime
   ///
-  if (curE > Ecv)
+  if (curE > ldMat.Ecv)
     {
       _P = Pe;
       if (ce < cmin)
@@ -145,8 +157,9 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
   ///
   /// hybrid regime
   ///
-  _P = ((curE - Eiv) * Pe + (Ecv - curE) * Pc) / (Ecv - Eiv);
-  const valueType chy = ((curE - Eiv) * ce + (Ecv - curE) * cc) / (Ecv - Eiv);
+  _P = ((curE - ldMat.Eiv) * Pe + (ldMat.Ecv - curE) * Pc) / (ldMat.Ecv - ldMat.Eiv);
+  const valueType chy = ((curE - ldMat.Eiv) * ce + (ldMat.Ecv - curE) * cc)
+    / (ldMat.Ecv - ldMat.Eiv);
   if (chy < cmin)
     _cs = cmin;
   else
@@ -154,30 +167,36 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
   return;
 };
 
-private:
-void loadMat(const size_t _mat)
+public:
+paramType getMatParams(const size_t _matId)
 {
-  ///
-  /// mat index is shifted by one to ensure
-  /// compatibility with FORTRAN codes which
-  /// use the mat index to directly index
-  /// arrays
-  ///
-  const size_t matIdx = _mat - 1;
+  const size_t matIdx = _matId - 1;
+  paramType _ret;
+  
+  _ret.rho0  = param(matIdx, 0);
+  _ret.A     = param(matIdx, 1);
+  _ret.B     = param(matIdx, 2);
+  _ret.a     = param(matIdx, 3);
+  _ret.b     = param(matIdx, 4);
+  _ret.alpha = param(matIdx, 5);
+  _ret.beta  = param(matIdx, 6);
+  _ret.E0    = param(matIdx, 7);
+  _ret.Eiv   = param(matIdx, 8);
+  _ret.Ecv   = param(matIdx, 9);
 
-  rho0 = param(matIdx, 0);
-  A = param(matIdx, 1);
-  B = param(matIdx, 2);
-  a = param(matIdx, 3);
-  b = param(matIdx, 4);
-  alpha = param(matIdx, 5);
-  beta = param(matIdx, 6);
-  E0 = param(matIdx, 7);
-  Eiv = param(matIdx, 8);
-  Ecv = param(matIdx, 9);
+  _ret.xmu   = param(matIdx,10);
+  _ret.umelt = param(matIdx,11);
+  _ret.yie   = param(matIdx,12);
+  _ret.pweib = param(matIdx,13);
+  _ret.cweib = param(matIdx,14);
+  _ret.J2slu = param(matIdx,15);
+  _ret.coh   = param(matIdx,16);
+  _ret.J2sl  = param(matIdx,17);
+  
+  _ret.id = _matId;
 
-  loadedMat = _mat;
-};
+  return _ret;
+}
 
 ///
 /// load the parameter file
@@ -217,7 +236,8 @@ void initParams(std::string _filename)
             {
               param(entry, i) = boost::lexical_cast<valueType>(str);
               i++;
-              if (i == 10)
+              /// 18 parameters in each entry
+              if (i == 18)
                 {
                   i = 0;
                   entry++;
@@ -230,8 +250,6 @@ void initParams(std::string _filename)
 
 
 private:
-identType loadedMat;
-valueType rho0, a, b, A, B, alpha, beta, E0, Eiv, Ecv;
 valueType Pc, Pe;
 valueType cc, ce;
 matrixType param;

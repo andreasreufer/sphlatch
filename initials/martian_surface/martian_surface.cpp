@@ -63,11 +63,23 @@ int main(int argc, char* argv[])
   io_type&        IOManager(io_type::instance());
   part_type&      PartManager(part_type::instance());
 
-
   matrixRefType pos(PartManager.pos);
-  valvectRefType  m(PartManager.m);
-  valvectRefType  h(PartManager.h);
-  idvectRefType  id(PartManager.id);
+  matrixRefType vel(PartManager.vel);
+  matrixRefType   S(PartManager.S);
+  
+  valvectRefType      m(PartManager.m);
+  valvectRefType      h(PartManager.h);
+  valvectRefType    rho(PartManager.rho);
+  valvectRefType      u(PartManager.u);
+  valvectRefType    dam(PartManager.dam);
+  valvectRefType epsmin(PartManager.epsmin);
+  valvectRefType  acoef(PartManager.acoef);
+  valvectRefType  mweib(PartManager.mweib);
+  valvectRefType  young(PartManager.young);
+  
+  idvectRefType      id(PartManager.id);
+  idvectRefType     mat(PartManager.mat);
+  idvectRefType noflaws(PartManager.noflaws);
 
   const size_t desNoParts = VMap["no-parts"].as<size_t>();
 
@@ -96,6 +108,11 @@ int main(int argc, char* argv[])
             << " and you get " << partsCount << " particles\n";
 
   PartManager.useBasicSPH();
+  PartManager.useEnergy();
+  PartManager.useMaterials();
+  PartManager.useDamage();
+  PartManager.useStress();
+
   PartManager.setNoParts(partsCount);
   PartManager.resizeAll();
   
@@ -133,9 +150,11 @@ int main(int argc, char* argv[])
     }
 
   sphlatch::quantsType saveQuants;
-  saveQuants.vects += &pos;
-  saveQuants.scalars += &m, &h;
-  saveQuants.ints += &id;
+  saveQuants.vects += &pos, &vel, &S;
+  saveQuants.scalars += &m, &h, &rho, &u, &dam,
+                        &epsmin, &acoef, &mweib, &young;
+  saveQuants.ints += &id, &mat, &noflaws;
+  
   PartManager.step = 0;
 
   std::string outputFilename = VMap["output-file"].as<std::string>();

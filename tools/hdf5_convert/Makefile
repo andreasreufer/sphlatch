@@ -1,4 +1,4 @@
-all: tomsasciitoh5part hdf5toh5part fuchsbintoh5part
+all: tomsasciitoh5part hdf5toh5part fuchsbintoh5part h5parttoparasph
 cdattoh5part:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -I../../aux/oosph -lhdf5 -lz -lboost_program_options -o cdat2h5part cdat2h5part.cpp
 	
@@ -13,4 +13,10 @@ hdf5toh5part:
 
 fuchsbintoh5part:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o fuchsbin2h5part fuchsbin2h5part.cpp
+
+h5parttoparasph: xdrlib
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options xdrlib.o -o h5part2parasph h5part2parasph.cpp
+
+xdrlib:
+	$(CC) $(CFLAGS) -c ../../aux/libxdr/xdrlib.c -o xdrlib.o
 

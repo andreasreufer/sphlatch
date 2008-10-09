@@ -127,7 +127,10 @@ valvectType m,              /// mass
             ecc,            /// eccentricity
             T,              /// temperature
             dam, ddamdt,    /// damage
-            kw, mw,         /// Weibull parameters
+            epsmin,         /// minimal strain
+            acoef,          /// crack growth timescale
+            mweib,          /// Weibull m exponent
+            young;          /// Youngs modulus
 
 ///
 /// integers
@@ -389,10 +392,10 @@ void ParticleManager::useIntegratedRho()
 ///
 void ParticleManager::useStress()
 {
-  usedVects[ "S" ] = &S;
-  usedVects[ "dSdt" ] = &dSdt;
-  usedVects[ "e" ] = &e;
-  usedVects[ "dR" ] = &dR;
+  usedVectors[ "S" ] = &S;
+  usedVectors[ "dSdt" ] = &dSdt;
+  usedVectors[ "e" ] = &e;
+  usedVectors[ "dR" ] = &dR;
   
   S.resize(0, 5);
   dSdt.resize(0, 5);
@@ -408,8 +411,10 @@ void ParticleManager::useDamage()
   usedScalars[ "dam" ] = &dam;
   usedScalars[ "ddamdt" ] = &ddamdt;
   
+  usedScalars[ "epsmin" ] = &epsmin;
+  usedScalars[ "acoef" ] = &acoef;
+  usedScalars[ "mweib" ] = &mweib;
   usedScalars[ "young" ] = &young;
-
 }
 
 void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)
