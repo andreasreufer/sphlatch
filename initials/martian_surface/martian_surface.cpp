@@ -177,12 +177,12 @@ int main(int argc, char* argv[])
   /// ice: 17
   identType baseId = 17;
   till_type::paramType baseParams = Tillotson.getMatParams(baseId);
-  const valueType baseU = 0.1;
+  const valueType baseU = 5.04e9;
 
   /// dunite: 4
   identType surfId = 4;
   till_type::paramType surfParams = Tillotson.getMatParams(surfId);
-  const valueType surfU = 0.1;
+  const valueType surfU = 1.72e9;
 
   ///
   /// set particle mass by multiplyin the particle volume

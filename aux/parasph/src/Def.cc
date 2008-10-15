@@ -5,6 +5,7 @@
 #include <cmath>
 #include <string>
 #include <unistd.h>
+#include <stdlib.h>
 
 #ifdef MPI_OK
 #include <mpi.h>
@@ -86,7 +87,7 @@ std::string trim(const std::string &input) {
 }
 std::string toUpper(const std::string &input) {
   std::string str = input;
-  for (uint i = 0; i < str.length(); i++) str[i] = toupper(str[i]);
+  for (int i = 0; i < str.length(); i++) str[i] = toupper(str[i]);
   return str;
 }
 

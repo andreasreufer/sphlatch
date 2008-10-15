@@ -102,13 +102,17 @@ void CDATwriter::open( std::string _filename,
   fout << _title << "\n";
   fout << _noParts << "," << -static_cast<int>(noVars) << "\n3\n";
 
+  ///
+  /// the order of those parameters is strict!
+  ///
+  fout << "TIME\n" << _time << "\n";
+  fout << "XDRD\n0\n";
+  
   if ( _dblPrec)
     fout << "DOUBLE\n0\n";
   else
     fout << "FLOAT\n0\n";
 
-  fout << "XDRD\n0\n";
-  fout << "TIME\n" << _time << "\n";
 
   for (size_t i = 0; i < noVars; i++)
   {

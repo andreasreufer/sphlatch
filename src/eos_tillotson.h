@@ -227,7 +227,7 @@ void initParams(std::string _filename)
   if (!fin)
     throw FileNotFound(_filename);
 
-  size_t entry = 0, i = 0, noEntries = 0, noParams = 10;
+  size_t entry = 0, i = 0, noEntries = 0, noParams = 18;
   bool noEntriesRead = false;
 
   while (!fin.eof())
