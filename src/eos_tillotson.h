@@ -40,10 +40,27 @@ static Tillotson* _instance;
 ///
 /// struct for material constants
 ///
+/// rho0:           initial density
+/// A:              bulk modulus
+/// B:              non-linear Tillotson compression coefficient
+/// a,b,alpha,beta: Tillotson parameters (dimensionless)
+/// E0:             initial energy
+/// Eiv:            energy of incipient vaporization
+/// Ecv:            energy of complete vaporization
+///
+/// xmu:            shear modulus
+/// umelt:          melt specific energy
+/// yie:            plastic yielding
+/// pweib:          Weibull parameter p (called m in Benz & Asphaug 1994)
+/// cweib:          Weibull parameter c (called k in Benz & Asphaug 1994)
+/// J2slu:          sine of slope of J2 for undamaged material
+/// coh:            cohesion
+/// J2sld:          sine of slope of J2 for damaged material
+///
 struct paramType {
   identType id;
   valueType rho0, a, b, A, B, alpha, beta, E0, Eiv, Ecv;
-  valueType xmu, umelt, yie, pweib, cweib, J2sl, coh, J2slu;
+  valueType xmu, umelt, yie, pweib, cweib, J2sld, coh, J2slu;
 };
 
 paramType ldMat;
@@ -55,7 +72,7 @@ paramType ldMat;
 ///
 void operator()(const size_t _i, valueType& _P, valueType& _cs)
 {
-  this->operator()(rho(_i), u(_i), mat(_i), _P, _cs);
+  this->operator()(rho (_i), u (_i), mat (_i), _P, _cs);
 }
 
 ///
@@ -71,7 +88,7 @@ void operator()(const valueType _rho, const valueType _u,
                 const identType _matId, valueType& _P, valueType& _cs)
 {
   const valueType curRho = _rho;
-  const valueType curE   = _u;
+  const valueType curE = _u;
   const identType curMatId = _matId;
 
   ///
@@ -133,8 +150,8 @@ void operator()(const valueType _rho, const valueType _u,
   ce = sqrt((ldMat.b * curE * (3. * k3 + 1.) * k1 * k1
              + 2. * ldMat.alpha * ldMat.b * k1 * k2 * k4 * curE
              + ldMat.A * exp1 * ((2. * ldMat.alpha * k2 + ldMat.beta)
-                               * (mu * k4 / curRho)
-                              + (1. / ldMat.rho0))
+                                 * (mu * k4 / curRho)
+                                 + (1. / ldMat.rho0))
              ) * exp2
             + ldMat.a * curE
             + (Pe / curRho) * (ldMat.a + ldMat.b * exp2 * k1 * k1));
@@ -159,7 +176,7 @@ void operator()(const valueType _rho, const valueType _u,
   ///
   _P = ((curE - ldMat.Eiv) * Pe + (ldMat.Ecv - curE) * Pc) / (ldMat.Ecv - ldMat.Eiv);
   const valueType chy = ((curE - ldMat.Eiv) * ce + (ldMat.Ecv - curE) * cc)
-    / (ldMat.Ecv - ldMat.Eiv);
+                        / (ldMat.Ecv - ldMat.Eiv);
   if (chy < cmin)
     _cs = cmin;
   else
@@ -172,27 +189,27 @@ paramType getMatParams(const size_t _matId)
 {
   const size_t matIdx = _matId - 1;
   paramType _ret;
-  
-  _ret.rho0  = param(matIdx, 0);
-  _ret.A     = param(matIdx, 1);
-  _ret.B     = param(matIdx, 2);
-  _ret.a     = param(matIdx, 3);
-  _ret.b     = param(matIdx, 4);
-  _ret.alpha = param(matIdx, 5);
-  _ret.beta  = param(matIdx, 6);
-  _ret.E0    = param(matIdx, 7);
-  _ret.Eiv   = param(matIdx, 8);
-  _ret.Ecv   = param(matIdx, 9);
 
-  _ret.xmu   = param(matIdx,10);
-  _ret.umelt = param(matIdx,11);
-  _ret.yie   = param(matIdx,12);
-  _ret.pweib = param(matIdx,13);
-  _ret.cweib = param(matIdx,14);
-  _ret.J2slu = param(matIdx,15);
-  _ret.coh   = param(matIdx,16);
-  _ret.J2sl  = param(matIdx,17);
-  
+  _ret.rho0 = param(matIdx, 0);
+  _ret.A = param(matIdx, 1);
+  _ret.B = param(matIdx, 2);
+  _ret.a = param(matIdx, 3);
+  _ret.b = param(matIdx, 4);
+  _ret.alpha = param(matIdx, 5);
+  _ret.beta = param(matIdx, 6);
+  _ret.E0 = param(matIdx, 7);
+  _ret.Eiv = param(matIdx, 8);
+  _ret.Ecv = param(matIdx, 9);
+
+  _ret.xmu = param(matIdx, 10);
+  _ret.umelt = param(matIdx, 11);
+  _ret.yie = param(matIdx, 12);
+  _ret.pweib = param(matIdx, 13);
+  _ret.cweib = param(matIdx, 14);
+  _ret.J2slu = param(matIdx, 15);
+  _ret.coh = param(matIdx, 16);
+  _ret.J2sld = param(matIdx, 17);
+
   _ret.id = _matId;
 
   return _ret;
@@ -207,8 +224,8 @@ void initParams(std::string _filename)
 
   fin.open(_filename.c_str(), std::ios::in);
 
-  if ( !fin )
-    throw FileNotFound( _filename );
+  if (!fin)
+    throw FileNotFound(_filename);
 
   size_t entry = 0, i = 0, noEntries = 0, noParams = 10;
   bool noEntriesRead = false;
@@ -264,4 +281,3 @@ Tillotson& Tillotson::instance()
 };
 }
 #endif
-

@@ -415,6 +415,8 @@ void ParticleManager::useDamage()
   usedScalars[ "acoef" ] = &acoef;
   usedScalars[ "mweib" ] = &mweib;
   usedScalars[ "young" ] = &young;
+  
+  usedIntegers[ "noflaws" ] = &noflaws;
 }
 
 void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)

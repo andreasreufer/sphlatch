@@ -12,8 +12,17 @@
 # Eiv:            energy of incipient vaporization
 # Ecv:            energy of complete vaporization
 #
+# xmu:            shear modulus
+# umelt:          melt specific energy
+# yie:            plastic yielding
+# pweib:          Weibull parameter p (called m in Benz & Asphaug 1994)
+# cweib:          Weibull parameter c (called k in Benz & Asphaug 1994)
+# J2slu:          sine of slope of J2 for undamaged material
+# coh:            cohesion
+# J2sld:          sine of slope of J2 for damaged material
+#
 # ... in the following order:
-# rho0       A           B            a      b    alpha  beta    E0          Eiv         Ecv
+# rho0       A           B            a      b    alpha  beta    E0          Eiv         Ecv    xmu     umelt   yie     pweib   cweib   J2slu   coh     J2sld
 #
 # the number of materials in this file:
 21

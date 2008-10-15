@@ -438,7 +438,8 @@ void CommunicationManager::sendGhosts(idvectRefType _idVect)
 
 void CommunicationManager::sendGhosts(valvectRefType _valVect)
 {
-  valvectType valSendBuff(noSendGhosts);
+  valvectType valSendBuff;
+  valSendBuff.resize(noSendGhosts);
 
   countsVectType sendByteOffset(noDomains);
   countsVectType recvByteOffset(noDomains);
