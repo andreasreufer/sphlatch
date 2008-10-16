@@ -130,35 +130,12 @@ int main(int argc, char* argv[])
   std::cerr << " read particle positions from: " << inputFilename << "\n";
 
   ///
-  /// keep only the lower half-sphere
-  ///
-  size_t noParts = PartManager.getNoLocalParts();
-  for (size_t k = 0; k < noParts; k++)
-    {
-      if (pos(k, Z) > 0.)
-        PartManager.blacklisted[k] = true;
-    }
-
-  ///
-  /// exchange particle data
-  ///
-  CommManager.exchangeQuants.vects += &pos, &vel;
-  CommManager.exchangeQuants.scalars += &m, &h;
-  CommManager.exchangeQuants.ints += &id;
-
-  CostZone.createDomainPartsIndex();
-  CommManager.exchange(CostZone.domainPartsIndex,
-                       CostZone.getNoGhosts());
-  CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-
-  ///
   /// scale position, specific volume and smoothing length
   ///
-  const valueType rScale = 900;
+  const valueType rScale = 20;
   const valueType volScale = pow(rScale, 3.);
 
-  noParts = PartManager.getNoLocalParts();
-  std::cerr << "keeping " << noParts << " particles \n";
+  const size_t noParts = PartManager.getNoLocalParts();
   for (size_t k = 0; k < noParts; k++)
     {
       pos(k, X) *= rScale;
@@ -170,15 +147,6 @@ int main(int argc, char* argv[])
       m(k) *= volScale;
     }
 
-
-  const valueType surfRelThickness = 0.1;
-  const valueType surfThickness = surfRelThickness * rScale;
-
-  /// ice: 17
-  identType baseId = 17;
-  till_type::paramType baseParams = Tillotson.getMatParams(baseId);
-  const valueType baseU = 5.04e9;
-
   /// dunite: 4
   identType surfId = 4;
   till_type::paramType surfParams = Tillotson.getMatParams(surfId);
@@ -188,47 +156,23 @@ int main(int argc, char* argv[])
   /// set particle mass by multiplyin the particle volume
   /// with the desired density
   ///
-  size_t noSurfParts = 0;
   for (size_t k = 0; k < noParts; k++)
     {
-      if (pos(k, Z) < -surfThickness)
-        {
-          ///
-          /// the unflawed base
-          ///
+      ///
+      /// the flawed surface
+      ///
+      const valueType surfRho = Tillotson.findRho(surfU, surfId,
+                                                  0., 1.e-2, 0.1, 10.);
+      m(k) *= surfRho;
+      rho(k) = surfRho;
 
-          const valueType baseRho = Tillotson.findRho(baseU, baseId,
-                                                      0., 1.e-2, 0.1, 10.);
-          m(k) *= baseRho;
-          rho(k) = baseRho;
+      u(k) = surfU;
+      mat(k) = surfId;
 
-          u(k) = baseU;
-          mat(k) = baseId;
-
-          acoef(k) = 0.;
-          young(k) = 9. * baseParams.A * baseParams.xmu
-                     / (3. * baseParams.A + baseParams.xmu);
-        }
-      else
-        {
-          ///
-          /// the flawed surface
-          ///
-          const valueType surfRho = Tillotson.findRho(surfU, surfId,
-                                                      0., 1.e-2, 0.1, 10.);
-          m(k) *= surfRho;
-          rho(k) = surfRho;
-          
-          u(k) = surfU;
-          mat(k) = surfId;
-
-          acoef(k) = 0.4 * sqrt((surfParams.A + (4. / 3.) * surfParams.xmu) /
-                                surfParams.rho0) / ( 2.*h(k) );
-          young(k) = 9. * surfParams.A * surfParams.xmu
-                     / (3. * surfParams.A + surfParams.xmu);
-
-          noSurfParts++;
-        }
+      acoef(k) = 0.4 * sqrt((surfParams.A + (4. / 3.) * surfParams.xmu) /
+                            surfParams.rho0) / (2. * h(k));
+      young(k) = 9. * surfParams.A * surfParams.xmu
+                 / (3. * surfParams.A + surfParams.xmu);
 
       ///
       /// no initial stress
@@ -243,20 +187,15 @@ int main(int argc, char* argv[])
   ///
   /// assign flaws to particles
   ///
-  const size_t noTotFlaws = std::max(10 * noSurfParts, 10000000lu);
+  const size_t noTotFlaws = std::max(10 * noParts, 1000lu);
 
-  std::cerr << "assigning " << noTotFlaws << " flaws to " << noSurfParts
-            << " surface particles\n";
-
-  ///
-  /// the typical surface volume
-  ///
-  valueType surfVol = surfThickness * surfThickness * surfThickness;
+  std::cerr << "assigning " << noTotFlaws << " flaws to " << noParts
+            << " particles\n";
 
   ///
   /// factor 300 from Benz setup-collision.f
   ///
-  const valueType weibKV = 300. / (surfParams.cweib * surfVol);
+  const valueType weibKV = 300. / (surfParams.cweib * volScale);
   const valueType weibExp = 1. / surfParams.pweib;
 
   boost::progress_display flawsProgress(noTotFlaws);
@@ -266,26 +205,23 @@ int main(int argc, char* argv[])
       const size_t i = lrint(noParts * (rand()
                                         / static_cast<double>(RAND_MAX)));
 
-      if (mat(i) == surfId)
-        {
-          const valueType curEps =
-            pow(weibKV * (static_cast<valueType>(noSetFlaws) + 1), weibExp);
+      const valueType curEps =
+        pow(weibKV * (static_cast<valueType>(noSetFlaws) + 1), weibExp);
 
-          ///
-          /// the first flaw is always the weakest,
-          /// as noSetFlaws rises monotonously
-          ///
-          if (noflaws(i) == 0)
-            epsmin(i) = curEps;
+      ///
+      /// the first flaw is always the weakest,
+      /// as noSetFlaws rises monotonously
+      ///
+      if (noflaws(i) == 0)
+        epsmin(i) = curEps;
 
-          noflaws(i)++;
-          ++flawsProgress;
+      noflaws(i)++;
+      ++flawsProgress;
 
-          /// just for temporary storage
-          mweib(i) = curEps;
+      /// just for temporary storage
+      mweib(i) = curEps;
 
-          noSetFlaws++;
-        }
+      noSetFlaws++;
     }
 
   ///
@@ -295,30 +231,21 @@ int main(int argc, char* argv[])
     {
       dam(k) = 0.;
 
-      if (mat(k) == surfId)
+      ///
+      /// no flaw was assigned, so give it one flaw with maximal strength
+      ///
+      if (noflaws(k) < 1)
         {
-          ///
-          /// no flaw was assigned, so give it one flaw with maximal strength
-          ///
-          if (noflaws(k) < 1)
-            {
-              noflaws(k) = 1;
-              epsmin(k) =
-                pow(weibKV * static_cast<valueType>(noTotFlaws + 1), weibExp);
-            }
+          noflaws(k) = 1;
+          epsmin(k) =
+            pow(weibKV * static_cast<valueType>(noTotFlaws + 1), weibExp);
+        }
 
-          if (noflaws(k) == 1)
-            mweib(k) = 1.;
-          else
-            mweib(k) = log(static_cast<valueType>(noflaws(k)))
-                       / log(mweib(k) / epsmin(k));
-        }
+      if (noflaws(k) == 1)
+        mweib(k) = 1.;
       else
-        {
-          noflaws(k) = 0;
-          mweib(k) = 1.;
-          epsmin(k) = 1.e20; /// arbitrarly high strength, from Benz code
-        }
+        mweib(k) = log(static_cast<valueType>(noflaws(k)))
+                   / log(mweib(k) / epsmin(k));
     }
 
   sphlatch::quantsType saveQuants;

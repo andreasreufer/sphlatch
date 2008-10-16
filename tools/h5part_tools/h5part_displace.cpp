@@ -60,6 +60,14 @@ int main(int argc, char* argv[])
   quantsType saveQuants;
 
   PartManager.useBasicSPH();
+  PartManager.useEnergy();
+  PartManager.useGravity();
+#ifdef SPHLATCH_SOLID
+  PartManager.useMaterials();
+  PartManager.useDamage();
+  PartManager.useStress();
+#endif
+
   IOManager.loadDump(inputFileName);
   const size_t noParts = PartManager.getNoLocalParts();
 

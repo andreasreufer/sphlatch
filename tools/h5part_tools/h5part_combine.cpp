@@ -60,25 +60,48 @@ int main(int argc, char* argv[])
   PartManager.useMaterials();
   PartManager.useEnergy();
   PartManager.useGravity();
+#ifdef SPHLATCH_SOLID
+  PartManager.useDamage();
+  PartManager.useStress();
+#endif
 
   using namespace sphlatch;
   using namespace boost::assign;
 
   idvectRefType id(PartManager.id);
   idvectRefType mat(PartManager.mat);
+#ifdef SPHLATCH_SOLID
+  idvectRefType noflaws(PartManager.noflaws);
+#endif
 
   matrixRefType pos(PartManager.pos);
   matrixRefType vel(PartManager.vel);
+#ifdef SPHLATCH_SOLID
+  matrixRefType S(PartManager.S);
+#endif
 
   valvectRefType m(PartManager.m);
   valvectRefType u(PartManager.u);
   valvectRefType h(PartManager.h);
   valvectRefType eps(PartManager.eps);
+#ifdef SPHLATCH_SOLID
+  valvectRefType rho(PartManager.rho);
+  valvectRefType dam(PartManager.dam);
+  valvectRefType epsmin(PartManager.epsmin);
+  valvectRefType acoef(PartManager.acoef);
+  valvectRefType mweib(PartManager.mweib);
+  valvectRefType young(PartManager.young);
+#endif
 
   quantsType saveQuants;
   saveQuants.ints += &id, &mat;
   saveQuants.vects += &pos, &vel;
   saveQuants.scalars += &m, &u, &h, &eps;
+#ifdef SPHLATCH_SOLID
+  saveQuants.ints += &noflaws;
+  saveQuants.vects += &S;
+  saveQuants.scalars += &dam, &epsmin, &acoef, &mweib, &young, &rho;
+#endif
 
   IOManager.loadDump(inputAFileName);
   IOManager.loadDump(inputBFileName);
