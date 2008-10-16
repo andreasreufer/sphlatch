@@ -216,6 +216,32 @@ paramType getMatParams(const size_t _matId)
 }
 
 ///
+/// find density for given p and u by bisection
+///
+/// this works only for monotonously increasing pressure
+/// 
+valueType findRho(const valueType _u, const identType _matId,
+                  const valueType _pTarget, const valueType _pDelta,
+                  const valueType _rhoMin, const valueType _rhoMax)
+{
+  valueType curP, curCs; 
+  valueType rhoGuess, rhoMin = _rhoMin, rhoMax = _rhoMax;
+
+  do {
+    rhoGuess = 0.5*(rhoMin + rhoMax);
+    this->operator()( rhoGuess, _u, _matId, curP, curCs );
+
+    if ( curP < _pTarget )
+      rhoMin = rhoGuess;
+    else
+      rhoMax = rhoGuess;
+  }
+  while ( fabs( curP - _pTarget ) > fabs( _pDelta ) );
+
+  return rhoGuess;
+}
+
+///
 /// load the parameter file
 ///
 void initParams(std::string _filename)

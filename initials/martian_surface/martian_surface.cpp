@@ -196,8 +196,11 @@ int main(int argc, char* argv[])
           ///
           /// the unflawed base
           ///
-          m(k) *= baseParams.rho0;
-          rho(k) = baseParams.rho0;
+
+          const valueType baseRho = Tillotson.findRho(baseU, baseId,
+                                                      0., 1.e-2, 0.1, 10.);
+          m(k) *= baseRho;
+          rho(k) = baseRho;
 
           u(k) = baseU;
           mat(k) = baseId;
@@ -211,14 +214,16 @@ int main(int argc, char* argv[])
           ///
           /// the flawed surface
           ///
-          m(k) *= surfParams.rho0;
-          rho(k) = surfParams.rho0;
-
+          const valueType surfRho = Tillotson.findRho(surfU, surfId,
+                                                      0., 1.e-2, 0.1, 10.);
+          m(k) *= surfRho;
+          rho(k) = surfRho;
+          
           u(k) = surfU;
           mat(k) = surfId;
 
           acoef(k) = 0.4 * sqrt((surfParams.A + (4. / 3.) * surfParams.xmu) /
-                                surfParams.rho0);
+                                surfParams.rho0) / ( 2.*h(k) );
           young(k) = 9. * surfParams.A * surfParams.xmu
                      / (3. * surfParams.A + surfParams.xmu);
 
@@ -248,8 +253,11 @@ int main(int argc, char* argv[])
   ///
   valueType surfVol = surfThickness * surfThickness * surfThickness;
 
+  ///
+  /// factor 300 from Benz setup-collision.f
+  ///
+  const valueType weibKV = 300. / (surfParams.cweib * surfVol);
   const valueType weibExp = 1. / surfParams.pweib;
-  const valueType weibKV = 1. / (surfParams.cweib * surfVol);
 
   boost::progress_display flawsProgress(noTotFlaws);
   size_t noSetFlaws = 0;
