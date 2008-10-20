@@ -45,7 +45,7 @@
 class Variable {
 private:
   std::string name, value;
-  static u_int max;
+  static size_t max;
 
 public:
   Variable() {}
@@ -59,7 +59,7 @@ public:
     if (trim(line).size() < 1) return false;
     if (line.at(0) == '#')     return false;
 
-    u_long pos = line.find('=');
+    unsigned long pos = line.find('=');
     name = trim(line.substr(0, pos));
     if (name.size() > max) max = name.size();
     if (pos != std::string::npos) value = trim(line.substr(pos+1));
@@ -92,7 +92,7 @@ public:
   }
 };
 
-u_int Variable::max;
+size_t Variable::max;
 
 
 
@@ -161,12 +161,12 @@ public:
 				 << "'" << std::endl;
     std::sort(var.begin(), var.end());
     file << "# Autom. created config file, manual changes may apply\n\n";
-    for (u_int i = 0; i < var.size(); i++) var[i].print(file);
+    for (size_t i = 0; i < var.size(); i++) var[i].print(file);
     file.close();
   }
 
   Variable *find(const std::string &name) {
-    for (u_int i = 0; i < var.size(); i++)
+    for (size_t i = 0; i < var.size(); i++)
       if (var[i].getName().find(name) != std::string::npos) return &var[i]; 
     throw ErrorVarNotFound(name, configPath);
   }
@@ -186,7 +186,7 @@ public:
   bool getMinValueGreater(const std::string &name, const T &min, T &value) {
     T help;
     value = 1.e30;
-    for (uint i = 0; i < var.size(); i++)
+    for (size_t i = 0; i < var.size(); i++)
       if (var[i].getName().find(name) != std::string::npos) {
       var[i].getValue(help);
       if (help > min && help < value) value = help;

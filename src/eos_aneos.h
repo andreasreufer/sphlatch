@@ -54,9 +54,6 @@ ANEOS()
   Logger.stream << "init ANEOS EOS with file "
                 << matFilename;
   Logger.flushStream();
-  
-  //rootenCalls = 0;
-  //eosCalls = 0;
 };
 
 ~ANEOS()
@@ -65,10 +62,6 @@ ANEOS()
 
 static ANEOS& instance();
 static ANEOS* _instance;
-
-//profileAneos
-//static size_t rootenCalls;
-//static size_t eosCalls;
 
 ///
 /// get the pressure & speed of sound for particle _i
@@ -79,16 +72,6 @@ void operator()(const size_t _i, valueType& _P, valueType& _cs)
 {
   this->operator()(rho(_i), u(_i), mat(_i), _P, _cs,
                    PartManager.T(_i), PartManager.phase(_i));
-
-/*  if ( _i == 0 )
-  {
-    Logger.stream << eosCalls << " eos and " << rootenCalls << " rooten calls";
-    Logger.flushStream();
-
-//profileAneos
-//    rootenCalls = 0;
-//    eosCalls = 0;
-  }*/
 }
 
 ///
@@ -159,7 +142,6 @@ private:
 void rooten(const double _rhoi, const double _ui, const int _mati,
             double &_Ti, double &_pi, double &_csi, int &_kpai) const
 {
-  //rootenCalls++;
   const double eps = 1.e-5;
   const double Tmin = 1.e-6; // get this as a parameter?
   const int itmax = 30;
@@ -170,17 +152,6 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
   static double Tlb, Tub;
   Tlb = 0.001;
   Tub = 6.0;
-
-  /*if ( _Ti < Tmin )
-    {
-      Tlb = 0.001;
-      Tub = 6.0;
-    }
-    else
-    {
-      Tlb = 0.95*_Ti;
-      Tub = 1.05*_Ti;
-    }*/
 
   // Check lower boundary
   for (fa = 0.0; fa >= 0.0; Tlb *= 0.1)
@@ -195,7 +166,6 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
       a = Tlb;
       aneos_(&a, &_rhoi, &_pi, &ei, &_S, &_CV, &_DPDT, &_DPDR, &_FKROS,
              &_csi, &_kpai, &_mati, &_FME, &_FMA);
-      //eosCalls++;
       // fa = trial energy - req energy
       fa = ei - _ui;
     }
@@ -210,7 +180,6 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
       b = Tub;
       aneos_(&b, &_rhoi, &_pi, &ei, &_S, &_CV, &_DPDT, &_DPDR, &_FKROS,
              &_csi, &_kpai, &_mati, &_FME, &_FMA);
-      //eosCalls++;
       // fa = trial energy - req energy
       fb = ei - _ui;
     }
@@ -297,7 +266,6 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
         }
       aneos_(&b, &_rhoi, &_pi, &ei, &_S, &_CV, &_DPDT, &_DPDR, &_FKROS,
              &_csi, &_kpai, &_mati, &_FME, &_FMA);
-      //eosCalls++;
       fb = ei - _ui;
     }
   ///
@@ -312,7 +280,7 @@ public:
 NoConvergence()
 {
   Logger << "no convergence in ANEOS temperature iteration";
-  // include par_Ticle data
+  // include particle data
 };
 
 ~NoConvergence()
@@ -334,10 +302,6 @@ TempOutOfBounds()
 };
 };
 };
-
-//profileAneos
-//size_t ANEOS::rootenCalls;
-//size_t ANEOS::eosCalls;
 
 ANEOS * ANEOS::_instance = NULL;
 ANEOS& ANEOS::instance()

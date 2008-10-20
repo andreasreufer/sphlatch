@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
   /// set particle mass by multiplyin the particle volume
   /// with the desired density
   ///
-  size_t noSurfParts = 0;
+  size_t noSurfParts = 0, noBaseParts = 0;
   for (size_t k = 0; k < noParts; k++)
     {
       if (pos(k, Z) < -surfThickness)
@@ -205,9 +205,11 @@ int main(int argc, char* argv[])
           u(k) = baseU;
           mat(k) = baseId;
 
-          acoef(k) = 0.;
+          acoef(k) = 0.4 * sqrt((baseParams.A + (4. / 3.) * baseParams.xmu) /
+                                baseParams.rho0) / (2. * h(k));
           young(k) = 9. * baseParams.A * baseParams.xmu
                      / (3. * baseParams.A + baseParams.xmu);
+          noBaseParts++;
         }
       else
         {
@@ -218,12 +220,12 @@ int main(int argc, char* argv[])
                                                       0., 1.e-2, 0.1, 10.);
           m(k) *= surfRho;
           rho(k) = surfRho;
-          
+
           u(k) = surfU;
           mat(k) = surfId;
 
           acoef(k) = 0.4 * sqrt((surfParams.A + (4. / 3.) * surfParams.xmu) /
-                                surfParams.rho0) / ( 2.*h(k) );
+                                surfParams.rho0) / (2. * h(k));
           young(k) = 9. * surfParams.A * surfParams.xmu
                      / (3. * surfParams.A + surfParams.xmu);
 
@@ -243,25 +245,26 @@ int main(int argc, char* argv[])
   ///
   /// assign flaws to particles
   ///
-  const size_t noTotFlaws = std::max(10 * noSurfParts, 10000000lu);
+  const size_t noTotSurfFlaws = std::max(10 * noSurfParts, 10000000lu);
 
-  std::cerr << "assigning " << noTotFlaws << " flaws to " << noSurfParts
+  std::cerr << "assigning " << noTotSurfFlaws << " flaws to " << noSurfParts
             << " surface particles\n";
 
   ///
   /// the typical surface volume
   ///
-  valueType surfVol = surfThickness * surfThickness * surfThickness;
+  const valueType surfVol = surfThickness * surfThickness * surfThickness;
 
   ///
+  /// set surface flaws
   /// factor 300 from Benz setup-collision.f
   ///
-  const valueType weibKV = 300. / (surfParams.cweib * surfVol);
-  const valueType weibExp = 1. / surfParams.pweib;
+  const valueType surfWeibKV = 300. / (surfParams.cweib * surfVol);
+  const valueType surfWeibExp = 1. / surfParams.pweib;
 
-  boost::progress_display flawsProgress(noTotFlaws);
+  boost::progress_display flawsSurfProgress(noTotSurfFlaws);
   size_t noSetFlaws = 0;
-  while (noSetFlaws < noTotFlaws)
+  while (noSetFlaws < noTotSurfFlaws)
     {
       const size_t i = lrint(noParts * (rand()
                                         / static_cast<double>(RAND_MAX)));
@@ -269,7 +272,7 @@ int main(int argc, char* argv[])
       if (mat(i) == surfId)
         {
           const valueType curEps =
-            pow(weibKV * (static_cast<valueType>(noSetFlaws) + 1), weibExp);
+            pow(surfWeibKV * (static_cast<valueType>(noSetFlaws) + 1), surfWeibExp);
 
           ///
           /// the first flaw is always the weakest,
@@ -279,7 +282,56 @@ int main(int argc, char* argv[])
             epsmin(i) = curEps;
 
           noflaws(i)++;
-          ++flawsProgress;
+          ++flawsSurfProgress;
+
+          /// just for temporary storage
+          mweib(i) = curEps;
+
+          noSetFlaws++;
+        }
+    }
+  
+  ///
+  /// assign flaws to particles
+  ///
+  const size_t noTotBaseFlaws = std::max(10 * noBaseParts, 10000000lu);
+
+  std::cerr << "assigning " << noTotBaseFlaws << " flaws to " << noBaseParts
+            << " base    particles\n";
+  
+  ///
+  /// the typical base volume
+  ///
+  const valueType baseVol = pow(rScale - surfThickness, 3.);
+
+  ///
+  /// set base flaws
+  /// factor 300 from Benz setup-collision.f
+  ///
+  const valueType baseWeibKV = 300. / (baseParams.cweib * baseVol);
+  const valueType baseWeibExp = 1. / baseParams.pweib;
+
+  boost::progress_display flawsBaseProgress(noTotBaseFlaws);
+  noSetFlaws = 0;
+  while (noSetFlaws < noTotBaseFlaws)
+    {
+      const size_t i = lrint(noParts * (rand()
+                                        / static_cast<double>(RAND_MAX)));
+
+      if (mat(i) == baseId)
+        {
+          const valueType curEps =
+            pow(baseWeibKV * (static_cast<valueType>(noSetFlaws) + 1), baseWeibExp);
+
+          ///
+          /// the first flaw is always the weakest,
+          /// as noSetFlaws rises monotonously
+          ///
+          if (noflaws(i) == 0)
+            epsmin(i) = curEps;
+
+          noflaws(i)++;
+          ++flawsBaseProgress;
 
           /// just for temporary storage
           mweib(i) = curEps;
@@ -295,30 +347,32 @@ int main(int argc, char* argv[])
     {
       dam(k) = 0.;
 
-      if (mat(k) == surfId)
+      ///
+      /// no flaw was assigned, so give it one flaw with maximal strength
+      ///
+      if (noflaws(k) < 1)
         {
-          ///
-          /// no flaw was assigned, so give it one flaw with maximal strength
-          ///
-          if (noflaws(k) < 1)
-            {
-              noflaws(k) = 1;
-              epsmin(k) =
-                pow(weibKV * static_cast<valueType>(noTotFlaws + 1), weibExp);
-            }
-
-          if (noflaws(k) == 1)
-            mweib(k) = 1.;
+          noflaws(k) = 1;
+          if (mat(k) == surfId)
+            epsmin(k) =
+              pow(surfWeibKV * static_cast<valueType>(noTotSurfFlaws + 1), surfWeibExp);
           else
-            mweib(k) = log(static_cast<valueType>(noflaws(k)))
-                       / log(mweib(k) / epsmin(k));
+            epsmin(k) =
+              pow(baseWeibKV * static_cast<valueType>(noTotBaseFlaws + 1), baseWeibExp);
         }
+
+      if (noflaws(k) == 1)
+        mweib(k) = 1.;
       else
-        {
-          noflaws(k) = 0;
-          mweib(k) = 1.;
-          epsmin(k) = 1.e20; /// arbitrarly high strength, from Benz code
-        }
+        mweib(k) = log(static_cast<valueType>(noflaws(k)))
+                   / log(mweib(k) / epsmin(k));
+
+      ///
+      /// no flaws
+      ///
+      //noflaws(k) = 0;
+      //mweib(k) = 1.;
+      //epsmin(k) = 1.e20; /// arbitrarly high strength, from Benz code
     }
 
   sphlatch::quantsType saveQuants;
