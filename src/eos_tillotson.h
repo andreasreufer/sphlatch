@@ -24,10 +24,12 @@ Tillotson()
 {
   initParams("tillotson.txt");
   ldMat = getMatParams(1);
+#ifdef SPHLATCH_LOGGER
   Logger.stream << "init Tillotson EOS with "
                 << param.size1()
                 << " materials";
   Logger.flushStream();
+#endif
 };
 
 ~Tillotson()

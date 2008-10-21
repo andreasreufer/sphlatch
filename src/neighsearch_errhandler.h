@@ -48,12 +48,19 @@ TooManyNeighs::TooManyNeighs(size_t _part,
   dumpFile.append( boost::lexical_cast<std::string>( id(_part) ) );
   dumpFile.append(".hdf5");
 
+#ifdef SPHLATCH_LOGGER
   Logger.stream << "error: particle " << id(_part)
                 << " has too many neighbours ("
                 << _noNeighs << "), store them to "
                 << dumpFile;
   Logger.flushStream();
   Logger.destroy();
+#else
+  std::cerr << "error: particle " << id(_part)
+            << " has too many neighbours ("
+            << _noNeighs << "), store them to "
+            << dumpFile << "\n";
+#endif
 
   neighID.resize(_noNeighs-1);
   partID.resize(1);

@@ -11,6 +11,9 @@
 // enable parallel version
 #define SPHLATCH_PARALLEL
 
+// enable Logger
+#define SPHLATCH_LOGGER
+
 // enable intensive logging for toptree global summation
 //#define SPHLATCH_TREE_LOGSUMUPMP
 
@@ -145,8 +148,8 @@ typedef sphlatch::BHtree<sphlatch::Quadrupoles> tree_type;
 #include "rankspace.h"
 typedef sphlatch::Rankspace neighsearch_type;
 
-#include "lookup_table.h"
-typedef sphlatch::LookupTable<sphlatch::InterpolateLinear> lut_type;
+#include "lookup_table1D.h"
+typedef sphlatch::LookupTable1D<sphlatch::InterpolateLinear> lut_type;
 
 using namespace sphlatch::vectindices;
 using namespace boost::assign;

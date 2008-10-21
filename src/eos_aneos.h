@@ -17,6 +17,10 @@
 #include "eos_generic.h"
 #include "err_handler.h"
 
+#ifdef SPHLATCH_ANEOS_TABLE
+#include "lookup_table2D.h"
+#endif
+
 ///
 /// FORTRAN subroutine "ANEOSINIT" to init ANEOS
 ///
@@ -51,14 +55,43 @@ ANEOS()
 
   aneosinit_(matFilename.c_str(), matFilename.size());
 
+#ifdef SPHLATCH_LOGGER
   Logger.stream << "init ANEOS EOS with file "
                 << matFilename;
   Logger.flushStream();
+#endif
+
+#ifdef SPHLATCH_ANEOS_TABLE
+  const size_t maxMatId = 256;
+
+  presTables.resize(maxMatId + 1);
+  TempTables.resize(maxMatId + 1);
+  csouTables.resize(maxMatId + 1);
+  phasTables.resize(maxMatId + 1);
+
+  tablesInit.resize(maxMatId + 1);
+
+  for (size_t i = 0; i < maxMatId + 1; i++)
+    {
+      presTables[i] = NULL;
+      TempTables[i] = NULL;
+      csouTables[i] = NULL;
+      phasTables[i] = NULL;
+
+      tablesInit[i] = false;
+    }
+#endif
 };
 
 ~ANEOS()
 {
 };
+
+#ifdef SPHLATCH_ANEOS_TABLE
+typedef LookupTable2D<InterpolateBilinear> lut_type;
+std::vector<lut_type*> presTables, TempTables, csouTables, phasTables;
+std::vector<bool> tablesInit;
+#endif
 
 static ANEOS& instance();
 static ANEOS* _instance;
@@ -70,8 +103,8 @@ static ANEOS* _instance;
 ///
 void operator()(const size_t _i, valueType& _P, valueType& _cs)
 {
-  this->operator()(rho(_i), u(_i), mat(_i), _P, _cs,
-                   PartManager.T(_i), PartManager.phase(_i));
+  this->operator()(rho (_i), u (_i), mat (_i), _P, _cs,
+                   PartManager.T (_i), PartManager.phase (_i));
 }
 
 ///
@@ -84,6 +117,7 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
 {
   static identType tmpPhase;
   static valueType tmpT;
+
   this->operator()(_rho, _u, _mat, _P, _cs, tmpT, tmpPhase);
 }
 
@@ -93,6 +127,31 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
 /// specific interface
 ///
 void operator()(const valueType _rho, const valueType _u, const identType _mat,
+                valueType& _P, valueType& _cs, valueType& _T, identType& _phase)
+{
+#ifdef SPHLATCH_ANEOS_TABLE
+  ///
+  /// check whether for the desired material there are
+  /// already tables available
+  ///
+  if (tablesInit[_mat] == false)
+    {
+      initTables(_mat);
+    }
+
+  const valueType curLogRho = log(_rho);
+  const valueType curLogU   = log(_u);
+
+  _P = (presTables[_mat])->operator()(curLogU, curLogRho);
+
+
+#else
+  iterate(_rho, _u, _mat, _P, _cs, _T, _phase);
+#endif
+
+};
+
+void iterate(const valueType _rho, const valueType _u, const identType _mat,
                 valueType& _P, valueType& _cs, valueType& _T, identType& _phase)
 {
   static double curRho, curU, curP, curCs, curT;
@@ -109,6 +168,86 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
   _cs = static_cast<valueType>(curCs);
   _T = static_cast<valueType>(curT);
 };
+
+#ifdef SPHLATCH_ANEOS_TABLE
+///
+/// initialize tables for a material
+///
+void initTables(const identType _mat)
+{
+  ///
+  /// prepare the argument vectors log(rho) and log(u)
+  ///
+  const valueType uMin = 1.e-5;
+  const valueType uMax = 10.;
+  const size_t nu = 100;
+  valvectType loguVect(nu);
+
+  const valueType dlogu = ( log(uMax) - log(uMin) )/(nu-1);
+  const valueType loguMin = log(uMin);
+
+  for (size_t i = 0; i < nu; i++)
+    {
+      loguVect(i) = loguMin + dlogu*static_cast<valueType>(i);
+    }
+
+  const valueType rhoMin = 1.e-3;
+  const valueType rhoMax = 10.;
+  const size_t nrho = 200;
+  valvectType logrhoVect(nrho);
+
+  const valueType dlogrho = ( log(rhoMax) - log(rhoMin) )/(nrho-1);
+  const valueType logrhoMin = log(rhoMin);
+
+  for (size_t i = 0; i < nrho; i++)
+    {
+      logrhoVect(i) = logrhoMin + dlogrho*static_cast<valueType>(i);
+    }
+  
+  ///
+  /// prepare the temporary tables
+  /// (this routine may take a long time)
+  ///
+  matrixType presTmpTable(nu, nrho);
+  matrixType TempTmpTable(nu, nrho);
+  matrixType csouTmpTable(nu, nrho);
+  matrixType phasTmpTable(nu, nrho);
+
+  identType phaseInt;
+
+  for (size_t i = 0; i < nu; i++)
+  {
+    for (size_t j = 0; j < nrho; j++)
+    {
+      const valueType curU   = exp(loguVect(i));
+      const valueType curRho = exp(logrhoVect(j));
+
+      iterate(curRho, curU, _mat,
+              presTmpTable(i,j),
+              csouTmpTable(i,j),
+              TempTmpTable(i,j),
+              phaseInt);
+
+      //std::cout << curRho << " " << curU << " " << presTmpTable(i,j) << "\n";
+
+      phasTmpTable(i,j) = lrint(phaseInt);
+    }
+  }
+  
+  ///
+  /// instantate the lookup tables
+  ///
+  presTables[_mat] = new lut_type(loguVect, logrhoVect, presTmpTable);
+  TempTables[_mat] = new lut_type(loguVect, logrhoVect, TempTmpTable);
+  csouTables[_mat] = new lut_type(loguVect, logrhoVect, csouTmpTable);
+  phasTables[_mat] = new lut_type(loguVect, logrhoVect, phasTmpTable);
+
+  ///
+  /// flag the tables for material _mat as initialized
+  ///
+  tablesInit[_mat] = true;
+}
+#endif
 
 ///
 /// get p(rho,T) and u(rho,T)
@@ -150,6 +289,7 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
 
   // Initial temperature bracket (in eV)
   static double Tlb, Tub;
+
   Tlb = 0.001;
   Tub = 6.0;
 
@@ -279,8 +419,12 @@ class NoConvergence : public GenericError
 public:
 NoConvergence()
 {
+#ifdef SPHLATCH_LOGGER
   Logger << "no convergence in ANEOS temperature iteration";
   // include particle data
+#else
+  std::cerr << "no convergence in ANEOS temperature iteration\n";
+#endif
 };
 
 ~NoConvergence()
@@ -293,8 +437,12 @@ class TempOutOfBounds : public GenericError
 public:
 TempOutOfBounds()
 {
+// include particle data
+#ifdef SPHLATCH_LOGGER
   Logger << "temperature out of bounds in ANEOS";
-  // include particle data
+#else
+  std::cerr << "temperature out of bounds in ANEOS\n";
+#endif
 };
 
 ~TempOutOfBounds()

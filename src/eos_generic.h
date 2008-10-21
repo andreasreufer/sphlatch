@@ -12,8 +12,9 @@
 
 #include "typedefs.h"
 #include "particle_manager.h"
+#ifdef SPHLATCH_LOGGER
 #include "log_manager.h"
-
+#endif
 
 namespace sphlatch
 {
@@ -24,8 +25,10 @@ class EOS
 protected:
 typedef sphlatch::ParticleManager partManagerType;
 partManagerType& PartManager;
+#ifdef SPHLATCH_LOGGER
 typedef sphlatch::LogManager logManagerType;
 logManagerType& Logger;
+#endif
 
 valvectRefType rho, p, u;
 idvectRefType mat;
@@ -33,7 +36,9 @@ idvectRefType mat;
 public:
 EOS() :
 PartManager(partManagerType::instance()),
+#ifdef SPHLATCH_LOGGER
 Logger(logManagerType::instance()),
+#endif
 rho(PartManager.rho),
 p(PartManager.p),
 u(PartManager.u),

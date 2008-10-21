@@ -44,8 +44,10 @@ void loadGamma()
 {
   gamma = PartManager.attributes["gamma"];
   gammaone = gamma - 1.;
+#ifdef SPHLATCH_LOGGER
   Logger.stream << "ideal gas EOS with gamma " << gamma;
   Logger.flushStream();
+#endif
 };
 
 private:

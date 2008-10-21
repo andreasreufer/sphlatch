@@ -55,8 +55,8 @@ typedef sphlatch::CostZone costzone_type;
 #include "rankspace.h"
 typedef sphlatch::Rankspace neighsearch_type;
 
-#include "lookup_table.h"
-typedef sphlatch::LookupTable<sphlatch::InterpolateStepwise> lut_type;
+#include "lookup_table1D.h"
+typedef sphlatch::LookupTable1D<sphlatch::InterpolateStepwise> lut_type;
 
 using namespace boost::assign;
 using namespace sphlatch::vectindices;

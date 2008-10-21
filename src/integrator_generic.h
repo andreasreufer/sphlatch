@@ -16,7 +16,6 @@
  *
  */
 
-//#include "communication_manager.h"
 #include "typedefs.h"
 #include "particle_manager.h"
 #ifdef SPHLATCH_PARALLEL

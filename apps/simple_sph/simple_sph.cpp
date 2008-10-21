@@ -11,6 +11,9 @@
 // enable parallel version
 #define SPHLATCH_PARALLEL
 
+// enable Logger
+#define SPHLATCH_LOGGER
+
 // enable intensive logging for toptree global summation
 //#define SPHLATCH_TREE_LOGSUMUPMP
 

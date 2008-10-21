@@ -2,6 +2,7 @@
 //#define SPHLATCH_SINGLEPREC
 
 #define SPHLATCH_PARALLEL
+#define SPHLATCH_ANEOS_TABLE
 
 #include <iostream>
 #include <iomanip>
@@ -46,7 +47,10 @@ int main(int argc, char* argv[])
   PartManager.useBasicSPH();
   PartManager.useEnergy();
   PartManager.useMaterials();
+#ifdef SPHLATCH_ANEOS
   PartManager.usePhase();
+  PartManager.useTemperature();
+#endif
 
   sphlatch::matrixRefType pos(PartManager.pos);
   sphlatch::valvectRefType rho(PartManager.rho);
@@ -58,7 +62,7 @@ int main(int argc, char* argv[])
 
   eos_type& EOS(eos_type::instance());
 
-  eosMat dunite;
+  /*eosMat dunite;
   dunite.rho0 = 3.320e+00;
   dunite.A = 1.290e+12;
   dunite.B = 1.290e+12;
@@ -84,13 +88,14 @@ int main(int argc, char* argv[])
 
   sphlatch::valueType sP = 0., sCs = 0.;
 
-  double pP = 0., pCs = 0., rhom1 = 0., T = 0.;
+  double pP = 0., pCs = 0., rhom1 = 0., T = 0.;*/
 
+  sphlatch::valueType sP = 0., sCs = 0.;
   const size_t noParts = PartManager.getNoLocalParts();
   //for (size_t i = 0; i < 1024; i++)
   for (size_t i = 0; i < noParts; i++)
     {
-      rhom1 = 1. / rho(i);
+      /*rhom1 = 1. / rho(i);
 
       if (mat(i) == 4)
         parasphTillotson(rho(i), rhom1, u(i), mat(i),
@@ -114,7 +119,18 @@ int main(int argc, char* argv[])
                 << sCs << "   "    // 11
                 << pP - sP << "    " // 12
                 << pCs - sCs << "  " // 13
-                << phase(i) << "\n"; // 14
+                << phase(i) << "\n"; // 14*/
+     
+      mat(i) = 4;
+      
+      rho(i) = 8.70359;
+      u(i) = 0.403702;
+
+      EOS(i, sP, sCs);
+
+      std::cout << mat(i) << "\t"
+                << sP << "\t"
+                << sCs << "\n";
     }
 
   MPI::Finalize();
