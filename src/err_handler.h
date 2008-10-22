@@ -35,18 +35,18 @@ GenericError();
 
 protected:
 #ifdef SPHLATCH_LOGGER
-logType&         Logger;
+logType & Logger;
 #endif
-partManagerType& PartManager;
+partManagerType & PartManager;
 ioManagerType&   IOManager;
 };
 
 GenericError::GenericError(void) :
 #ifdef SPHLATCH_LOGGER
-    Logger(logType::instance()),
+  Logger(logType::instance()),
 #endif
-    PartManager(partManagerType::instance()),
-    IOManager(ioManagerType::instance())
+  PartManager(partManagerType::instance()),
+  IOManager(ioManagerType::instance())
 {
 #ifdef SPHLATCH_LOGGER
   Logger << "SPHLATCH!!! an error has occured ...";
@@ -65,7 +65,6 @@ class FileNotFound : public GenericError
 public:
 FileNotFound(std::string _filename);
 ~FileNotFound();
-
 };
 
 FileNotFound::FileNotFound(std::string _filename)
@@ -82,5 +81,21 @@ FileNotFound::~FileNotFound()
 {
 };
 
+class GeneralError : public GenericError
+{
+public:
+GeneralError(std::string _mesg)
+{
+#ifdef SPHLATCH_LOGGER
+  Logger << _mesg;
+#else
+  std::cerr << _mesg << "\n";
+#endif
+};
+
+~GeneralError()
+{
+};
+};
 };
 #endif

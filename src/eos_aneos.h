@@ -62,7 +62,17 @@ ANEOS()
 #endif
 
 #ifdef SPHLATCH_ANEOS_TABLE
-  const size_t maxMatId = 256;
+  ///
+  /// set the number of points in rho and u
+  /// for the interpolation tables
+  ///
+  noPointsRho = 1000;
+  noPointsU = 1000;
+
+  ///
+  /// the maximal mat id
+  ///
+  const size_t maxMatId = 32;
 
   presTables.resize(maxMatId + 1);
   TempTables.resize(maxMatId + 1);
@@ -81,6 +91,12 @@ ANEOS()
       tablesInit[i] = false;
     }
 #endif
+  nan = std::numeric_limits<valueType>::quiet_NaN();
+
+  ///
+  /// throw exceptions per default, keep quiet when generating tables
+  ///
+  quiet = false;
 };
 
 ~ANEOS()
@@ -96,15 +112,22 @@ std::vector<bool> tablesInit;
 static ANEOS& instance();
 static ANEOS* _instance;
 
+private:
+valueType nan;
+bool quiet;
+
+size_t noPointsRho, noPointsU;
+
 ///
 /// get the pressure & speed of sound for particle _i
 ///
 /// common EOS interface for particle use
 ///
+public:
 void operator()(const size_t _i, valueType& _P, valueType& _cs)
 {
-  this->operator()(rho (_i), u (_i), mat (_i), _P, _cs,
-                   PartManager.T (_i), PartManager.phase (_i));
+  (*this)(rho(_i), u(_i), mat(_i), _P, _cs,
+          PartManager.T(_i), PartManager.phase(_i));
 }
 
 ///
@@ -112,13 +135,14 @@ void operator()(const size_t _i, valueType& _P, valueType& _cs)
 ///
 /// common EOS interface for independent use
 ///
+public:
 void operator()(const valueType _rho, const valueType _u, const identType _mat,
                 valueType& _P, valueType& _cs)
 {
   static identType tmpPhase;
   static valueType tmpT;
 
-  this->operator()(_rho, _u, _mat, _P, _cs, tmpT, tmpPhase);
+  (*this)(_rho, _u, _mat, _P, _cs, tmpT, tmpPhase);
 }
 
 ///
@@ -126,33 +150,47 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
 ///
 /// specific interface
 ///
+public:
 void operator()(const valueType _rho, const valueType _u, const identType _mat,
                 valueType& _P, valueType& _cs, valueType& _T, identType& _phase)
 {
 #ifdef SPHLATCH_ANEOS_TABLE
   ///
   /// check whether for the desired material there are
-  /// already tables available
+  /// already tables available. if not, generate them.
   ///
-  if (tablesInit[_mat] == false)
-    {
-      initTables(_mat);
-    }
+  if (!tablesInit[_mat])
+    initTables(_mat);
 
-  const valueType curLogRho = log(_rho);
-  const valueType curLogU   = log(_u);
+  const valueType curLogRho = log10(_rho);
+  const valueType curLogU = log10(_u);
 
-  _P = (presTables[_mat])->operator()(curLogU, curLogRho);
+  _P = (*presTables[_mat])(curLogU, curLogRho);
 
+  ///
+  /// the first table query gives us the indices
+  /// for the other table queries
+  ///
+  const size_t ixl = (presTables[_mat])->ixl;
+  const size_t iyl = (presTables[_mat])->iyl;
+
+  _T = (*TempTables[_mat])(curLogU, curLogRho, ixl, iyl);
+  _cs = (*csouTables[_mat])(curLogU, curLogRho, ixl, iyl);
+
+  _phase = static_cast<identType>(
+    lrint((*phasTables[_mat])(curLogU, curLogRho, ixl, iyl)));
 
 #else
+  ///
+  /// use the slower but more accurate iteration
+  ///
   iterate(_rho, _u, _mat, _P, _cs, _T, _phase);
 #endif
-
 };
 
+private:
 void iterate(const valueType _rho, const valueType _u, const identType _mat,
-                valueType& _P, valueType& _cs, valueType& _T, identType& _phase)
+             valueType& _P, valueType& _cs, valueType& _T, identType& _phase)
 {
   static double curRho, curU, curP, curCs, curT;
   static int curMat, curPhase;
@@ -173,67 +211,83 @@ void iterate(const valueType _rho, const valueType _u, const identType _mat,
 ///
 /// initialize tables for a material
 ///
+private:
 void initTables(const identType _mat)
 {
+#ifdef SPHLATCH_LOGGER
+  Logger.stream << "ANEOS generate table for mat id " << _mat;
+  Logger.flushStream();
+#endif
   ///
-  /// prepare the argument vectors log(rho) and log(u)
+  /// prepare the argument vectors log10(rho) and log10(u)
   ///
-  const valueType uMin = 1.e-5;
-  const valueType uMax = 10.;
-  const size_t nu = 100;
-  valvectType loguVect(nu);
+  if (PartManager.attributes["umin"] == 0)
+    throw GeneralError("umin not set or 0 for ANEOS table!");
 
-  const valueType dlogu = ( log(uMax) - log(uMin) )/(nu-1);
-  const valueType loguMin = log(uMin);
+  if (PartManager.attributes["rhomax"] == 0)
+    throw GeneralError("umax not set or 0 for ANEOS table!");
 
-  for (size_t i = 0; i < nu; i++)
+  const valueType uMin = PartManager.attributes["umin"];
+  const valueType uMax = PartManager.attributes["umax"];
+
+  valvectType loguVect(noPointsU);
+  const valueType dlogu = (log10(uMax) - log10(uMin)) / (noPointsU - 1);
+  const valueType loguMin = log10(uMin);
+
+  for (size_t i = 0; i < noPointsU; i++)
     {
-      loguVect(i) = loguMin + dlogu*static_cast<valueType>(i);
+      loguVect(i) = loguMin + dlogu * static_cast<valueType>(i);
     }
 
-  const valueType rhoMin = 1.e-3;
-  const valueType rhoMax = 10.;
-  const size_t nrho = 200;
-  valvectType logrhoVect(nrho);
+  if (PartManager.attributes["rhomin"] == 0)
+    throw GeneralError("rhomin not set or 0 for ANEOS table!");
 
-  const valueType dlogrho = ( log(rhoMax) - log(rhoMin) )/(nrho-1);
-  const valueType logrhoMin = log(rhoMin);
+  if (PartManager.attributes["rhomax"] == 0)
+    throw GeneralError("rhomax not set or 0 for ANEOS table!");
 
-  for (size_t i = 0; i < nrho; i++)
+  const valueType rhoMin = PartManager.attributes["rhomin"];
+  const valueType rhoMax = PartManager.attributes["rhomax"];
+
+  valvectType logrhoVect(noPointsRho);
+  const valueType dlogrho = (log10(rhoMax) - log10(rhoMin)) / (noPointsRho - 1);
+  const valueType logrhoMin = log10(rhoMin);
+
+  for (size_t i = 0; i < noPointsRho; i++)
     {
-      logrhoVect(i) = logrhoMin + dlogrho*static_cast<valueType>(i);
+      logrhoVect(i) = logrhoMin + dlogrho * static_cast<valueType>(i);
     }
-  
+
   ///
   /// prepare the temporary tables
   /// (this routine may take a long time)
   ///
-  matrixType presTmpTable(nu, nrho);
-  matrixType TempTmpTable(nu, nrho);
-  matrixType csouTmpTable(nu, nrho);
-  matrixType phasTmpTable(nu, nrho);
+  matrixType presTmpTable(noPointsU, noPointsRho);
+  matrixType TempTmpTable(noPointsU, noPointsRho);
+  matrixType csouTmpTable(noPointsU, noPointsRho);
+  matrixType phasTmpTable(noPointsU, noPointsRho);
 
+  ///
+  /// inhibit NoConvergence throwing during table creation
+  ///
+  quiet = true;
   identType phaseInt;
-
-  for (size_t i = 0; i < nu; i++)
-  {
-    for (size_t j = 0; j < nrho; j++)
+  for (size_t i = 0; i < noPointsU; i++)
     {
-      const valueType curU   = exp(loguVect(i));
-      const valueType curRho = exp(logrhoVect(j));
+      for (size_t j = 0; j < noPointsRho; j++)
+        {
+          const valueType curU = pow(10., loguVect(i));
+          const valueType curRho = pow(10., logrhoVect(j));
 
-      iterate(curRho, curU, _mat,
-              presTmpTable(i,j),
-              csouTmpTable(i,j),
-              TempTmpTable(i,j),
-              phaseInt);
-
-      //std::cout << curRho << " " << curU << " " << presTmpTable(i,j) << "\n";
-
-      phasTmpTable(i,j) = lrint(phaseInt);
+          iterate(curRho, curU, _mat,
+                  presTmpTable(i, j),
+                  csouTmpTable(i, j),
+                  TempTmpTable(i, j),
+                  phaseInt);
+          phasTmpTable(i, j) = lrint(phaseInt);
+        }
     }
-  }
-  
+  quiet = false;
+
   ///
   /// instantate the lookup tables
   ///
@@ -246,12 +300,20 @@ void initTables(const identType _mat)
   /// flag the tables for material _mat as initialized
   ///
   tablesInit[_mat] = true;
+#ifdef SPHLATCH_LOGGER
+  Logger.stream << "ANEOS table (" << noPointsRho << "x" << noPointsU
+                << ") initialised for mat id " << _mat
+                << " (range rho: " << rhoMin << "..." << rhoMax
+                << ", range u: " << uMin << "..." << uMax << ")";
+  Logger.flushStream();
+#endif
 }
 #endif
 
 ///
 /// get p(rho,T) and u(rho,T)
 ///
+public:
 void getSpecEnergy(const valueType _rho, const valueType _T,
                    const identType _mat,
                    valueType& _p, valueType& _cs, valueType& _u)
@@ -316,7 +378,7 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
   for (fb = 0.0; fb <= 0.0; Tub *= 3.0)
     {
       if (Tub > 1.e15)
-        throw TempOutOfBounds();
+        throw TempOutOfBounds(Tub, 1.e15);
       b = Tub;
       aneos_(&b, &_rhoi, &_pi, &ei, &_S, &_CV, &_DPDT, &_DPDR, &_FKROS,
              &_csi, &_kpai, &_mati, &_FME, &_FMA);
@@ -329,7 +391,7 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
   // Start iteration
   fc = fb; // fc -> upper energy bound
 
-  // just to shut up com_piler
+  // just to shut up compiler
   c = a;     // c -> lower temperature bound
   d = b - a; // d is temperature range
   e = d;
@@ -408,22 +470,37 @@ void rooten(const double _rhoi, const double _ui, const int _mati,
              &_csi, &_kpai, &_mati, &_FME, &_FMA);
       fb = ei - _ui;
     }
+
   ///
   /// arriving here means no convergence
+  /// we set all output quantities to NaN
   ///
-  throw NoConvergence();
+  _Ti = nan;
+  _pi = nan;
+  _csi = nan;
+  _kpai = -1;
+
+  if (!quiet)
+    throw NoConvergence(_rhoi, _ui, _mati);
 };
 
+private:
 class NoConvergence : public GenericError
 {
 public:
-NoConvergence()
+NoConvergence(const double _rho, const double _u, const int _mat)
 {
 #ifdef SPHLATCH_LOGGER
-  Logger << "no convergence in ANEOS temperature iteration";
-  // include particle data
+  Logger.stream
 #else
-  std::cerr << "no convergence in ANEOS temperature iteration\n";
+  std::cerr
+#endif
+  << "no convergence in ANEOS temperature iteration, rho = "
+  << _rho << ", u = " << _u << ", mat id = " << _mat;
+#ifdef SPHLATCH_LOGGER
+  Logger.flushStream();
+#else
+  std::cerr << "\n";
 #endif
 };
 
@@ -432,16 +509,23 @@ NoConvergence()
 };
 };
 
+private:
 class TempOutOfBounds : public GenericError
 {
 public:
-TempOutOfBounds()
+TempOutOfBounds(const double _Tub, const double _Tmax)
 {
-// include particle data
 #ifdef SPHLATCH_LOGGER
-  Logger << "temperature out of bounds in ANEOS";
+  Logger.stream
 #else
-  std::cerr << "temperature out of bounds in ANEOS\n";
+  std::cerr
+#endif
+  << "temperature out of bounds in ANEOS, Tub = " << _Tub
+  << ", Tmax = " << _Tmax;
+#ifdef SPHLATCH_LOGGER
+  Logger.flushStream();
+#else
+  std::cerr << "\n";
 #endif
 };
 

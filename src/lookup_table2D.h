@@ -171,19 +171,19 @@ public:
 valueType interpolate(const valueType _x, const valueType _y,
                       const size_t _ixl, const size_t _iyl)
 {
-  const valueType xl = x(ixl);
-  const valueType xh = x(ixl + 1);
+  const valueType xl = x(_ixl);
+  const valueType xh = x(_ixl + 1);
 
-  const valueType yl = y(iyl);
-  const valueType yh = y(iyl + 1);
+  const valueType yl = y(_iyl);
+  const valueType yh = y(_iyl + 1);
 
   const valueType t = (_x - xl) / (xh - xl);
   const valueType u = (_y - yl) / (yh - yl);
 
-  return(f(ixl, iyl) * (1. - t) * (1. - u) +
-         f(ixl + 1, iyl) * t * (1. - u) +
-         f(ixl, iyl + 1) * (1. - t) * u +
-         f(ixl + 1, iyl + 1) * t * u);
+  return(f(_ixl, _iyl) * (1. - t) * (1. - u) +
+         f(_ixl + 1, _iyl) * t * (1. - u) +
+         f(_ixl, _iyl + 1) * (1. - t) * u +
+         f(_ixl + 1, _iyl + 1) * t * u);
 };
 };
 }
