@@ -1,4 +1,4 @@
-all: aneosTest tillotsonTest
+all: aneosTest tillotsonTest storePress
 
 aneosTest: aneos 
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz \

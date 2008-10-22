@@ -69,6 +69,22 @@ ANEOS()
   noPointsRho = 1000;
   noPointsU = 1000;
 
+  if (PartManager.attributes.count("umin") < 1)
+    throw GeneralError("umin not set for ANEOS table!");
+  uMin = PartManager.attributes["umin"];
+
+  if (PartManager.attributes.count("umax") < 1)
+    throw GeneralError("umax not set for ANEOS table!");
+  uMax = PartManager.attributes["umax"];
+
+  if (PartManager.attributes.count("rhomin") < 1)
+    throw GeneralError("rhomin not set for ANEOS table!");
+  rhoMin = PartManager.attributes["rhomin"];
+
+  if (PartManager.attributes.count("rhomax") < 1)
+    throw GeneralError("rhomax not set for ANEOS table!");
+  rhoMax = PartManager.attributes["rhomax"];
+
   ///
   /// the maximal mat id
   ///
@@ -116,7 +132,10 @@ private:
 valueType nan;
 bool quiet;
 
+#ifdef SPHLATCH_ANEOS_TABLE
 size_t noPointsRho, noPointsU;
+valueType rhoMin, rhoMax, uMin, uMax;
+#endif
 
 ///
 /// get the pressure & speed of sound for particle _i
@@ -156,36 +175,43 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
 {
 #ifdef SPHLATCH_ANEOS_TABLE
   ///
-  /// check whether for the desired material there are
-  /// already tables available. if not, generate them.
+  /// if rho and u are inside the talbe range, use
+  /// the table. otherwise fall back to iteration.
   ///
-  if (!tablesInit[_mat])
-    initTables(_mat);
+  if (_rho > rhoMin && _rho < rhoMax &&
+      _u > uMin && _u < uMax)
+    {
+      ///
+      /// check whether for the desired material there are
+      /// already tables available. if not, generate them.
+      ///
+      if (!tablesInit[_mat])
+        initTables(_mat);
 
-  const valueType curLogRho = log10(_rho);
-  const valueType curLogU = log10(_u);
+      const valueType curLogRho = log10(_rho);
+      const valueType curLogU = log10(_u);
 
-  _P = (*presTables[_mat])(curLogU, curLogRho);
+      _P = (*presTables[_mat])(curLogU, curLogRho);
 
-  ///
-  /// the first table query gives us the indices
-  /// for the other table queries
-  ///
-  const size_t ixl = (presTables[_mat])->ixl;
-  const size_t iyl = (presTables[_mat])->iyl;
+      ///
+      /// the first table query gives us the indices
+      /// for the other table queries
+      ///
+      const size_t ixl = (presTables[_mat])->ixl;
+      const size_t iyl = (presTables[_mat])->iyl;
 
-  _T = (*TempTables[_mat])(curLogU, curLogRho, ixl, iyl);
-  _cs = (*csouTables[_mat])(curLogU, curLogRho, ixl, iyl);
+      _T = (*TempTables[_mat])(curLogU, curLogRho, ixl, iyl);
+      _cs = (*csouTables[_mat])(curLogU, curLogRho, ixl, iyl);
 
-  _phase = static_cast<identType>(
-    lrint((*phasTables[_mat])(curLogU, curLogRho, ixl, iyl)));
-
-#else
+      _phase = static_cast<identType>(
+        lrint((*phasTables[_mat])(curLogU, curLogRho, ixl, iyl)));
+    }
+  else
+#endif
   ///
   /// use the slower but more accurate iteration
   ///
   iterate(_rho, _u, _mat, _P, _cs, _T, _phase);
-#endif
 };
 
 private:
@@ -221,15 +247,6 @@ void initTables(const identType _mat)
   ///
   /// prepare the argument vectors log10(rho) and log10(u)
   ///
-  if (PartManager.attributes["umin"] == 0)
-    throw GeneralError("umin not set or 0 for ANEOS table!");
-
-  if (PartManager.attributes["rhomax"] == 0)
-    throw GeneralError("umax not set or 0 for ANEOS table!");
-
-  const valueType uMin = PartManager.attributes["umin"];
-  const valueType uMax = PartManager.attributes["umax"];
-
   valvectType loguVect(noPointsU);
   const valueType dlogu = (log10(uMax) - log10(uMin)) / (noPointsU - 1);
   const valueType loguMin = log10(uMin);
@@ -238,15 +255,6 @@ void initTables(const identType _mat)
     {
       loguVect(i) = loguMin + dlogu * static_cast<valueType>(i);
     }
-
-  if (PartManager.attributes["rhomin"] == 0)
-    throw GeneralError("rhomin not set or 0 for ANEOS table!");
-
-  if (PartManager.attributes["rhomax"] == 0)
-    throw GeneralError("rhomax not set or 0 for ANEOS table!");
-
-  const valueType rhoMin = PartManager.attributes["rhomin"];
-  const valueType rhoMax = PartManager.attributes["rhomax"];
 
   valvectType logrhoVect(noPointsRho);
   const valueType dlogrho = (log10(rhoMax) - log10(rhoMin)) / (noPointsRho - 1);
