@@ -8,7 +8,7 @@
 
 #include "typedefs.h"
 
-#include "kernel_cubicspline3d.h"
+#include "kernel_cubicspline.h"
 
 enum vectIndices { X, Y, Z };
 
@@ -72,7 +72,11 @@ int main(int argc, char* argv[])
         rvec(Z) = z;
 
         kernelVal += myKernel.value( r, h )*vol;
-        derivVal  += myKernel.derive( r, h, rvec )*vol;
+        myKernel.derive( r, h, x, y, z );
+
+        derivVal(X) += myKernel.derivX * vol;
+        derivVal(Y) += myKernel.derivY * vol;
+        derivVal(Z) += myKernel.derivZ * vol;
       }
     }
     std::cout << i << " " << std::flush;

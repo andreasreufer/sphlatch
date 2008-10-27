@@ -131,13 +131,17 @@ void CDATreader::open( std::string _filename )
     vars[i] = readLine(fin);
   }
   
+  /*
   noParts =
     lrint( ( static_cast<double>( myDomain + 1 ) / noDomains )*noTotParts ) -
     lrint( ( static_cast<double>( myDomain ) / noDomains )*noTotParts );
 
   myOffset = 
     lrint( ( static_cast<double>( myDomain ) / noDomains )*noTotParts )
-    * buffsize * noVars;
+    * buffsize * noVars; */
+
+  noParts = noTotParts;
+  myOffset = 0;
 
   if ( readLine(fin) != "^^^" )
   {

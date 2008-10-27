@@ -74,7 +74,7 @@ typedef sphlatch::ParticleManager part_type;
 #include <boost/progress.hpp>
 #include <vector>
 
-#include "kernel_cubicspline3d.h"
+#include "kernel_cubicspline.h"
 
 /// tree stuff
 //#include "bhtree.h"

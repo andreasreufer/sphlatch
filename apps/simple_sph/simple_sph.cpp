@@ -139,7 +139,7 @@ typedef sphlatch::IdealGas eos_type;
 #include <boost/progress.hpp>
 #include <vector>
 
-#include "kernel_cubicspline3d.h"
+#include "kernel_cubicspline.h"
 typedef sphlatch::CubicSpline3D kernel_type;
 
 #include "bhtree.h"

@@ -139,7 +139,7 @@ typedef sphlatch::IdealGas eos_type;
 #include <boost/progress.hpp>
 #include <vector>
 
-#include "kernel_cubicspline3d.h"
+#include "kernel_cubicspline.h"
 typedef sphlatch::CubicSpline3D kernel_type;
 
 #include "bhtree.h"
@@ -1127,7 +1127,7 @@ int main(int argc, char* argv[])
   PartManager.attributes["courant"] = 0.3;
 
   PartManager.attributes["noneigh"] = 50.;
-  PartManager.attributes["umin"] = 1000.;
+  PartManager.attributes["umin"] = 1.e8;
 #ifdef SPHLATCH_FRICTION
   PartManager.attributes["frictime"] = 200.;
 #endif
@@ -1137,6 +1137,12 @@ int main(int argc, char* argv[])
   PartManager.attributes["maxorbittime"] = 432000.;
   PartManager.attributes["maxradius"] = 2.e9;
   PartManager.attributes["escapedmass"] = 0.0;
+#endif
+#ifdef SPHLATCH_ANEOS_TABLE
+  PartManager.attributes["rhomin"] = 1.e-3;
+  PartManager.attributes["rhomax"] = 15.;
+  /// umin already set
+  PartManager.attributes["umax"] = 1.e12;
 #endif
 
   ///
