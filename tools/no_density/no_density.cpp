@@ -20,7 +20,7 @@
 //#define SPHLATCH_RANKSPACESERIALIZE
 
 // enable checking of bounds for the neighbour lists
-//#define SPHLATCH_CHECKNONEIGHBOURS
+#define SPHLATCH_CHECKNONEIGHBOURS
 
 // enable selfgravity?
 //#define SPHLATCH_GRAVITY
@@ -225,8 +225,10 @@ int main(int argc, char* argv[])
   /// so it can be choosen quite large
   ///
   Nsearch.prepare();
-  Nsearch.neighbourList.resize(16384);
-  Nsearch.neighDistList.resize(16384);
+  //Nsearch.neighbourList.resize(16384);
+  //Nsearch.neighDistList.resize(16384);
+  Nsearch.neighbourList.resize(163840);
+  Nsearch.neighDistList.resize(163840);
   Logger << "Rankspace prepared";
 
   ///
