@@ -20,7 +20,7 @@ tabs = timp - t0;
 ttot = 1.10*abs(tabs);
 
 
-nsteps = 1000;
+nsteps = 5000;
 dt = ttot / nsteps;
 pos = zeros(nsteps, 4);
 dist = zeros(nsteps, 1);

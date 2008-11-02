@@ -70,11 +70,11 @@ int main(int argc, char* argv[])
 
   IOManager.loadDump("input.h5part");
 
-  PartManager.attributes["rhomin"] = 1.e-6;
+  PartManager.attributes["rhomin"] = 1.e-3;
   PartManager.attributes["rhomax"] = 15.;
 
-  PartManager.attributes["umin"] = 1.e6;
-  PartManager.attributes["umax"] = 1.e14;
+  PartManager.attributes["umin"] = 1.e9;
+  PartManager.attributes["umax"] = 1.e12;
 
   eos_type& EOS(eos_type::instance());
 
@@ -86,14 +86,12 @@ int main(int argc, char* argv[])
     {
       EOS(i, p(i), cs(i));
     }
-
   Logger << "first EOS run (slow)";
   
   for (size_t i = 0; i < noParts; i++)
     {
       EOS(i, p(i), cs(i));
     }
-  
   Logger << "second EOS run (fast)";
 
   sphlatch::quantsType saveQuants;
