@@ -83,8 +83,8 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
-typedef sphlatch::valueRefType valueRefType;
+typedef sphlatch::valueType fType;
+typedef sphlatch::valueRefType fRefType;
 
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::valvectRefType valvectRefType;
@@ -151,7 +151,7 @@ typedef sphlatch::Rankspace neighsearch_type;
 using namespace sphlatch::vectindices;
 using namespace boost::assign;
 
-valueType timeStep()
+fType timeStep()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
@@ -189,8 +189,8 @@ valueType timeStep()
   valvectRefType T(PartManager.T);
 #endif
 
-  valueRefType time(PartManager.attributes["time"]);
-  valueRefType saveItrvl(IOManager.saveItrvl);
+  fRefType time(PartManager.attributes["time"]);
+  fRefType saveItrvl(IOManager.saveItrvl);
 
   int& step(PartManager.step);
   //int& substep(PartManager.substep);
@@ -202,16 +202,16 @@ valueType timeStep()
   /// timestep criterion for acceleration
   /// ( see Wetzstein et. al 2008 )
   ///
-  valueType dtA = std::numeric_limits<valueType>::max();
+  fType dtA = std::numeric_limits<fType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType ai = sqrt(acc(i, X) * acc(i, X) +
-                                acc(i, Y) * acc(i, Y) +
-                                acc(i, Z) * acc(i, Z));
+      const fType ai = sqrt(acc(i, X) * acc(i, X) +
+                            acc(i, Y) * acc(i, Y) +
+                            acc(i, Z) * acc(i, Z));
 
       if (ai > 0.)
         {
-          const valueType dtAi = sqrt(h(i) / ai);
+          const fType dtAi = sqrt(h(i) / ai);
           dtA = dtAi < dtA ? dtAi : dtA;
         }
     }
@@ -223,12 +223,12 @@ valueType timeStep()
   /// limit oooling speed in integration time
   /// energy integration
   ///
-  valueType dtU = std::numeric_limits<valueType>::max();
+  fType dtU = std::numeric_limits<fType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
       if (dudt(i) < 0.)
         {
-          const valueType dtUi = -u(i) / dudt(i);
+          const fType dtUi = -u(i) / dudt(i);
           dtU = dtUi < dtU ? dtUi : dtU;
         }
     }
@@ -240,10 +240,10 @@ valueType timeStep()
   /// timestep criterion for smoothing length integration
   /// ( see Wetzstein et. al 2008 )
   ///
-  valueType dtH = std::numeric_limits<valueType>::max();
+  fType dtH = std::numeric_limits<fType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType absdtHi = fabs(h(i) / dhdt(i));
+      const fType absdtHi = fabs(h(i) / dhdt(i));
 
       if (absdtHi > 0.)
         {
@@ -257,11 +257,11 @@ valueType timeStep()
   ///
   /// CFL condition
   ///
-  valueType dtCFL = std::numeric_limits<valueType>::max();
-  const valueType courantNumber = PartManager.attributes["courant"];
+  fType dtCFL = std::numeric_limits<fType>::max();
+  const fType courantNumber = PartManager.attributes["courant"];
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType dtCFLi = h(i) / cs(i);
+      const fType dtCFLi = h(i) / cs(i);
       dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
       if (cs(i) > 0.)
         {
@@ -274,15 +274,15 @@ valueType timeStep()
   ///
   /// distance to next save time
   ///
-  const valueType dtSave = (floor((time / saveItrvl) + 1.e-6)
-                            + 1.) * saveItrvl - time;
+  const fType dtSave = (floor((time / saveItrvl) + 1.e-6)
+                        + 1.) * saveItrvl - time;
 
   ///
   /// determine global minimum.
   /// by parallelly minimizing the timesteps, we
   /// can estimate which ones are dominant
   ///
-  valueType dtGlob = std::numeric_limits<valueType>::max();
+  fType dtGlob = std::numeric_limits<fType>::max();
 
   dtGlob = dtA < dtGlob ? dtA : dtGlob;
   dtGlob = dtCFL < dtGlob ? dtCFL : dtGlob;
@@ -334,8 +334,8 @@ valueType timeStep()
 #ifdef SPHLATCH_INTEGRATERHO
   saveQuants.scalars += &drhodt;
 #endif
-  const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
-                                * saveItrvl;
+  const fType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
+                            * saveItrvl;
   if (fabs(curSaveTime - time) < 1.e-9)
     {
       std::string fileName = "dump";
@@ -469,8 +469,8 @@ void derivate()
     }
 
 #ifdef SPHLATCH_GRAVITY
-  const valueType gravTheta = PartManager.attributes["gravtheta"];
-  const valueType gravConst = PartManager.attributes["gravconst"];
+  const fType gravTheta = PartManager.attributes["gravtheta"];
+  const fType gravConst = PartManager.attributes["gravconst"];
 
   tree_type Tree(gravTheta, gravConst,
                  CostZone.getDepth(), CostZone.getCenter(),
@@ -528,13 +528,13 @@ void derivate()
 #else
       const size_t i = k;
 #endif
-      const valueType hi = h(i);
-      const valueType srchRad = 2. * hi;
+      const fType hi = h(i);
+      const fType srchRad = 2. * hi;
       Nsearch.findNeighbours(i, srchRad);
 
       const size_t noNeighs = Nsearch.neighbourList[0];
 
-      static valueType rhoi;
+      static fType rhoi;
       rhoi = 0.;
 
       ///
@@ -542,10 +542,10 @@ void derivate()
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
-          const valueType r = Nsearch.neighDistList[curNeigh];
+          const fType r = Nsearch.neighDistList[curNeigh];
           const size_t j = Nsearch.neighbourList[curNeigh];
 
-          const valueType hij = 0.5 * (hi + h(j));
+          const fType hij = 0.5 * (hi + h(j));
 
           rhoi += m(j) * Kernel.value(r, hij);
         }
@@ -561,7 +561,7 @@ void derivate()
   /// lower temperature bound
   ///
 
-  const valueType uMin = PartManager.attributes["umin"];
+  const fType uMin = PartManager.attributes["umin"];
   for (size_t i = 0; i < noParts; i++)
     {
       if (u(i) < uMin)
@@ -595,16 +595,16 @@ void derivate()
   /// I need    : pos, vel, h, m, rho, u
   /// I provide : acc, dudt, divv
   ///
-  const valueType alpha = 1;
-  const valueType beta = 2;
+  const fType alpha = 1;
+  const fType beta = 2;
 
-  valueType curAccX = 0., curAccY = 0., curAccZ = 0.;
+  fType curAccX = 0., curAccY = 0., curAccZ = 0.;
 #ifdef SPHLATCH_TIMEDEP_ENERGY
-  valueType curPow = 0.;
+  fType curPow = 0.;
 #endif
 #ifdef SPHLATCH_VELDIV
-  valueType curDrhoDt = 0.;
-  valueType divvMax = std::numeric_limits<valueType>::min();
+  fType curDrhoDt = 0.;
+  fType divvMax = std::numeric_limits<fType>::min();
 #endif
   for (size_t k = 0; k < noParts; k++)
     {
@@ -613,14 +613,14 @@ void derivate()
 #else
       const size_t i = k;
 #endif
-      const valueType hi = h(i);
-      const valueType rhoi = rho(i);
-      const valueType pi = p(i);
+      const fType hi = h(i);
+      const fType rhoi = rho(i);
+      const fType pi = p(i);
 
-      const valueType piOrhoirhoi = pi / (rhoi * rhoi);
+      const fType piOrhoirhoi = pi / (rhoi * rhoi);
 
       /// find the neighbours
-      const valueType srchRad = 2. * hi;
+      const fType srchRad = 2. * hi;
       Nsearch.findNeighbours(i, srchRad);
 
       ///
@@ -638,55 +638,55 @@ void derivate()
 #ifdef SPHLATCH_VELDIV
       curDrhoDt = 0.;
 #endif
-      const valueType viX = vel(i, X);
-      const valueType viY = vel(i, Y);
-      const valueType viZ = vel(i, Z);
+      const fType viX = vel(i, X);
+      const fType viY = vel(i, Y);
+      const fType viZ = vel(i, Z);
 
-      const valueType riX = pos(i, X);
-      const valueType riY = pos(i, Y);
-      const valueType riZ = pos(i, Z);
+      const fType riX = pos(i, X);
+      const fType riY = pos(i, Y);
+      const fType riZ = pos(i, Z);
 
-      const valueType ci = cs(i);
+      const fType ci = cs(i);
 
       ///
       /// sum over the neighbours
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
-          const valueType rij = Nsearch.neighDistList[curNeigh];
+          const fType rij = Nsearch.neighDistList[curNeigh];
           const size_t j = Nsearch.neighbourList[curNeigh];
 
-          const valueType rhoj = rho(j);
-          const valueType pj = p(j);
+          const fType rhoj = rho(j);
+          const fType pj = p(j);
 
-          const valueType hij = 0.5 * (hi + h(j));
+          const fType hij = 0.5 * (hi + h(j));
 
-          const valueType rijX = riX - pos(j, X);
-          const valueType rijY = riY - pos(j, Y);
-          const valueType rijZ = riZ - pos(j, Z);
+          const fType rijX = riX - pos(j, X);
+          const fType rijY = riY - pos(j, Y);
+          const fType rijZ = riZ - pos(j, Z);
 
-          const valueType vijX = viX - vel(j, X);
-          const valueType vijY = viY - vel(j, Y);
-          const valueType vijZ = viZ - vel(j, Z);
+          const fType vijX = viX - vel(j, X);
+          const fType vijY = viY - vel(j, Y);
+          const fType vijZ = viZ - vel(j, Z);
 
-          const valueType vijrij = rijX * vijX + rijY * vijY + rijZ * vijZ;
+          const fType vijrij = rijX * vijX + rijY * vijY + rijZ * vijZ;
 
           /// make that a static or define outside of loop?
-          valueType av = 0;
+          fType av = 0;
 
           /// AV
           if (vijrij < 0.)
             {
-              const valueType rijrij = rijX * rijX + rijY * rijY + rijZ * rijZ;
-              const valueType rhoij = 0.5 * (rhoi + rhoj);
-              const valueType cij = 0.5 * (ci + cs(j));
-              const valueType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
+              const fType rijrij = rijX * rijX + rijY * rijY + rijZ * rijZ;
+              const fType rhoij = 0.5 * (rhoi + rhoj);
+              const fType cij = 0.5 * (ci + cs(j));
+              const fType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
 
               av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
             }
 
-          const valueType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
-          const valueType mj = m(j);
+          const fType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
+          const fType mj = m(j);
 
           /// acceleration
           Kernel.derive(rij, hij, rijX, rijY, rijZ);
@@ -699,9 +699,9 @@ void derivate()
           ///
           /// m_j * v_ij * divW_ij
           ///
-          const valueType mjvijdivWij = mj * (vijX * Kernel.derivX +
-                                              vijY * Kernel.derivY +
-                                              vijZ * Kernel.derivZ);
+          const fType mjvijdivWij = mj * (vijX * Kernel.derivX +
+                                          vijY * Kernel.derivY +
+                                          vijZ * Kernel.derivZ);
 #endif
 
 #ifdef SPHLATCH_TIMEDEP_ENERGY
@@ -731,7 +731,7 @@ void derivate()
       drhodt(i) = -curDrhoDt;
 #endif
 #ifdef SPHLATCH_FRICTION
-      const valueType fricCoeff = 1. / PartManager.attributes["frictime"];
+      const fType fricCoeff = 1. / PartManager.attributes["frictime"];
       acc(i, X) -= vel(i, X) * fricCoeff;
       acc(i, Y) -= vel(i, Y) * fricCoeff;
       acc(i, Z) -= vel(i, Z) * fricCoeff;
@@ -756,28 +756,28 @@ void derivate()
   /// I need    : divv, noneigh
   /// I provide : h, dhdt
   ///
-  const valueType noNeighOpt = PartManager.attributes["noneigh"];
-  const valueType noNeighMin = (2. / 3.) * noNeighOpt;
-  const valueType noNeighMax = (5. / 3.) * noNeighOpt;
-  const valueType cDivvMax = divvMax;
+  const fType noNeighOpt = PartManager.attributes["noneigh"];
+  const fType noNeighMin = (2. / 3.) * noNeighOpt;
+  const fType noNeighMax = (5. / 3.) * noNeighOpt;
+  const fType cDivvMax = divvMax;
 #endif
 
-  const valueType czAtomicLength = CostZone.getAtomicLength();
+  const fType czAtomicLength = CostZone.getAtomicLength();
   for (size_t i = 0; i < noParts; i++)
     {
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-      const valueType noNeighCur = static_cast<valueType>(noneigh(i));
+      const fType noNeighCur = static_cast<fType>(noneigh(i));
 
       ///
       /// k1: too few neighbours   k2: number ok   k3: too many neighbours
       ///
-      //const valueType k1 = 0.5 * (1 + tanh((noNeighCur - noNeighMin) / -5.));
-      const valueType k1 = 0.;
-      const valueType k3 = 0.5 * (1 + tanh((noNeighCur - noNeighMax) / 5.));
-      const valueType k2 = 1. - k1 - k3;
+      //const fType k1 = 0.5 * (1 + tanh((noNeighCur - noNeighMin) / -5.));
+      const fType k1 = 0.;
+      const fType k3 = 0.5 * (1 + tanh((noNeighCur - noNeighMax) / 5.));
+      const fType k2 = 1. - k1 - k3;
 
       dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
-                 - k2 * static_cast<valueType>(1. / 3.) * divv(i)) * h(i);
+                 - k2 * static_cast<fType>(1. / 3.) * divv(i)) * h(i);
 #endif
       ///
       /// hard upper limit
@@ -811,11 +811,11 @@ int main(int argc, char* argv[])
 
   Options.add_options()
   ("input-file,i", po::value<std::string>(),
-    "input file")
-  ("save-time,s", po::value<valueType>(),
-    "save dumps when (time) modulo (save time) = 0.")
-  ("stop-time,S", po::value<valueType>(),
-    "stop simulaton at this time");
+   "input file")
+  ("save-time,s", po::value<fType>(),
+   "save dumps when (time) modulo (save time) = 0.")
+  ("stop-time,S", po::value<fType>(),
+   "stop simulaton at this time");
 
   po::positional_options_description posDesc;
   posDesc.add("input-file", 1);
@@ -853,8 +853,8 @@ int main(int argc, char* argv[])
   /// attributes will be overwritten, when defined in file
   ///
   std::string loadDumpFile = poMap["input-file"].as<std::string>();
-  const valueType maxTime = poMap["stop-time"].as<valueType>();
-  IOManager.saveItrvl = poMap["save-time"].as<valueType>();
+  const fType maxTime = poMap["stop-time"].as<fType>();
+  IOManager.saveItrvl = poMap["save-time"].as<fType>();
 
   PartManager.attributes["gamma"] = 5. / 3.;
   PartManager.attributes["gravconst"] = 1.0;
@@ -862,9 +862,15 @@ int main(int argc, char* argv[])
   PartManager.attributes["courant"] = 0.3;
 
   PartManager.attributes["noneigh"] = 50.;
-  PartManager.attributes["umin"] = 1000.;
+  PartManager.attributes["umin"] = 1.8;
 #ifdef SPHLATCH_FRICTION
   PartManager.attributes["frictime"] = 200.;
+#endif
+#ifdef SPHLATCH_ANEOS_TABLE
+  PartManager.attributes["rhomin"] = 1.e-3;
+  PartManager.attributes["rhomax"] = 15.;
+  /// umin already set
+  PartManager.attributes["umax"] = 1.e12;
 #endif
 
   ///
@@ -928,7 +934,7 @@ int main(int argc, char* argv[])
   idvectRefType noneigh(PartManager.noneigh);
 
   int& step(PartManager.step);
-  valueRefType time(PartManager.attributes["time"]);
+  fRefType time(PartManager.attributes["time"]);
 
   const size_t myDomain = CommManager.getMyDomain();
 

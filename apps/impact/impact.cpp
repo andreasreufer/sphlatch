@@ -84,7 +84,7 @@ namespace po = boost::program_options;
 
 #include "typedefs.h"
 typedef sphlatch::valueType fType;
-typedef sphlatch::valueRefType valueRefType;
+typedef sphlatch::valueRefType fRefType;
 
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::valvectRefType valvectRefType;
@@ -195,8 +195,8 @@ fType timeStep()
   valvectRefType ecc(PartManager.ecc);
 #endif
 
-  valueRefType time(PartManager.attributes["time"]);
-  valueRefType saveItrvl(IOManager.saveItrvl);
+  fRefType time(PartManager.attributes["time"]);
+  fRefType saveItrvl(IOManager.saveItrvl);
 
   int& step(PartManager.step);
   //int& substep(PartManager.substep);
@@ -212,8 +212,8 @@ fType timeStep()
   for (size_t i = 0; i < noParts; i++)
     {
       const fType ai = sqrt(acc(i, X) * acc(i, X) +
-                                acc(i, Y) * acc(i, Y) +
-                                acc(i, Z) * acc(i, Z));
+                            acc(i, Y) * acc(i, Y) +
+                            acc(i, Z) * acc(i, Z));
 
       if (ai > 0.)
         {
@@ -281,7 +281,7 @@ fType timeStep()
   /// distance to next save time
   ///
   const fType dtSave = (floor((time / saveItrvl) + 1.e-6)
-                            + 1.) * saveItrvl - time;
+                        + 1.) * saveItrvl - time;
 
   ///
   /// determine global minimum.
@@ -359,8 +359,8 @@ fType timeStep()
   for (size_t i = 0; i < noParts; i++)
     {
       const fType curRad = sqrt((pos(i, X) - comX) * (pos(i, X) - comX) +
-                                    (pos(i, Y) - comY) * (pos(i, Y) - comY) +
-                                    (pos(i, Z) - comZ) * (pos(i, Z) - comZ));
+                                (pos(i, Y) - comY) * (pos(i, Y) - comY) +
+                                (pos(i, Z) - comZ) * (pos(i, Z) - comZ));
       maxRad = curRad > maxRad ? curRad : maxRad;
     }
   CommManager.max(maxRad);
@@ -379,8 +379,8 @@ fType timeStep()
   for (size_t i = 0; i < noParts; i++)
     {
       const fType curRad = sqrt((pos(i, X) - comX) * (pos(i, X) - comX) +
-                                    (pos(i, Y) - comY) * (pos(i, Y) - comY) +
-                                    (pos(i, Z) - comZ) * (pos(i, Z) - comZ));
+                                (pos(i, Y) - comY) * (pos(i, Y) - comY) +
+                                (pos(i, Z) - comZ) * (pos(i, Z) - comZ));
 
       const size_t curBin = std::max(std::min(
                                        lrint((curRad / maxRad) * noMassBins
@@ -431,12 +431,12 @@ fType timeStep()
 
   std::string domString = boost::lexical_cast<std::string>(myDomain);
   std::fstream escFile, rmvFile;
-  
+
   std::string escFilename = "escDom000";
   escFilename.replace(escFilename.size() - 0 - domString.size(),
                       domString.size(), domString);
   escFile.open(escFilename.c_str(), std::ios::out | std::ios::app);
-  
+
   std::string rmvFilename = "rmvDom000";
   rmvFilename.replace(rmvFilename.size() - 0 - domString.size(),
                       domString.size(), domString);
@@ -600,7 +600,7 @@ fType timeStep()
   saveQuants.scalars += &ecc;
 #endif
   const fType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
-                                * saveItrvl;
+                            * saveItrvl;
   if (fabs(curSaveTime - time) < 1.e-9)
     {
       std::string fileName = "dump";
@@ -965,8 +965,8 @@ void derivate()
           /// m_j * v_ij * divW_ij
           ///
           const fType mjvijdivWij = mj * (vijX * Kernel.derivX +
-                                              vijY * Kernel.derivY +
-                                              vijZ * Kernel.derivZ);
+                                          vijY * Kernel.derivY +
+                                          vijZ * Kernel.derivZ);
 #endif
 
 #ifdef SPHLATCH_TIMEDEP_ENERGY
@@ -1209,7 +1209,7 @@ int main(int argc, char* argv[])
   idvectRefType noneigh(PartManager.noneigh);
 
   int& step(PartManager.step);
-  valueRefType time(PartManager.attributes["time"]);
+  fRefType time(PartManager.attributes["time"]);
 
   const size_t myDomain = CommManager.getMyDomain();
 

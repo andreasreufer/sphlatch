@@ -6,7 +6,7 @@ impact_GHUA__: libaneos
 				      -DSPHLATCH_GRAVITY \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
-				      -DSPHLATCH_ANEOS_TABLE
+				      -DSPHLATCH_ANEOS_TABLE \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
 				      -DSPHLATCH_REMOVEESCAPING \
 				      -o impact_GHUA__ impact.cpp

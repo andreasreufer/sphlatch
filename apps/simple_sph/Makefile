@@ -114,6 +114,7 @@ simple_sph_GHUA__: libaneos
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -DSPHLATCH_ANEOS_TABLE \
 				      -o simple_sph_GHUA__ simple_sph.cpp
 
 simple_sph__HUA__: libaneos
@@ -122,6 +123,7 @@ simple_sph__HUA__: libaneos
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -DSPHLATCH_ANEOS_TABLE \
 				      -o simple_sph__HUA__ simple_sph.cpp
 
 simple_sph_GHUA_F: libaneos
@@ -131,6 +133,7 @@ simple_sph_GHUA_F: libaneos
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -DSPHLATCH_ANEOS_TABLE \
 				      -DSPHLATCH_FRICTION \
 				      -o simple_sph_GHUA_F simple_sph.cpp
 
