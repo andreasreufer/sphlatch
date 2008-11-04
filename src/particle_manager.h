@@ -229,6 +229,9 @@ ParticleManager::ParticleManager(void)
   isGhostVarSet += "id";
 
   step = 0, substep = 0;
+  
+  noLocalParts = 0;
+  noGhostParts = 0;
 }
 
 

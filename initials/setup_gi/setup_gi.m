@@ -34,6 +34,10 @@ vesc = sqrt(  2.*G*( mtar + mimp ) / (Rtar + Rimp) );
 vimp = sqrt( vesc^2. + vinf^2. );
 rimp = Rtar + Rimp;
 
+printf(" (rimp = %ecm)\n", rimp);
+r0reldist = 5.;
+r0reldist = input("r0       [rimp] = ");
+
 mu = G*mtot;
 k1 = rimp * (vimp^2. ) / mu;
 
@@ -84,8 +88,8 @@ fprintf(fid, "# v     = %e cm/s\n", vimp);
 fprintf(fid, "# theta = %f° (true anomaly)\n", thetaimp*360/(2*pi));
 fprintf(fid, "# beta  = %f° (impact angle)\n", betaimp*360/(2*pi));
 
-# determine true anomaly theta0 for r0 = x*rimp
-r0 = 5.*rimp;
+# determine true anomaly theta0 for r0
+r0 = r0reldist*rimp;
 v0 = sqrt( vinf^2. + ( 2.*mu / r0 ) );
 theta0 = acos( ( rperih*(1. + e ) - r0 ) / ( e * r0 ) );
 beta0 = acos( Ltot / ( r0*v0*mimp ) );
@@ -146,10 +150,11 @@ fprintf(fid, "#  commands to setup the initial file:\n");
 fprintf(fid, "h5part_displace -i impactor.h5part --pos [%e,%e,%e] --vel [%e,%e,%e] --id 2000000 \n", rimp0(1), 0., rimp0(2), vimp0(1), 0., vimp0(2));
 fprintf(fid, "h5part_displace -i target.h5part --pos [%e,%e,%e] --vel [%e,%e,%e]\n", rtar0(1), 0., rtar0(2), vtar0(1), 0., vtar0(2));
 fprintf(fid, "h5part_combine -a target.h5part -b impactor.h5part -o combined.h5part\n");
-fprintf(fid, "h5part_writeattr -i combined.h5part -k time -v=%e\n", timp - t0 );
+fprintf(fid, "h5part_writeattr -i combined.h5part -k time -v %e\n", timp - t0 );
 fprintf(fid, "\n");
 
 fclose(fid);
+system("chmod 0755 setup_gi.sh");
 
 printf("wrote everything to setup_gi.sh: \n");
 

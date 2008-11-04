@@ -103,8 +103,8 @@ int main(int argc, char* argv[])
   const valueType partVolume = totVolume / partsCount;
   const valueType smoLength  = 0.85*latticeLength;
 
-
-  std::cerr << partVolume << " " << totVolume << "\n";
+  std::cerr << " particle volume: " << partVolume << "\n"
+            << " total    volume: " << totVolume << "\n";
 
   partsCount = 0;
   Lattice.first();

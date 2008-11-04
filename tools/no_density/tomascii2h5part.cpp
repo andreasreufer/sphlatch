@@ -118,9 +118,12 @@ int main(int argc, char* argv[])
     }
 
     pos(i, 2) = 0.;
-    
+   
+    ///
+    /// he's using search radius
+    ///
     fin >> readLine;
-    h(i) = boost::lexical_cast<valueType>(readLine);
+    h(i) = 0.5*boost::lexical_cast<valueType>(readLine);
 
     id(i) = i + 1;
   }

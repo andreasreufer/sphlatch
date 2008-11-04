@@ -1,3 +1,5 @@
+#!/usr/bin/octave --persist
+
 setup_gi
 
 parts.pos(1,1) = rimp0(1);

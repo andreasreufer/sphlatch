@@ -238,8 +238,6 @@ int main(int argc, char* argv[])
   ///
   for (size_t k = 0; k < noParts; k++)
     {
-      h(k) /= 2.;
-
       ///
       /// find neighbours
       ///
