@@ -320,6 +320,7 @@ fType timeStep()
   ///
   const fType minCoreDensity = PartManager.attributes["mincoredens"];
   fType comX = 0., comY = 0., comZ = 0., comM = 0.;
+  fType comVX = 0., comVY = 0., comVZ = 0.;
   for (size_t i = 0; i < noParts; i++)
     {
       if (rho(i) > minCoreDensity)
@@ -327,17 +328,29 @@ fType timeStep()
           comX += pos(i, X) * m(i);
           comY += pos(i, Y) * m(i);
           comZ += pos(i, Z) * m(i);
+          
+          comVX += vel(i, X) * m(i);
+          comVY += vel(i, Y) * m(i);
+          comVZ += vel(i, Z) * m(i);
+          
           comM += m(i);
         }
     }
+  CommManager.sum(comM);
+  
   CommManager.sum(comX);
   CommManager.sum(comY);
   CommManager.sum(comZ);
-  CommManager.sum(comM);
-
   comX /= comM;
   comY /= comM;
   comZ /= comM;
+  
+  CommManager.sum(comVX);
+  CommManager.sum(comVY);
+  CommManager.sum(comVZ);
+  comVX /= comM;
+  comVY /= comM;
+  comVZ /= comM;
 
   if (myDomain == 0)
     {
@@ -347,6 +360,9 @@ fType timeStep()
               << comX << "\t"
               << comY << "\t"
               << comZ << "\t"
+              << comVX << "\t"
+              << comVY << "\t"
+              << comVZ << "\t"
               << comM << "\n";
       comFile.close();
     }
@@ -447,15 +463,15 @@ fType timeStep()
       ///
       /// calculate eccentricity vector and its magnitude
       ///
-      const fType rx = (pos(i, X) - comX);
-      const fType ry = (pos(i, Y) - comY);
-      const fType rz = (pos(i, Z) - comZ);
+      const fType rx = pos(i, X) - comX;
+      const fType ry = pos(i, Y) - comY;
+      const fType rz = pos(i, Z) - comZ;
 
       const fType r = sqrt(rx * rx + ry * ry + rz * rz);
 
-      const fType vx = vel(i, X);
-      const fType vy = vel(i, Y);
-      const fType vz = vel(i, Z);
+      const fType vx = vel(i, X) - comVX;
+      const fType vy = vel(i, Y) - comVY;
+      const fType vz = vel(i, Z) - comVZ;
 
       const fType vivi = vx * vx + vy * vy + vz * vz;
       const fType rivi = rx * vx + ry * vy + rz * vz;
@@ -469,6 +485,10 @@ fType timeStep()
 
       const fType e = sqrt(ex * ex + ey * ey + ez * ez);
       ecc(i) = e;
+
+      const fType lx = m(i)*( ry*vz - rz*vy );
+      const fType ly = m(i)*( rz*vx - rx*vz );
+      const fType lz = m(i)*( rx*vy - ry*vx );
 
       ///
       /// specific energy, semi-major axis and orbital period
@@ -495,6 +515,9 @@ fType timeStep()
                       << vel(i, X) << "\t"
                       << vel(i, Y) << "\t"
                       << vel(i, Z) << "\t"
+                      << lx << "\t"
+                      << ly << "\t"
+                      << lz << "\t"
                       << m(i) << "\t"
                       << h(i) << "\t"
                       << u(i) << "\t"
@@ -1036,8 +1059,8 @@ void derivate()
       ///
       /// k1: too few neighbours   k2: number ok   k3: too many neighbours
       ///
-      //const fType k1 = 0.5 * (1 + tanh((noNeighCur - noNeighMin) / -5.));
-      const fType k1 = 0.; // inhibits h oscillation above hard surfaces
+      const fType k1 = 0.5 * (1 + tanh((noNeighCur - noNeighMin) / -5.));
+      //const fType k1 = 0.; // inhibits h oscillation above hard surfaces
       const fType k3 = 0.5 * (1 + tanh((noNeighCur - noNeighMax) / 5.));
       const fType k2 = 1. - k1 - k3;
 

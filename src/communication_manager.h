@@ -76,6 +76,7 @@ void max(valueRefType _val);
 void min(valueRefType _val);
 void sum(valueRefType _val);
 void sum(valvectRefType _vect);
+void sum(matrixRefType _mat);
 void sum(countsRefType _cnt);
 
 size_t getMyDomain();
@@ -400,7 +401,7 @@ void CommunicationManager::sendGhosts(idvectRefType _idVect)
   countsVectType recvByteOffset(noDomains);
   countsVectType bytesTo(noDomains);
   countsVectType bytesFrom(noDomains);
-  
+
   ///
   /// fill send buffer and prepare byte count vectors
   ///
@@ -439,13 +440,14 @@ void CommunicationManager::sendGhosts(idvectRefType _idVect)
 void CommunicationManager::sendGhosts(valvectRefType _valVect)
 {
   valvectType valSendBuff;
+
   valSendBuff.resize(noSendGhosts);
 
   countsVectType sendByteOffset(noDomains);
   countsVectType recvByteOffset(noDomains);
   countsVectType bytesTo(noDomains);
   countsVectType bytesFrom(noDomains);
-  
+
   ///
   /// fill send buffer and prepare byte count vectors
   ///
@@ -485,12 +487,12 @@ void CommunicationManager::sendGhosts(matrixRefType _matrix)
 {
   const size_t matrSize2 = _matrix.size2();
   matrixType vectSendBuff(noSendGhosts, matrSize2);
-  
+
   countsVectType sendByteOffset(noDomains);
   countsVectType recvByteOffset(noDomains);
   countsVectType bytesTo(noDomains);
   countsVectType bytesFrom(noDomains);
-  
+
   ///
   /// fill send buffer and prepare byte count vectors
   ///
@@ -505,7 +507,7 @@ void CommunicationManager::sendGhosts(matrixRefType _matrix)
       while (idxItr != idxEnd)
         {
           particleRowType(vectSendBuff, buffIdx) =
-                particleRowType(_matrix, *idxItr);
+            particleRowType(_matrix, *idxItr);
           buffIdx++;
           idxItr++;
         }
@@ -515,14 +517,14 @@ void CommunicationManager::sendGhosts(matrixRefType _matrix)
       bytesTo[i] = floatSize * matrSize2 * gPartsTo[i];
       bytesFrom[i] = floatSize * matrSize2 * gPartsFrom[i];
     }
-  
+
   ///
   /// exchange data
   ///
   barrier();
-  MPI::COMM_WORLD.Alltoallv(&vectSendBuff(0,0), &bytesTo[0],
+  MPI::COMM_WORLD.Alltoallv(&vectSendBuff(0, 0), &bytesTo[0],
                             &sendByteOffset[0], MPI::BYTE,
-                            &_matrix(0,0), &bytesFrom[0],
+                            &_matrix(0, 0), &bytesFrom[0],
                             &recvByteOffset[0], MPI::BYTE);
   barrier();
 }
@@ -843,6 +845,7 @@ void CommunicationManager::sum(valueRefType _val)
 void CommunicationManager::sum(valvectRefType _vect)
 {
   const size_t vectLength = _vect.size();
+
 #ifdef MPI_IN_PLACE
   MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE, &_vect(0), vectLength,
                             mpiFloatType, MPI::SUM);
@@ -851,6 +854,21 @@ void CommunicationManager::sum(valvectRefType _vect)
   MPI::COMM_WORLD.Allreduce(&_vect(0), &recvBuff(0), vectLength,
                             mpiFloatType, MPI::SUM);
   _vect = recvBuff;
+#endif
+}
+
+void CommunicationManager::sum(matrixRefType _mat)
+{
+  const size_t matLength = _mat.size1() * _mat.size2();
+
+#ifdef MPI_IN_PLACE
+  MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE, &_mat(0, 0), matLength,
+                            mpiFloatType, MPI::SUM);
+#else
+  matrixType recvBuff(_mat);
+  MPI::COMM_WORLD.Allreduce(&_mat(0), &recvBuff(0, 0), matLength,
+                            mpiFloatType, MPI::SUM);
+  _mat = recvBuff;
 #endif
 }
 
