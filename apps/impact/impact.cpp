@@ -870,8 +870,8 @@ void derivate()
     {
       EOS(k, p(k), cs(k));
 
-      if (p(k) < 0.)
-        p(k) = 0.;
+      //if (p(k) < 0.)
+      //  p(k) = 0.;
     }
   Logger << "calculated pressure";
   CommManager.sendGhosts(p);

@@ -184,6 +184,7 @@ int main(int argc, char* argv[])
   ///
   IOManager.loadDump(loadDumpFile);
 
+
   ///
   /// exchange particle data
   ///
@@ -266,12 +267,17 @@ int main(int argc, char* argv[])
   /// bin particle masses according to radius, cumulate mass bins
   /// and sum them up globally
   ///
-  valvectType massRad(noMassBins), massBins(noMassBins);
+  valvectType massRad(noMassBins), totMassBins(noMassBins);
   for (size_t i = 0; i < noMassBins; i++)
     {
       massRad(i) = maxRad * (i / static_cast<fType>(noMassBins));
-      massBins(i) = 0.;
+      totMassBins(i) = 0.;
     }
+  
+  ///
+  /// store radii
+  ///
+  IOManager.savePrimitive(massRad, "r", saveFile);
 
   for (size_t i = 0; i < noParts; i++)
     {
@@ -282,32 +288,18 @@ int main(int argc, char* argv[])
       const size_t curBin = std::max(std::min(
                                        lrint((curRad / maxRad) * noMassBins
                                              - 0.5),
-                                       static_cast<long int>(noMassBins)),
+                                       static_cast<long int>(noMassBins - 1)),
                                      static_cast<long int>(0));
 
-      massBins(curBin) += m(i);
+      totMassBins(curBin) += m(i);
     }
-  CommManager.sum(massBins);
+  CommManager.sum(totMassBins);
+
 
   ///
-  /// store mass profile
+  /// create lookup table for the mass profile
   ///
-  IOManager.savePrimitive(massRad, "r", saveFile);
-  IOManager.savePrimitive(massBins, "m", saveFile);
-
-  ///
-  /// cumulative bins
-  ///
-  for (size_t i = 1; i < noMassBins; i++)
-    {
-      massBins(i) += massBins(i - 1);
-    }
-  IOManager.savePrimitive(massBins, "mcum", saveFile);
-
-  ///
-  /// create lookup table
-  ///
-  lut_type massProf(massRad, massBins);
+  lut_type massProf(massRad, totMassBins);
 
   ///
   /// some constants
@@ -326,19 +318,20 @@ int main(int argc, char* argv[])
   const fType maxOrbitTime = PartManager.attributes["maxorbittime"];
   const fType rMax = PartManager.attributes["maxradius"];
 
-  const fType totMass = massBins(noMassBins - 1);
-
-  valvectType Mdisk(1), Mpe(1);
-  valvectType Ldisk(3), Lpe(3), Lrem(3);
+  valvectType Mdisk(1), Mpe(1), Mesc(1);
+  valvectType Ldisk(3), Lpe(3), Lrem(3), Lesc(3);
   zerovalvectType zero(3);
 
+  Lesc = zero;
   Ldisk = zero;
   Lpe = zero;
   Lrem = zero;
   Mdisk(0) = 0.;
   Mpe(0) = 0.;
+  Mesc(0) = 0.;
 
   matrixType LBins(noMassBins, 3);
+  valvectType MBins(noMassBins);
 
   for (size_t i = 0; i < noParts; i++)
     {
@@ -391,31 +384,52 @@ int main(int argc, char* argv[])
 
       const size_t curBin = std::max(std::min(
                                        lrint((r / maxRad) * noMassBins - 0.5),
-                                       static_cast<long int>(noMassBins)),
+                                       static_cast<long int>(noMassBins - 1)),
                                      static_cast<long int>(0));
 
-      LBins(curBin, X) += rlx;
-      LBins(curBin, Y) += rly;
-      LBins(curBin, Z) += rlz;
 
-      if (r > Rroche)
+      const bool isEscaping = (e > 1.) && (r > Rroche);
+      const bool isDisk = (e < 1.) && (r > Rroche);
+      const bool isPlanet = not (isEscaping or isDisk);
+
+      if (not isEscaping)
+        {
+          Lrem(X) += lx;
+          Lrem(Y) += ly;
+          Lrem(Z) += lz;
+
+          LBins(curBin, X) += rlx;
+          LBins(curBin, Y) += rly;
+          LBins(curBin, Z) += rlz;
+          MBins(curBin) += m(i);
+        }
+      else
+        {
+          Lesc(X) += rlx;
+          Lesc(Y) += rly;
+          Lesc(Z) += rlz;
+        }
+
+      if (isEscaping)
+        {
+          Mesc(0) += m(i);
+        }
+
+      if (isDisk)
         {
           Mdisk(0) += m(i);
           Ldisk(X) += rlx;
           Ldisk(Y) += rly;
           Ldisk(Z) += rlz;
         }
-      else
+
+      if (isPlanet)
         {
           Mpe(0) += m(i);
           Lpe(X) += rlx;
           Lpe(Y) += rly;
           Lpe(Z) += rlz;
         }
-
-      Lrem(X) += lx;
-      Lrem(Y) += ly;
-      Lrem(Z) += lz;
     }
 
   CommManager.sum(Mpe);
@@ -436,11 +450,6 @@ int main(int argc, char* argv[])
   CommManager.sum(Lrem);
   IOManager.savePrimitive(Lrem, "Lrem", saveFile);
 
-  valvectType Mesc(1);
-  valvectType Lesc(3);
-
-  Lesc = zero;
-  Mesc(0) = 0.;
 
   std::fstream escFile;
   escFile.open(escapeeFile.c_str(), std::ios::in);
@@ -502,7 +511,25 @@ int main(int argc, char* argv[])
   CommManager.sum(Lpe);
   IOManager.savePrimitive(Lesc, "Lesc", saveFile);
 
-  std::cout << "# Mpe       "
+  std::cerr << "Mdisk:   " << Mdisk(0) / Mmoon << " mlun\n";
+  std::cerr << "Mesc:    " << Mesc(0) / Mmoon << " mlun\n";
+
+  ///
+  /// store mass profile
+  ///
+  IOManager.savePrimitive(MBins, "m", saveFile);
+
+  ///
+  /// cumulative bins
+  ///
+  for (size_t i = 1; i < noMassBins; i++)
+    {
+      MBins(i) += MBins(i - 1);
+    }
+  IOManager.savePrimitive(MBins, "mcum", saveFile);
+
+  std::cout << "# time      "
+            << "  Mpe       "
             << "  Lpe       "
             << "  Mdisk     "
             << "  Ldisk     "
@@ -522,7 +549,8 @@ int main(int argc, char* argv[])
   const fType LremA = sqrt(Lrem(X) * Lrem(X) +
                            Lrem(Y) * Lrem(Y) +
                            Lrem(Z) * Lrem(Z));
-  std::cout << Mpe(0) << " "
+  std::cout << dumpTime << " "
+            << Mpe(0) << " "
             << LpeA << " "
             << Mdisk(0) << " "
             << LdiskA << " "

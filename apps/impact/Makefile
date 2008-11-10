@@ -1,4 +1,4 @@
-all: impact_GHUA__ impact_GHUT__
+all: impact_GHUA__ impact_GHUT__ impact_GHUa_K
 
 impact_GHUA__: libaneos
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
@@ -19,6 +19,15 @@ impact_GHUT__:
 				      -DSPHLATCH_TILLOTSON \
 				      -DSPHLATCH_REMOVEESCAPING \
 				      -o impact_GHUT__ impact.cpp
+
+impact_GHUa_K: libaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -I../../src \
+				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_TIMEDEP_SMOOTHING \
+				      -DSPHLATCH_TIMEDEP_ENERGY \
+				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -o impact_GHUa_K impact.cpp
 
 libaneos:
 	$(FC) $(FFLAGS) -c ../../aux/libaneos/libaneos.f -o libaneos.o

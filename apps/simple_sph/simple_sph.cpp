@@ -782,14 +782,14 @@ void derivate()
       ///
       /// hard upper limit
       ///
-      if (2.5 * h(i) > czAtomicLength)
+      /*if (2.5 * h(i) > czAtomicLength)
         {
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
           if (dhdt(i) > 0.)
             dhdt(i) = 0.;
 #endif
           h(i) = czAtomicLength / 2.5;
-        }
+        }*/
     }
   Logger.stream << "adapted smoothing length (2.5h < " << czAtomicLength
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
