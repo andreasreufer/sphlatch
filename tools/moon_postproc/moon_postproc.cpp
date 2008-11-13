@@ -149,6 +149,8 @@ int main(int argc, char* argv[])
   PartManager.usePhase();
   PartManager.useTemperature();
 
+  PartManager.useEccentricity();
+
   ///
   /// some useful references
   ///
@@ -241,6 +243,14 @@ int main(int argc, char* argv[])
   comVY /= comM;
   comVZ /= comM;
 
+  std::cerr << "planet center:  pos ["
+            << comX << ","
+            << comY << ","
+            << comZ << "]\n"
+            << "                vel ["
+            << comVX << ","
+            << comVY << ","
+            << comVZ << "]\n";
   ///
   /// determine maximal radius relative to center of mass
   ///
@@ -293,8 +303,15 @@ int main(int argc, char* argv[])
 
       totMassBins(curBin) += m(i);
     }
+  
+  ///
+  /// cumulative bins
+  ///
+  for (size_t i = 1; i < noMassBins; i++)
+    {
+      totMassBins(i) += totMassBins(i - 1);
+    }
   CommManager.sum(totMassBins);
-
 
   ///
   /// create lookup table for the mass profile
@@ -329,6 +346,8 @@ int main(int argc, char* argv[])
   Mdisk(0) = 0.;
   Mpe(0) = 0.;
   Mesc(0) = 0.;
+
+  size_t noDiskParts = 0, noPlanParts = 0, noEscParts = 0;
 
   matrixType LBins(noMassBins, 3);
   valvectType MBins(noMassBins);
@@ -387,7 +406,6 @@ int main(int argc, char* argv[])
                                        static_cast<long int>(noMassBins - 1)),
                                      static_cast<long int>(0));
 
-
       const bool isEscaping = (e > 1.) && (r > Rroche);
       const bool isDisk = (e < 1.) && (r > Rroche);
       const bool isPlanet = not (isEscaping or isDisk);
@@ -413,6 +431,7 @@ int main(int argc, char* argv[])
       if (isEscaping)
         {
           Mesc(0) += m(i);
+          noEscParts++;
         }
 
       if (isDisk)
@@ -421,6 +440,7 @@ int main(int argc, char* argv[])
           Ldisk(X) += rlx;
           Ldisk(Y) += rly;
           Ldisk(Z) += rlz;
+          noDiskParts++;
         }
 
       if (isPlanet)
@@ -429,6 +449,7 @@ int main(int argc, char* argv[])
           Lpe(X) += rlx;
           Lpe(Y) += rly;
           Lpe(Z) += rlz;
+          noPlanParts++;
         }
     }
 
@@ -499,6 +520,8 @@ int main(int argc, char* argv[])
       Lesc(X) += parM * (y * vz + z * vy);
       Lesc(Y) += parM * (z * vx + x * vz);
       Lesc(Z) += parM * (x * vy + y * vx);
+          
+      noEscParts++;
 
       for (size_t i = 0; i < 10; i++)
         escFile >> entry; // h, u, p, noneigh, e, a, Torbit, mat, phase, T
@@ -511,8 +534,12 @@ int main(int argc, char* argv[])
   CommManager.sum(Lpe);
   IOManager.savePrimitive(Lesc, "Lesc", saveFile);
 
-  std::cerr << "Mdisk:   " << Mdisk(0) / Mmoon << " mlun\n";
-  std::cerr << "Mesc:    " << Mesc(0) / Mmoon << " mlun\n";
+  std::cerr << "Mdisk:   " << Mdisk(0) / Mmoon
+            << " mlun  (" << noDiskParts << " particles)\n";
+  std::cerr << "Mesc:    " << Mesc(0) / Mmoon
+            << " mlun (" << noEscParts << " particles)\n";
+  std::cerr << "Mplan:   " << Mpe(0) / Mearth
+            << " me (" << noPlanParts << " particles)\n";
 
   ///
   /// store mass profile
@@ -528,13 +555,13 @@ int main(int argc, char* argv[])
     }
   IOManager.savePrimitive(MBins, "mcum", saveFile);
 
-  std::cout << "# time      "
-            << "  Mpe       "
-            << "  Lpe       "
-            << "  Mdisk     "
-            << "  Ldisk     "
-            << "  Mesc      "
-            << "  Lesc      "
+  std::cerr << "# time       "
+            << "  Mpe        "
+            << "  Lpe        "
+            << "  Mdisk      "
+            << "  Ldisk      "
+            << "  Mesc       "
+            << "  Lesc       "
             << "  Lrem\n";
 
   const fType LpeA = sqrt(Lpe(X) * Lpe(X) +
@@ -549,7 +576,8 @@ int main(int argc, char* argv[])
   const fType LremA = sqrt(Lrem(X) * Lrem(X) +
                            Lrem(Y) * Lrem(Y) +
                            Lrem(Z) * Lrem(Z));
-  std::cout << dumpTime << " "
+  std::cout << std::scientific
+            << dumpTime << " "
             << Mpe(0) << " "
             << LpeA << " "
             << Mdisk(0) << " "

@@ -537,9 +537,9 @@ fType timeStep()
                       << "\n";
             }
 
-          if (e < 1. && e > 0.7 &&
-              M > 0.9 * totMass &&
-              Torbit > maxOrbitTime)
+          if (e < 1. && M > 0.9 * totMass &&
+              (Torbit > maxOrbitTime || r > 2.* rMax)
+              )
             {
               PartManager.blacklisted[i] = true;
               curDiskRemovedMass += m(i);
@@ -750,9 +750,6 @@ void derivate()
 
       if (pos(i, Z) < 5. || pos(i, Z) > 295.)
         vel(i, Z) = 0;
-#endif
-#ifdef SPHLATCH_GRAVITY
-      eps(i) = 0.7 * h(i);
 #endif
     }
 
@@ -1158,7 +1155,7 @@ int main(int argc, char* argv[])
   PartManager.attributes["mincoredens"] = 5.0;
   PartManager.attributes["maxfreedens"] = 0.1;
   PartManager.attributes["maxorbittime"] = 432000.;
-  PartManager.attributes["maxradius"] = 2.e9;
+  PartManager.attributes["maxradius"] = 1.e10;
   PartManager.attributes["escapedmass"] = 0.0;
 #endif
 #ifdef SPHLATCH_ANEOS_TABLE
