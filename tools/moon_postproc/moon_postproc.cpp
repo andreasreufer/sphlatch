@@ -335,22 +335,33 @@ int main(int argc, char* argv[])
   const fType maxOrbitTime = PartManager.attributes["maxorbittime"];
   const fType rMax = PartManager.attributes["maxradius"];
 
-  valvectType Mdisk(1), Mpe(1), Mesc(1);
-  valvectType Ldisk(3), Lpe(3), Lrem(3), Lesc(3);
-  zerovalvectType zero(3);
+  valvectType MdiskIron(1), MdiskDun(1), Mpe(1), Mesc(1);
+  valvectType Ldisk(3), Lpe(3), Lrem(3), Lesc(3), Prem(3), Pesc(3);
+  zerovalvectType zero(3), zeroBins(noMassBins);
 
   Lesc = zero;
+  Lrem = zero;
+  
+  Pesc = zero;
+  Prem = zero;
+  
   Ldisk = zero;
   Lpe = zero;
-  Lrem = zero;
-  Mdisk(0) = 0.;
+
+  MdiskIron(0) = 0.;
+  MdiskDun(0) = 0.;
   Mpe(0) = 0.;
   Mesc(0) = 0.;
-
-  size_t noDiskParts = 0, noPlanParts = 0, noEscParts = 0;
+  
+  size_t noDiskIronParts = 0, noDiskDunParts = 0,
+         noPlanParts = 0, noEscParts = 0;
 
   matrixType LBins(noMassBins, 3);
-  valvectType MBins(noMassBins);
+
+  valvectType MProfIron(noMassBins);
+  MProfIron = zeroBins;
+  valvectType MProfDun(noMassBins);
+  MProfDun = zeroBins;
 
   for (size_t i = 0; i < noParts; i++)
     {
@@ -394,8 +405,12 @@ int main(int argc, char* argv[])
       const fType ly = m(i) * (z * vx - x * vz);
       const fType lz = m(i) * (x * vy - y * vx);
 
+      const fType px = m(i) * vx;
+      const fType py = m(i) * vy;
+      const fType pz = m(i) * vz;
+
       ///
-      /// specific energy, semi-major axis and orbital period
+      /// orbital energy, semi-major axis and orbital period
       ///
       const fType specE = (vivi / 2.) - (mu / r);
       const fType a = mu / (2. * specE);
@@ -406,26 +421,42 @@ int main(int argc, char* argv[])
                                        static_cast<long int>(noMassBins - 1)),
                                      static_cast<long int>(0));
 
+      ///
+      /// particle properties
+      ///
       const bool isEscaping = (e > 1.) && (r > Rroche);
       const bool isDisk = (e < 1.) && (r > Rroche);
       const bool isPlanet = not (isEscaping or isDisk);
+      const bool isIron = ( mat(i) == 5 );
 
       if (not isEscaping)
         {
           Lrem(X) += lx;
           Lrem(Y) += ly;
           Lrem(Z) += lz;
+          
+          Prem(X) += px;
+          Prem(Y) += py;
+          Prem(Z) += pz;
 
           LBins(curBin, X) += rlx;
           LBins(curBin, Y) += rly;
           LBins(curBin, Z) += rlz;
-          MBins(curBin) += m(i);
+          
+          if ( isIron )
+            MProfIron(curBin) += m(i);
+          else
+            MProfDun(curBin) += m(i);
         }
       else
         {
-          Lesc(X) += rlx;
-          Lesc(Y) += rly;
-          Lesc(Z) += rlz;
+          Lesc(X) += lx;
+          Lesc(Y) += ly;
+          Lesc(Z) += lz;
+
+          Pesc(X) += px;
+          Pesc(Y) += py;
+          Pesc(Z) += pz;
         }
 
       if (isEscaping)
@@ -436,19 +467,29 @@ int main(int argc, char* argv[])
 
       if (isDisk)
         {
-          Mdisk(0) += m(i);
           Ldisk(X) += rlx;
           Ldisk(Y) += rly;
           Ldisk(Z) += rlz;
-          noDiskParts++;
+  
+          if ( isIron )
+          {
+            MdiskIron(0) += m(i);
+            noDiskIronParts++;
+          }
+          else
+          {
+            MdiskDun(0) += m(i);
+            noDiskDunParts++;
+          }
         }
 
       if (isPlanet)
         {
-          Mpe(0) += m(i);
           Lpe(X) += rlx;
           Lpe(Y) += rly;
           Lpe(Z) += rlz;
+          
+          Mpe(0) += m(i);
           noPlanParts++;
         }
     }
@@ -458,20 +499,31 @@ int main(int argc, char* argv[])
 
   CommManager.sum(Lpe);
   IOManager.savePrimitive(Lpe, "Lpe", saveFile);
-
-  CommManager.sum(Mdisk);
-  IOManager.savePrimitive(Mdisk, "Mdisk", saveFile);
-
+  
   CommManager.sum(Ldisk);
   IOManager.savePrimitive(Ldisk, "Ldisk", saveFile);
+
+  CommManager.sum(MdiskDun);
+  IOManager.savePrimitive(MdiskDun, "MdiskDun", saveFile);
+  
+  CommManager.sum(MdiskIron);
+  IOManager.savePrimitive(MdiskIron, "MdiskIron", saveFile);
+ 
+  valvectType Mdisk = MdiskIron + MdiskDun;
+  IOManager.savePrimitive(Mdisk, "Mdisk", saveFile);
 
   CommManager.sum(LBins);
   IOManager.savePrimitive(LBins, "L", saveFile);
 
   CommManager.sum(Lrem);
   IOManager.savePrimitive(Lrem, "Lrem", saveFile);
+  
+  CommManager.sum(Prem);
+  IOManager.savePrimitive(Prem, "Prem", saveFile);
 
-
+  ///
+  /// now add escapees
+  ///
   std::fstream escFile;
   escFile.open(escapeeFile.c_str(), std::ios::in);
 
@@ -520,6 +572,10 @@ int main(int argc, char* argv[])
       Lesc(X) += parM * (y * vz + z * vy);
       Lesc(Y) += parM * (z * vx + x * vz);
       Lesc(Z) += parM * (x * vy + y * vx);
+
+      Pesc(X) += parM * vx;
+      Pesc(Y) += parM * vy;
+      Pesc(Z) += parM * vz;
           
       noEscParts++;
 
@@ -531,29 +587,50 @@ int main(int argc, char* argv[])
   CommManager.sum(Mesc);
   IOManager.savePrimitive(Mesc, "Mesc", saveFile);
 
-  CommManager.sum(Lpe);
+  CommManager.sum(Lesc);
   IOManager.savePrimitive(Lesc, "Lesc", saveFile);
+  
+  valvectType Ltot = Lesc + Lrem;
+  IOManager.savePrimitive(Ltot, "Ltot", saveFile);
+  
+  CommManager.sum(Pesc);
+  IOManager.savePrimitive(Pesc, "Pesc", saveFile);
+  
+  valvectType Ptot = Pesc + Prem;
+  IOManager.savePrimitive(Ptot, "Ptot", saveFile);
 
-  std::cerr << "Mdisk:   " << Mdisk(0) / Mmoon
-            << " mlun  (" << noDiskParts << " particles)\n";
+  std::cerr << "Mdisk:   " << (MdiskDun(0) + MdiskIron(0))/ Mmoon
+            << " mlun  (" << noDiskIronParts + noDiskDunParts 
+            << " particles)\n";
+  std::cerr << " disk iron faction    "
+            << 100.* MdiskIron(0) / ( MdiskDun(0) + MdiskIron(0) )
+            << " % (" << noDiskIronParts << " particles)\n";
   std::cerr << "Mesc:    " << Mesc(0) / Mmoon
             << " mlun (" << noEscParts << " particles)\n";
   std::cerr << "Mplan:   " << Mpe(0) / Mearth
             << " me (" << noPlanParts << " particles)\n";
+  std::cerr << "Total no. of particles: "
+            << noPlanParts + noDiskIronParts
+               + noDiskDunParts + noEscParts << "\n";
 
   ///
   /// store mass profile
   ///
-  IOManager.savePrimitive(MBins, "m", saveFile);
+  IOManager.savePrimitive(MProfIron, "Miron", saveFile);
+  IOManager.savePrimitive(MProfDun, "Mdun", saveFile);
+
+  valvectType MProf = MProfDun + MProfIron;
+  IOManager.savePrimitive(MProf, "M", saveFile);
+
 
   ///
   /// cumulative bins
   ///
   for (size_t i = 1; i < noMassBins; i++)
     {
-      MBins(i) += MBins(i - 1);
+      MProf(i) += MProf(i - 1);
     }
-  IOManager.savePrimitive(MBins, "mcum", saveFile);
+  IOManager.savePrimitive(MProf, "Mcum", saveFile);
 
   std::cerr << "# time       "
             << "  Mpe        "
@@ -562,29 +639,41 @@ int main(int argc, char* argv[])
             << "  Ldisk      "
             << "  Mesc       "
             << "  Lesc       "
-            << "  Lrem\n";
+            << "  Lrem       "
+            << "  Ltot       "
+            << "DiskIronFrac\n";
 
   const fType LpeA = sqrt(Lpe(X) * Lpe(X) +
                           Lpe(Y) * Lpe(Y) +
                           Lpe(Z) * Lpe(Z));
+
   const fType LdiskA = sqrt(Ldisk(X) * Ldisk(X) +
                             Ldisk(Y) * Ldisk(Y) +
                             Ldisk(Z) * Ldisk(Z));
-  const fType LescA = sqrt(Lesc(X) * Lesc(X) +
-                           Lesc(Y) * Lesc(Y) +
-                           Lesc(Z) * Lesc(Z));
-  const fType LremA = sqrt(Lrem(X) * Lrem(X) +
-                           Lrem(Y) * Lrem(Y) +
-                           Lrem(Z) * Lrem(Z));
+  
+  const fType LtotA = sqrt( Ltot(X) * Ltot(X) +
+                            Ltot(Y) * Ltot(Y) +
+                            Ltot(Z) * Ltot(Z));
+
+  const fType LescA = sqrt( Lesc(X) * Lesc(X) +
+                            Lesc(Y) * Lesc(Y) +
+                            Lesc(Z) * Lesc(Z));
+
+  const fType LremA = sqrt( Lrem(X) * Lrem(X) +
+                            Lrem(Y) * Lrem(Y) +
+                            Lrem(Z) * Lrem(Z));
+
   std::cout << std::scientific
             << dumpTime << " "
             << Mpe(0) << " "
             << LpeA << " "
-            << Mdisk(0) << " "
+            << MdiskDun(0) + MdiskIron(0) << " "
             << LdiskA << " "
             << Mesc(0) << " "
             << LescA << " "
-            << LremA << "\n";
+            << LremA << " "
+            << LtotA << " "
+            << MdiskIron(0) / ( MdiskDun(0) + MdiskIron(0) ) << "\n";
 
   MPI::Finalize();
   return EXIT_SUCCESS;

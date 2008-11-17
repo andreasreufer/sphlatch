@@ -27,7 +27,7 @@ MAXR="7.e9"  # minimal radius to proto-earth for removal of part.
 # scale of scatter plots and max. binning radius for mass profiles
 FULLSCALE="[-10.0e9,4.0e9,-5.0e9,5.0e9]"
 ZOOMSCALE="[-2.0e9,2.0e9,-1.5e9,1.5e9]"
-PPMAXRAD="5.e9"
+PPMAXRAD="7.e9"
 
 # times
 SAVETIME=1e2

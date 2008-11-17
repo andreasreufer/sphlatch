@@ -57,7 +57,7 @@ cp -Rpv src/$BINARY .
 # prepare postproc script
 mkdir gifs_full gifs_zoom postproc
 cp -Rpv $TMPLDIR/_postproc.sh postproc.sh
-echo "# time         Mpe          Lpe          Mdisk        Ldisk        Mesc         Lesc         Lrem" >simSummary
+echo "# time         Mpe          Lpe          Mdisk        Ldisk        Mesc         Lesc         Lrem         Ltot       DiskIronFrac" >simSummary
 
 echo 
 echo " start simulation with:"
