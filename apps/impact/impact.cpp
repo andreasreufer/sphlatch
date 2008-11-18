@@ -751,6 +751,9 @@ void derivate()
       if (pos(i, Z) < 5. || pos(i, Z) > 295.)
         vel(i, Z) = 0;
 #endif
+#ifdef SPHLATCH_ADAPTGRAVSMOOTH
+      eps(i) = 0.7 * h(i);
+#endif
     }
 
 #ifdef SPHLATCH_GRAVITY
@@ -867,8 +870,10 @@ void derivate()
     {
       EOS(k, p(k), cs(k));
 
-      //if (p(k) < 0.)
-      //  p(k) = 0.;
+#ifdef SPHLATCH_NONEGPRESS
+      if (p(k) < 0.)
+        p(k) = 0.;
+#endif
     }
   Logger << "calculated pressure";
   CommManager.sendGhosts(p);
@@ -1304,6 +1309,12 @@ int main(int argc, char* argv[])
 #endif
 #ifdef SPHLATCH_REMOVEESCAPING
                 << "     removal of particles on escaping orbits\n"
+#endif
+#ifdef SPHLATCH_NONEGPRESS
+                << "     no negative pressure\n"
+#endif
+#ifdef SPHLATCH_ADAPTGRAVSMOOTH
+                << "     grav. smoothing coupled to h\n";
 #endif
                 << "     basic SPH\n";
   Logger.flushStream();
