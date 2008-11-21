@@ -193,6 +193,11 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
 
       _P = (*presTables[_mat])(curLogU, curLogRho);
 
+#ifdef SPHLATCH_NONEGPRESS
+      if (_P < 0.)
+        _P = 0.;
+#endif
+
       ///
       /// the first table query gives us the indices
       /// for the other table queries
@@ -337,6 +342,10 @@ void getSpecEnergy(const valueType _rho, const valueType _T,
          &cs, &kpa, &mat, &fme, &fma);
 
   _p = static_cast<valueType>(p);
+#ifdef SPHLATCH_NONEGPRESS
+  if (_p < 0.)
+    _p = 0.;
+#endif
   _cs = static_cast<valueType>(cs);
   _u = static_cast<valueType>(u);
 };

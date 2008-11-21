@@ -66,7 +66,8 @@ BHtree(valueType _thetaMAC,
   pos(PartManager.pos),
   acc(PartManager.acc),
   eps(PartManager.eps),
-  m(PartManager.m)
+  m(PartManager.m),
+  h(PartManager.h)
 {
   if (_thetaMAC < 0.)
     {
@@ -173,7 +174,7 @@ bitsetType localIsFilled, remoteIsFilled;
 valvectType cellVect;
 
 matrixRefType pos, acc;
-valvectRefType eps, m;
+valvectRefType eps, m, h;
 
 std::vector<nodePtrT> partProxies;
 size_t noLocParts;
@@ -928,41 +929,69 @@ void calcGravityRecursor(void)
 ///
 void calcGravParticle()
 {
-  const valueType partGravPartnerX = static_cast<partPtrT>(curNodePtr)->xPos;
-  const valueType partGravPartnerY = static_cast<partPtrT>(curNodePtr)->yPos;
-  const valueType partGravPartnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
-  const valueType partGravPartnerM = static_cast<partPtrT>(curNodePtr)->mass;
+  const valueType partnerX = static_cast<partPtrT>(curNodePtr)->xPos;
+  const valueType partnerY = static_cast<partPtrT>(curNodePtr)->yPos;
+  const valueType partnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
+  const valueType partnerM = static_cast<partPtrT>(curNodePtr)->mass;
 
-  const valueType partPartDistPow2 = (partGravPartnerX - curGravParticleX) *
-                                     (partGravPartnerX - curGravParticleX) +
-                                     (partGravPartnerY - curGravParticleY) *
-                                     (partGravPartnerY - curGravParticleY) +
-                                     (partGravPartnerZ - curGravParticleZ) *
-                                     (partGravPartnerZ - curGravParticleZ);
+  const valueType partnerR2 = (partnerX - curGravParticleX) *
+                              (partnerX - curGravParticleX) +
+                              (partnerY - curGravParticleY) *
+                              (partnerY - curGravParticleY) +
+                              (partnerZ - curGravParticleZ) *
+                              (partnerZ - curGravParticleZ);
 
-  /// \todo: include spline softening
-#ifdef SPHLATCH_SINGLEPREC
-  const valueType cellPartDistPow3 =
-    (partPartDistPow2 + epsilonSquare) *
-    sqrtf(partPartDistPow2 + epsilonSquare);
+#ifdef SPHLATCH_GRAVSPLINESMOOTH
+  const identType partnerIdx = curNodePtr->ident;
+  const valueType partnerH = h(partnerIdx);
+  const valueType partnerMOSmoR3 = partnerM *
+                                   splineOSmoR3(sqrt(partnerR2), partnerH);
 #else
-  const valueType cellPartDistPow3 =
-    (partPartDistPow2 + epsilonSquare) *
-    sqrt(partPartDistPow2 + epsilonSquare);
+  const valueType partnerMOSmoR3 = partnerM /
+                                   ((partnerR2 + epsilonSquare) *
+                                    sqrt(partnerR2 + epsilonSquare));
 #endif
-  //const valueType cellPartDistPow3 = partPartDistPow2 + epsilonSquare;
 
-  // todo: use cellPartDistPow3Inv
-  curGravParticleAX -= partGravPartnerM *
-                       (curGravParticleX - partGravPartnerX) /
-                       cellPartDistPow3;
-  curGravParticleAY -= partGravPartnerM *
-                       (curGravParticleY - partGravPartnerY) /
-                       cellPartDistPow3;
-  curGravParticleAZ -= partGravPartnerM *
-                       (curGravParticleZ - partGravPartnerZ) /
-                       cellPartDistPow3;
+  curGravParticleAX -= partnerMOSmoR3 * (curGravParticleX - partnerX);
+  curGravParticleAY -= partnerMOSmoR3 * (curGravParticleY - partnerY);
+  curGravParticleAZ -= partnerMOSmoR3 * (curGravParticleZ - partnerZ);
+};
+
+#ifdef SPHLATCH_GRAVSPLINESMOOTH
+///
+/// gravitational spline softening for B Spline kernel from
+/// Hernquist & Katz 1989
+///
+valueType splineOSmoR3(const valueType _r, const valueType _h)
+{
+  const valueType u = _r / _h;
+  const valueType r3 = _r * _r * _r;
+
+  if (u >= 2.)
+    {
+      return(1. / r3);
+    }
+  else
+  if (u > 1.)
+    {
+      return (1. / r3) * (
+               -(1. / 15.)
+               + (8. / 3.) * u * u * u
+               - 3. * u * u * u * u
+               + (6. / 5.) * u * u * u * u * u
+               - (1. / 6.) * u * u * u * u * u * u
+               );
+    }
+  else
+    {
+      return (1. / r3) * (
+               +(4. / 3.)
+               - (6. / 5.) * u * u
+               + (1. / 2.) * u * u * u
+               );
+    }
 }
+#endif
 // end of calcGravity() stuff
 
 // neighbour search stuff
@@ -971,7 +1000,7 @@ size_t noNeighbours;
 // cellPartDist already definded (great, feels like FORTRAN :-)
 valueType curNeighParticleX, curNeighParticleY, curNeighParticleZ,
           searchRadius, searchRadPow2, //cellCornerDist, cellPartDistPow2,
-          partPartDistPow2;
+          partnerR2;
 
 public:
 ///
@@ -1032,14 +1061,14 @@ void findNeighbourRecursor()
 {
   if (curNodePtr->isParticle)
     {
-      partPartDistPow2 =
+      partnerR2 =
         (static_cast<partPtrT>(curNodePtr)->xPos - curNeighParticleX) *
         (static_cast<partPtrT>(curNodePtr)->xPos - curNeighParticleX) +
         (static_cast<partPtrT>(curNodePtr)->yPos - curNeighParticleY) *
         (static_cast<partPtrT>(curNodePtr)->yPos - curNeighParticleY) +
         (static_cast<partPtrT>(curNodePtr)->zPos - curNeighParticleZ) *
         (static_cast<partPtrT>(curNodePtr)->zPos - curNeighParticleZ);
-      if (partPartDistPow2 < searchRadPow2)
+      if (partnerR2 < searchRadPow2)
         {
           ///
           /// add the particle to the neighbour list
@@ -1053,7 +1082,7 @@ void findNeighbourRecursor()
                                 neighDistList);
 #endif
           neighbourList[noNeighbours] = curNodePtr->ident;
-          neighDistList(noNeighbours) = sqrt(partPartDistPow2);
+          neighDistList(noNeighbours) = sqrt(partnerR2);
         }
     }
   else
@@ -1524,5 +1553,4 @@ void emptyRecursor()
 // end of empty() stuff
 };
 };
-
 #endif

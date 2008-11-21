@@ -869,11 +869,6 @@ void derivate()
   for (size_t k = 0; k < noParts; k++)
     {
       EOS(k, p(k), cs(k));
-
-#ifdef SPHLATCH_NONEGPRESS
-      if (p(k) < 0.)
-        p(k) = 0.;
-#endif
     }
   Logger << "calculated pressure";
   CommManager.sendGhosts(p);

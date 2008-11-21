@@ -57,6 +57,7 @@ simple_sph_GHUT__:
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_TILLOTSON \
+				      -DSPHLATCH_GRAVSPLINESMOOTH \
 				      -o simple_sph_GHUT__ simple_sph.cpp
 
 simple_sph__HUT__:
