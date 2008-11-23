@@ -4,18 +4,19 @@ impact_GHUA__: libaneos
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
-				      -DSPHLATCH_ANEOS_TABLE \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
 				      -DSPHLATCH_REMOVEESCAPING \
-				      -DSPHLATCH_GRAVSPLINESMOOTH \
 				      -DSPHLATCH_NONEGPRESS \
+				      -DSPHLATCH_GRAVSPLINESMOOTH \
 				      -o impact_GHUA__ impact.cpp
 impact_GHUT__:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_TILLOTSON \

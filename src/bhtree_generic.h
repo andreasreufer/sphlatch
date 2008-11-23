@@ -941,23 +941,27 @@ void calcGravParticle()
                               (partnerZ - curGravParticleZ) *
                               (partnerZ - curGravParticleZ);
 
-#ifdef SPHLATCH_GRAVSPLINESMOOTH
+#ifdef SPHLATCH_GRAVITY_SPLINESMOOTHING
   const identType partnerIdx = curNodePtr->ident;
   const valueType partnerH = h(partnerIdx);
   const valueType partnerMOSmoR3 = partnerM *
                                    splineOSmoR3(sqrt(partnerR2), partnerH);
-#else
+#endif
+#ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
   const valueType partnerMOSmoR3 = partnerM /
                                    ((partnerR2 + epsilonSquare) *
                                     sqrt(partnerR2 + epsilonSquare));
+#else
+  const valueType partnerMOSmoR3 = partnerM / (partnerR2 * sqrt(partnerR2));
 #endif
+
 
   curGravParticleAX -= partnerMOSmoR3 * (curGravParticleX - partnerX);
   curGravParticleAY -= partnerMOSmoR3 * (curGravParticleY - partnerY);
   curGravParticleAZ -= partnerMOSmoR3 * (curGravParticleZ - partnerZ);
 };
 
-#ifdef SPHLATCH_GRAVSPLINESMOOTH
+#ifdef SPHLATCH_GRAVITY_SPLINESMOOTHING
 ///
 /// gravitational spline softening for B Spline kernel from
 /// Hernquist & Katz 1989
@@ -965,15 +969,16 @@ void calcGravParticle()
 valueType splineOSmoR3(const valueType _r, const valueType _h)
 {
   const valueType u = _r / _h;
-  const valueType r3 = _r * _r * _r;
 
   if (u >= 2.)
     {
+      const valueType r3 = _r * _r * _r;
       return(1. / r3);
     }
   else
   if (u > 1.)
     {
+      const valueType r3 = _r * _r * _r;
       return (1. / r3) * (
                -(1. / 15.)
                + (8. / 3.) * u * u * u
@@ -984,7 +989,8 @@ valueType splineOSmoR3(const valueType _r, const valueType _h)
     }
   else
     {
-      return (1. / r3) * (
+      const valueType h3 = _h * _h * _h;
+      return (1. / h3) * (
                +(4. / 3.)
                - (6. / 5.) * u * u
                + (1. / 2.) * u * u * u

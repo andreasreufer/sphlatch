@@ -26,12 +26,14 @@ simple_sph_G_____:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -o simple_sph_G_____ simple_sph.cpp
 
 simple_sph_GH____:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -o simple_sph_GH____ simple_sph.cpp
 
@@ -39,6 +41,7 @@ simple_sph_GHU___:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -o simple_sph_GHU___ simple_sph.cpp
@@ -54,10 +57,11 @@ simple_sph_GHUT__:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_TILLOTSON \
-				      -DSPHLATCH_GRAVSPLINESMOOTH \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -o simple_sph_GHUT__ simple_sph.cpp
 
 simple_sph__HUT__:
@@ -72,6 +76,7 @@ simple_sph_GHUTR_:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_TILLOTSON \
@@ -91,6 +96,7 @@ simple_sph_GHUT_F:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_TILLOTSON \
@@ -101,6 +107,7 @@ simple_sph_GHUTRF:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_TILLOTSON \
@@ -112,6 +119,7 @@ simple_sph_GHUA__: libaneos
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
@@ -131,6 +139,7 @@ simple_sph_GHUA_F: libaneos
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \

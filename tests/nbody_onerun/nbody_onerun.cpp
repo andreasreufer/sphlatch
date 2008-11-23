@@ -78,8 +78,6 @@ typedef sphlatch::LogManager log_type;
 using namespace sphlatch::vectindices;
 using namespace boost::assign;
 
-
-
 int main(int argc, char* argv[])
 {
   MPI::Init(argc, argv);
@@ -124,7 +122,6 @@ int main(int argc, char* argv[])
   CommManager.exchangeQuants.vects += &pos;
   CommManager.exchangeQuants.scalars += &m, &eps;
   CommManager.exchangeQuants.ints += &id;
-
 
   ///
   /// exchange particles
