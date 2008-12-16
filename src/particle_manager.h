@@ -44,6 +44,8 @@ void useGravity(void);
 void useEccentricity(void);
 void useIntegratedRho(void);
 
+void useCost(void);
+
 void useAVMonaghan(void);
 void useAVBalsara(void);
 void useAVHernquist(void);
@@ -130,7 +132,8 @@ valvectType m,              /// mass
             epsmin,         /// minimal strain
             acoef,          /// crack growth timescale
             mweib,          /// Weibull m exponent
-            young;          /// Youngs modulus
+            young,          /// Youngs modulus
+            cost;           /// relative computational cost
 
 ///
 /// integers
@@ -388,6 +391,14 @@ void ParticleManager::useTemperature()
 void ParticleManager::useIntegratedRho()
 {
   usedScalars[ "drhodt" ] = &drhodt;
+}
+
+///
+/// the cost variable
+///
+void ParticleManager::useCost()
+{
+  usedScalars[ "cost" ] = &cost;
 }
 
 ///

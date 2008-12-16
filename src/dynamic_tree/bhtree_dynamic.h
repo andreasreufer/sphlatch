@@ -40,7 +40,9 @@ class BHTree {
     typedef costzoneCellNode czllT;
     typedef costzoneCellNode* czllPtrT;
 
-    typedef std::list<czllPtrT> czllPtrlistT;
+    typedef std::list<czllPtrT> czllPtrListT;
+
+    typedef std::vector<partPtrT> partPtrVectT;
     
     BHTree();
     ~BHTree();
@@ -57,12 +59,27 @@ class BHTree {
     ChunkAllocator<cellT, 1024> cellAllocator;
     ChunkAllocator<czllT,  256> czllAllocator;
     
-    czllPtrlistT CZbottomCells;
+    czllPtrListT CZbottomCells;
+
+    partPtrVectT partProxies;
 };
 
 BHTree::BHTree()
 {
+  
+
+  ///
+  /// allocate root cell and set cell
+  /// size, add root cell to CZbottom
+  /// cells list
+  ///
   rootPtr = czllAllocator.pop();
+
+  ///
+  /// resize particle proxy vector
+  ///
+
+  partProxies.resize(16);
 };
 
 BHTree::~BHTree()

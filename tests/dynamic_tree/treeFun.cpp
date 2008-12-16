@@ -6,7 +6,7 @@
 #include "bhtree_dynamic.h"
 #include "bhtree_worker.h"
 #include "bhtree_worker_grav.h"
-//#include "bhtree_part_inserter.h"
+#include "bhtree_part_inserter.h"
 //#include "bhtree_cz_builder.h"
 #include "bhtree_worker_treedump.h"
 

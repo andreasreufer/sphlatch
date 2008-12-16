@@ -27,7 +27,7 @@ public:
    typedef BHTree::cellPtrT       cellPtrT;
    typedef BHTree::czllPtrT       czllPtrT;
 
-   typedef BHTree::czllPtrlistT   czllPtrlistT;
+   typedef BHTree::czllPtrListT   czllPtrListT;
 
    BHTreeWorker(const BHTreeWorker& _worker);
    BHTreeWorker(treePtrT _treePtr);
@@ -51,7 +51,7 @@ public:
    partManagerT& PartManager;
 
    matrixRefType  pos, acc;
-   valvectRefType eps, m, h;
+   valvectRefType eps, m, h, cost;
 
    void setTree(treePtrT _treePtr);
 };
@@ -67,7 +67,8 @@ BHTreeWorker::BHTreeWorker(const BHTreeWorker& _worker) :
    acc(PartManager.acc),
    eps(PartManager.eps),
    m(PartManager.m),
-   h(PartManager.h)
+   h(PartManager.h),
+   cost(PartManager.cost)
 {
    setTree(_worker.treePtr);
 }
@@ -82,14 +83,14 @@ BHTreeWorker::BHTreeWorker(treePtrT _treePtr) :
    acc(PartManager.acc),
    eps(PartManager.eps),
    m(PartManager.m),
-   h(PartManager.h)
+   h(PartManager.h),
+   cost(PartManager.cost)
 {
    setTree(_treePtr);
 }
 
 BHTreeWorker::~BHTreeWorker()
-{
-}
+{ }
 
 void BHTreeWorker::setTree(treePtrT _treePtr)
 {
