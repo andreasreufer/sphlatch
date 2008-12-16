@@ -34,27 +34,27 @@ namespace sphlatch {
 namespace blas = boost::numeric::ublas;
 
 ///
-/// valueType: should be a float 
+/// fType: should be a float 
 ///
 #ifdef SPHLATCH_SINGLEPREC
-typedef float valueType;
+typedef float fType;
 #else
-typedef double valueType;
+typedef double fType;
 #endif
-typedef valueType*              valuePtrType;
-typedef valueType&              valueRefType;
-typedef const valueType&        valueCRefType;
+typedef fType*              fPtrType;
+typedef fType&              fRefType;
+typedef const fType&        valueCRefType;
 
 ///
-/// a valueType matrix
+/// a fType matrix
 /// please note that the communication manager
 /// assumes this type to have continuous storage
 ///
-typedef blas::matrix<valueType>        matrixType;
+typedef blas::matrix<fType>        matrixType;
 typedef matrixType&                    matrixRefType;
 typedef matrixType*                    matrixPtrType;
 
-typedef blas::zero_matrix<valueType>   zeromatrixType;
+typedef blas::zero_matrix<fType>   zeromatrixType;
 
 ///
 /// a matrix row
@@ -94,13 +94,13 @@ typedef matrixColumnType& quantColumnRefType;
 typedef matrixColumnType* quantColumnPtrType;
 
 ///
-/// a valueType vector
+/// a fType vector
 ///
-typedef blas::vector<valueType> valvectType;
-typedef blas::vector<valueType>& valvectRefType;
-typedef blas::vector<valueType>* valvectPtrType;
+typedef blas::vector<fType> valvectType;
+typedef blas::vector<fType>& valvectRefType;
+typedef blas::vector<fType>* valvectPtrType;
 
-typedef blas::zero_vector<valueType> zerovalvectType;
+typedef blas::zero_vector<fType> zerovalvectType;
 
 
 typedef blas::vector_range<valvectType> valvectRangeType;
@@ -160,7 +160,7 @@ typedef boost::dynamic_bitset<bitsetBlockType>& bitsetRefType;
 ///
 /// attribute map
 ///
-typedef std::map< std::string, valueType > attrMapType;
+typedef std::map< std::string, fType > attrMapType;
 typedef attrMapType& attrMapRefType;
 typedef attrMapType* attrMapPtrType;
 

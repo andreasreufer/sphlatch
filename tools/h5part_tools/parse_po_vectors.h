@@ -3,7 +3,7 @@
 #include "typedefs.h"
 
 typedef sphlatch::valvectType valvectType;
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 
 valvectType vectOptParse(std::string str) {
 	valvectType vect(3);
@@ -23,7 +23,7 @@ valvectType vectOptParse(std::string str) {
 
 	if ( str.substr(0,1) == "[" ) {
 		str.erase(0,1);
-		vect(0) = boost::lexical_cast<valueType>(
+		vect(0) = boost::lexical_cast<fType>(
                           str.substr(0, str.find(",") ));
 		str.erase(0, str.find(",") + 1);
 	} else {
@@ -31,10 +31,10 @@ valvectType vectOptParse(std::string str) {
 		exit( EXIT_FAILURE );
 	}
 	
-	vect(1) = boost::lexical_cast<valueType>(str.substr(0, str.find(",") ));
+	vect(1) = boost::lexical_cast<fType>(str.substr(0, str.find(",") ));
 	str.erase(0, str.find(",") + 1);
 
-	vect(2) = boost::lexical_cast<valueType>(str.substr(0, str.find("]") ));
+	vect(2) = boost::lexical_cast<fType>(str.substr(0, str.find("]") ));
 	str.erase(0, str.find("]") + 1);
 
 	return vect;

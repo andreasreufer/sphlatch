@@ -77,8 +77,8 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
-typedef sphlatch::valueRefType valueRefType;
+typedef sphlatch::fType fType;
+typedef sphlatch::fRefType fRefType;
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::valvectRefType valvectRefType;
 
@@ -199,9 +199,9 @@ int main(int argc, char* argv[])
       id(i) = noGenParts * myDomain + i + 1;
       m(i) = noGenParts * myDomain + i + 1;
 
-      pos(i, X) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
-      pos(i, Y) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
-      pos(i, Z) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
+      pos(i, X) = static_cast<sphlatch::fType>(rand()) / RAND_MAX;
+      pos(i, Y) = static_cast<sphlatch::fType>(rand()) / RAND_MAX;
+      pos(i, Z) = static_cast<sphlatch::fType>(rand()) / RAND_MAX;
 
     }
 
@@ -248,11 +248,11 @@ int main(int argc, char* argv[])
   /*for (size_t i = 0; i < noParts; i++)
     {
       pos(i, X) += 0.05 * (
-        static_cast<sphlatch::valueType>(rand()) / RAND_MAX - 0.5);
+        static_cast<sphlatch::fType>(rand()) / RAND_MAX - 0.5);
       pos(i, Y) += 0.05 * (
-        static_cast<sphlatch::valueType>(rand()) / RAND_MAX - 0.5);
+        static_cast<sphlatch::fType>(rand()) / RAND_MAX - 0.5);
       pos(i, Z) += 0.05 * (
-        static_cast<sphlatch::valueType>(rand()) / RAND_MAX - 0.5);
+        static_cast<sphlatch::fType>(rand()) / RAND_MAX - 0.5);
 
       ///
       /// this ensures the particles to stay in a periodic boundary box

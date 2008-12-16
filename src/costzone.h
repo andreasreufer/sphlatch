@@ -75,8 +75,8 @@ domainPartsIndexRefType createDomainGhostIndex(void);
 static domainPartsIndexType domainPartsIndex;
 static domainPartsIndexType domainGhostIndex;
 
-valueType getSidelength();
-valueType getAtomicLength();
+fType getSidelength();
+fType getAtomicLength();
 valvectType getCenter();
 size_t getDepth();
 size_t getNoGhosts();
@@ -93,7 +93,7 @@ private:
 static domainPartsIndexType costzoneCells;
 static countsVectType partsPerCell;
 static countsVectType domainMap;
-valueType xCenter, yCenter, zCenter, sidelength;
+fType xCenter, yCenter, zCenter, sidelength;
 size_t depth, noCells1D, noCells2D, noCells3D, noGhosts;
 size_t myFirstWalkIndex, myLastWalkIndex;
 };
@@ -457,13 +457,13 @@ void CostZone::centerOfTheUniverse(void)
   bitsetRefType blk(PartManager.blacklisted);
   const size_t noParts = PartManager.getNoLocalParts();
 
-  valueType xMin = std::numeric_limits<valueType>::max();
-  valueType yMin = std::numeric_limits<valueType>::max();
-  valueType zMin = std::numeric_limits<valueType>::max();
+  fType xMin = std::numeric_limits<fType>::max();
+  fType yMin = std::numeric_limits<fType>::max();
+  fType zMin = std::numeric_limits<fType>::max();
 
-  valueType xMax = std::numeric_limits<valueType>::min();
-  valueType yMax = std::numeric_limits<valueType>::min();
-  valueType zMax = std::numeric_limits<valueType>::min();
+  fType xMax = std::numeric_limits<fType>::min();
+  fType yMax = std::numeric_limits<fType>::min();
+  fType zMax = std::numeric_limits<fType>::min();
 
   for (size_t i = 0; i < noParts; i++)
     {
@@ -532,13 +532,13 @@ void CostZone::fillCostzoneCells()
   ///
   /// define the position corresponding to index 0
   ///
-  const valueType xMin = xCenter - 0.5 * sidelength;
-  const valueType yMin = yCenter - 0.5 * sidelength;
-  const valueType zMin = zCenter - 0.5 * sidelength;
+  const fType xMin = xCenter - 0.5 * sidelength;
+  const fType yMin = yCenter - 0.5 * sidelength;
+  const fType zMin = zCenter - 0.5 * sidelength;
   ///
   /// this factor translates distance to cell index
   ///
-  const valueType lengthToIndex = static_cast<valueType>(noCells1D) / sidelength;
+  const fType lengthToIndex = static_cast<fType>(noCells1D) / sidelength;
 
   ///
   /// put the local particles in the corresponding costzone cells
@@ -581,14 +581,14 @@ valvectType CostZone::getCenter(void)
   return retvect;
 }
 
-valueType CostZone::getSidelength(void)
+fType CostZone::getSidelength(void)
 {
   return sidelength;
 }
 
-valueType CostZone::getAtomicLength(void)
+fType CostZone::getAtomicLength(void)
 {
-  return (sidelength / static_cast<valueType>(noCells1D));
+  return (sidelength / static_cast<fType>(noCells1D));
 }
 
 size_t CostZone::getDepth(void)

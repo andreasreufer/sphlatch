@@ -31,13 +31,13 @@ class CDATwriter
 public:
   void open( std::string _filename,
              std::string _title,
-             valueType _time,
+             fType _time,
              size_t _noParts,
              std::vector<std::string> _varNames,
              bool _dblPrec);
   void close();
 
-  void write(size_t _part, size_t _var, valueType _val);
+  void write(size_t _part, size_t _var, fType _val);
 
   CDATwriter();
   ~CDATwriter();
@@ -89,7 +89,7 @@ CDATwriter::~CDATwriter()
 
 void CDATwriter::open( std::string _filename,
                        std::string _title,
-                       valueType _time,
+                       fType _time,
                        size_t _noParts,
                        std::vector<std::string> _varNames,
                        bool _dblPrec)
@@ -141,7 +141,7 @@ void CDATwriter::close()
 }
 
 
-void CDATwriter::write(size_t _part, size_t _var, valueType _value)
+void CDATwriter::write(size_t _part, size_t _var, fType _value)
 {
   const size_t curOffset = ( _part*noVars + _var )*buffsize; 
   curPos = startXDRpos;

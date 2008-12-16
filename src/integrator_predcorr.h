@@ -40,13 +40,13 @@ virtual void bootstrap() = 0;
 /// prediction step:
 ///  x_p = x + 0.5*( 3*v_0 + - v_-1 )*dt
 ///
-virtual void predict(const valueType& _dt) = 0;
+virtual void predict(const fType& _dt) = 0;
 
 ///
 /// correction step:
 ///  x_1 = x_0 + 0.5(  v_p + v_0 )*dt
 ///
-virtual void correct(const valueType& _dt) = 0;
+virtual void correct(const fType& _dt) = 0;
 };
 
 ///
@@ -91,7 +91,7 @@ void bootstrap()
   ov = v;
 }
 
-void predict(const valueType& _dt)
+void predict(const fType& _dt)
 {
   valvectRefType  ox(oVar);
   valvectRangeType x(*var,  rangeType(0, ox.size()));
@@ -109,7 +109,7 @@ void predict(const valueType& _dt)
   ov.swap(v);
 }
 
-void correct(const valueType& _dt)
+void correct(const fType& _dt)
 {
   valvectRefType  ox(oVar);
   valvectRangeType x(*var,  rangeType(0, ox.size()));
@@ -180,7 +180,7 @@ void bootstrap()
   ov = v;
 }
 
-void predict(const valueType& _dt)
+void predict(const fType& _dt)
 {
   matrixRefType  ox(oVar);
   matrixRangeType x(*var,  rangeType(0, ox.size1()), rangeType(0, var->size2()));
@@ -207,7 +207,7 @@ void predict(const valueType& _dt)
   oa.swap(a);
 }
 
-void correct(const valueType& _dt)
+void correct(const fType& _dt)
 {
   matrixRefType  ox(oVar);
   matrixRangeType x(*var,  rangeType(0, ox.size1()), rangeType(0, var->size2()));
@@ -234,18 +234,18 @@ class PredCorrMetaIntegrator : public GenericMetaIntegrator
 private:
 typedef std::list<GenericPredCorr*> integratorsListType;
 typedef void (*voidVoidFuncPtr)(void);
-typedef valueType (*valueTypeVoidFuncPtr)(void);
+typedef fType (*fTypeVoidFuncPtr)(void);
 
 integratorsListType::iterator integItr, integEnd;
 voidVoidFuncPtr derivFunc;
-valueTypeVoidFuncPtr timingFunc;
+fTypeVoidFuncPtr timingFunc;
 
 public:
 ///
 /// instantate the metaIntegrator with a
 /// function pointer to the derivation function
 ///
-PredCorrMetaIntegrator(void(*_deriv)(void), valueType(*_timing)(void))
+PredCorrMetaIntegrator(void(*_deriv)(void), fType(*_timing)(void))
 {
   derivFunc = _deriv;
   timingFunc = _timing;
@@ -290,7 +290,7 @@ void integrate(void)
   derivFunc();
 
   /// timestepping
-  const valueType dt = timingFunc();
+  const fType dt = timingFunc();
 
   /// predict
   integItr = integrators.begin();
@@ -300,7 +300,7 @@ void integrate(void)
       integItr++;
     }
 
-  valueRefType time(PartManager.attributes["time"]);
+  fRefType time(PartManager.attributes["time"]);
   time += dt;
   
   /// derivative

@@ -33,7 +33,7 @@
 #include <boost/assign/std/vector.hpp>
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 
 #include "mpi.h"
 
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 
   part_type& PartManager(part_type::instance());
 
-  valueType& time(PartManager.attributes["time"]);
+  fType& time(PartManager.attributes["time"]);
 
   std::cout << time << "\n";
   time = 12.;

@@ -17,7 +17,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;

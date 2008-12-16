@@ -78,8 +78,8 @@ void loadPrimitive(valvectRefType _vect,
                    std::string _name,
                    std::string _inputFile);
 
-valueType loadAttribute(std::string _name, std::string _inputFile);
-void      saveAttribute(valueType _attr, std::string _name,
+fType loadAttribute(std::string _name, std::string _inputFile);
+void      saveAttribute(fType _attr, std::string _name,
                         std::string _inputFile);
 
 ///
@@ -102,7 +102,7 @@ CommManagerType& CommManager;
 ///
 /// public variable to store the saving interval
 ///
-valueType saveItrvl;
+fType saveItrvl;
 
 protected:
 IOManager(void);
@@ -402,7 +402,7 @@ void IOManager::loadDump(std::string _inputFile)
     {
       hid_t curAttr;
       dimsMem[0] = 1;
-      valueType attrBuff;
+      fType attrBuff;
 
       curAttr = H5Aopen(curGroup, (*attrItr).c_str(), H5P_DEFAULT);
       H5Aread(curAttr, H5floatMemType, &attrBuff);
@@ -527,7 +527,7 @@ void IOManager::saveDump(std::string _outputFile,
   ///
   /// if a domain has nothing to save, the COLLECTIVE IO will fail
   ///
-  valueType minLocParts = noLocParts;
+  fType minLocParts = noLocParts;
   CommManager.min(minLocParts);
 
   if (minLocParts < 1)
@@ -721,12 +721,12 @@ void IOManager::loadPrimitive(valvectRefType _vect,
   H5Fclose(fileHandle);
 }
 
-valueType IOManager::loadAttribute(std::string _name, std::string _inputFile)
+fType IOManager::loadAttribute(std::string _name, std::string _inputFile)
 {
   hsize_t dimsMem[1];
 
   dimsMem[0] = 1;
-  valueType attrBuff;
+  fType attrBuff;
 
   ///
   /// open file, group and dataset
@@ -749,7 +749,7 @@ valueType IOManager::loadAttribute(std::string _name, std::string _inputFile)
   return attrBuff;
 }
 
-void IOManager::saveAttribute(valueType _attr, std::string _name,
+void IOManager::saveAttribute(fType _attr, std::string _name,
                          std::string _inputFile)
 {
   hsize_t dimsMem[1];

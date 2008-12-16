@@ -34,7 +34,7 @@ public:
   size_t getNoParts();
   void close();
 
-  valueType read(size_t _part, size_t _var);
+  fType read(size_t _part, size_t _var);
 
   CDATreader();
   ~CDATreader();
@@ -119,7 +119,7 @@ void CDATreader::open( std::string _filename )
       }
       else
       {
-        attrs[ attrKey ] = boost::lexical_cast<valueType>( attrVal );
+        attrs[ attrKey ] = boost::lexical_cast<fType>( attrVal );
       }
     }
   }
@@ -180,7 +180,7 @@ void CDATreader::close()
 }
 
 
-valueType CDATreader::read(size_t _part, size_t _var)
+fType CDATreader::read(size_t _part, size_t _var)
 {
   const size_t curOffset = ( _part*noVars + _var )*buffsize; 
   curPos = startXDRpos;
@@ -196,12 +196,12 @@ valueType CDATreader::read(size_t _part, size_t _var)
   if ( buffsize == xdrFloatSize )
   {
     xdr_float(xdrs, &flt_buff);
-    return static_cast<valueType>(flt_buff);
+    return static_cast<fType>(flt_buff);
   }
   else
   {
     xdr_double(xdrs, &dbl_buff);
-    return static_cast<valueType>(dbl_buff);
+    return static_cast<fType>(dbl_buff);
   }
 }
 

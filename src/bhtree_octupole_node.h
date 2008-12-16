@@ -21,7 +21,7 @@ struct octupoleCellNode : public quadrupoleCellNode {
 ///
 /// octupole moments
 ///
-  valueType s11, s22, s33, s12, s21, s13, s31, s23, s32, s123;
+  fType s11, s22, s33, s12, s21, s13, s31, s23, s32, s123;
 };
 };
 

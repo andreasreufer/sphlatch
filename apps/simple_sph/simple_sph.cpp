@@ -83,7 +83,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType fType;
+typedef sphlatch::fType fType;
 typedef sphlatch::valueRefType fRefType;
 
 typedef sphlatch::valvectType valvectType;
@@ -142,8 +142,10 @@ typedef sphlatch::IdealGas eos_type;
 #include "kernel_cubicspline.h"
 typedef sphlatch::CubicSpline3D kernel_type;
 
+#ifdef SPHLATCH_GRAVITY
 #include "bhtree.h"
 typedef sphlatch::BHtree<sphlatch::Quadrupoles> tree_type;
+#endif
 
 #include "rankspace.h"
 typedef sphlatch::Rankspace neighsearch_type;

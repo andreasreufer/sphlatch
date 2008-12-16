@@ -24,7 +24,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 typedef sphlatch::stringListType stringListType;
 typedef sphlatch::matrixRangeType matrixRangeType;
 typedef sphlatch::rangeType rangeType;

@@ -44,7 +44,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-//typedef sphlatch::valueType valueType;
+//typedef sphlatch::fType fType;
 //typedef sphlatch::partsIndexVectType partsIndexVectType;
 
 #include "io_manager.h"
@@ -171,8 +171,8 @@ int main(int argc, char* argv[])
 
   // tree context
   {
-    const valueType gravTheta = 0.6;
-    const valueType gravConst = 1.0;
+    const fType gravTheta = 0.6;
+    const fType gravConst = 1.0;
 
     stepStartTime = MPI_Wtime();
     
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
         curIndex = i;
 #endif
         // allow a little tolerance, as the furthest is exactely at 2h
-        const valueType searchRadius = 2.0000001 * h(curIndex);
+        const fType searchRadius = 2.0000001 * h(curIndex);
         BarnesHutTree.findNeighbours(curIndex, searchRadius);
         std::cout << curIndex << ": " << BarnesHutTree.neighbourList[0] << "\n";
       }
@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
         curIndex = i;
 #endif
         // allow a little tolerance, as the furthest is exactely at 2h
-        const valueType searchRadius = 2.0000001 * h(curIndex);
+        const fType searchRadius = 2.0000001 * h(curIndex);
         RSSearch.findNeighbours(curIndex, searchRadius);
         std::cout << curIndex << ": " << RSSearch.neighbourList[0] << "\n";
       }
@@ -286,13 +286,13 @@ int main(int argc, char* argv[])
       curIndex = i;
 
       // allow a little tolerance, as the furthest is exactely at 2h
-      const valueType searchRadius = 2.0000001 * h(curIndex);
-      const valueType searchRadPow2 = searchRadius * searchRadius;
+      const fType searchRadius = 2.0000001 * h(curIndex);
+      const fType searchRadPow2 = searchRadius * searchRadius;
 
       size_t noBFneighbours = 0;
       for (size_t j = 0; j < noParts; j++)
         {
-          static valueType dist;
+          static fType dist;
 
           //using namespace sphlatch;
           /*dist = sqrt((Data(i, X) - Data(j, X)) * (Data(i, X) - Data(j, X))

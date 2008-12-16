@@ -24,9 +24,9 @@ int main(int argc, char* argv[])
   rvec(Z) = 0.;
 
   const size_t steps = 1000;
-  const valueType h = 1.e-9;
+  const fType h = 1.e-9;
   
-  valueType kernelVal = 0;
+  fType kernelVal = 0;
   valvectType derivVal(3);
   derivVal(X) = 0.;
   derivVal(Y) = 0.;
@@ -34,11 +34,11 @@ int main(int argc, char* argv[])
   
   /*for (size_t i = 0; i < steps; i++)
   {
-    const valueType x = 4.5*( static_cast<valueType>( rand() ) / RAND_MAX ) - 2.25; 
-    const valueType y = 4.5*( static_cast<valueType>( rand() ) / RAND_MAX ) - 2.25; 
-    const valueType z = 4.5*( static_cast<valueType>( rand() ) / RAND_MAX ) - 2.25; 
+    const fType x = 4.5*( static_cast<fType>( rand() ) / RAND_MAX ) - 2.25; 
+    const fType y = 4.5*( static_cast<fType>( rand() ) / RAND_MAX ) - 2.25; 
+    const fType z = 4.5*( static_cast<fType>( rand() ) / RAND_MAX ) - 2.25; 
     
-    const valueType r = sqrt( x*x + y*y + z*z );
+    const fType r = sqrt( x*x + y*y + z*z );
   
     rvec(X) = x;
     rvec(Y) = y;
@@ -48,24 +48,24 @@ int main(int argc, char* argv[])
     derivVal  += myKernel.derive( r, h, rvec )*4.5*4.5*4.5;
   
   }
-  kernelVal /= static_cast<valueType>( steps );
-  derivVal  /= static_cast<valueType>( steps );
+  kernelVal /= static_cast<fType>( steps );
+  derivVal  /= static_cast<fType>( steps );
   */
   
-  const valueType dx = 4.5*h / static_cast<valueType>(steps);
-  const valueType vol = 4.5*4.5*4.5*h*h*h;
+  const fType dx = 4.5*h / static_cast<fType>(steps);
+  const fType vol = 4.5*4.5*4.5*h*h*h;
   
   for (size_t i = 0; i < steps; i++)
   {
-    const valueType x = - 2.25*h + ( 0.5 + i )*dx;
+    const fType x = - 2.25*h + ( 0.5 + i )*dx;
     for (size_t j = 0; j < steps; j++)
     {
-      const valueType y = - 2.25*h + ( 0.5 + j )*dx;
+      const fType y = - 2.25*h + ( 0.5 + j )*dx;
       for (size_t k = 0; k < steps; k++)
       {
-        const valueType z = - 2.25*h + ( 0.5 + k )*dx;
+        const fType z = - 2.25*h + ( 0.5 + k )*dx;
 
-        const valueType r = sqrt( x*x + y*y + z*z );
+        const fType r = sqrt( x*x + y*y + z*z );
   
         rvec(X) = x;
         rvec(Y) = y;
@@ -83,8 +83,8 @@ int main(int argc, char* argv[])
   }
   std::cout << "\n";
 
-  kernelVal /= static_cast<valueType>( steps*steps*steps );
-  derivVal  /= static_cast<valueType>( steps*steps*steps );
+  kernelVal /= static_cast<fType>( steps*steps*steps );
+  derivVal  /= static_cast<fType>( steps*steps*steps );
 
   std::cout << "kernel       integral: " << kernelVal << "\n";
   std::cout << "kernel deriv integral: " << derivVal << "\n";

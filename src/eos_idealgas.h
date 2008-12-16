@@ -31,7 +31,7 @@ static IdealGas* _instance;
 ///
 /// get the pressure and speed of sound for particle _i
 ///
-void operator()(const size_t _i, valueType& _P, valueType& _cs)
+void operator()(const size_t _i, fType& _P, fType& _cs)
 {
   _P = gammaone * (u(_i) * rho(_i));
   _cs = sqrt(p(_i) * gamma / rho(_i));
@@ -51,7 +51,7 @@ void loadGamma()
 };
 
 private:
-valueType gamma, gammaone;
+fType gamma, gammaone;
 };
 
 IdealGas * IdealGas::_instance = NULL;

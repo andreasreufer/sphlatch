@@ -21,7 +21,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
@@ -76,9 +76,9 @@ int main(int argc, char* argv[])
 
     m(i) = 1;
 
-    pos(i, X) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
-    pos(i, Y) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
-    pos(i, Z) = static_cast<sphlatch::valueType>(rand()) / RAND_MAX;
+    pos(i, X) = static_cast<sphlatch::fType>(rand()) / RAND_MAX;
+    pos(i, Y) = static_cast<sphlatch::fType>(rand()) / RAND_MAX;
+    pos(i, Z) = static_cast<sphlatch::fType>(rand()) / RAND_MAX;
   }
   
 

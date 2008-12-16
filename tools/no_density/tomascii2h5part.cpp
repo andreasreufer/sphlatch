@@ -21,7 +21,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
   }
 
   size_t noParts = 0;
-  valueType gravConst = 0;
+  fType gravConst = 0;
   std::string readLine;
 
   // ugly header parsing
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     for (size_t j = 0; j < 2; j++)
     {
       fin >> readLine;
-      pos(i, j) = boost::lexical_cast<valueType>(readLine);
+      pos(i, j) = boost::lexical_cast<fType>(readLine);
     }
 
     pos(i, 2) = 0.;
@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
     /// he's using search radius
     ///
     fin >> readLine;
-    h(i) = 0.5*boost::lexical_cast<valueType>(readLine);
+    h(i) = 0.5*boost::lexical_cast<fType>(readLine);
 
     id(i) = i + 1;
   }

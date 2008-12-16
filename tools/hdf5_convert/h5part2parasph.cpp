@@ -21,7 +21,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 typedef sphlatch::valvectType valvectType;
 
 typedef sphlatch::valvectRefType valvectRefType;
@@ -123,9 +123,9 @@ int main(int argc, char* argv[])
       CDATWriter.write(i, 5, vel(i, Z));
 
       CDATWriter.write(i, 6, h(i));
-      CDATWriter.write(i, 7, static_cast<valueType>(id(i)));
+      CDATWriter.write(i, 7, static_cast<fType>(id(i)));
       CDATWriter.write(i, 8, m(i));
-      CDATWriter.write(i, 9, static_cast<valueType>(mat(i)));
+      CDATWriter.write(i, 9, static_cast<fType>(mat(i)));
       CDATWriter.write(i, 10, p(i));
       CDATWriter.write(i, 11, 0.);
       CDATWriter.write(i, 12, rho(i));

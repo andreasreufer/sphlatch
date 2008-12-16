@@ -14,7 +14,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 typedef sphlatch::quantsType quantsType;
 
 #include "particle_manager.h"
@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
   Options.add_options() ("help,h", "Produces this Help")
   ("input-file,i", po::value<std::string>(), "input file")
   ("attr-key,k", po::value<std::string>(), "attribute key")
-  ("attr-value,v", po::value<valueType>(), "attribute value");
+  ("attr-value,v", po::value<fType>(), "attribute value");
 
   po::variables_map VMap;
   po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 
   std::string inputFileName = VMap["input-file"].as<std::string>();
   std::string attrKey = VMap["attr-key"].as<std::string>();
-  valueType attrValue = VMap["attr-value"].as<valueType>();
+  fType attrValue = VMap["attr-value"].as<fType>();
   quantsType saveQuants;
 
   IOManager.loadDump(inputFileName);

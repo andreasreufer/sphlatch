@@ -67,7 +67,7 @@ LagrangeSphere1DSolver(size_t _noCells) :
 };
 
 public:
-void integrateTo(valueType _t);
+void integrateTo(fType _t);
 void densityToMass();
 
 public:
@@ -77,13 +77,13 @@ idvectType mat;
 valvectType T;
 idvectType phase;
 #endif
-valueType time, uMin, friction;
-valueType gravConst, courantNumber;
+fType time, uMin, friction;
+fType gravConst, courantNumber;
 
 private:
-void integrate(valueType _dtMax);
+void integrate(fType _dtMax);
 void bootstrap();
-valueType detTimestep();
+fType detTimestep();
 
 eosType& EOS;
 
@@ -92,14 +92,14 @@ size_t noCells, noEdges;
 
 valvectType rhoOld, qOld;
 
-valueType avAlpha, avBeta;
-valueType dtp05, dtm05;
+fType avAlpha, avBeta;
+fType dtp05, dtm05;
 
 bool firstStep;
 };
 
 
-void LagrangeSphere1DSolver::integrateTo(valueType _t)
+void LagrangeSphere1DSolver::integrateTo(fType _t)
 {
   if (firstStep)
     bootstrap();
@@ -110,13 +110,13 @@ void LagrangeSphere1DSolver::integrateTo(valueType _t)
   }
 }
 
-void LagrangeSphere1DSolver::integrate(valueType _dtMax)
+void LagrangeSphere1DSolver::integrate(fType _dtMax)
 {
-  const valueType pi4 = M_PI * 4.;
+  const fType pi4 = M_PI * 4.;
   
   dtp05 = std::min(detTimestep(), _dtMax);
 
-  valueType dtc00;
+  fType dtc00;
   if (firstStep)
     {
       dtc00 = dtp05;
@@ -128,21 +128,21 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
   ///
   /// update velocity
   ///
-  valueType mSum = 0.;
+  fType mSum = 0.;
   for (size_t i = 1; i < noEdges - 1; i++)
     {
-      const valueType dmk = 0.5 * (m(i - 1) + m(i));
-      const valueType Ak = pi4 * r(i) * r(i);
-      const valueType Akm10 = pi4 * r(i - 1) * r(i - 1);
-      const valueType Akp10 = pi4 * r(i + 1) * r(i + 1);
-      const valueType Akm05 = 0.5 * (Akm10 + Ak);
-      const valueType Akp05 = 0.5 * (Akp10 + Ak);
+      const fType dmk = 0.5 * (m(i - 1) + m(i));
+      const fType Ak = pi4 * r(i) * r(i);
+      const fType Akm10 = pi4 * r(i - 1) * r(i - 1);
+      const fType Akp10 = pi4 * r(i + 1) * r(i + 1);
+      const fType Akm05 = 0.5 * (Akm10 + Ak);
+      const fType Akp05 = 0.5 * (Akp10 + Ak);
 
-      const valueType gradP = Ak * (p(i) - p(i - 1));
-      const valueType gradQ = 0.5 * (q(i) * (3. * Akp05 - Ak) - q(i - 1) * (3. * Akm05 - Ak));
+      const fType gradP = Ak * (p(i) - p(i - 1));
+      const fType gradQ = 0.5 * (q(i) * (3. * Akp05 - Ak) - q(i - 1) * (3. * Akm05 - Ak));
 
       mSum += m(i - 1);
-      const valueType accG = gravConst * mSum / (r(i) * r(i));
+      const fType accG = gravConst * mSum / (r(i) * r(i));
 
       v(i) -= ((gradP + gradQ) / dmk + accG + friction*v(i)) * dtc00;
       assert(!isnan(v(i)));
@@ -166,8 +166,8 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
   for (size_t i = 0; i < noCells; i++)
     {
       rhoOld(i) = rho(i);
-      const valueType rkpow3 = r(i) * r(i) * r(i);
-      const valueType rkp1pow3 = r(i + 1) * r(i + 1) * r(i + 1);
+      const fType rkpow3 = r(i) * r(i) * r(i);
+      const fType rkp1pow3 = r(i + 1) * r(i + 1) * r(i + 1);
       rho(i) = 3. * m(i) / (pi4 * (rkp1pow3 - rkpow3));
       assert(!isnan(rho(i)));
     }
@@ -180,14 +180,14 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
     {
       if (v(i + 1) < v(i))
         {
-          const valueType Ak = pi4 * r(i) * r(i);
-          const valueType Akp10 = pi4 * r(i + 1) * r(i + 1);
-          const valueType Akp05 = 0.5 * (Akp10 + Ak);
+          const fType Ak = pi4 * r(i) * r(i);
+          const fType Akp10 = pi4 * r(i + 1) * r(i + 1);
+          const fType Akp05 = 0.5 * (Akp10 + Ak);
 
-          const valueType k1 = (v(i + 1) * (Akp05 - Akp10 / 3.)
+          const fType k1 = (v(i + 1) * (Akp05 - Akp10 / 3.)
                                 - v(i) * (Akp05 - Ak / 3.)) / Akp05;
-          const valueType absDivV = v(i) - v(i + 1);
-          const valueType rhop05 = 0.5*(rho(i) + rhoOld(i));
+          const fType absDivV = v(i) - v(i + 1);
+          const fType rhop05 = 0.5*(rho(i) + rhoOld(i));
 
           q(i) = -(3./2.)*rhop05*k1*( avAlpha*cs(i)+ avBeta*avBeta*absDivV );
           assert(!isinf(q(i)));
@@ -201,19 +201,19 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
   ///
   /// the last cell is not needed, as it is vacuum anyway
   ///
-  valueType pPrime = 0.;
+  fType pPrime = 0.;
   for (size_t i = 0; i < noCells-1; i++)
     {
       pPrime = 0.;
-      const valueType Ak = pi4 * r(i) * r(i);
-      const valueType Akp10 = pi4 * r(i + 1) * r(i + 1);
-      const valueType Akp05 = 0.5 * (Akp10 + Ak);
+      const fType Ak = pi4 * r(i) * r(i);
+      const fType Akp10 = pi4 * r(i + 1) * r(i + 1);
+      const fType Akp05 = 0.5 * (Akp10 + Ak);
 
       ///
       /// try uPrime and guess pPrime
       ///
-      const valueType dVol = (Akp10 * v(i + 1) - Ak * v(i)) / m(i);
-      const valueType uPrime = u(i) - p(i) * dVol * dtp05;
+      const fType dVol = (Akp10 * v(i + 1) - Ak * v(i)) / m(i);
+      const fType uPrime = u(i) - p(i) * dVol * dtp05;
 #ifdef SPHLATCH_ANEOS
       EOS(rho(i), uPrime, mat(i), pPrime, cs(i), T(i), phase(i));
 #else
@@ -228,7 +228,7 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
       ///
       /// AV heating
       ///
-      const valueType dQ = (v(i + 1) * (3. * Akp05 - Akp10)
+      const fType dQ = (v(i + 1) * (3. * Akp05 - Akp10)
                             - v(i) * (3. * Akp05 - Ak)) / m(i);
       u(i) -= (p(i) * dVol + dQ) * dtp05;
       pow(i) = -(p(i) * dVol + dQ);
@@ -258,30 +258,30 @@ void LagrangeSphere1DSolver::integrate(valueType _dtMax)
   time += dtp05;
 }
 
-valueType LagrangeSphere1DSolver::detTimestep()
+fType LagrangeSphere1DSolver::detTimestep()
 {
   ///
   /// calculate current timestep dtp05
   ///
-  valueType dtCFL = std::numeric_limits<valueType>::max();
-  valueType dtVsc = std::numeric_limits<valueType>::max();
-  valueType dtPow = std::numeric_limits<valueType>::max();
+  fType dtCFL = std::numeric_limits<fType>::max();
+  fType dtVsc = std::numeric_limits<fType>::max();
+  fType dtPow = std::numeric_limits<fType>::max();
 
   for (size_t i = 0; i < noCells; i++)
     {
-      const valueType dr = r(i + 1) - r(i);
-      const valueType dv = v(i + 1) - v(i);
-      const valueType absDv = fabs(dv);
+      const fType dr = r(i + 1) - r(i);
+      const fType dv = v(i + 1) - v(i);
+      const fType absDv = fabs(dv);
 
-      const valueType dtCFLi = dr / (cs(i) + absDv);
+      const fType dtCFLi = dr / (cs(i) + absDv);
       dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
 
-      const valueType dtVsci = 1. / (4. * avBeta * fabs(v(i) + v(i + 1)) / dr);
+      const fType dtVsci = 1. / (4. * avBeta * fabs(v(i) + v(i + 1)) / dr);
       dtVsc = dtVsci < dtVsc ? dtVsci : dtVsc;
 
       if (pow(i) < 0.)
         {
-          const valueType dtPowi = -u(i) / pow(i);
+          const fType dtPowi = -u(i) / pow(i);
           dtPow = dtPowi < dtPow ? dtPowi : dtPow;
         }
     }
@@ -292,15 +292,15 @@ valueType LagrangeSphere1DSolver::detTimestep()
 
 void LagrangeSphere1DSolver::bootstrap()
 {
-  const valueType pi4 = M_PI * 4.;
+  const fType pi4 = M_PI * 4.;
 
   ///
   /// calculate density
   ///
   for (size_t i = 0; i < noCells; i++)
     {
-      const valueType rkpow3 = r(i) * r(i) * r(i);
-      const valueType rkp1pow3 = r(i + 1) * r(i + 1) * r(i + 1);
+      const fType rkpow3 = r(i) * r(i) * r(i);
+      const fType rkp1pow3 = r(i + 1) * r(i + 1) * r(i + 1);
       rho(i) = 3. * m(i) / (pi4 * (rkp1pow3 - rkpow3));
       rhoOld(i) = rho(i);
     }
@@ -335,12 +335,12 @@ void LagrangeSphere1DSolver::densityToMass()
   ///
   /// calculate mass from density
   ///
-  const valueType pi4 = M_PI * 4.;
+  const fType pi4 = M_PI * 4.;
 
   for (size_t i = 0; i < noCells; i++)
     {
-      const valueType rkpow3 = r(i) * r(i) * r(i);
-      const valueType rkp1pow3 = r(i + 1) * r(i + 1) * r(i + 1);
+      const fType rkpow3 = r(i) * r(i) * r(i);
+      const fType rkp1pow3 = r(i + 1) * r(i + 1) * r(i + 1);
       m(i) = (rho(i) * pi4 * (rkp1pow3 - rkpow3)) / 3.;
     }
 }

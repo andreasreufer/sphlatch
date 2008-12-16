@@ -43,7 +43,7 @@ LookupTable1D(valvectType _x, valvectType _f)
 };
 
 public:
-valueType operator()(valueType _x);
+fType operator()(fType _x);
 
 private:
 T_leaftype& asLeaf()
@@ -55,14 +55,14 @@ public:
 size_t ixl, ixh;
 
 protected:
-valueType xMin, xMax;
-valueType fMin, fMax;
+fType xMin, xMax;
+fType fMin, fMax;
 valvectType f, x;
 size_t nx;
 };
 
 template<class T_leaftype>
-valueType LookupTable1D<T_leaftype>::operator()(const valueType _x)
+fType LookupTable1D<T_leaftype>::operator()(const fType _x)
 {
   ///
   /// return a constant extrapolation
@@ -102,12 +102,12 @@ valueType LookupTable1D<T_leaftype>::operator()(const valueType _x)
 
 class InterpolateLinear : public LookupTable1D<InterpolateLinear> {
 public:
-valueType interpolate(const valueType _x, const size_t ixl)
+fType interpolate(const fType _x, const size_t ixl)
 {
-  const valueType xl = x(ixl);
-  const valueType xh = x(ixl + 1);
+  const fType xl = x(ixl);
+  const fType xh = x(ixl + 1);
 
-  const valueType t = (_x - xl) / (xh - xl);
+  const fType t = (_x - xl) / (xh - xl);
 
   return((1. - t) * f(ixl) + t * f(ixl + 1));
 };
@@ -119,12 +119,12 @@ valueType interpolate(const valueType _x, const size_t ixl)
 ///
 class InterpolateStepwise : public LookupTable1D<InterpolateStepwise> {
 public:
-valueType interpolate(const valueType _x, const size_t ixl)
+fType interpolate(const fType _x, const size_t ixl)
 {
-  const valueType xl = x(ixl);
-  const valueType xh = x(ixl + 1);
+  const fType xl = x(ixl);
+  const fType xh = x(ixl + 1);
 
-  const valueType dx = xh - xl;
+  const fType dx = xh - xl;
 
   if (_x < xl + 0.5 * dx)
     return f(ixl);

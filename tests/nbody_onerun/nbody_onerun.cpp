@@ -41,8 +41,8 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
-typedef sphlatch::valueRefType valueRefType;
+typedef sphlatch::fType fType;
+typedef sphlatch::fRefType fRefType;
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::zerovalvectType zerovalvectType;
 typedef sphlatch::valvectRefType valvectRefType;
@@ -154,8 +154,8 @@ int main(int argc, char* argv[])
     {
       PartManager.step = i;
 
-      const valueType gravTheta = PartManager.attributes["gravtheta"];
-      const valueType gravConst = PartManager.attributes["gravconst"];
+      const fType gravTheta = PartManager.attributes["gravtheta"];
+      const fType gravConst = PartManager.attributes["gravconst"];
 
       //sphlatch::BHtree<sphlatch::Monopoles> Tree(gravTheta,
       sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,

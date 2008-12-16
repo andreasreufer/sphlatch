@@ -18,7 +18,7 @@ namespace po = boost::program_options;
 #include "particle.h"
 
 #include "typedefs.h"
-//typedef sphlatch::valueType valueType;
+//typedef sphlatch::fType fType;
 
 #include "iomanager.h"
 typedef sphlatch::IOManager io_type;
@@ -82,9 +82,9 @@ int main(int argc, char* argv[])
   
   for (size_t i = 0; i < noBlobParts; i++)
   {
-    blob(i, X) = (static_cast<valueType>(random()) / RAND_MAX ) - 0.5;
-    blob(i, Y) = (static_cast<valueType>(random()) / RAND_MAX ) - 0.5;
-    blob(i, Z) = (static_cast<valueType>(random()) / RAND_MAX ) - 0.5;
+    blob(i, X) = (static_cast<fType>(random()) / RAND_MAX ) - 0.5;
+    blob(i, Y) = (static_cast<fType>(random()) / RAND_MAX ) - 0.5;
+    blob(i, Z) = (static_cast<fType>(random()) / RAND_MAX ) - 0.5;
   }
 
   const size_t noBlobs = 1000;
@@ -94,36 +94,36 @@ int main(int argc, char* argv[])
   for (size_t i = 0; i < noBlobs; i++)
   {
     
-    const valueType phi = 2.*M_PI
-      *(static_cast<valueType>(random()) / RAND_MAX );
-    const valueType theta = M_PI
-      *(static_cast<valueType>(random()) / RAND_MAX );
-    const valueType rad = 20.
-      *(static_cast<valueType>(random()) / RAND_MAX );
-    //const valueType rad = 20*( 1. / ( sin(M_PI - theta) + 0.2 ) );
-    //const valueType rad = 20*( 1. / ( (1 - theta/M_PI) + 0.001) );
+    const fType phi = 2.*M_PI
+      *(static_cast<fType>(random()) / RAND_MAX );
+    const fType theta = M_PI
+      *(static_cast<fType>(random()) / RAND_MAX );
+    const fType rad = 20.
+      *(static_cast<fType>(random()) / RAND_MAX );
+    //const fType rad = 20*( 1. / ( sin(M_PI - theta) + 0.2 ) );
+    //const fType rad = 20*( 1. / ( (1 - theta/M_PI) + 0.001) );
 
-    /*const valueType xCen = 1.80*rad*sin(theta)*cos(phi);
-    const valueType yCen = 1.80*rad*sin(theta)*sin(phi);*/
-    //const valueType zCen = 1.00*rad*cos(theta);
+    /*const fType xCen = 1.80*rad*sin(theta)*cos(phi);
+    const fType yCen = 1.80*rad*sin(theta)*sin(phi);*/
+    //const fType zCen = 1.00*rad*cos(theta);
     
-    /*const valueType gamma = 0.97*M_PI
-      *(static_cast<valueType>(random()) / RAND_MAX - 0.5);
-    const valueType zCen = 2.0*tan(gamma);*/
+    /*const fType gamma = 0.97*M_PI
+      *(static_cast<fType>(random()) / RAND_MAX - 0.5);
+    const fType zCen = 2.0*tan(gamma);*/
     
-    /*const valueType alpha = 0.95*M_PI
-      *(static_cast<valueType>(random()) / RAND_MAX - 0.5);
-    const valueType xCen = 5.*tan(alpha);
+    /*const fType alpha = 0.95*M_PI
+      *(static_cast<fType>(random()) / RAND_MAX - 0.5);
+    const fType xCen = 5.*tan(alpha);
     
-    const valueType beta = 0.95*M_PI
-      *(static_cast<valueType>(random()) / RAND_MAX - 0.5);
-    const valueType yCen = 5.*tan(beta);*/
+    const fType beta = 0.95*M_PI
+      *(static_cast<fType>(random()) / RAND_MAX - 0.5);
+    const fType yCen = 5.*tan(beta);*/
 
-    const valueType xCen = 4.0*rad*sin(theta)*cos(phi);
-    const valueType yCen = 4.0*rad*sin(theta)*sin(phi);
+    const fType xCen = 4.0*rad*sin(theta)*cos(phi);
+    const fType yCen = 4.0*rad*sin(theta)*sin(phi);
     
-    valueType zCen;
-    /*if ( (static_cast<valueType>(random()) / RAND_MAX ) > 0.97 )
+    fType zCen;
+    /*if ( (static_cast<fType>(random()) / RAND_MAX ) > 0.97 )
     {
       zCen = -0.6;
     }

@@ -86,11 +86,11 @@ int main(int argc, char* argv[])
   iron.Eiv = 1.420e+10;
   iron.Ecv = 8.450e+10;
 
-  sphlatch::valueType sP = 0., sCs = 0.;
+  sphlatch::fType sP = 0., sCs = 0.;
 
   double pP = 0., pCs = 0., rhom1 = 0., T = 0.;*/
 
-  sphlatch::valueType sP = 0., sCs = 0.;
+  sphlatch::fType sP = 0., sCs = 0.;
   const size_t noParts = PartManager.getNoLocalParts();
   //for (size_t i = 0; i < 1024; i++)
   for (size_t i = 0; i < noParts; i++)

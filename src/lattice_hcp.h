@@ -15,7 +15,7 @@
 namespace sphlatch {
 class LatticeHCP {
 public:
-LatticeHCP(valueType _spacing, valueType _xMax, valueType _yMax, valueType _zMax)
+LatticeHCP(fType _spacing, fType _xMax, fType _yMax, fType _zMax)
 {
   fillingFactor = sqrt(2)*M_PI / 6.;
   d = _spacing;
@@ -43,17 +43,17 @@ void first();
 void next();
 bool isLast;
 
-valueType xCur, yCur, zCur, rCur;
-valueType fillingFactor;
+fType xCur, yCur, zCur, rCur;
+fType fillingFactor;
 
 private:
 void calcRad();
-valueType xOld, yOld;
+fType xOld, yOld;
 
-valueType xMin, yMin, zMin;
-valueType xMax, yMax, zMax;
+fType xMin, yMin, zMin;
+fType xMax, yMax, zMax;
 
-valueType d, d05, dsq32, dsq34;
+fType d, d05, dsq32, dsq34;
 };
 
 void LatticeHCP::first()

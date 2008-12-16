@@ -21,7 +21,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
   ("help,h", "Produces this Help")
   ("input-file,i" , po::value<std::string>(), "input  file")
   ("output-file,o", po::value<std::string>(), "output file")
-  ("grav-eps,e" ,   po::value<valueType>(),   "gravitational smoothing");
+  ("grav-eps,e" ,   po::value<fType>(),   "gravitational smoothing");
 
   po::variables_map VMap;
   po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 
   std::string outputFilename = VMap["output-file"].as<std::string>();
   std::string  inputFilename = VMap["input-file"].as<std::string>();
-  valueType gravEps          = VMap["grav-eps"].as<valueType>();
+  fType gravEps          = VMap["grav-eps"].as<fType>();
 
   std::cout << inputFilename << " -> " << outputFilename << "\n";
 
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
   }
 
   size_t noParts = 0;
-  valueType gravConst = 0;
+  fType gravConst = 0;
   std::string readLine;
 
   // ugly header parsing
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
         break;
 
       case 5:
-        gravConst = boost::lexical_cast<valueType>(readLine);
+        gravConst = boost::lexical_cast<fType>(readLine);
         break;
     }
   }
@@ -124,18 +124,18 @@ int main(int argc, char* argv[])
   for (size_t i = 0; i < noParts; i++)
   {
     fin >> readLine;
-    m(i) = boost::lexical_cast<valueType>(readLine);
+    m(i) = boost::lexical_cast<fType>(readLine);
 
     for (size_t j = 0; j < 3; j++)
     {
       fin >> readLine;
-      pos(i, j) = boost::lexical_cast<valueType>(readLine);
+      pos(i, j) = boost::lexical_cast<fType>(readLine);
     }
     
     for (size_t j = 0; j < 3; j++)
     {
       fin >> readLine;
-      vel(i, j) = boost::lexical_cast<valueType>(readLine);
+      vel(i, j) = boost::lexical_cast<fType>(readLine);
     }
 
     id(i) = i + 1;

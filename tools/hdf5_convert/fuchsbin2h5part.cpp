@@ -20,7 +20,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 typedef sphlatch::identType identType;
 typedef sphlatch::matrixType matrixType;
 typedef sphlatch::stringVectType stringVectType;
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
   /// n2
   readInt( fin );
   /// t
-  PartManager.attributes["time"] = static_cast<valueType>( readDbl( fin ) );
+  PartManager.attributes["time"] = static_cast<fType>( readDbl( fin ) );
   /// trot
   readDbl( fin );
   /// tkin
@@ -162,40 +162,40 @@ int main(int argc, char* argv[])
         {
           case 0:
             id(i) = static_cast<identType>(i);
-            pos(i, X) = static_cast<valueType>( readDbl( fin ) );
+            pos(i, X) = static_cast<fType>( readDbl( fin ) );
             break;
           case 1:
-            pos(i, Y) = static_cast<valueType>( readDbl( fin ) );
+            pos(i, Y) = static_cast<fType>( readDbl( fin ) );
             break;
           case 2:
-            pos(i, Z) = static_cast<valueType>( readDbl( fin ) );
+            pos(i, Z) = static_cast<fType>( readDbl( fin ) );
             break;
           case 3:
-            vel(i, X) = static_cast<valueType>( readDbl( fin ) );
+            vel(i, X) = static_cast<fType>( readDbl( fin ) );
             break;
           case 4:
-            vel(i, Y) = static_cast<valueType>( readDbl( fin ) );
+            vel(i, Y) = static_cast<fType>( readDbl( fin ) );
             break;
           case 5:
-            vel(i, Z) = static_cast<valueType>( readDbl( fin ) );
+            vel(i, Z) = static_cast<fType>( readDbl( fin ) );
             break;
           case 6:
-            u(i) = static_cast<valueType>( readDbl( fin ) );
+            u(i) = static_cast<fType>( readDbl( fin ) );
             break;
           case 7:
-            h(i) = static_cast<valueType>( readDbl( fin ) );
+            h(i) = static_cast<fType>( readDbl( fin ) );
             break;
           case 8:
-            m(i) = static_cast<valueType>( readDbl( fin ) );
+            m(i) = static_cast<fType>( readDbl( fin ) );
             break;
           case 9:
-            rho(i) = static_cast<valueType>( readDbl( fin ) );
+            rho(i) = static_cast<fType>( readDbl( fin ) );
             break;
           case 10:
             readDbl(fin); /// T
             break;
           case 11:
-            p(i) = static_cast<valueType>( readDbl( fin ) );
+            p(i) = static_cast<fType>( readDbl( fin ) );
             break;
           case 12:
             readDbl(fin); /// alpha?
@@ -211,18 +211,18 @@ int main(int argc, char* argv[])
   ///
   /// conversion constants from the re,me-system to the cgs-system
   ///
-  const valueType unitL = 6.348e8;   // earth radius in cm
-  const valueType unitM = 5.3014e27; // earth mass in g
-  const valueType unitT = 850.34;    // unit time in s
+  const fType unitL = 6.348e8;   // earth radius in cm
+  const fType unitM = 5.3014e27; // earth mass in g
+  const fType unitT = 850.34;    // unit time in s
 
   // unit specific energy in erg/g
-  const valueType unitU = unitL*unitL / (unitT*unitT);
+  const fType unitU = unitL*unitL / (unitT*unitT);
   // unit pressure in barye
-  const valueType unitP = unitM / ( unitL*unitT*unitT );
+  const fType unitP = unitM / ( unitL*unitT*unitT );
   // unit velocity in cm/s
-  const valueType unitV = unitL / unitT;
+  const fType unitV = unitL / unitT;
   // unit density in g per cm^3
-  const valueType unitRho = unitM / ( unitL*unitL*unitL );
+  const fType unitRho = unitM / ( unitL*unitL*unitL );
 
   ///
   /// rescale the physical quantities into the cgs-system

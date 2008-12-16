@@ -39,10 +39,10 @@ PartsTooClose::PartsTooClose(size_t _depth,
   using namespace sphlatch::vectindices;
   matrixRefType pos(PartManager.pos);
   idvectRefType id(PartManager.id);
-  const valueType rootSize = static_cast<cellPtrT>(_rootPtr)->cellSize;
-  const valueType rootX = static_cast<cellPtrT>(_rootPtr)->xCenter;
-  const valueType rootY = static_cast<cellPtrT>(_rootPtr)->yCenter;
-  const valueType rootZ = static_cast<cellPtrT>(_rootPtr)->zCenter;
+  const fType rootSize = static_cast<cellPtrT>(_rootPtr)->cellSize;
+  const fType rootX = static_cast<cellPtrT>(_rootPtr)->xCenter;
+  const fType rootY = static_cast<cellPtrT>(_rootPtr)->yCenter;
+  const fType rootZ = static_cast<cellPtrT>(_rootPtr)->zCenter;
 
 #ifdef SPHLATCH_LOGGER
   Logger.stream
@@ -103,10 +103,10 @@ PartOutsideTree::PartOutsideTree(size_t _newPart,
   using namespace sphlatch::vectindices;
   matrixRefType pos(PartManager.pos);
   idvectRefType id(PartManager.id);
-  const valueType rootSize = static_cast<cellPtrT>(_rootPtr)->cellSize;
-  const valueType rootX = static_cast<cellPtrT>(_rootPtr)->xCenter;
-  const valueType rootY = static_cast<cellPtrT>(_rootPtr)->yCenter;
-  const valueType rootZ = static_cast<cellPtrT>(_rootPtr)->zCenter;
+  const fType rootSize = static_cast<cellPtrT>(_rootPtr)->cellSize;
+  const fType rootX = static_cast<cellPtrT>(_rootPtr)->xCenter;
+  const fType rootY = static_cast<cellPtrT>(_rootPtr)->yCenter;
+  const fType rootZ = static_cast<cellPtrT>(_rootPtr)->zCenter;
 
 #ifdef SPHLATCH_LOGGER
   Logger.stream

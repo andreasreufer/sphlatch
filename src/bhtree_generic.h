@@ -54,11 +54,11 @@ public:
 /// - build toptree
 /// - set up buffer matrices for toptree cell nodes
 ///
-BHtree(valueType _thetaMAC,
-       valueType _gravConst,
+BHtree(fType _thetaMAC,
+       fType _gravConst,
        size_t _czDepth,
        valvectType _rootCenter,
-       valueType _rootSize) :
+       fType _rootSize) :
 #ifdef SPHLATCH_PARALLEL
   CommManager(commManagerType::instance()),
 #endif
@@ -237,7 +237,7 @@ void newCellChild(const size_t _n)
               static_cast<cellPtrT>(curNodePtr)->child[i] = NULL;
             }
 
-          valueType curCellSize =
+          fType curCellSize =
             static_cast<cellPtrT>(curNodePtr->parent)->cellSize / 2.;
 
           static_cast<cellPtrT>(curNodePtr)->cellSize = curCellSize;
@@ -344,13 +344,13 @@ void insertParticle(size_t _newPartIdx)
   ///
   /// check whether the particle comes to lie in the root cell
   ///
-  const valueType curX = pos(_newPartIdx, X);
-  const valueType curY = pos(_newPartIdx, Y);
-  const valueType curZ = pos(_newPartIdx, Z);
-  const valueType rootSize = static_cast<cellPtrT>(rootPtr)->cellSize;
-  const valueType rootX = static_cast<cellPtrT>(rootPtr)->xCenter;
-  const valueType rootY = static_cast<cellPtrT>(rootPtr)->yCenter;
-  const valueType rootZ = static_cast<cellPtrT>(rootPtr)->zCenter;
+  const fType curX = pos(_newPartIdx, X);
+  const fType curY = pos(_newPartIdx, Y);
+  const fType curZ = pos(_newPartIdx, Z);
+  const fType rootSize = static_cast<cellPtrT>(rootPtr)->cellSize;
+  const fType rootX = static_cast<cellPtrT>(rootPtr)->xCenter;
+  const fType rootY = static_cast<cellPtrT>(rootPtr)->yCenter;
+  const fType rootZ = static_cast<cellPtrT>(rootPtr)->zCenter;
 
   if (curX < rootX - 0.5 * rootSize ||
       curX > rootX + 0.5 * rootSize ||
@@ -835,11 +835,11 @@ void particleOrderRecursor()
 
 // calcGravity() stuff
 protected:
-valueType curGravParticleX, curGravParticleY, curGravParticleZ;
-valueType curGravParticleAX, curGravParticleAY, curGravParticleAZ;
-valueType cellPartDist; //, cellPartDistPow3;
-valueType thetaMAC, gravConst;
-valueType epsilonSquare;
+fType curGravParticleX, curGravParticleY, curGravParticleZ;
+fType curGravParticleAX, curGravParticleAY, curGravParticleAZ;
+fType cellPartDist; //, cellPartDistPow3;
+fType thetaMAC, gravConst;
+fType epsilonSquare;
 size_t calcGravityCellsCounter, calcGravityPartsCounter;
 
 public:
@@ -929,12 +929,12 @@ void calcGravityRecursor(void)
 ///
 void calcGravParticle()
 {
-  const valueType partnerX = static_cast<partPtrT>(curNodePtr)->xPos;
-  const valueType partnerY = static_cast<partPtrT>(curNodePtr)->yPos;
-  const valueType partnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
-  const valueType partnerM = static_cast<partPtrT>(curNodePtr)->mass;
+  const fType partnerX = static_cast<partPtrT>(curNodePtr)->xPos;
+  const fType partnerY = static_cast<partPtrT>(curNodePtr)->yPos;
+  const fType partnerZ = static_cast<partPtrT>(curNodePtr)->zPos;
+  const fType partnerM = static_cast<partPtrT>(curNodePtr)->mass;
 
-  const valueType partnerR2 = (partnerX - curGravParticleX) *
+  const fType partnerR2 = (partnerX - curGravParticleX) *
                               (partnerX - curGravParticleX) +
                               (partnerY - curGravParticleY) *
                               (partnerY - curGravParticleY) +
@@ -943,16 +943,17 @@ void calcGravParticle()
 
 #ifdef SPHLATCH_GRAVITY_SPLINESMOOTHING
   const identType partnerIdx = curNodePtr->ident;
-  const valueType partnerH = h(partnerIdx);
-  const valueType partnerMOSmoR3 = partnerM *
+  const fType partnerH = h(partnerIdx);
+  const fType partnerMOSmoR3 = partnerM *
                                    splineOSmoR3(sqrt(partnerR2), partnerH);
 #endif
 #ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
-  const valueType partnerMOSmoR3 = partnerM /
+  const fType partnerMOSmoR3 = partnerM /
                                    ((partnerR2 + epsilonSquare) *
                                     sqrt(partnerR2 + epsilonSquare));
-#else
-  const valueType partnerMOSmoR3 = partnerM / (partnerR2 * sqrt(partnerR2));
+#endif
+#ifdef SPHLATCH_GRAVITY_NOSMOOTHING
+  const fType partnerMOSmoR3 = partnerM / (partnerR2 * sqrt(partnerR2));
 #endif
 
 
@@ -966,19 +967,19 @@ void calcGravParticle()
 /// gravitational spline softening for B Spline kernel from
 /// Hernquist & Katz 1989
 ///
-valueType splineOSmoR3(const valueType _r, const valueType _h)
+fType splineOSmoR3(const fType _r, const fType _h)
 {
-  const valueType u = _r / _h;
+  const fType u = _r / _h;
 
   if (u >= 2.)
     {
-      const valueType r3 = _r * _r * _r;
+      const fType r3 = _r * _r * _r;
       return(1. / r3);
     }
   else
   if (u > 1.)
     {
-      const valueType r3 = _r * _r * _r;
+      const fType r3 = _r * _r * _r;
       return (1. / r3) * (
                -(1. / 15.)
                + (8. / 3.) * u * u * u
@@ -989,7 +990,7 @@ valueType splineOSmoR3(const valueType _r, const valueType _h)
     }
   else
     {
-      const valueType h3 = _h * _h * _h;
+      const fType h3 = _h * _h * _h;
       return (1. / h3) * (
                +(4. / 3.)
                - (6. / 5.) * u * u
@@ -1004,7 +1005,7 @@ valueType splineOSmoR3(const valueType _r, const valueType _h)
 private:
 size_t noNeighbours;
 // cellPartDist already definded (great, feels like FORTRAN :-)
-valueType curNeighParticleX, curNeighParticleY, curNeighParticleZ,
+fType curNeighParticleX, curNeighParticleY, curNeighParticleZ,
           searchRadius, searchRadPow2, //cellCornerDist, cellPartDistPow2,
           partnerR2;
 
@@ -1026,7 +1027,7 @@ valvectType neighDistList;
 size_t curPartIndex;
 int noMaxNeighs;
 void findNeighbours(const size_t _curPartIdx,
-                    const valueType _search_radius)
+                    const fType _search_radius)
 {
   ///
   /// set up some vars and go to particles node
@@ -1165,14 +1166,14 @@ bool sphereTotInsideCell()
 ///
 bool cellTotOutsideSphere()
 {
-  const valueType cellPartDistPow2 =
+  const fType cellPartDistPow2 =
     (static_cast<cellPtrT>(curNodePtr)->xCenter - curNeighParticleX) *
     (static_cast<cellPtrT>(curNodePtr)->xCenter - curNeighParticleX)
     + (static_cast<cellPtrT>(curNodePtr)->yCenter - curNeighParticleY) *
     (static_cast<cellPtrT>(curNodePtr)->yCenter - curNeighParticleY)
     + (static_cast<cellPtrT>(curNodePtr)->zCenter - curNeighParticleZ) *
     (static_cast<cellPtrT>(curNodePtr)->zCenter - curNeighParticleZ);
-  const valueType cellCornerDist = static_cast<valueType>(0.866025403784439) *
+  const fType cellCornerDist = static_cast<fType>(0.866025403784439) *
                                    static_cast<cellPtrT>(curNodePtr)->cellSize;
 
   return(cellPartDistPow2 > (searchRadius + cellCornerDist) *
@@ -1197,16 +1198,16 @@ public:
 /// when each particle has mass m = 1, then the masses of the cells
 /// give directly the number of particles contained in them
 ///
-valueType maxMassEncloseRad(const size_t _curPartIdx,
-                            const valueType _minMass)
+fType maxMassEncloseRad(const size_t _curPartIdx,
+                            const fType _minMass)
 {
   ///
   /// set up some vars and go to particle node
   ///
   curNodePtr = partProxies[_curPartIdx];
-  const valueType partX = static_cast<partPtrT>(curNodePtr)->xPos;
-  const valueType partY = static_cast<partPtrT>(curNodePtr)->yPos;
-  const valueType partZ = static_cast<partPtrT>(curNodePtr)->zPos;
+  const fType partX = static_cast<partPtrT>(curNodePtr)->xPos;
+  const fType partY = static_cast<partPtrT>(curNodePtr)->yPos;
+  const fType partZ = static_cast<partPtrT>(curNodePtr)->zPos;
 
   ///
   /// go up (if possible) until minimal mass is reached
@@ -1225,11 +1226,11 @@ valueType maxMassEncloseRad(const size_t _curPartIdx,
   /// determine the farthest corner of the cell relative to the particle,
   /// determine its distance to the particle and return it
   ///
-  valueType cornerX = static_cast<cellPtrT>(curNodePtr)->xCenter;
-  valueType cornerY = static_cast<cellPtrT>(curNodePtr)->yCenter;
-  valueType cornerZ = static_cast<cellPtrT>(curNodePtr)->zCenter;
+  fType cornerX = static_cast<cellPtrT>(curNodePtr)->xCenter;
+  fType cornerY = static_cast<cellPtrT>(curNodePtr)->yCenter;
+  fType cornerZ = static_cast<cellPtrT>(curNodePtr)->zCenter;
 
-  const valueType halfCellSize =
+  const fType halfCellSize =
     0.5 * static_cast<cellPtrT>(curNodePtr)->cellSize;
 
   cornerX = (partX < cornerX) ?

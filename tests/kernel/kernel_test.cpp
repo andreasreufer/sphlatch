@@ -20,27 +20,27 @@ int main(int argc, char* argv[])
 //CubicSpline2D myKernel;
 
   const size_t steps = 200;
-  const valueType h = 17.;
+  const fType h = 17.;
 
-  valueType kernelVal = 0;
+  fType kernelVal = 0;
 
-  valueType derivValX = 0., derivValY = 0., derivValZ = 0.;
+  fType derivValX = 0., derivValY = 0., derivValZ = 0.;
 
-  const valueType dx = 4.5 * h / static_cast<valueType>(steps);
-  const valueType vol = dx * dx * dx;
-  //const valueType vol = dx * dx;
+  const fType dx = 4.5 * h / static_cast<fType>(steps);
+  const fType vol = dx * dx * dx;
+  //const fType vol = dx * dx;
 
   for (size_t i = 0; i < steps; i++)
     {
-      const valueType x = -2.25 * h + (0.5 + i) * dx;
+      const fType x = -2.25 * h + (0.5 + i) * dx;
       for (size_t j = 0; j < steps; j++)
         {
-          const valueType y = -2.25 * h + (0.5 + j) * dx;
+          const fType y = -2.25 * h + (0.5 + j) * dx;
           for (size_t k = 0; k < steps; k++)
             {
-              const valueType z = -2.25 * h + (0.5 + k) * dx;
+              const fType z = -2.25 * h + (0.5 + k) * dx;
 
-              const valueType r = sqrt(x * x + y * y + z * z);
+              const fType r = sqrt(x * x + y * y + z * z);
 
               kernelVal += myKernel.value(r, h) * vol;
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
               derivValZ += myKernel.derivZ * vol;
             }
 
-          /*const valueType r = sqrt(x * x + y * y);
+          /*const fType r = sqrt(x * x + y * y);
 
           kernelVal += (myKernel.value(r, h) * vol);
 
@@ -66,10 +66,10 @@ int main(int argc, char* argv[])
   std::cout << "kernel deriv integral: " << derivValX << " " << derivValY << " " << derivValZ << "\n";
 
 
-  const valueType r = 3.0;
-  const valueType x = 2.0000;
-  const valueType y = 1.4142;
-  const valueType z = 1.7321;
+  const fType r = 3.0;
+  const fType x = 2.0000;
+  const fType y = 1.4142;
+  const fType z = 1.7321;
   //myKernel.derive(r, h, x, y, z);
   //std::cout << "kernel deriv: [" << myKernel.derivX << "," << myKernel.derivY << "," << myKernel.derivZ << "]\n";
 

@@ -47,9 +47,9 @@ LookupTable2D(valvectType _x, valvectType _y, matrixType _f)
 };
 
 public:
-valueType operator()(const valueType _x, const valueType _y);
+fType operator()(const fType _x, const fType _y);
 
-valueType operator()(const valueType _x, const valueType _y,
+fType operator()(const fType _x, const fType _y,
                      const size_t _ixl, const size_t _iyl);
 
 private:
@@ -63,7 +63,7 @@ size_t ixl, ixh, iyl, iyh;
 
 protected:
 valvectType x, y;
-valueType xMin, xMax, yMin, yMax;
+fType xMin, xMax, yMin, yMax;
 matrixType f;
 size_t nx, ny;
 
@@ -71,12 +71,12 @@ private:
 class OutsideRange : public GenericError
 {
   public:
-OutsideRange(const valueType _x,
-             const valueType _y,
-             const valueType xMin,
-             const valueType xMax,
-             const valueType yMin,
-             const valueType yMax)
+OutsideRange(const fType _x,
+             const fType _y,
+             const fType xMin,
+             const fType xMax,
+             const fType yMin,
+             const fType yMax)
 {
 #ifdef SPHLATCH_LOGGER
   Logger.stream
@@ -99,8 +99,8 @@ OutsideRange(const valueType _x,
 };
 
 template<class T_leaftype>
-valueType LookupTable2D<T_leaftype>::operator()(const valueType _x,
-                                                const valueType _y)
+fType LookupTable2D<T_leaftype>::operator()(const fType _x,
+                                                const fType _y)
 {
   ///
   /// throw an exception outside the
@@ -155,8 +155,8 @@ valueType LookupTable2D<T_leaftype>::operator()(const valueType _x,
 /// are still inside the range
 ///
 template<class T_leaftype>
-valueType LookupTable2D<T_leaftype>::operator()(
-  const valueType _x, const valueType _y,
+fType LookupTable2D<T_leaftype>::operator()(
+  const fType _x, const fType _y,
   const size_t _ixl, const size_t _iyl)
 {
   return(asLeaf().interpolate(_x, _y, _ixl, _iyl));
@@ -168,17 +168,17 @@ valueType LookupTable2D<T_leaftype>::operator()(
 ///
 class InterpolateBilinear : public LookupTable2D<InterpolateBilinear> {
 public:
-valueType interpolate(const valueType _x, const valueType _y,
+fType interpolate(const fType _x, const fType _y,
                       const size_t _ixl, const size_t _iyl)
 {
-  const valueType xl = x(_ixl);
-  const valueType xh = x(_ixl + 1);
+  const fType xl = x(_ixl);
+  const fType xh = x(_ixl + 1);
 
-  const valueType yl = y(_iyl);
-  const valueType yh = y(_iyl + 1);
+  const fType yl = y(_iyl);
+  const fType yh = y(_iyl + 1);
 
-  const valueType t = (_x - xl) / (xh - xl);
-  const valueType u = (_y - yl) / (yh - yl);
+  const fType t = (_x - xl) / (xh - xl);
+  const fType u = (_y - yl) / (yh - yl);
 
   return(f(_ixl, _iyl) * (1. - t) * (1. - u) +
          f(_ixl + 1, _iyl) * t * (1. - u) +

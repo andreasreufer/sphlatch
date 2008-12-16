@@ -52,7 +52,7 @@ partsIndexVectType indicesRankedX, indicesRankedY, indicesRankedZ,
                    rsIndicesX, rsIndicesY, rsIndicesZ;
 
 // replace later on by valVectType
-std::valarray<valueType> cellMinX, cellMinY, cellMinZ,
+std::valarray<fType> cellMinX, cellMinY, cellMinZ,
                          cellMaxX, cellMaxY, cellMaxZ;
 
 size_t noParts, noCells, partsPerCell;
@@ -161,17 +161,17 @@ void prepare()
 public:
 partsIndexVectType neighbourList;
 /*void findNeighbours(const partProxyPtrT _curParticle,
-                    const valueRefType _search_radius)
+                    const fRefType _search_radius)
    {
    }*/
 
 private:
-valueType curPartX, curPartY, curPartZ;
+fType curPartX, curPartY, curPartZ;
 size_t minRankX, maxRankX, minRankY, maxRankY, minRankZ, maxRankZ;
 
 public:
 void findNeighbours(const size_t& _curPartIndex,
-                    const valueRefType _search_radius)
+                    const fRefType _search_radius)
 {
   curPartX = Data(_curPartIndex, X);
   curPartY = Data(_curPartIndex, Y);
@@ -233,7 +233,7 @@ void findNeighbours(const size_t& _curPartIndex,
 
   static size_t curRankX, curRankY, curRankZ, neighIndex;
   static size_t noNeighbours;
-  static valueType neighDist;
+  static fType neighDist;
 
   noNeighbours = 0;
 

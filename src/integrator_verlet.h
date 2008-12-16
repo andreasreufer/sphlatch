@@ -35,13 +35,13 @@ virtual void prepare() = 0;
 /// drift changes the position:
 ///  x_1 = x_0 + v_0*dt + 0.5*a_0*dt^2
 ///
-virtual void drift(const valueType& _dt) = 0;
+virtual void drift(const fType& _dt) = 0;
 
 ///
 /// kick changes the velocity:
 ///  v_1 = v_0 + 0.5*a_0*dt + 0.5*a_1*dt;
 ///
-virtual void kick(const valueType& _dt) = 0;
+virtual void kick(const fType& _dt) = 0;
 };
 
 ///
@@ -86,7 +86,7 @@ void prepare()
   a = zero;
 }
 
-void drift(const valueType& _dt)
+void drift(const fType& _dt)
 {
   matrixRangeType x(*var, rangeType(0, noParts), rangeType(0, var->size2()));
   matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
@@ -95,7 +95,7 @@ void drift(const valueType& _dt)
   matrixRefType oa(oddVar);
 
   /// move
-  const valueType dtSquare = _dt * _dt;
+  const fType dtSquare = _dt * _dt;
 
   x += (v * _dt) + 0.5 * (a * dtSquare);
 
@@ -103,7 +103,7 @@ void drift(const valueType& _dt)
   oa.swap(a);
 }
 
-void kick(const valueType& _dt)
+void kick(const fType& _dt)
 {
   matrixRangeType v(*dVar, rangeType(0, noParts), rangeType(0, dVar->size2()));
   matrixRefType a(*ddVar);
@@ -158,7 +158,7 @@ void prepare()
   a = zero;
 }
 
-void drift(const valueType& _dt)
+void drift(const fType& _dt)
 {
   valvectRangeType x(*var, rangeType(0, noParts));
   valvectRangeType v(*dVar, rangeType(0, noParts));
@@ -167,7 +167,7 @@ void drift(const valueType& _dt)
   valvectRefType oa(oddVar);
 
   /// move
-  const valueType dtSquare = _dt * _dt;
+  const fType dtSquare = _dt * _dt;
 
   x += v * _dt + 0.5 * a * (dtSquare);
 
@@ -175,7 +175,7 @@ void drift(const valueType& _dt)
   oa.swap(a);
 }
 
-void kick(const valueType& _dt)
+void kick(const fType& _dt)
 {
   valvectRangeType v(*dVar, rangeType(0, noParts));
   valvectRefType a(*ddVar);
@@ -200,15 +200,15 @@ class VerletMetaIntegrator : public GenericMetaIntegrator
 private:
 typedef std::list<GenericVerlet*> integratorsListType;
 typedef void (*voidVoidFuncPtr)(void);
-typedef valueType (*valueTypeVoidFuncPtr)(void);
+typedef fType (*fTypeVoidFuncPtr)(void);
 
 integratorsListType::iterator integItr, integEnd;
 voidVoidFuncPtr derivFunc;
-valueTypeVoidFuncPtr timingFunc;
-valueType lastDt;
+fTypeVoidFuncPtr timingFunc;
+fType lastDt;
 
 public:
-VerletMetaIntegrator(void(*_deriv)(void), valueType(*_timing)(void))
+VerletMetaIntegrator(void(*_deriv)(void), fType(*_timing)(void))
 {
   derivFunc = _deriv;
   timingFunc = _timing;
@@ -242,7 +242,7 @@ void bootstrap()
 
   derivFunc();
   
-  const valueType dt = timingFunc();
+  const fType dt = timingFunc();
   
   integItr = integrators.begin();
   while (integItr != integEnd)
@@ -252,7 +252,7 @@ void bootstrap()
     }
   
   PartManager.step++;
-  valueRefType time( PartManager.attributes["time"] );
+  fRefType time( PartManager.attributes["time"] );
   time += dt;
 };
 
@@ -279,7 +279,7 @@ void integrate()
   /// calculate derivative
   derivFunc();
 
-  const valueType dt = timingFunc();
+  const fType dt = timingFunc();
 
   /// kick
   integItr = integrators.begin();
@@ -298,7 +298,7 @@ void integrate()
     }
   
   PartManager.step++;
-  valueRefType time( PartManager.attributes["time"] );
+  fRefType time( PartManager.attributes["time"] );
   time += dt;
 };
 

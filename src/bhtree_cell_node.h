@@ -29,8 +29,8 @@ struct genericCellNode : public genericNode {
 ///
 /// center and size of the cell
 ///
-  valueType xCenter, yCenter, zCenter;
-  valueType cellSize;
+  fType xCenter, yCenter, zCenter;
+  fType cellSize;
 };
 
 };

@@ -40,7 +40,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 typedef sphlatch::valueRefType valueRefType;
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::zerovalvectType zerovalvectType;
@@ -85,7 +85,7 @@ typedef sphlatch::LogManager log_type;
 using namespace sphlatch::vectindices;
 using namespace boost::assign;
 
-valueType timeStep()
+fType timeStep()
 {
   part_type& PartManager(part_type::instance());
   comm_type& CommManager(comm_type::instance());
@@ -117,17 +117,17 @@ valueType timeStep()
   ///
   /// don't go further than one smoothing length
   ///
-  valueType dtA = std::numeric_limits<valueType>::max();
+  fType dtA = std::numeric_limits<fType>::max();
 
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType ai = sqrt(acc(i, X) * acc(i, X) +
+      const fType ai = sqrt(acc(i, X) * acc(i, X) +
                                 acc(i, Y) * acc(i, Y) +
                                 acc(i, Z) * acc(i, Z));
 
       if (ai > 0.)
         {
-          const valueType dtAi = sqrt(h(i) / ai);
+          const fType dtAi = sqrt(h(i) / ai);
           dtA = dtAi < dtA ? dtAi : dtA;
         }
     }
@@ -135,11 +135,11 @@ valueType timeStep()
   ///
   /// energy integration
   ///
-  valueType dtU = std::numeric_limits<valueType>::max();
+  fType dtU = std::numeric_limits<fType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType absdudti = dudt(i);
-      const valueType dtUi = (u(i)) / absdudti;
+      const fType absdudti = dudt(i);
+      const fType dtUi = (u(i)) / absdudti;
 
       if (absdudti > 0.)
         {
@@ -150,11 +150,11 @@ valueType timeStep()
   ///
   /// smoothing length integration
   ///
-  valueType dtH = std::numeric_limits<valueType>::max();
+  fType dtH = std::numeric_limits<fType>::max();
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType absdhdti = dhdt(i);
-      const valueType dtHi = (h(i)) / absdhdti;
+      const fType absdhdti = dhdt(i);
+      const fType dtHi = (h(i)) / absdhdti;
 
       if (absdhdti > 0.)
         {
@@ -165,12 +165,12 @@ valueType timeStep()
   ///
   /// CFL condition
   ///
-  valueType dtCFL = std::numeric_limits<valueType>::max();
-  const valueType gamma = 1.4;
+  fType dtCFL = std::numeric_limits<fType>::max();
+  const fType gamma = 1.4;
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType ci = sqrt(p(i) * gamma / rho(i));
-      const valueType dtCFLi = h(i) / ci;
+      const fType ci = sqrt(p(i) * gamma / rho(i));
+      const fType dtCFLi = h(i) / ci;
 
       if (ci > 0.)
         {
@@ -181,27 +181,27 @@ valueType timeStep()
   ///
   /// distance to next saveItrvl
   ///
-  //const valueType saveItrvl = 0.1;
-  const valueType saveItrvl = 0.2;
+  //const fType saveItrvl = 0.1;
+  const fType saveItrvl = 0.2;
   std::string fileName = "saveDump000000.h5part";
 
-  const valueType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
+  const fType nextSaveTime = (floor((time / saveItrvl) + 1.e-6)
                                   + 1.) * saveItrvl;
-  valueType dtSave = nextSaveTime - time;
+  fType dtSave = nextSaveTime - time;
 
   ///
   /// determine global minimum.
   /// by parallelly minimizing the timesteps, we
   /// can estimate which ones are dominant
   ///
-  valueType dtGlob = std::numeric_limits<valueType>::max();
+  fType dtGlob = std::numeric_limits<fType>::max();
 
   CommManager.min(dtA);
   CommManager.min(dtU);
   CommManager.min(dtH);
   CommManager.min(dtCFL);
 
-  const valueType courantNumber = 0.3;
+  const fType courantNumber = 0.3;
   dtGlob = dtA < dtGlob ? dtA : dtGlob;
   dtGlob = dtU < dtGlob ? dtU : dtGlob;
   dtGlob = dtH < dtGlob ? dtH : dtGlob;
@@ -227,7 +227,7 @@ valueType timeStep()
   saveQuants.ints += &id, &noneigh;
 
 
-  const valueType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
+  const fType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
                                 * saveItrvl;
   if (fabs(curSaveTime - time) < 1.e-9)
     {
@@ -290,9 +290,9 @@ void derivate()
   CommManager.sendGhosts(eps);
   Logger << " sent to ghosts: pos, vel, id, m, h, eps";
 
-  const valueType gravTheta = 0.7;
-  //const valueType gravConst = 1.0;
-  const valueType gravConst = 5.e-3;
+  const fType gravTheta = 0.7;
+  //const fType gravConst = 1.0;
+  const fType gravConst = 5.e-3;
   PartManager.attributes["gravTheta"] = gravTheta;
   PartManager.attributes["gravConst"] = gravConst;
 
@@ -339,8 +339,8 @@ void derivate()
       ///
       /// find neighbours
       ///
-      const valueType hi = h(i);
-      const valueType srchRad = 2. * hi;
+      const fType hi = h(i);
+      const fType srchRad = 2. * hi;
       RSSearch.findNeighbours(i, srchRad);
 
       const size_t noNeighs = RSSearch.neighbourList[0];
@@ -350,7 +350,7 @@ void derivate()
       ///
       noneigh(i) = noNeighs;
 
-      static valueType rhoi;
+      static fType rhoi;
       rhoi = 0.;
 
       //if (id(i) == 125664)
@@ -369,10 +369,10 @@ void derivate()
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
-          const valueType r = RSSearch.neighDistList[curNeigh];
+          const fType r = RSSearch.neighDistList[curNeigh];
           const size_t j = RSSearch.neighbourList[curNeigh];
 
-          const valueType hij = 0.5 * (hi + h(j));
+          const fType hij = 0.5 * (hi + h(j));
 
           rhoi += m(j) * Kernel.value(r, hij);
         }
@@ -385,8 +385,8 @@ void derivate()
   ///
   /// lower temperature bound
   ///
-  //const valueType uMin = 1000.;
-  const valueType uMin = .1;
+  //const fType uMin = 1000.;
+  const fType uMin = .1;
   for (size_t i = 0; i < noParts; i++)
     {
       if (u(i) < uMin)
@@ -404,8 +404,8 @@ void derivate()
   /// I need    : u, rho
   /// I provide : p
   ///
-  const valueType gamma = 1.4;
-  //const valueType gamma = 1.66666666666666667;
+  const fType gamma = 1.4;
+  //const fType gamma = 1.66666666666666667;
   p = (gamma - 1) * (boost::numeric::ublas::element_prod(u, rho));
   PartManager.attributes["gamma"] = gamma;
   Logger << "pressure";
@@ -413,24 +413,24 @@ void derivate()
   ///
   /// acceleration, power and velocity divergence
   ///
-  const valueType alpha = 1;
-  const valueType beta = 1;
+  const fType alpha = 1;
+  const fType beta = 1;
 
   valvectType curAcc(3);
 
-  valueType curPow = 0., curVelDiv = 0.;
-  valueType divvMax = std::numeric_limits<valueType>::min();
+  fType curPow = 0., curVelDiv = 0.;
+  fType divvMax = std::numeric_limits<fType>::min();
 
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType hi = h(i);
-      const valueType rhoi = rho(i);
-      const valueType pi = p(i);
+      const fType hi = h(i);
+      const fType rhoi = rho(i);
+      const fType pi = p(i);
 
-      const valueType piOrhoirhoi = pi / (rhoi * rhoi);
+      const fType piOrhoirhoi = pi / (rhoi * rhoi);
 
       /// find the neighbours
-      const valueType srchRad = 2. * hi;
+      const fType srchRad = 2. * hi;
       RSSearch.findNeighbours(i, srchRad);
 
       const size_t noNeighs = RSSearch.neighbourList[0];
@@ -442,7 +442,7 @@ void derivate()
       const particleRowType veli(vel, i);
       const particleRowType Ri(pos, i);
 
-      const valueType ci = sqrt(gamma * p(i) / rho(i));
+      const fType ci = sqrt(gamma * p(i) / rho(i));
 
       ///
       /// SPH acceleration and specific power sum
@@ -452,42 +452,42 @@ void derivate()
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
-          const valueType rij = RSSearch.neighDistList[curNeigh];
+          const fType rij = RSSearch.neighDistList[curNeigh];
           const size_t j = RSSearch.neighbourList[curNeigh];
 
-          const valueType rhoj = rho(j);
-          const valueType pj = p(j);
+          const fType rhoj = rho(j);
+          const fType pj = p(j);
 
-          const valueType hij = 0.5 * (hi + h(j));
+          const fType hij = 0.5 * (hi + h(j));
 
           const particleRowType velj(vel, j);
           const particleRowType Rj(pos, j);
 
           /// replace by scalar expressions?
-          const valueType vijrij =
+          const fType vijrij =
             boost::numeric::ublas::inner_prod(velj - veli, Rj - Ri);
 
-          valueType av = 0;
+          fType av = 0;
 
           /// AV
           if (vijrij < 0.)
             {
-              const valueType rijrij =
+              const fType rijrij =
                 boost::numeric::ublas::inner_prod(Ri - Rj, Ri - Rj);
-              const valueType rhoij = 0.5 * (rhoi + rhoj);
-              const valueType cij = 0.5 * (ci + sqrt(gamma * p(j) / rhoj));
-              const valueType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
+              const fType rhoij = 0.5 * (rhoi + rhoj);
+              const fType cij = 0.5 * (ci + sqrt(gamma * p(j) / rhoj));
+              const fType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
 
               av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
             }
 
-          const valueType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
+          const fType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
 
           /// acceleration
           curAcc -= (m(j) * accTerm * Kernel.derive(rij, hij, Ri - Rj));
 
           /// m_j * v_ij * divW_ij
-          const valueType mjvijdivWij = m(j) * (
+          const fType mjvijdivWij = m(j) * (
             boost::numeric::ublas::inner_prod(veli - velj,
                                               Kernel.derivative));
 
@@ -511,25 +511,25 @@ void derivate()
   /// define desired number of neighbours
   const size_t noNeighOpt = 50;
 
-  const valueType noNeighMin = (2. / 3.) * static_cast<valueType>(noNeighOpt);
-  const valueType noNeighMax = (5. / 3.) * static_cast<valueType>(noNeighOpt);
-  const valueType cDivvMax = divvMax;
+  const fType noNeighMin = (2. / 3.) * static_cast<fType>(noNeighOpt);
+  const fType noNeighMax = (5. / 3.) * static_cast<fType>(noNeighOpt);
+  const fType cDivvMax = divvMax;
 
-  const valueType czAtomicLength = CostZone.getAtomicLength();
+  const fType czAtomicLength = CostZone.getAtomicLength();
   for (size_t i = 0; i < noParts; i++)
     {
-      const valueType noNeighCur = static_cast<valueType>(noneigh(i));
+      const fType noNeighCur = static_cast<fType>(noneigh(i));
 
-      const valueType A = exp((noNeighCur - noNeighMin) / 5.);
-      const valueType B = exp((noNeighCur - noNeighMax) / 5.);
+      const fType A = exp((noNeighCur - noNeighMin) / 5.);
+      const fType B = exp((noNeighCur - noNeighMax) / 5.);
 
-      const valueType k1 = 1. / (A * (A + (1. / A)));
-      const valueType k2 = (A / (A + (1. / A)))
+      const fType k1 = 1. / (A * (A + (1. / A)));
+      const fType k2 = (A / (A + (1. / A)))
                            + 1. / (B * (B + (1. / B))) - 1.;
-      const valueType k3 = B / (B + (1. / B));
+      const fType k3 = B / (B + (1. / B));
 
       dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
-                 - k2 * static_cast<valueType>(1. / 3.) * divv(i)) * h(i);
+                 - k2 * static_cast<fType>(1. / 3.) * divv(i)) * h(i);
 
       ///
       /// hard upper limit
@@ -566,8 +566,8 @@ int main(int argc, char* argv[])
   //std::string loadDumpFile = "shocktube_t30.h5part";
   //std::string loadDumpFile = "test1_small.h5part";
   std::string loadDumpFile = "initial.h5part";
-  //const valueType maxTime = 5.;
-  const valueType maxTime = 200.;
+  //const fType maxTime = 5.;
+  const fType maxTime = 200.;
 
   ///
   /// define what we're doing
@@ -675,7 +675,7 @@ int main(int argc, char* argv[])
   ///
   /// the integration loop
   ///
-  //valueType nextSaveTime = time;
+  //fType nextSaveTime = time;
   while (time <= maxTime)
     {
       ///
@@ -701,7 +701,7 @@ int main(int argc, char* argv[])
       /// set center of mass to 0 again
       ///
       noParts = PartManager.getNoLocalParts();
-      valueType comX = 0., comY = 0., comZ = 0., totM = 0.;
+      fType comX = 0., comY = 0., comZ = 0., totM = 0.;
       for (size_t i = 0; i < noParts; i++)
         {
           comX += pos(i, X) * m(i);

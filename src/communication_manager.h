@@ -72,9 +72,9 @@ template<class T> void recvVector(std::vector<T>& _vector, size_t _sendDomain);
 
 void sumUpCounts(countsVectRefType _indexVect);
 
-void max(valueRefType _val);
-void min(valueRefType _val);
-void sum(valueRefType _val);
+void max(fRefType _val);
+void min(fRefType _val);
+void sum(fRefType _val);
 void sum(valvectRefType _vect);
 void sum(matrixRefType _mat);
 void sum(countsRefType _cnt);
@@ -142,7 +142,7 @@ CommunicationManager::CommunicationManager(void) :
   gPartsTo.resize(noDomains);
 
   identSize = sizeof(identType);
-  floatSize = sizeof(valueType);
+  floatSize = sizeof(fType);
 
 #ifdef SPHLATCH_SINGLEPREC
   mpiFloatType = MPI::FLOAT;
@@ -189,7 +189,7 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   ///
   /// current number of particles
   ///
-  //const valueType noParts = PartManager.getNoLocalParts();
+  //const fType noParts = PartManager.getNoLocalParts();
 
   ///
   /// set new number of particles (noGhosts needs to be known)
@@ -642,7 +642,7 @@ void CommunicationManager::calcOffsets(domainPartsIndexRefType _indices,
 void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvDomain)
 {
   static size_t noRemElems, noCurElems, noCurBytes, round;
-  const size_t noBuffElems = commBuffSize / sizeof(valueType);
+  const size_t noBuffElems = commBuffSize / sizeof(fType);
 
   const size_t recvRank = domainToRank[_recvDomain];
 
@@ -657,7 +657,7 @@ void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvDomain)
   while (noRemElems > 0)
     {
       noCurElems = std::min(noRemElems, noBuffElems);
-      noCurBytes = noCurElems * sizeof(valueType);
+      noCurBytes = noCurElems * sizeof(fType);
 
       ///
       /// this pointer arithmetics stuff assumes continous
@@ -673,7 +673,7 @@ void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvDomain)
 void CommunicationManager::recvMatrix(matrixRefType _matrix, size_t _sendDomain)
 {
   static size_t noRemElems, noCurElems, noCurBytes, round;
-  const size_t noBuffElems = commBuffSize / sizeof(valueType);
+  const size_t noBuffElems = commBuffSize / sizeof(fType);
 
   const size_t sendRank = domainToRank[_sendDomain];
 
@@ -688,7 +688,7 @@ void CommunicationManager::recvMatrix(matrixRefType _matrix, size_t _sendDomain)
   while (noRemElems > 0)
     {
       noCurElems = std::min(noRemElems, noBuffElems);
-      noCurBytes = noCurElems * sizeof(valueType);
+      noCurBytes = noCurElems * sizeof(fType);
 
       ///
       /// this pointer arithmetics stuff assumes continous
@@ -788,7 +788,7 @@ void CommunicationManager::sumUpCounts(countsVectRefType _indexVect)
     }
 }
 
-void CommunicationManager::max(valueRefType _val)
+void CommunicationManager::max(fRefType _val)
 {
   static double doubleBuff;
 
@@ -803,10 +803,10 @@ void CommunicationManager::max(valueRefType _val)
                             MPI::DOUBLE, MPI::MAX);
   doubleBuff = recvDoubleBuff;
 #endif
-  _val = static_cast<valueType>(doubleBuff);
+  _val = static_cast<fType>(doubleBuff);
 }
 
-void CommunicationManager::min(valueRefType _val)
+void CommunicationManager::min(fRefType _val)
 {
   static double doubleBuff;
 
@@ -821,10 +821,10 @@ void CommunicationManager::min(valueRefType _val)
                             MPI::DOUBLE, MPI::MIN);
   doubleBuff = recvDoubleBuff;
 #endif
-  _val = static_cast<valueType>(doubleBuff);
+  _val = static_cast<fType>(doubleBuff);
 }
 
-void CommunicationManager::sum(valueRefType _val)
+void CommunicationManager::sum(fRefType _val)
 {
   static double doubleBuff;
 
@@ -839,7 +839,7 @@ void CommunicationManager::sum(valueRefType _val)
                             MPI::DOUBLE, MPI::SUM);
   doubleBuff = recvDoubleBuff;
 #endif
-  _val = static_cast<valueType>(doubleBuff);
+  _val = static_cast<fType>(doubleBuff);
 }
 
 void CommunicationManager::sum(valvectRefType _vect)

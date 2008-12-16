@@ -168,14 +168,14 @@ void calcMultipole()
 void addCOM(valvectRefType _target, const valvectRefType _source)
 {
   /// const static does not seem to work here
-  const valueType oldMass = _target[MASS];
+  const fType oldMass = _target[MASS];
 
   _target[MASS] += _source[MASS];
 
   if (_target[MASS] > 0.)
     {
       /// const static does not seem to work here
-      const valueType newMassInv = (1.0 / _target[MASS]);
+      const fType newMassInv = (1.0 / _target[MASS]);
       _target[CX] = newMassInv * (oldMass * _target[CX]
                                   + _source[MASS] * _source[CX]);
       _target[CY] = newMassInv * (oldMass * _target[CY]
@@ -192,13 +192,13 @@ void addCOM(valvectRefType _target, const valvectRefType _source)
 ///
 void addMP(valvectRefType _target, const valvectRefType _source)
 {
-  const valueType rx = _source[CX] - _target[CX];
-  const valueType ry = _source[CY] - _target[CY];
-  const valueType rz = _source[CZ] - _target[CZ];
-  const valueType rxrx = rx * rx;
-  const valueType ryry = ry * ry;
-  const valueType rzrz = rz * rz;
-  const valueType rr = rxrx + ryry + rzrz;
+  const fType rx = _source[CX] - _target[CX];
+  const fType ry = _source[CY] - _target[CY];
+  const fType rz = _source[CZ] - _target[CZ];
+  const fType rxrx = rx * rx;
+  const fType ryry = ry * ry;
+  const fType rzrz = rz * rz;
+  const fType rr = rxrx + ryry + rzrz;
 
   _target[Q11] += (3. * rxrx - rr) * _source[MASS] + _source[Q11];
   _target[Q22] += (3. * ryry - rr) * _source[MASS] + _source[Q22];
@@ -386,15 +386,15 @@ void calcGravCell()
   /// cellPartDist is already set by the MAC function
 
   /// intermediate results for monopole term
-  const valueType rInvPow3 = 1. / (cellPartDist * cellPartDist * cellPartDist);
+  const fType rInvPow3 = 1. / (cellPartDist * cellPartDist * cellPartDist);
 
-  const valueType rx = curGravParticleX
+  const fType rx = curGravParticleX
                        - static_cast<octuPtrT>(curNodePtr)->xCom;
-  const valueType ry = curGravParticleY
+  const fType ry = curGravParticleY
                        - static_cast<octuPtrT>(curNodePtr)->yCom;
-  const valueType rz = curGravParticleZ
+  const fType rz = curGravParticleZ
                        - static_cast<octuPtrT>(curNodePtr)->zCom;
-  const valueType mass = static_cast<octuPtrT>(curNodePtr)->mass;
+  const fType mass = static_cast<octuPtrT>(curNodePtr)->mass;
 
   /// gravity due to monopole term
   curGravParticleAX -= (rInvPow3) * mass * rx;
@@ -402,20 +402,20 @@ void calcGravCell()
   curGravParticleAZ -= (rInvPow3) * mass * rz;
 
   /// intermediate results for quadrupole term
-  const valueType rInvPow5 = rInvPow3 / (cellPartDist * cellPartDist);
-  const valueType rInvPow7 = rInvPow5 / (cellPartDist * cellPartDist);
+  const fType rInvPow5 = rInvPow3 / (cellPartDist * cellPartDist);
+  const fType rInvPow7 = rInvPow5 / (cellPartDist * cellPartDist);
 
-  const valueType q11 = static_cast<octuPtrT>(curNodePtr)->q11;
-  const valueType q22 = static_cast<octuPtrT>(curNodePtr)->q22;
-  const valueType q33 = static_cast<octuPtrT>(curNodePtr)->q33;
-  const valueType q12 = static_cast<octuPtrT>(curNodePtr)->q12;
-  const valueType q13 = static_cast<octuPtrT>(curNodePtr)->q13;
-  const valueType q23 = static_cast<octuPtrT>(curNodePtr)->q23;
+  const fType q11 = static_cast<octuPtrT>(curNodePtr)->q11;
+  const fType q22 = static_cast<octuPtrT>(curNodePtr)->q22;
+  const fType q33 = static_cast<octuPtrT>(curNodePtr)->q33;
+  const fType q12 = static_cast<octuPtrT>(curNodePtr)->q12;
+  const fType q13 = static_cast<octuPtrT>(curNodePtr)->q13;
+  const fType q23 = static_cast<octuPtrT>(curNodePtr)->q23;
 
-  const valueType q1jrj = q11 * rx + q12 * ry + q13 * rz;
-  const valueType q2jrj = q12 * rx + q22 * ry + q23 * rz;
-  const valueType q3jrj = q13 * rx + q23 * ry + q33 * rz;
-  const valueType qijrirj = q11 * rx * rx +
+  const fType q1jrj = q11 * rx + q12 * ry + q13 * rz;
+  const fType q2jrj = q12 * rx + q22 * ry + q23 * rz;
+  const fType q3jrj = q13 * rx + q23 * ry + q33 * rz;
+  const fType qijrirj = q11 * rx * rx +
                             q22 * ry * ry +
                             q33 * rz * rz +
                             2. * q12 * rx * ry +
@@ -428,28 +428,28 @@ void calcGravCell()
   curGravParticleAZ += (rInvPow5) * (q3jrj) - (rInvPow7) * (2.5 * qijrirj * rz);
 
   /// intermediate results for octupole term
-  const valueType rInvPow9 = rInvPow7 / (cellPartDist * cellPartDist);
+  const fType rInvPow9 = rInvPow7 / (cellPartDist * cellPartDist);
 
-  const valueType s11 = static_cast<octuPtrT>(curNodePtr)->s11;
-  const valueType s22 = static_cast<octuPtrT>(curNodePtr)->s22;
-  const valueType s33 = static_cast<octuPtrT>(curNodePtr)->s33;
-  const valueType s12 = static_cast<octuPtrT>(curNodePtr)->s12;
-  const valueType s21 = static_cast<octuPtrT>(curNodePtr)->s21;
-  const valueType s13 = static_cast<octuPtrT>(curNodePtr)->s13;
-  const valueType s31 = static_cast<octuPtrT>(curNodePtr)->s31;
-  const valueType s23 = static_cast<octuPtrT>(curNodePtr)->s23;
-  const valueType s32 = static_cast<octuPtrT>(curNodePtr)->s32;
-  const valueType s123 = static_cast<octuPtrT>(curNodePtr)->s123;
+  const fType s11 = static_cast<octuPtrT>(curNodePtr)->s11;
+  const fType s22 = static_cast<octuPtrT>(curNodePtr)->s22;
+  const fType s33 = static_cast<octuPtrT>(curNodePtr)->s33;
+  const fType s12 = static_cast<octuPtrT>(curNodePtr)->s12;
+  const fType s21 = static_cast<octuPtrT>(curNodePtr)->s21;
+  const fType s13 = static_cast<octuPtrT>(curNodePtr)->s13;
+  const fType s31 = static_cast<octuPtrT>(curNodePtr)->s31;
+  const fType s23 = static_cast<octuPtrT>(curNodePtr)->s23;
+  const fType s32 = static_cast<octuPtrT>(curNodePtr)->s32;
+  const fType s123 = static_cast<octuPtrT>(curNodePtr)->s123;
 
-  const valueType s1jrj = s11 * rx + s12 * ry + s13 * rz;
-  const valueType s2jrj = s21 * rx + s22 * ry + s23 * rz;
-  const valueType s3jrj = s31 * rx + s32 * ry + s33 * rz;
+  const fType s1jrj = s11 * rx + s12 * ry + s13 * rz;
+  const fType s2jrj = s21 * rx + s22 * ry + s23 * rz;
+  const fType s3jrj = s31 * rx + s32 * ry + s33 * rz;
 
-  const valueType si1riri = s11 * rx * rx + s21 * ry * ry + s31 * rz * rz;
-  const valueType si2riri = s12 * rx * rx + s22 * ry * ry + s32 * rz * rz;
-  const valueType si3riri = s13 * rx * rx + s23 * ry * ry + s33 * rz * rz;
+  const fType si1riri = s11 * rx * rx + s21 * ry * ry + s31 * rz * rz;
+  const fType si2riri = s12 * rx * rx + s22 * ry * ry + s32 * rz * rz;
+  const fType si3riri = s13 * rx * rx + s23 * ry * ry + s33 * rz * rz;
 
-  const valueType sijririrj = si1riri * rx + si2riri * ry + si3riri * rz;
+  const fType sijririrj = si1riri * rx + si2riri * ry + si3riri * rz;
 
   /// gravity due to octupole terms
   curGravParticleAX += (rInvPow7) * (s1jrj * rx + 0.5 * si1riri

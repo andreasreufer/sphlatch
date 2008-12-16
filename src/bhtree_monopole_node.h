@@ -21,8 +21,8 @@ struct monopoleCellNode : public genericCellNode {
 ///
 /// center of mass and mass
 ///
-  valueType xCom, yCom, zCom;
-  valueType mass;
+  fType xCom, yCom, zCom;
+  fType mass;
 };
 };
 

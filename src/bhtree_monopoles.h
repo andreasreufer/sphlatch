@@ -123,14 +123,14 @@ void calcMultipole()
 void addCOM(valvectRefType _target, const valvectRefType _source)
 {
   /// const static does not seem to work here
-  const valueType oldMass = _target[MASS];
+  const fType oldMass = _target[MASS];
 
   _target[MASS] += _source[MASS];
 
   if (_target[MASS] > 0.)
     {
       /// const static does not seem to work here
-      const valueType newMassInv = (1.0 / _target[MASS]);
+      const fType newMassInv = (1.0 / _target[MASS]);
       _target[CX] = newMassInv * (oldMass * _target[CX]
                                   + _source[MASS] * _source[CX]);
       _target[CY] = newMassInv * (oldMass * _target[CY]
@@ -219,15 +219,15 @@ void calcGravCell()
   /// cellPartDist is already set by the MAC function
 
   /// intermediate results for monopole term
-  const valueType rInvPow3 = 1. / (cellPartDist * cellPartDist * cellPartDist);
+  const fType rInvPow3 = 1. / (cellPartDist * cellPartDist * cellPartDist);
 
-  const valueType rx = curGravParticleX
+  const fType rx = curGravParticleX
                        - static_cast<monoPtrT>(curNodePtr)->xCom;
-  const valueType ry = curGravParticleY
+  const fType ry = curGravParticleY
                        - static_cast<monoPtrT>(curNodePtr)->yCom;
-  const valueType rz = curGravParticleZ
+  const fType rz = curGravParticleZ
                        - static_cast<monoPtrT>(curNodePtr)->zCom;
-  const valueType mass = static_cast<monoPtrT>(curNodePtr)->mass;
+  const fType mass = static_cast<monoPtrT>(curNodePtr)->mass;
 
   /// gravity due to monopole term
   curGravParticleAX -= (rInvPow3) * mass * rx;

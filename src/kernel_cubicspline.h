@@ -23,9 +23,9 @@ public:
 CubicSpline3D() {};
 ~CubicSpline3D() {};
 
-valueType value(const valueType& _r, const valueType& _h)
+fType value(const fType& _r, const fType& _h)
 {
-  const valueType q = _r / _h;
+  const fType q = _r / _h;
 
   if ( q > 2. )
   {
@@ -33,7 +33,7 @@ valueType value(const valueType& _r, const valueType& _h)
   }
   else
   {
-    const valueType k1 = ( 1. / ( _h*_h*_h*M_PI) );
+    const fType k1 = ( 1. / ( _h*_h*_h*M_PI) );
 
     if ( q > 1. )
     {
@@ -46,10 +46,10 @@ valueType value(const valueType& _r, const valueType& _h)
   }
 }
 
-void derive( const valueType& _r, const valueType& _h,
-             const valueType& _rx, const valueType& _ry, const valueType& _rz)
+void derive( const fType& _r, const fType& _h,
+             const fType& _rx, const fType& _ry, const fType& _rz)
 {
-  const valueType q = _r / _h;
+  const fType q = _r / _h;
 
   ///
   /// when q = 0, the kernel also has to be (0,0,0)
@@ -63,7 +63,7 @@ void derive( const valueType& _r, const valueType& _h,
   }
   else
   {
-    const valueType k2 = 1. / ( _h*_h*_h*_h*M_PI*_r );
+    const fType k2 = 1. / ( _h*_h*_h*_h*M_PI*_r );
 
     derivX = _rx * k2;
     derivY = _ry * k2;
@@ -71,7 +71,7 @@ void derive( const valueType& _r, const valueType& _h,
 
     if ( q > 1. )
     {
-      const valueType k3 = -0.75*( 2. - q )*( 2. - q );
+      const fType k3 = -0.75*( 2. - q )*( 2. - q );
       derivX *= k3;
       derivY *= k3;
       derivZ *= k3;
@@ -79,7 +79,7 @@ void derive( const valueType& _r, const valueType& _h,
     }
     else
     {
-      const valueType k3 = - 3.*q + 2.25*q*q;
+      const fType k3 = - 3.*q + 2.25*q*q;
       derivX *= k3;
       derivY *= k3;
       derivZ *= k3;
@@ -88,7 +88,7 @@ void derive( const valueType& _r, const valueType& _h,
   } 
 }
 
-valueType derivX, derivY, derivZ;
+fType derivX, derivY, derivZ;
 
 };
 
@@ -102,9 +102,9 @@ public:
 CubicSpline2D() {};
 ~CubicSpline2D() {};
 
-valueType value(const valueType& _r, const valueType& _h)
+fType value(const fType& _r, const fType& _h)
 {
-  const valueType q = _r / _h;
+  const fType q = _r / _h;
 
   if ( q > 2. )
   {
@@ -112,7 +112,7 @@ valueType value(const valueType& _r, const valueType& _h)
   }
   else
   {
-    const valueType k1 = ( 10. / ( 7.*_h*_h*M_PI) );
+    const fType k1 = ( 10. / ( 7.*_h*_h*M_PI) );
 
     if ( q > 1. )
     {
@@ -125,10 +125,10 @@ valueType value(const valueType& _r, const valueType& _h)
   }
 }
 
-void derive( const valueType& _r, const valueType& _h,
-             const valueType& _rx, const valueType& _ry)
+void derive( const fType& _r, const fType& _h,
+             const fType& _rx, const fType& _ry)
 {
-  const valueType q = _r / _h;
+  const fType q = _r / _h;
 
   ///
   /// when q = 0, the kernel also has to be (0,0,0)
@@ -141,21 +141,21 @@ void derive( const valueType& _r, const valueType& _h,
   }
   else
   {
-    const valueType k2 = 10. / ( 7.*_h*_h*_h*M_PI*_r );
+    const fType k2 = 10. / ( 7.*_h*_h*_h*M_PI*_r );
 
     derivX = _rx * k2;
     derivY = _ry * k2;
 
     if ( q > 1. )
     {
-      const valueType k3 = -0.75*( 2. - q )*( 2. - q );
+      const fType k3 = -0.75*( 2. - q )*( 2. - q );
       derivX *= k3;
       derivY *= k3;
       return;
     }
     else
     {
-      const valueType k3 = - 3.*q + 2.25*q*q;
+      const fType k3 = - 3.*q + 2.25*q*q;
       derivX *= k3;
       derivY *= k3;
       return;
@@ -163,7 +163,7 @@ void derive( const valueType& _r, const valueType& _h,
   } 
 }
 
-valueType derivX, derivY;
+fType derivX, derivY;
 
 };
 

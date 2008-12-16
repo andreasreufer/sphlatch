@@ -21,7 +21,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 
 using namespace boost::assign;
 //using namespace sphlatch::vectindices;
@@ -93,30 +93,31 @@ int main(int argc, char* argv[])
 
   std::string curToken;
 
-  const valueType scale = 1.e-09;
-  const valueType appRad = 0.002;
+  const fType scale = 1.e-09;
+  //const fType appRad = 0.002;  // value for 2Mparts
+  const fType appRad = 0.010;    // value for 200kparts
   while (fin)
     {
       fout << "sphere{<";
       fin >> curToken;
-      fout << scale*boost::lexical_cast<valueType>(curToken);
+      fout << scale*boost::lexical_cast<fType>(curToken);
       fout << ",";
       fin >> curToken;
-      fout << scale*boost::lexical_cast<valueType>(curToken);
+      fout << scale*boost::lexical_cast<fType>(curToken);
       fout << ",";
       fin >> curToken;
-      fout << scale*boost::lexical_cast<valueType>(curToken);
+      fout << scale*boost::lexical_cast<fType>(curToken);
       fout << ">, "<< appRad << "\n";
       fout << "   texture{\n";
       fout << "       pigment {color rgb<";
       fin >> curToken;
-      fout << boost::lexical_cast<valueType>(curToken);
+      fout << boost::lexical_cast<fType>(curToken);
       fout << ",";
       fin >> curToken;
-      fout << boost::lexical_cast<valueType>(curToken);
+      fout << boost::lexical_cast<fType>(curToken);
       fout << ",";
       fin >> curToken;
-      fout << boost::lexical_cast<valueType>(curToken);
+      fout << boost::lexical_cast<fType>(curToken);
       fout << ">} \n       } \n} \n";
     }
 

@@ -107,7 +107,7 @@ ANEOS()
       tablesInit[i] = false;
     }
 #endif
-  nan = std::numeric_limits<valueType>::quiet_NaN();
+  nan = std::numeric_limits<fType>::quiet_NaN();
 
   ///
   /// throw exceptions per default, keep quiet when generating tables
@@ -129,12 +129,12 @@ static ANEOS& instance();
 static ANEOS* _instance;
 
 private:
-valueType nan;
+fType nan;
 bool quiet;
 
 #ifdef SPHLATCH_ANEOS_TABLE
 size_t noPointsRho, noPointsU;
-valueType rhoMin, rhoMax, uMin, uMax;
+fType rhoMin, rhoMax, uMin, uMax;
 #endif
 
 ///
@@ -143,7 +143,7 @@ valueType rhoMin, rhoMax, uMin, uMax;
 /// common EOS interface for particle use
 ///
 public:
-void operator()(const size_t _i, valueType& _P, valueType& _cs)
+void operator()(const size_t _i, fType& _P, fType& _cs)
 {
   (*this)(rho(_i), u(_i), mat(_i), _P, _cs,
           PartManager.T(_i), PartManager.phase(_i));
@@ -155,11 +155,11 @@ void operator()(const size_t _i, valueType& _P, valueType& _cs)
 /// common EOS interface for independent use
 ///
 public:
-void operator()(const valueType _rho, const valueType _u, const identType _mat,
-                valueType& _P, valueType& _cs)
+void operator()(const fType _rho, const fType _u, const identType _mat,
+                fType& _P, fType& _cs)
 {
   static identType tmpPhase;
-  static valueType tmpT;
+  static fType tmpT;
 
   (*this)(_rho, _u, _mat, _P, _cs, tmpT, tmpPhase);
 }
@@ -170,8 +170,8 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
 /// specific interface
 ///
 public:
-void operator()(const valueType _rho, const valueType _u, const identType _mat,
-                valueType& _P, valueType& _cs, valueType& _T, identType& _phase)
+void operator()(const fType _rho, const fType _u, const identType _mat,
+                fType& _P, fType& _cs, fType& _T, identType& _phase)
 {
 #ifdef SPHLATCH_ANEOS_TABLE
   ///
@@ -188,8 +188,8 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
       if (!tablesInit[_mat])
         initTables(_mat);
 
-      const valueType curLogRho = log10(_rho);
-      const valueType curLogU = log10(_u);
+      const fType curLogRho = log10(_rho);
+      const fType curLogU = log10(_u);
 
       _P = (*presTables[_mat])(curLogU, curLogRho);
 
@@ -220,8 +220,8 @@ void operator()(const valueType _rho, const valueType _u, const identType _mat,
 };
 
 private:
-void iterate(const valueType _rho, const valueType _u, const identType _mat,
-             valueType& _P, valueType& _cs, valueType& _T, identType& _phase)
+void iterate(const fType _rho, const fType _u, const identType _mat,
+             fType& _P, fType& _cs, fType& _T, identType& _phase)
 {
   static double curRho, curU, curP, curCs, curT;
   static int curMat, curPhase;
@@ -233,9 +233,9 @@ void iterate(const valueType _rho, const valueType _u, const identType _mat,
   rooten(curRho, curU, curMat, curT, curP, curCs, curPhase);
 
   _phase = static_cast<identType>(curPhase);
-  _P = static_cast<valueType>(curP);
-  _cs = static_cast<valueType>(curCs);
-  _T = static_cast<valueType>(curT);
+  _P = static_cast<fType>(curP);
+  _cs = static_cast<fType>(curCs);
+  _T = static_cast<fType>(curT);
 };
 
 #ifdef SPHLATCH_ANEOS_TABLE
@@ -253,21 +253,21 @@ void initTables(const identType _mat)
   /// prepare the argument vectors log10(rho) and log10(u)
   ///
   valvectType loguVect(noPointsU);
-  const valueType dlogu = (log10(uMax) - log10(uMin)) / (noPointsU - 1);
-  const valueType loguMin = log10(uMin);
+  const fType dlogu = (log10(uMax) - log10(uMin)) / (noPointsU - 1);
+  const fType loguMin = log10(uMin);
 
   for (size_t i = 0; i < noPointsU; i++)
     {
-      loguVect(i) = loguMin + dlogu * static_cast<valueType>(i);
+      loguVect(i) = loguMin + dlogu * static_cast<fType>(i);
     }
 
   valvectType logrhoVect(noPointsRho);
-  const valueType dlogrho = (log10(rhoMax) - log10(rhoMin)) / (noPointsRho - 1);
-  const valueType logrhoMin = log10(rhoMin);
+  const fType dlogrho = (log10(rhoMax) - log10(rhoMin)) / (noPointsRho - 1);
+  const fType logrhoMin = log10(rhoMin);
 
   for (size_t i = 0; i < noPointsRho; i++)
     {
-      logrhoVect(i) = logrhoMin + dlogrho * static_cast<valueType>(i);
+      logrhoVect(i) = logrhoMin + dlogrho * static_cast<fType>(i);
     }
 
   ///
@@ -288,8 +288,8 @@ void initTables(const identType _mat)
     {
       for (size_t j = 0; j < noPointsRho; j++)
         {
-          const valueType curU = pow(10., loguVect(i));
-          const valueType curRho = pow(10., logrhoVect(j));
+          const fType curU = pow(10., loguVect(i));
+          const fType curRho = pow(10., logrhoVect(j));
 
           iterate(curRho, curU, _mat,
                   presTmpTable(i, j),
@@ -327,9 +327,9 @@ void initTables(const identType _mat)
 /// get p(rho,T) and u(rho,T)
 ///
 public:
-void getSpecEnergy(const valueType _rho, const valueType _T,
+void getSpecEnergy(const fType _rho, const fType _T,
                    const identType _mat,
-                   valueType& _p, valueType& _cs, valueType& _u)
+                   fType& _p, fType& _cs, fType& _u)
 {
   static double T, rho, p, u, S, cv, dpdt, dpdr, fkros, cs, fme, fma;
   static int kpa, mat;
@@ -341,13 +341,13 @@ void getSpecEnergy(const valueType _rho, const valueType _T,
   aneos_(&T, &rho, &p, &u, &S, &cv, &dpdt, &dpdr, &fkros,
          &cs, &kpa, &mat, &fme, &fma);
 
-  _p = static_cast<valueType>(p);
+  _p = static_cast<fType>(p);
 #ifdef SPHLATCH_NONEGPRESS
   if (_p < 0.)
     _p = 0.;
 #endif
-  _cs = static_cast<valueType>(cs);
-  _u = static_cast<valueType>(u);
+  _cs = static_cast<fType>(cs);
+  _u = static_cast<fType>(u);
 };
 
 private:

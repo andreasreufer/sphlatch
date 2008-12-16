@@ -83,8 +83,8 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
-typedef sphlatch::valueRefType valueRefType;
+typedef sphlatch::fType fType;
+typedef sphlatch::fRefType fRefType;
 
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::valvectRefType valvectRefType;
@@ -242,14 +242,14 @@ int main(int argc, char* argv[])
       /// find neighbours
       ///
       const size_t i = k;
-      const valueType hi = h(i);
-      const valueType srchRad = 2. * hi;
+      const fType hi = h(i);
+      const fType srchRad = 2. * hi;
       Nsearch.findNeighbours(i, srchRad);
 
       const size_t noNeighs = Nsearch.neighbourList[0];
       noneigh(i) = noNeighs;
 
-      static valueType rhoi;
+      static fType rhoi;
       rhoi = 0.;
 
       ///
@@ -257,11 +257,11 @@ int main(int argc, char* argv[])
       ///
       for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
         {
-          const valueType r = Nsearch.neighDistList[curNeigh];
+          const fType r = Nsearch.neighDistList[curNeigh];
           const size_t j = Nsearch.neighbourList[curNeigh];
 
-          //const valueType hij = 0.5 * (hi + h(j));
-          const valueType hij = hi;
+          //const fType hij = 0.5 * (hi + h(j));
+          const fType hij = hi;
 
           rhoi += Kernel.value(r, hij);
         }

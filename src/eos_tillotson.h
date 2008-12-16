@@ -61,8 +61,8 @@ static Tillotson* _instance;
 ///
 struct paramType {
   identType id;
-  valueType rho0, a, b, A, B, alpha, beta, E0, Eiv, Ecv;
-  valueType xmu, umelt, yie, pweib, cweib, J2sld, coh, J2slu;
+  fType rho0, a, b, A, B, alpha, beta, E0, Eiv, Ecv;
+  fType xmu, umelt, yie, pweib, cweib, J2sld, coh, J2slu;
 };
 
 paramType ldMat;
@@ -72,7 +72,7 @@ paramType ldMat;
 ///
 /// common EOS interface
 ///
-void operator()(const size_t _i, valueType& _P, valueType& _cs)
+void operator()(const size_t _i, fType& _P, fType& _cs)
 {
   this->operator()(rho (_i), u (_i), mat (_i), _P, _cs);
 }
@@ -86,11 +86,11 @@ void operator()(const size_t _i, valueType& _P, valueType& _cs)
 /// to the scheme in ParaSPH where the square root of the hybrid
 /// formula is taken.
 ///
-void operator()(const valueType _rho, const valueType _u,
-                const identType _matId, valueType& _P, valueType& _cs)
+void operator()(const fType _rho, const fType _u,
+                const identType _matId, fType& _P, fType& _cs)
 {
-  const valueType curRho = _rho;
-  const valueType curE = _u;
+  const fType curRho = _rho;
+  const fType curE = _u;
   const identType curMatId = _matId;
 
   ///
@@ -100,13 +100,13 @@ void operator()(const valueType _rho, const valueType _u,
   if (curMatId != ldMat.id)
     ldMat = getMatParams(curMatId);
 
-  const valueType eta = curRho / ldMat.rho0;
-  const valueType mu = eta - 1.;
-  const valueType curER = curRho * curE;
-  const valueType cmin = sqrt(0.25 * ldMat.A / ldMat.rho0);
+  const fType eta = curRho / ldMat.rho0;
+  const fType mu = eta - 1.;
+  const fType curER = curRho * curE;
+  const fType cmin = sqrt(0.25 * ldMat.A / ldMat.rho0);
 
-  const valueType k1 = 1. / ((curE / (ldMat.E0 * eta * eta)) + 1);
-  const valueType k3 = curE / (ldMat.E0 * eta * eta);
+  const fType k1 = 1. / ((curE / (ldMat.E0 * eta * eta)) + 1);
+  const fType k3 = curE / (ldMat.E0 * eta * eta);
 
   ///
   /// calculate Pc,cc
@@ -140,11 +140,11 @@ void operator()(const valueType _rho, const valueType _u,
   /// are in an expanded non-cold regime
   /// -> calculate Pe,ce
   ///
-  const valueType k2 = (1. / eta) - 1.;
-  const valueType k4 = 1. / eta;
+  const fType k2 = (1. / eta) - 1.;
+  const fType k4 = 1. / eta;
 
-  const valueType exp1 = exp(-ldMat.beta * k2);
-  const valueType exp2 = exp(-ldMat.alpha * k2 * k2);
+  const fType exp1 = exp(-ldMat.beta * k2);
+  const fType exp2 = exp(-ldMat.alpha * k2 * k2);
 
   Pe = ldMat.a * curER
        + (curER * ldMat.b * k1 + ldMat.A * mu * exp1) * exp2;
@@ -177,7 +177,7 @@ void operator()(const valueType _rho, const valueType _u,
   /// hybrid regime
   ///
   _P = ((curE - ldMat.Eiv) * Pe + (ldMat.Ecv - curE) * Pc) / (ldMat.Ecv - ldMat.Eiv);
-  const valueType chy = ((curE - ldMat.Eiv) * ce + (ldMat.Ecv - curE) * cc)
+  const fType chy = ((curE - ldMat.Eiv) * ce + (ldMat.Ecv - curE) * cc)
                         / (ldMat.Ecv - ldMat.Eiv);
   if (chy < cmin)
     _cs = cmin;
@@ -222,12 +222,12 @@ paramType getMatParams(const size_t _matId)
 ///
 /// this works only for monotonously increasing pressure
 /// 
-valueType findRho(const valueType _u, const identType _matId,
-                  const valueType _pTarget, const valueType _pDelta,
-                  const valueType _rhoMin, const valueType _rhoMax)
+fType findRho(const fType _u, const identType _matId,
+                  const fType _pTarget, const fType _pDelta,
+                  const fType _rhoMin, const fType _rhoMax)
 {
-  valueType curP, curCs; 
-  valueType rhoGuess, rhoMin = _rhoMin, rhoMax = _rhoMax;
+  fType curP, curCs; 
+  fType rhoGuess, rhoMin = _rhoMin, rhoMax = _rhoMax;
 
   do {
     rhoGuess = 0.5*(rhoMin + rhoMax);
@@ -279,7 +279,7 @@ void initParams(std::string _filename)
           else
           if (entry < noEntries)
             {
-              param(entry, i) = boost::lexical_cast<valueType>(str);
+              param(entry, i) = boost::lexical_cast<fType>(str);
               i++;
               /// 18 parameters in each entry
               if (i == 18)
@@ -295,8 +295,8 @@ void initParams(std::string _filename)
 
 
 private:
-valueType Pc, Pe;
-valueType cc, ce;
+fType Pc, Pe;
+fType cc, ce;
 matrixType param;
 };
 

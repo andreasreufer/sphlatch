@@ -30,7 +30,7 @@ namespace po = boost::program_options;
 #include <boost/assign/std/vector.hpp>
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 typedef sphlatch::zerovalvectType zerovalvectType;
 typedef sphlatch::valvectRefType valvectRefType;
 typedef sphlatch::idvectRefType idvectRefType;
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
   Options.add_options() ("help", "Produces this Help")
   ("input-file,i", po::value<std::string>(), "hdf5 file")
   ("no-neighs,n", po::value<size_t>(), "no. of neighbours  (default 50)")
-  ("cs-length,c", po::value<valueType>(), "comp. supp. length (default 2.)");
+  ("cs-length,c", po::value<fType>(), "comp. supp. length (default 2.)");
 
   po::variables_map PoMap;
   po::store(po::command_line_parser(argc, argv).options(Options).run(), PoMap);
@@ -89,10 +89,10 @@ int main(int argc, char* argv[])
       noDesNeighs = PoMap[ "no-neighs" ].as<size_t>();
     }
 
-  valueType csLength = 2.;
+  fType csLength = 2.;
   if (PoMap.count("cs-length"))
     {
-      csLength = PoMap[ "cs-length" ].as<valueType>();
+      csLength = PoMap[ "cs-length" ].as<fType>();
     }
 
   std::cout << " trying to get " << noDesNeighs << " neighbours inside "
@@ -180,13 +180,13 @@ int main(int argc, char* argv[])
 
   zerovalvectType zeroVect(noMaxNeighs);
 
-  const valueType minMass = static_cast<valueType>(noDesNeighs);
+  const fType minMass = static_cast<fType>(noDesNeighs);
 
   for (size_t i = 0; i < noParts; i++)
     {
       const size_t curIndex = Tree.particleOrder[i];
 
-      const valueType maxRad = Tree.maxMassEncloseRad(curIndex, minMass);
+      const fType maxRad = Tree.maxMassEncloseRad(curIndex, minMass);
 
       ///
       /// the tree does not guarantee valid entries in the neighbour list

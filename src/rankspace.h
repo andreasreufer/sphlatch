@@ -225,11 +225,11 @@ partsIndexVectType neighbourList;
 valvectType neighDistList;
 
 private:
-valueType curPartX, curPartY, curPartZ;
+fType curPartX, curPartY, curPartZ;
 size_t minCellX, maxCellX, minCellY, maxCellY, minCellZ, maxCellZ;
 public:
 void findNeighbours(const size_t _curPartIndex,
-                    const valueType _search_radius)
+                    const fType _search_radius)
 {
   curPartX = pos(_curPartIndex, X);
   curPartY = pos(_curPartIndex, Y);
@@ -293,7 +293,7 @@ void findNeighbours(const size_t _curPartIndex,
       maxCellZ++;
     }
 
-  const valueType searchRadPow2 = _search_radius * _search_radius;
+  const fType searchRadPow2 = _search_radius * _search_radius;
 
   static size_t noNeighbours;
   noNeighbours = 0;
@@ -312,7 +312,7 @@ void findNeighbours(const size_t _curPartIndex,
                 {
                   const size_t neighIndex = (rankspaceCells[cartIndex])[i];
 
-                  const valueType neighDistPow2 =
+                  const fType neighDistPow2 =
                     (pos(neighIndex, X) - curPartX) *
                     (pos(neighIndex, X) - curPartX) +
                     (pos(neighIndex, Y) - curPartY) *

@@ -22,7 +22,7 @@ struct quadrupoleCellNode : public monopoleCellNode {
 ///
 /// quadrupole moments
 ///
-  valueType q11, q22, q33, q12, q13, q23;
+  fType q11, q22, q33, q12, q13, q23;
 };
 };
 

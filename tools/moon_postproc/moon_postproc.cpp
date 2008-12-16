@@ -34,8 +34,8 @@ namespace po = boost::program_options;
 #include <gsl/gsl_histogram.h>
 
 #include "typedefs.h"
-typedef sphlatch::valueType fType;
-typedef sphlatch::valueRefType fRefType;
+typedef sphlatch::fType fType;
+typedef sphlatch::fRefType fRefType;
 
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::valvectRefType valvectRefType;

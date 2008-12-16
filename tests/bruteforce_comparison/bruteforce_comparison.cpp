@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
   universeCenter(0) = 0.0;
   universeCenter(1) = 0.0;
   universeCenter(2) = 0.0;
-  sphlatch::valueType universeSize = 10., theta = 0.60;
+  sphlatch::fType universeSize = 10., theta = 0.60;
   size_t costzoneDepth = 4;
 
   TimeStart = microsec_clock::local_time();
@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
 
   for (size_t i = 0; i < noParts; i++)
     {
-      sphlatch::valueType partDistPow2, partDistPow3, epsilonPow2;
+      sphlatch::fType partDistPow2, partDistPow3, epsilonPow2;
       Data(i, AX) = 0.;
       Data(i, AY) = 0.;
       Data(i, AZ) = 0.;

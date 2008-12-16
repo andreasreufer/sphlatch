@@ -44,7 +44,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-//typedef sphlatch::valueType valueType;
+//typedef sphlatch::fType fType;
 //typedef sphlatch::partsIndexVectType partsIndexVectType;
 
 #include "io_manager.h"
@@ -85,18 +85,18 @@ void derivate()
   for (size_t i = 0; i < noParts; i++)
   {
 #ifdef ORBIT
-    const valueType dist = sqrt( pos(i, X)*pos(i, X) +
+    const fType dist = sqrt( pos(i, X)*pos(i, X) +
                                  pos(i, Y)*pos(i, Y) );
     
-    const valueType distPow3 = dist*dist*dist;
+    const fType distPow3 = dist*dist*dist;
     
     acc(i, X) = - pos(i, X) / distPow3;
     acc(i, Y) = - pos(i, Y) / distPow3;
     acc(i, Z) = 0;
 #endif
 #ifdef ONEDIMTHROW
-    //const valueType dist = sqrt( pos(i, X)*pos(i, X) );
-    //const valueType distPow3 = dist*dist*dist;
+    //const fType dist = sqrt( pos(i, X)*pos(i, X) );
+    //const fType distPow3 = dist*dist*dist;
 
     //acc(i, X) = - pos(i, X) / distPow3;
     acc(i, X) = (pos(i, X) > 0.) ? -1. : 1.;
@@ -138,20 +138,20 @@ int main(int argc, char* argv[])
   PartManager.resizeAll();
 
 #ifdef ORBIT
-  //const valueType k = 1.88;
-  const valueType k = 0.;
+  //const fType k = 1.88;
+  const fType k = 0.;
   for (size_t i = 0; i < noParts; i++)
   {
     id(i) = i;
 
-    const valueType phi = 2*M_PI*static_cast<valueType>(random())/RAND_MAX;
+    const fType phi = 2*M_PI*static_cast<fType>(random())/RAND_MAX;
 
     pos(i, X) = sin( phi );
     pos(i, Y) = cos( phi );
     pos(i, Z) = 0;
 
-    const valueType theta = phi
-      + k*( (static_cast<valueType>(random())/RAND_MAX) - 0.5);
+    const fType theta = phi
+      + k*( (static_cast<fType>(random())/RAND_MAX) - 0.5);
     
     //vel(i, X) = 1.40*cos( theta );
     //vel(i, Y) = -1.35*sin( theta );
@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
   }
 #endif
   
-  const valueType dt = 2*M_PI / 50.;
+  const fType dt = 2*M_PI / 50.;
   
   myIntegrator.bootstrap(dt);
 

@@ -21,7 +21,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
@@ -41,8 +41,8 @@ int main(int argc, char* argv[])
   ("input-file,i",  po::value<std::string>(), "input  file")
   ("output-file,o", po::value<std::string>(), "output file")
   ("header-file,f", po::value<std::string>(), "header file     default: <none>")
-  ("scaling,s",  po::value<valueType>(),      "scaling         default: 1.00")
-  ("radius,r",   po::value<valueType>(),      "sphere radius   default: 0.05");
+  ("scaling,s",  po::value<fType>(),      "scaling         default: 1.00")
+  ("radius,r",   po::value<fType>(),      "sphere radius   default: 0.05");
 
   po::variables_map VMap;
   po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
@@ -54,16 +54,16 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
     }
 
-  valueType k = 1.;
+  fType k = 1.;
   if (VMap.count("scaling"))
   {
-    k = VMap["scaling"].as<valueType>();
+    k = VMap["scaling"].as<fType>();
   }
   
-  valueType rad = 0.05;
+  fType rad = 0.05;
   if (VMap.count("radius"))
   {
-    rad = VMap["radius"].as<valueType>();
+    rad = VMap["radius"].as<fType>();
   }
   rad *= k;
 

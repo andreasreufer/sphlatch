@@ -29,6 +29,7 @@ impact_GHUa_K: libaneos
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
 				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \

@@ -18,8 +18,8 @@ namespace sphlatch {
 struct particleNode : public genericNode {
   // particle position and mass
   // are cached locally
-  valueType xPos, yPos, zPos;
-  valueType mass;
+  fType xPos, yPos, zPos;
+  fType mass;
 };
 };
 

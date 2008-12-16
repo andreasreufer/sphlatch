@@ -86,7 +86,7 @@ IOManager::IOManager(void) :
   sizeOfXDRfloat = 4;
   sizeOfXDRdouble = 8;
 
-  if (sizeof(valueType) == sizeOfXDRfloat)
+  if (sizeof(fType) == sizeOfXDRfloat)
     {
       datawidthSave = sizeOfXDRfloat;
     }
@@ -160,7 +160,7 @@ std::vector<int> IOManager::loadCDAT(std::string FileName)
             }
           else
             {
-              MemoryManager.saveParameter(paramlabel, lexical_cast<valueType>(paramvalue), true);
+              MemoryManager.saveParameter(paramlabel, lexical_cast<fType>(paramvalue), true);
             }
         }
       ;
@@ -229,7 +229,7 @@ std::vector<int> IOManager::loadCDAT(std::string FileName)
               if (attributes[j] != -1)
                 {
                   Data(i, attributes[j]) =
-                    static_cast<valueType>(*valuep);
+                    static_cast<fType>(*valuep);
                 }
             }
         }
@@ -246,7 +246,7 @@ std::vector<int> IOManager::loadCDAT(std::string FileName)
               if (attributes[j] != -1)
                 {
                   Data(i, attributes[j]) =
-                    static_cast<valueType>(*valuep);
+                    static_cast<fType>(*valuep);
                 }
             }
         }

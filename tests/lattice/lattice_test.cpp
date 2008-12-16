@@ -7,7 +7,7 @@
 #include <iomanip>
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 typedef sphlatch::valvectType valvectType;
 
 #include "lattice_hcp.h"
