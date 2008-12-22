@@ -8,8 +8,8 @@ h5parttocdat:
 tomsasciitoh5part:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o tomascii2h5part tomascii2h5part.cpp
 
-hdf5toh5part:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o hdf52h5part hdf52h5part.cpp
+h5partAddscalpos:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o h5part_addscalpos h5part_accscalpos.cpp
 
 fuchsbintoh5part:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o fuchsbin2h5part fuchsbin2h5part.cpp

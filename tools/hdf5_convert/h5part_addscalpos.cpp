@@ -48,16 +48,16 @@ int main(int argc, char* argv[])
   po::options_description Options("Global Options");
   Options.add_options()
   ("help,h", "Produces this Help")
-  ("input-file,i" , po::value<std::string>(), "input  file")
-  ("output-file,o" , po::value<std::string>(), "output file");
+  ("input-file,i" , po::value<std::string>(), "input  file");
+  //("output-file,o" , po::value<std::string>(), "output file");
 
   po::variables_map VMap;
   po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
   po::notify(VMap);
 
   if (VMap.count("help") ||
-      not VMap.count("input-file") ||
-      not VMap.count("output-file"))
+      not VMap.count("input-file") )
+      //not VMap.count("output-file"))
     {
       std::cerr << Options << std::endl;
       return EXIT_FAILURE;
@@ -68,12 +68,13 @@ int main(int argc, char* argv[])
   io_type&        IOManager(io_type::instance());
 
   std::string  inputFilename = VMap["input-file"].as<std::string>();
-  std::string  outputFilename = VMap["output-file"].as<std::string>();
+  //std::string  outputFilename = VMap["output-file"].as<std::string>();
+  std::string  outputFilename = inputFilename;
 
   std::cout << "adding scalar position and velocity to " << inputFilename << "\n";
 
   PartManager.useBasicSPH();
-  PartManager.useEnergy();
+/*  PartManager.useEnergy();
   
 #ifdef SPHLATCH_TIMEDEP_ENERGY
   PartManager.useTimedepEnergy();
@@ -98,7 +99,7 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_REMOVEESCAPING
   PartManager.useEccentricity();
 #endif
-  
+  */
   IOManager.loadDump( inputFilename );
 
   ///
@@ -152,7 +153,7 @@ int main(int argc, char* argv[])
   ///
   /// save the rest
   ///
-  quantsType saveQuants;
+  /*quantsType saveQuants;
   valvectRefType h( PartManager.h );
   valvectRefType m( PartManager.m );
   valvectRefType u( PartManager.u );
@@ -211,7 +212,7 @@ int main(int argc, char* argv[])
   H5Ldelete(rootGroup, "/current", H5P_DEFAULT);
   
   H5Gclose(rootGroup);
-  H5Fclose(fileHandle);
+  H5Fclose(fileHandle);*/
 
   return EXIT_SUCCESS;
 }
