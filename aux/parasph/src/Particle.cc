@@ -388,7 +388,16 @@ public:
     // Pressure
     ftype pij  = p * rhoim2 + read->p * rhojm2;
     ftype diag = pij + Piij;
-    
+   
+#ifdef NOMULTIPHASESTRAIN
+    //
+    // remove strength between different materials
+    //
+    if ( (bodyNr() != read->bodyNr()) && diag < 0. ) {
+      diag = 0.;
+    }
+#endif
+
     f         -= d     * diag * gWmj;
     write->f  += d     * diag * gWmi;
     du        += projv * diag * gWmj;

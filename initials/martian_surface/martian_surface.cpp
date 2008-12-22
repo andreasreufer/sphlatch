@@ -34,7 +34,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 typedef sphlatch::identType identType;
 typedef sphlatch::valvectType valvectType;
 
@@ -154,8 +154,8 @@ int main(int argc, char* argv[])
   ///
   /// scale position, specific volume and smoothing length
   ///
-  const valueType rScale = 900;
-  const valueType volScale = pow(rScale, 3.);
+  const fType rScale = 400;
+  const fType volScale = pow(rScale, 3.);
 
   noParts = PartManager.getNoLocalParts();
   std::cerr << "keeping " << noParts << " particles \n";
@@ -171,18 +171,18 @@ int main(int argc, char* argv[])
     }
 
 
-  const valueType surfRelThickness = 0.1;
-  const valueType surfThickness = surfRelThickness * rScale;
+  const fType surfRelThickness = 0.075;
+  const fType surfThickness = surfRelThickness * rScale;
 
   /// ice: 17
   identType baseId = 17;
   till_type::paramType baseParams = Tillotson.getMatParams(baseId);
-  const valueType baseU = 5.04e9;
+  const fType baseU = 5.04e9;
 
   /// dunite: 4
   identType surfId = 4;
   till_type::paramType surfParams = Tillotson.getMatParams(surfId);
-  const valueType surfU = 1.72e9;
+  const fType surfU = 1.72e9;
 
   ///
   /// set particle mass by multiplyin the particle volume
@@ -196,8 +196,7 @@ int main(int argc, char* argv[])
           ///
           /// the unflawed base
           ///
-
-          const valueType baseRho = Tillotson.findRho(baseU, baseId,
+          const fType baseRho = Tillotson.findRho(baseU, baseId,
                                                       0., 1.e-2, 0.1, 10.);
           m(k) *= baseRho;
           rho(k) = baseRho;
@@ -209,6 +208,8 @@ int main(int argc, char* argv[])
                                 baseParams.rho0) / (2. * h(k));
           young(k) = 9. * baseParams.A * baseParams.xmu
                      / (3. * baseParams.A + baseParams.xmu);
+          
+          dam(k) = 0.0;
           noBaseParts++;
         }
       else
@@ -216,7 +217,7 @@ int main(int argc, char* argv[])
           ///
           /// the flawed surface
           ///
-          const valueType surfRho = Tillotson.findRho(surfU, surfId,
+          const fType surfRho = Tillotson.findRho(surfU, surfId,
                                                       0., 1.e-2, 0.1, 10.);
           m(k) *= surfRho;
           rho(k) = surfRho;
@@ -229,6 +230,7 @@ int main(int argc, char* argv[])
           young(k) = 9. * surfParams.A * surfParams.xmu
                      / (3. * surfParams.A + surfParams.xmu);
 
+          dam(k) = 0.9;
           noSurfParts++;
         }
 
@@ -253,14 +255,14 @@ int main(int argc, char* argv[])
   ///
   /// the typical surface volume
   ///
-  const valueType surfVol = surfThickness * surfThickness * surfThickness;
+  const fType surfVol = surfThickness * surfThickness * surfThickness;
 
   ///
   /// set surface flaws
   /// factor 300 from Benz setup-collision.f
   ///
-  const valueType surfWeibKV = 300. / (surfParams.cweib * surfVol);
-  const valueType surfWeibExp = 1. / surfParams.pweib;
+  const fType surfWeibKV = 300. / (surfParams.cweib * surfVol);
+  const fType surfWeibExp = 1. / surfParams.pweib;
 
   boost::progress_display flawsSurfProgress(noTotSurfFlaws);
   size_t noSetFlaws = 0;
@@ -271,8 +273,8 @@ int main(int argc, char* argv[])
 
       if (mat(i) == surfId)
         {
-          const valueType curEps =
-            pow(surfWeibKV * (static_cast<valueType>(noSetFlaws) + 1), surfWeibExp);
+          const fType curEps =
+            pow(surfWeibKV * (static_cast<fType>(noSetFlaws) + 1), surfWeibExp);
 
           ///
           /// the first flaw is always the weakest,
@@ -302,14 +304,14 @@ int main(int argc, char* argv[])
   ///
   /// the typical base volume
   ///
-  const valueType baseVol = pow(rScale - surfThickness, 3.);
+  const fType baseVol = pow(rScale - surfThickness, 3.);
 
   ///
   /// set base flaws
   /// factor 300 from Benz setup-collision.f
   ///
-  const valueType baseWeibKV = 300. / (baseParams.cweib * baseVol);
-  const valueType baseWeibExp = 1. / baseParams.pweib;
+  const fType baseWeibKV = 300. / (baseParams.cweib * baseVol);
+  const fType baseWeibExp = 1. / baseParams.pweib;
 
   boost::progress_display flawsBaseProgress(noTotBaseFlaws);
   noSetFlaws = 0;
@@ -320,8 +322,8 @@ int main(int argc, char* argv[])
 
       if (mat(i) == baseId)
         {
-          const valueType curEps =
-            pow(baseWeibKV * (static_cast<valueType>(noSetFlaws) + 1), baseWeibExp);
+          const fType curEps =
+            pow(baseWeibKV * (static_cast<fType>(noSetFlaws) + 1), baseWeibExp);
 
           ///
           /// the first flaw is always the weakest,
@@ -345,8 +347,7 @@ int main(int argc, char* argv[])
   ///
   for (size_t k = 0; k < noParts; k++)
     {
-      dam(k) = 0.;
-
+      
       ///
       /// no flaw was assigned, so give it one flaw with maximal strength
       ///
@@ -355,16 +356,16 @@ int main(int argc, char* argv[])
           noflaws(k) = 1;
           if (mat(k) == surfId)
             epsmin(k) =
-              pow(surfWeibKV * static_cast<valueType>(noTotSurfFlaws + 1), surfWeibExp);
+              pow(surfWeibKV * static_cast<fType>(noTotSurfFlaws + 1), surfWeibExp);
           else
             epsmin(k) =
-              pow(baseWeibKV * static_cast<valueType>(noTotBaseFlaws + 1), baseWeibExp);
+              pow(baseWeibKV * static_cast<fType>(noTotBaseFlaws + 1), baseWeibExp);
         }
 
       if (noflaws(k) == 1)
         mweib(k) = 1.;
       else
-        mweib(k) = log(static_cast<valueType>(noflaws(k)))
+        mweib(k) = log(static_cast<fType>(noflaws(k)))
                    / log(mweib(k) / epsmin(k));
 
       ///

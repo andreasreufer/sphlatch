@@ -34,7 +34,7 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
+typedef sphlatch::fType fType;
 typedef sphlatch::identType identType;
 typedef sphlatch::valvectType valvectType;
 
@@ -132,8 +132,8 @@ int main(int argc, char* argv[])
   ///
   /// scale position, specific volume and smoothing length
   ///
-  const valueType rScale = 20;
-  const valueType volScale = pow(rScale, 3.);
+  const fType rScale = 12.1;
+  const fType volScale = pow(rScale, 3.);
 
   const size_t noParts = PartManager.getNoLocalParts();
   for (size_t k = 0; k < noParts; k++)
@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
   /// dunite: 4
   identType surfId = 4;
   till_type::paramType surfParams = Tillotson.getMatParams(surfId);
-  const valueType surfU = 1.72e9;
+  const fType surfU = 1.72e9;
 
   ///
   /// set particle mass by multiplyin the particle volume
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
       ///
       /// the flawed surface
       ///
-      const valueType surfRho = Tillotson.findRho(surfU, surfId,
+      const fType surfRho = Tillotson.findRho(surfU, surfId,
                                                   0., 1.e-2, 0.1, 10.);
       m(k) *= surfRho;
       rho(k) = surfRho;
@@ -195,8 +195,8 @@ int main(int argc, char* argv[])
   ///
   /// factor 300 from Benz setup-collision.f
   ///
-  const valueType weibKV = 300. / (surfParams.cweib * volScale);
-  const valueType weibExp = 1. / surfParams.pweib;
+  const fType weibKV = 300. / (surfParams.cweib * volScale);
+  const fType weibExp = 1. / surfParams.pweib;
 
   boost::progress_display flawsProgress(noTotFlaws);
   size_t noSetFlaws = 0;
@@ -205,8 +205,8 @@ int main(int argc, char* argv[])
       const size_t i = lrint(noParts * (rand()
                                         / static_cast<double>(RAND_MAX)));
 
-      const valueType curEps =
-        pow(weibKV * (static_cast<valueType>(noSetFlaws) + 1), weibExp);
+      const fType curEps =
+        pow(weibKV * (static_cast<fType>(noSetFlaws) + 1), weibExp);
 
       ///
       /// the first flaw is always the weakest,
@@ -238,13 +238,13 @@ int main(int argc, char* argv[])
         {
           noflaws(k) = 1;
           epsmin(k) =
-            pow(weibKV * static_cast<valueType>(noTotFlaws + 1), weibExp);
+            pow(weibKV * static_cast<fType>(noTotFlaws + 1), weibExp);
         }
 
       if (noflaws(k) == 1)
         mweib(k) = 1.;
       else
-        mweib(k) = log(static_cast<valueType>(noflaws(k)))
+        mweib(k) = log(static_cast<fType>(noflaws(k)))
                    / log(mweib(k) / epsmin(k));
     }
 
