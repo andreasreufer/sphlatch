@@ -6,7 +6,7 @@
 #include "bhtree_dynamic.h"
 #include "bhtree_worker.h"
 #include "bhtree_worker_grav.h"
-#include "bhtree_part_inserter.h"
+#include "bhtree_part_insertmover.h"
 //#include "bhtree_cz_builder.h"
 #include "bhtree_worker_treedump.h"
 
@@ -20,11 +20,12 @@ typedef sphlatch::BHTree treeType;
 typedef sphlatch::BHTreeWorker workerType;
 typedef sphlatch::BHTreeDump dumpType;
 typedef sphlatch::BHTreeWorkerGrav gravworkerType;
-//typedef sphlatch::BHTreePartsInserter inserterType;
 
 int main()
 {
+  sleep(1);
   treeType& Tree(treeType::instance());
+  sleep(1);
 
   //inserterType inserter;
 
@@ -40,6 +41,7 @@ int main()
     //std::cout << tid << ":" << i << ":" << &worker << "\n";
     
   }
+  sleep(1);
   return 0;
 }
 

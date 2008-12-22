@@ -46,7 +46,6 @@ public:
 
    void clear()
    {
-      parent = NULL;
       next   = NULL;
       skip   = NULL;
 
@@ -72,7 +71,6 @@ public:
 
    void clear()
    {
-      parent = NULL;
       next   = NULL;
       skip   = NULL;
 
@@ -124,7 +122,6 @@ public:
 
    void clear()
    {
-      parent = NULL;
       next   = NULL;
       skip   = NULL;
 
@@ -178,7 +175,6 @@ public:
 
    void clear()
    {
-      parent = NULL;
       next   = NULL;
       skip   = NULL;
 
@@ -226,7 +222,6 @@ public:
 
    void clear()
    {
-      parent = NULL;
       next   = NULL;
       skip   = NULL;
 
@@ -324,7 +319,6 @@ public:
 
    void clear()
    {
-      parent = NULL;
       next   = NULL;
       skip   = NULL;
 

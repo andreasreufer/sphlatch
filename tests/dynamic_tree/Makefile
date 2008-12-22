@@ -7,3 +7,5 @@ treefun:
 	  -DSPHLATCH_GRAVITY \
 	  -o treeFun treeFun.cpp
 
+clean:
+	rm treeFun 2>&1 >/dev/null; true

@@ -16,84 +16,86 @@
 #include "typedefs.h"
 
 #include "bhtree_nodes.h"
-#include "chunk_allocator.h"
+#include "stack_allocator.h"
 
 namespace sphlatch {
-
 class BHTree {
-  public:
-    friend class BHTreeWorker;
-    friend class BHTreeCZBuilder;
+public:
+   friend class BHTreeWorker;
+   friend class BHTreeCZBuilder;
+   friend class BHTreePartsInsertMover;
 
-    typedef BHTree selfType;
-    typedef BHTree& selfRef;
-    typedef BHTree* selfPtr;
-    
-    typedef genericNode* nodePtrT;
+   typedef BHTree                  selfType;
+   typedef BHTree&                 selfRef;
+   typedef BHTree*                 selfPtr;
 
-    typedef particleNode partT;
-    typedef particleNode* partPtrT;
+   typedef genericNode*            nodePtrT;
 
-    typedef quadrupoleCellNode cellT;
-    typedef quadrupoleCellNode* cellPtrT;
+   typedef particleNode            partT;
+   typedef particleNode*           partPtrT;
 
-    typedef costzoneCellNode czllT;
-    typedef costzoneCellNode* czllPtrT;
+   typedef quadrupoleCellNode      cellT;
+   typedef quadrupoleCellNode*     cellPtrT;
 
-    typedef std::list<czllPtrT> czllPtrListT;
+   typedef costzoneCellNode        czllT;
+   typedef costzoneCellNode*       czllPtrT;
 
-    typedef std::vector<partPtrT> partPtrVectT;
-    
-    BHTree();
-    ~BHTree();
+   typedef std::list<czllPtrT>     czllPtrListT;
 
-    static selfRef instance(void);
+   typedef std::vector<partPtrT>   partPtrVectT;
 
-  private:
-    static selfPtr _instance;
+   BHTree();
+   ~BHTree();
 
-  protected:
-    czllPtrT rootPtr;
+   static selfRef instance(void);
 
-    ChunkAllocator<partT, 8192> partAllocator;
-    ChunkAllocator<cellT, 1024> cellAllocator;
-    ChunkAllocator<czllT,  256> czllAllocator;
-    
-    czllPtrListT CZbottomCells;
+private:
+   static selfPtr _instance;
 
-    partPtrVectT partProxies;
+protected:
+   czllPtrT rootPtr;
+
+   StackAllocator<partT, 1048576> partAllocator;
+   StackAllocator<cellT, 262144>  cellAllocator;
+   StackAllocator<czllT, 16384>   czllAllocator;
+
+   czllPtrListT CZbottomCells;
+
+   partPtrVectT partProxies;
 };
 
 BHTree::BHTree()
 {
-  
+   ///
+   /// allocate root cell and set cell
+   /// size, add root cell to CZbottom
+   /// cells list
+   ///
+   rootPtr           = czllAllocator.pop();
+   rootPtr->atBottom = true;
 
-  ///
-  /// allocate root cell and set cell
-  /// size, add root cell to CZbottom
-  /// cells list
-  ///
-  rootPtr = czllAllocator.pop();
-
-  ///
-  /// resize particle proxy vector
-  ///
-
-  partProxies.resize(16);
-};
+   ///
+   /// resize particle proxy vector
+   ///
+   partProxies.reserve(1048576);
+   
+   partProxies.resize(1048576);
+   for (size_t i = 0; i < 1048576; i++)
+   {
+     partProxies[i] = NULL;
+   }
+   partProxies.resize(0);
+}
 
 BHTree::~BHTree()
-{
-};
+{ }
 
 BHTree::selfPtr BHTree::_instance = NULL;
 BHTree::selfRef BHTree::instance()
 {
-  if ( _instance == NULL )
-    _instance = new BHTree;
-  return *_instance;
+   if (_instance == NULL)
+      _instance = new BHTree;
+   return(*_instance);
 }
-
 };
 #endif
-
