@@ -89,6 +89,12 @@ stringListType discoverVars(std::string _inputFile, std::string _stepName);
 stringListType discoverVars(std::string _inputFile);
 
 ///
+/// get quants in 
+///
+quantsType getQuants(std::string _inputFile, std::string _stepName);
+quantsType getQuants(std::string _inputFile);
+
+///
 /// set output precision
 ///
 void setSinglePrecOut(void);
@@ -825,6 +831,17 @@ IOManager::discoverVars(std::string _inputFile)
   return discoverVars(_inputFile, "/current");
 }
 
+quantsType IOManager::getQuants(std::string _inputFile, std::string _stepName)
+{
+  stringListType varNames = discoverVars( _inputFile, _stepName);
+  return PartManager.getKnownQuants(varNames);
+}
+
+quantsType IOManager::getQuants(std::string _inputFile)
+{
+  stringListType varNames = discoverVars( _inputFile);
+  return PartManager.getKnownQuants(varNames);
+}
 
 void IOManager::setSinglePrecOut(void)
 {

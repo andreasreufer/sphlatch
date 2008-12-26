@@ -9,237 +9,343 @@
 
 namespace sphlatch
 {
-
 namespace vectindices
 {
-enum VectIndices { X, Y, Z };
-enum TensorIndices { XX, XY, XZ, YY, YZ };
+enum VectIndices
+{
+   X, Y, Z
+};
+enum TensorIndices
+{
+   XX, XY, XZ, YY, YZ
+};
 }
 
 class ParticleManager
 {
 public:
-typedef ParticleManager self_type;
-typedef ParticleManager& self_reference;
-typedef ParticleManager* self_pointer;
+   typedef ParticleManager                         self_type;
+   typedef ParticleManager&                        self_reference;
+   typedef ParticleManager*                        self_pointer;
 
-typedef std::map< std::string, valvectPtrType > valVectPtrMap;
-typedef std::map< std::string, matrixPtrType > matrixPtrMap;
-typedef std::map< std::string, idvectPtrType > idVectPtrMap;
+   typedef std::map<std::string, valvectPtrType>   valvectPtrMap;
+   typedef std::map<std::string, matrixPtrType>    matrixPtrMap;
+   typedef std::map<std::string, idvectPtrType>    idvectPtrMap;
 
-typedef std::set< std::string > stringSet;
+   typedef std::set<std::string>                   stringSet;
 
-static self_reference instance(void);
+   typedef std::map<std::string, std::string>      strStrMapType;
 
-///
-/// methods to set up the vars needed
-///
-void useBasicSPH(void);
-void useEnergy(void);
-void useTimedepEnergy(void);
-void useEntropy(void);
-void useTimedepEntropy(void);
-void useTimedepH(void);
-void useGravity(void);
-void useEccentricity(void);
-void useIntegratedRho(void);
+   static self_reference instance(void);
 
-void useCost(void);
+   ///
+   /// methods to set up the vars needed
+   ///
+   void usePhaseSpace();
+   void useBasicSPH();
+   void useEnergy();
+   void useTimedepEnergy();
+   void useEntropy();
+   void useTimedepEntropy();
+   void useTimedepH();
+   void useGravity();
+   void useEccentricity();
+   void useIntegratedRho();
 
-void useAVMonaghan(void);
-void useAVBalsara(void);
-void useAVHernquist(void);
-void useAVTimedepAlpha(void);
+   void useCost(void);
 
-void useMaterials(void);
-void usePhase(void);
-void useTemperature(void);
+   void useAVMonaghan(void);
+   void useAVBalsara(void);
+   void useAVHernquist(void);
+   void useAVTimedepAlpha(void);
 
-void useStress(void);
-void useDamage(void);
+   void useMaterials(void);
+   void usePhase(void);
+   void useTemperature(void);
 
-void setNoParts(size_t _noParts, size_t _noGhostParts);
-void setNoParts(size_t _noParts);
+   void useStress(void);
+   void useDamage(void);
 
-void addParts(size_t _addNoParts);
+   void setNoParts(size_t _noParts, size_t _noGhostParts);
+   void setNoParts(size_t _noParts);
 
-void resizeAll(bool _keep);
-void resizeAll(void);
+   void addParts(size_t _addNoParts);
 
-void resize(matrixRefType _matrixRef, bool _keep);
-void resize(valvectRefType _valvectRef, bool _keep);
-void resize(idvectRefType _idvectRef, bool _keep);
+   void resizeAll(bool _keep);
 
-///
-/// get the name of a int/scalar/vect value reference
-///
-std::string getName(matrixRefType _matrixRef);
-std::string getName(valvectRefType _valvectRef);
-std::string getName(idvectRefType _idvectRef);
+   void resizeAll(void);
 
-///
-/// get the int/scalar/vect value reference for a name
-///
-matrixPtrType  getVectRef(std::string _name);
-valvectPtrType getScalarRef(std::string _name);
-idvectPtrType  getIdRef(std::string _name);
+   void resize(matrixRefType _matrixRef, bool _keep);
+   void resize(valvectRefType _valvectRef, bool _keep);
+   void resize(idvectRefType _idvectRef, bool _keep);
 
-///
-/// register an auxilliary quantity, for example integration vars
-///
-void regQuantity(matrixRefType _matrixRef,   std::string _name);
-void regQuantity(valvectRefType _valvectRef, std::string _name);
-void regQuantity(idvectRefType _idvectRef,   std::string _name);
+   ///
+   /// synonyms for var names
+   ///
+private:
+   strStrMapType synonymes;
 
-///
-/// unregister a quantity again, for example when an integrator is destructed
-///
-void unRegQuantity(matrixRefType  _matRef);
-void unRegQuantity(valvectRefType _valvectRef);
-void unRegQuantity(idvectRefType  _idvectRef);
+   ///
+   /// add a synonym for a known name
+   ///
+public:
+   void addSynonym(std::string _name, std::string _syn);
+   std::string resolveSynonym(std::string _syn);
 
-///
-/// vector quantities:
-///
-matrixType pos,     /// position
-           vel,     /// velocity
-           acc,     /// acceleration
-           rotv,    /// vorticity
-           S, dSdt, /// traceless deviatoric stress tensor
-           dR,      /// rotation rate tensor
-           e;       /// strain rate tensor
+   ///
+   /// get the name of a int/scalar/vect value reference
+   ///
+   std::string getName(matrixRefType _matrixRef);
+   std::string getName(valvectRefType _valvectRef);
+   std::string getName(idvectRefType _idvectRef);
 
-///
-/// scalar quantities
-///
-valvectType m,              /// mass
-            h, dhdt,        /// smoothing length
-            rho, drhodt,    /// density
-            p,              /// pressurce
-            u, dudt,        /// specific internal energy
-            A, dAdt,        /// entropy
-            alpha, dalphadt,/// artificial viscosity alpha
-            divv,           /// velocity divergence
-            mumax,          /// maximal Monaghan mu
-            q,              /// AV parameter
-            eps,            /// gravitational smoothing
-            dtav,           /// AV timestep
-            dt,             /// timestep
-            cs,             /// speed of sound
-            ecc,            /// eccentricity
-            T,              /// temperature
-            dam, ddamdt,    /// damage
-            epsmin,         /// minimal strain
-            acoef,          /// crack growth timescale
-            mweib,          /// Weibull m exponent
-            young,          /// Youngs modulus
-            cost;           /// relative computational cost
+   ///
+   /// get the int/scalar/vect value reference for a name
+   ///
+   matrixPtrType  getVectRef(std::string _name);
+   valvectPtrType getScalarRef(std::string _name);
+   idvectPtrType  getIdRef(std::string _name);
 
-///
-/// integers
-///
-idvectType id,       /// ID
-           noneigh,  /// number of neighbours
-           mat,      /// material
-           phase,    /// phase
-           noflaws;  /// number of flaws
+   ///
+   /// register an auxilliary quantity, for example integration vars
+   ///
+   void regQuantity(matrixRefType _matrixRef, std::string _name);
+   void regQuantity(valvectRefType _valvectRef, std::string _name);
+   void regQuantity(idvectRefType _idvectRef, std::string _name);
 
-///
-/// blacklist for particles to be deleted
-///
-bitsetType blacklisted;
+   ///
+   /// unregister a quantity again, for example when an integrator
+   /// is destructed
+   ///
+   void unRegQuantity(matrixRefType _matRef);
+   void unRegQuantity(valvectRefType _valvectRef);
+   void unRegQuantity(idvectRefType _idvectRef);
 
-///
-/// the integration step and the substep of the integrator
-///
-int step, substep;
+   ///
+   /// vector quantities:
+   ///
+   matrixType pos,     /// position
+              vel,     /// velocity
+              acc,     /// acceleration
+              rotv,    /// vorticity
+              S, dSdt, /// traceless deviatoric stress tensor
+              dR,      /// rotation rate tensor
+              e;       /// strain rate tensor
+
+   ///
+   /// scalar quantities
+   ///
+   valvectType m,               /// mass
+               h, dhdt,         /// smoothing length
+               rho, drhodt,     /// density
+               p,               /// pressurce
+               u, dudt,         /// specific internal energy
+               A, dAdt,         /// entropy
+               alpha, dalphadt, /// artificial viscosity alpha
+               divv,            /// velocity divergence
+               mumax,           /// maximal Monaghan mu
+               q,               /// AV parameter
+               eps,             /// gravitational smoothing
+               dtav,            /// AV timestep
+               dt,              /// timestep
+               cs,              /// speed of sound
+               ecc,             /// eccentricity
+               T,               /// temperature
+               dam, ddamdt,     /// damage
+               epsmin,          /// minimal strain
+               acoef,           /// crack growth timescale
+               mweib,           /// Weibull m exponent
+               young,           /// Youngs modulus
+               cost;            /// relative computational cost
+
+   ///
+   /// integers
+   ///
+   idvectType id,      /// ID
+              noneigh, /// number of neighbours
+              mat,     /// material
+              phase,   /// phase
+              noflaws; /// number of flaws
+
+   ///
+   /// blacklist for particles to be deleted
+   ///
+   bitsetType blacklisted;
+
+   ///
+   /// the integration step and the substep of the integrator
+   ///
+   int step, substep;
 
 protected:
-ParticleManager(void);
-~ParticleManager(void);
+   ParticleManager(void);
+   ~ParticleManager(void);
 
 private:
-///
-/// the quantities used by local particles
-///
-valVectPtrMap usedScalars;
-matrixPtrMap usedVectors;
-idVectPtrMap usedIntegers;
+   ///
+   /// the quantities used by local particles
+   ///
+   quantsType usedQuants;
 
-///
-/// number of local/ghost particles
-///
-private:
-size_t noLocalParts, noGhostParts;
+   matrixPtrMap  knownVects;
+   valvectPtrMap knownScalars;
+   idvectPtrMap  knownIntegers;
 
 public:
-size_t getNoLocalParts();
-size_t getNoGhostParts();
-size_t getNoTotalParts();
+   ///
+   /// get/set used quantities
+   ///
+   quantsType getUsedQuants();
+   void setUsedQuants(quantsType _quants);
 
-///
-/// the quantities which are ghosts, when used
-///
+   ///
+   /// get known quants from a string list
+   ///
+   quantsType getKnownQuants(stringListType _strlist);
+
+   ///
+   /// number of local/ghost particles
+   ///
 private:
-stringSet isGhostVarSet;
+   size_t noLocalParts, noGhostParts;
 
-bool isGhostVar(std::string _searchString);
-
-///
-/// attribute stuff
-///
 public:
-attrMapType attributes;
-bool attrExists(std::string _name);
+   size_t getNoLocalParts();
+   size_t getNoGhostParts();
+   size_t getNoTotalParts();
 
-static self_pointer _instance;
+   ///
+   /// the quantities which are ghosts, when used
+   ///
+private:
+   stringSetType isGhostVarSet;
+   bool isGhostVar(std::string _searchString);
+
+
+   ///
+   /// attribute stuff
+   ///
+public:
+   attrMapType attributes;
+   bool attrExists(std::string _name);
+
+   static self_pointer _instance;
 };
 
 ParticleManager::self_pointer ParticleManager::_instance = NULL;
 
 ParticleManager::self_reference ParticleManager::instance(void)
 {
-  if (_instance != NULL)
-    return *_instance;
-  else
-    {
+   if (_instance != NULL)
+      return(*_instance);
+   else
+   {
       _instance = new ParticleManager;
-      return *_instance;
-    }
+      return(*_instance);
+   }
 }
 
 ParticleManager::ParticleManager(void)
 {
-  ///
-  /// define the amount of variables needed in every case
-  /// (position and ID)
-  ///
-  usedVectors[ "pos" ] = &pos;
-  pos.resize(0, 3);
+   using namespace boost::assign;
+   ///
+   /// known vectorial quantities with
+   /// their respective second dimension
+   /// size
+   ///
+   knownVects["pos"]  = &pos;
+   knownVects["vel"]  = &vel;
+   knownVects["acc"]  = &acc;
+   knownVects["rotv"] = &rotv;
+   knownVects["S"]    = &S;
+   knownVects["dSdt"] = &dSdt;
+   knownVects["dR"]   = &dR;
+   knownVects["e"]    = &e;
 
-  usedIntegers[ "id" ] = &id;
+   pos.resize(0, 3);
+   vel.resize(0, 3);
+   acc.resize(0, 3);
+   rotv.resize(0, 3);
+   S.resize(0, 5);
+   dSdt.resize(0, 5);
+   dR.resize(0, 5);
+   e.resize(0, 5);
 
-  using namespace boost::assign;
-  ///
-  /// define the quantities used for ghosts
-  /// vectorial quantities:
-  ///
-  isGhostVarSet += "pos", "vel", "rotv", "S";
-  /// scalar quantities:
-  isGhostVarSet += "m", "h", "rho", "p", "A",
-                    "alpha", "divv", "eps", "cs";
-  /// integers:
-  isGhostVarSet += "id";
+   ///
+   /// vectorial quantities which are ghost
+   ///
+   isGhostVarSet += "pos", "vel", "rotv", "S";
 
-  step = 0, substep = 0;
-  
-  noLocalParts = 0;
-  noGhostParts = 0;
+   ///
+   /// known integer quantities
+   ///
+   knownIntegers["id"]      = &id;
+   knownIntegers["noneigh"] = &noneigh;
+   knownIntegers["mat"]     = &mat;
+   knownIntegers["phase"]   = &phase;
+   knownIntegers["noflaws"] = &noflaws;
+
+   ///
+   /// integer   quantities which are ghost
+   ///
+   isGhostVarSet += "id";
+
+   ///
+   /// known scalar quantities
+   ///
+   knownScalars["m"]        = &m;
+   knownScalars["dhdt"]     = &dhdt;
+   knownScalars["rho"]      = &rho;
+   knownScalars["drhodt"]   = &drhodt;
+   knownScalars["p"]        = &p;
+   knownScalars["u"]        = &u;
+   knownScalars["dudt"]     = &dudt;
+   knownScalars["A"]        = &A;
+   knownScalars["dAdt"]     = &dAdt;
+   knownScalars["alpha"]    = &alpha;
+   knownScalars["dalphadt"] = &dalphadt;
+   knownScalars["divv"]     = &divv;
+   knownScalars["mumax"]    = &mumax;
+   knownScalars["q"]        = &q;
+   knownScalars["eps"]      = &eps;
+   knownScalars["dtav"]     = &dtav;
+   knownScalars["dt"]       = &dt;
+   knownScalars["cs"]       = &cs;
+   knownScalars["ecc"]      = &ecc;
+   knownScalars["T"]        = &T;
+   knownScalars["dam"]      = &dam;
+   knownScalars["ddamdt"]   = &ddamdt;
+   knownScalars["epsmin"]   = &epsmin;
+   knownScalars["acoef"]    = &acoef;
+   knownScalars["mweib"]    = &mweib;
+   knownScalars["young"]    = &young;
+   knownScalars["cost"]     = &cost;
+
+   ///
+   /// scalar quantities which are ghost
+   ///
+   isGhostVarSet += "m", "h", "rho", "p", "A",
+   "alpha", "divv", "eps", "cs";
+
+   ///
+   /// set some initial values
+   ///
+   step = 0, substep = 0;
+
+   noLocalParts = 0;
+   noGhostParts = 0;
 }
 
-
 ParticleManager::~ParticleManager(void)
+{ }
+
+///
+///
+///
+void ParticleManager::usePhaseSpace()
 {
+   using namespace boost::assign;
+   usedQuants.vects += &pos, &vel;
 }
 
 ///
@@ -247,20 +353,17 @@ ParticleManager::~ParticleManager(void)
 ///
 void ParticleManager::useGravity()
 {
-  usedVectors[ "vel" ] = &vel;
-  usedVectors[ "acc" ] = &acc;
-
-  // 3D
-  vel.resize(vel.size1(), 3);
-  acc.resize(acc.size1(), 3);
-
-  usedScalars[ "m" ] = &m;
-  usedScalars[ "eps" ] = &eps;
+   usePhaseSpace();
+   using namespace boost::assign;
+   usedQuants.vects   += &acc;
+   usedQuants.scalars += &m, &eps;
+   usedQuants.ints    += &id;
 }
 
 void ParticleManager::useEccentricity()
 {
-  usedScalars[ "ecc" ] = &ecc;
+   using namespace boost::assign;
+   usedQuants.scalars += &ecc;
 }
 
 ///
@@ -268,20 +371,11 @@ void ParticleManager::useEccentricity()
 ///
 void ParticleManager::useBasicSPH()
 {
-  usedVectors[ "vel" ] = &vel;
-  usedVectors[ "acc" ] = &acc;
-
-  // 3D
-  vel.resize(vel.size1(), 3);
-  acc.resize(acc.size1(), 3);
-
-  usedScalars[ "m" ] = &m;
-  usedScalars[ "h" ] = &h;
-  usedScalars[ "rho" ] = &rho;
-  usedScalars[ "p" ] = &p;
-  usedScalars[ "cs" ] = &cs;
-  
-  usedIntegers[ "noneigh" ] = &noneigh;
+   usePhaseSpace();
+   using namespace boost::assign;
+   usedQuants.vects   += &acc;
+   usedQuants.scalars += &m, &h, &rho, &p, &cs;
+   usedQuants.ints    += &noneigh, &id;
 }
 
 ///
@@ -289,7 +383,8 @@ void ParticleManager::useBasicSPH()
 ///
 void ParticleManager::useEnergy()
 {
-  usedScalars[ "u" ] = &u;
+   using namespace boost::assign;
+   usedQuants.scalars += &u;
 }
 
 ///
@@ -297,7 +392,8 @@ void ParticleManager::useEnergy()
 ///
 void ParticleManager::useTimedepEnergy()
 {
-  usedScalars[ "dudt" ] = &dudt;
+   using namespace boost::assign;
+   usedQuants.scalars += &dudt;
 }
 
 ///
@@ -305,7 +401,8 @@ void ParticleManager::useTimedepEnergy()
 ///
 void ParticleManager::useEntropy()
 {
-  usedScalars[ "A" ] = &A;
+   using namespace boost::assign;
+   usedQuants.scalars += &A;
 }
 
 ///
@@ -313,7 +410,8 @@ void ParticleManager::useEntropy()
 ///
 void ParticleManager::useTimedepEntropy()
 {
-  usedScalars[ "dAdt" ] = &dAdt;
+   using namespace boost::assign;
+   usedQuants.scalars += &dAdt;
 }
 
 ///
@@ -321,8 +419,8 @@ void ParticleManager::useTimedepEntropy()
 ///
 void ParticleManager::useTimedepH()
 {
-  usedScalars[ "dhdt" ] = &dhdt;
-  usedScalars[ "divv" ] = &divv;
+   using namespace boost::assign;
+   usedQuants.scalars += &dhdt, &divv;
 }
 
 ///
@@ -330,7 +428,8 @@ void ParticleManager::useTimedepH()
 ///
 void ParticleManager::useAVMonaghan()
 {
-  usedScalars[ "mumax" ] = &mumax;
+   using namespace boost::assign;
+   usedQuants.scalars += &mumax;
 }
 
 ///
@@ -338,8 +437,8 @@ void ParticleManager::useAVMonaghan()
 ///
 void ParticleManager::useAVTimedepAlpha()
 {
-  usedScalars[ "alpha" ] = &alpha;
-  usedScalars[ "dalphadt" ] = &dalphadt;
+   using namespace boost::assign;
+   usedQuants.scalars += &alpha, &dalphadt;
 }
 
 ///
@@ -347,10 +446,8 @@ void ParticleManager::useAVTimedepAlpha()
 ///
 void ParticleManager::useAVBalsara()
 {
-  usedVectors[ "rotv" ] = &rotv;
-
-  // 3D
-  rotv.resize(rotv.size1(), 3);
+   using namespace boost::assign;
+   usedQuants.vects += &rotv;
 }
 
 ///
@@ -358,7 +455,8 @@ void ParticleManager::useAVBalsara()
 ///
 void ParticleManager::useAVHernquist()
 {
-  usedScalars[ "q" ] = &q;
+   using namespace boost::assign;
+   usedQuants.scalars += &q;
 }
 
 ///
@@ -366,7 +464,8 @@ void ParticleManager::useAVHernquist()
 ///
 void ParticleManager::useMaterials()
 {
-  usedIntegers[ "mat" ] = &mat;
+   using namespace boost::assign;
+   usedQuants.ints += &mat;
 }
 
 ///
@@ -374,7 +473,8 @@ void ParticleManager::useMaterials()
 ///
 void ParticleManager::usePhase()
 {
-  usedIntegers[ "phase" ] = &phase;
+   using namespace boost::assign;
+   usedQuants.ints += &phase;
 }
 
 ///
@@ -382,7 +482,8 @@ void ParticleManager::usePhase()
 ///
 void ParticleManager::useTemperature()
 {
-  usedScalars[ "T" ] = &T;
+   using namespace boost::assign;
+   usedQuants.scalars += &T;
 }
 
 ///
@@ -390,7 +491,8 @@ void ParticleManager::useTemperature()
 ///
 void ParticleManager::useIntegratedRho()
 {
-  usedScalars[ "drhodt" ] = &drhodt;
+   using namespace boost::assign;
+   usedQuants.scalars += &drhodt;
 }
 
 ///
@@ -398,7 +500,8 @@ void ParticleManager::useIntegratedRho()
 ///
 void ParticleManager::useCost()
 {
-  usedScalars[ "cost" ] = &cost;
+   using namespace boost::assign;
+   usedQuants.scalars += &cost;
 }
 
 ///
@@ -406,15 +509,8 @@ void ParticleManager::useCost()
 ///
 void ParticleManager::useStress()
 {
-  usedVectors[ "S" ] = &S;
-  usedVectors[ "dSdt" ] = &dSdt;
-  usedVectors[ "e" ] = &e;
-  usedVectors[ "dR" ] = &dR;
-  
-  S.resize(0, 5);
-  dSdt.resize(0, 5);
-  e.resize(0, 5);
-  dR.resize(0, 5);
+   using namespace boost::assign;
+   usedQuants.vects += &S, &dSdt, &e, &dR;
 }
 
 ///
@@ -422,21 +518,15 @@ void ParticleManager::useStress()
 ///
 void ParticleManager::useDamage()
 {
-  usedScalars[ "dam" ] = &dam;
-  usedScalars[ "ddamdt" ] = &ddamdt;
-  
-  usedScalars[ "epsmin" ] = &epsmin;
-  usedScalars[ "acoef" ] = &acoef;
-  usedScalars[ "mweib" ] = &mweib;
-  usedScalars[ "young" ] = &young;
-  
-  usedIntegers[ "noflaws" ] = &noflaws;
+   using namespace boost::assign;
+   usedQuants.scalars += &dam, &ddamdt, &epsmin, &acoef, &mweib, &young;
+   usedQuants.ints    += &noflaws;
 }
 
 void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)
 {
-  noLocalParts = _noLocalParts;
-  noGhostParts = _noGhostParts;
+   noLocalParts = _noLocalParts;
+   noGhostParts = _noGhostParts;
 }
 
 ///
@@ -444,7 +534,7 @@ void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)
 ///
 void ParticleManager::setNoParts(size_t _noLocParts)
 {
-  setNoParts(_noLocParts, 0);
+   setNoParts(_noLocParts, 0);
 }
 
 ///
@@ -452,8 +542,8 @@ void ParticleManager::setNoParts(size_t _noLocParts)
 //
 void ParticleManager::addParts(size_t _addNoParts)
 {
-  setNoParts(getNoLocalParts() + _addNoParts, 0);
-  resizeAll(true);
+   setNoParts(getNoLocalParts() + _addNoParts, 0);
+   resizeAll(true);
 }
 
 ///
@@ -461,35 +551,35 @@ void ParticleManager::addParts(size_t _addNoParts)
 ///
 void ParticleManager::resizeAll(bool _keep)
 {
-  matrixPtrMap::iterator vectorsItr = usedVectors.begin();
+   matrixPtrSetType::iterator vectorsItr = usedQuants.vects.begin();
 
-  while (vectorsItr != usedVectors.end())
-    {
-      resize( *(vectorsItr->second), _keep);
+   while (vectorsItr != usedQuants.vects.end())
+   {
+      resize(**vectorsItr, _keep);
       vectorsItr++;
-    }
+   }
 
-  valVectPtrMap::iterator scalarsItr = usedScalars.begin();
-  while (scalarsItr != usedScalars.end())
-    {
-      resize( *(scalarsItr->second), _keep);
+   valvectPtrSetType::iterator scalarsItr = usedQuants.scalars.begin();
+   while (scalarsItr != usedQuants.scalars.end())
+   {
+      resize(**scalarsItr, _keep);
       scalarsItr++;
-    }
+   }
 
-  idVectPtrMap::iterator intsItr = usedIntegers.begin();
-  while (intsItr != usedIntegers.end())
-    {
-      resize( *(intsItr->second), _keep);
+   idvectPtrSetType::iterator intsItr = usedQuants.ints.begin();
+   while (intsItr != usedQuants.ints.end())
+   {
+      resize(**intsItr, _keep);
       intsItr++;
-    }
+   }
 
-  blacklisted.resize(noLocalParts);
-  blacklisted.reset();
+   blacklisted.resize(noLocalParts);
+   blacklisted.reset();
 }
 
 void ParticleManager::resizeAll()
 {
-  resizeAll(false);
+   resizeAll(false);
 }
 
 ///
@@ -497,22 +587,22 @@ void ParticleManager::resizeAll()
 ///
 void ParticleManager::resize(matrixRefType _matrix, bool _keep)
 {
-  std::string matrixName = getName(_matrix);
-  size_t newSize;
+   std::string matrixName = getName(_matrix);
+   size_t      newSize;
 
-  if (isGhostVar(matrixName))
-    {
+   if (isGhostVar(matrixName))
+   {
       newSize = noLocalParts + noGhostParts;
-    }
-  else
-    {
+   }
+   else
+   {
       newSize = noLocalParts;
-    }
+   }
 
-  if (_matrix.size1() != newSize)
-    {
+   if (_matrix.size1() != newSize)
+   {
       _matrix.resize(newSize, _matrix.size2(), _keep);
-    }
+   }
 }
 
 ///
@@ -520,22 +610,22 @@ void ParticleManager::resize(matrixRefType _matrix, bool _keep)
 ///
 void ParticleManager::resize(valvectRefType _valvect, bool _keep)
 {
-  std::string vectName = getName(_valvect);
-  size_t newSize;
+   std::string vectName = getName(_valvect);
+   size_t      newSize;
 
-  if (isGhostVar(vectName))
-    {
+   if (isGhostVar(vectName))
+   {
       newSize = noLocalParts + noGhostParts;
-    }
-  else
-    {
+   }
+   else
+   {
       newSize = noLocalParts;
-    }
+   }
 
-  if (_valvect.size() != newSize)
-    {
+   if (_valvect.size() != newSize)
+   {
       _valvect.resize(newSize, _keep);
-    }
+   }
 }
 
 ///
@@ -543,22 +633,22 @@ void ParticleManager::resize(valvectRefType _valvect, bool _keep)
 ///
 void ParticleManager::resize(idvectRefType _idvect, bool _keep)
 {
-  std::string vectName = getName(_idvect);
-  size_t newSize;
+   std::string vectName = getName(_idvect);
+   size_t      newSize;
 
-  if (isGhostVar(vectName))
-    {
+   if (isGhostVar(vectName))
+   {
       newSize = noLocalParts + noGhostParts;
-    }
-  else
-    {
+   }
+   else
+   {
       newSize = noLocalParts;
-    }
+   }
 
-  if (_idvect.size() != newSize)
-    {
+   if (_idvect.size() != newSize)
+   {
       _idvect.resize(newSize, _keep);
-    }
+   }
 }
 
 ///
@@ -566,17 +656,59 @@ void ParticleManager::resize(idvectRefType _idvect, bool _keep)
 ///
 size_t ParticleManager::getNoLocalParts()
 {
-  return noLocalParts;
+   return(noLocalParts);
 }
 
 size_t ParticleManager::getNoGhostParts()
 {
-  return noGhostParts;
+   return(noGhostParts);
 }
 
 size_t ParticleManager::getNoTotalParts()
 {
-  return noLocalParts + noGhostParts;
+   return(noLocalParts + noGhostParts);
+}
+
+///
+/// get/set used quantitites
+///
+quantsType ParticleManager::getUsedQuants()
+{
+   return(usedQuants);
+}
+
+void ParticleManager::setUsedQuants(quantsType _quants)
+{
+   usedQuants = _quants;
+}
+
+///
+/// get known quants from a string list
+///
+quantsType ParticleManager::getKnownQuants(stringListType _strlist)
+{
+   quantsType retQuants;
+
+   stringListType::iterator strItr = _strlist.begin();
+
+   while (strItr != _strlist.end())
+   {
+      matrixPtrMap::iterator vectItr = knownVects.find(*strItr);
+      if (vectItr != knownVects.end())
+         retQuants.vects.insert(vectItr->second);
+
+      valvectPtrMap::iterator scalItr = knownScalars.find(*strItr);
+      if (scalItr != knownScalars.end())
+         retQuants.scalars.insert(scalItr->second);
+
+      idvectPtrMap::iterator intItr = knownIntegers.find(*strItr);
+      if (intItr != knownIntegers.end())
+         retQuants.ints.insert(intItr->second);
+
+      strItr++;
+   }
+
+   return(retQuants);
 }
 
 ///
@@ -584,10 +716,43 @@ size_t ParticleManager::getNoTotalParts()
 ///
 bool ParticleManager::isGhostVar(std::string _searchString)
 {
-  stringSet::const_iterator strItr = isGhostVarSet.begin();
+   stringSet::const_iterator strItr = isGhostVarSet.begin();
 
-  strItr = isGhostVarSet.find(_searchString);
-  return(strItr != isGhostVarSet.end());
+   strItr = isGhostVarSet.find(_searchString);
+   return(strItr != isGhostVarSet.end());
+}
+
+///
+///
+///
+void ParticleManager::addSynonym(std::string _name, std::string _syn)
+{
+   bool isKnown = false;
+   valvectPtrMap::iterator vectItr = knownScalars.find(_name);
+
+   if (vectItr != knownScalars.end())
+      isKnown = true;
+
+   matrixPtrMap::iterator matrItr = knownVects.find(_name);
+   if (matrItr != knownVects.end())
+      isKnown = true;
+
+   idvectPtrMap::iterator idItr = knownIntegers.find(_name);
+   if (idItr != knownIntegers.end())
+      isKnown = true;
+
+   if (isKnown == true)
+      synonymes[_syn] = _name;
+}
+
+std::string ParticleManager::resolveSynonym(std::string _syn)
+{
+   strStrMapType::iterator synItr = synonymes.find(_syn);
+
+   if (synItr != synonymes.end())
+      return(synItr->second);
+   else
+      return(_syn);
 }
 
 ///
@@ -595,17 +760,22 @@ bool ParticleManager::isGhostVar(std::string _searchString)
 ///
 std::string ParticleManager::getName(matrixRefType _matrixRef)
 {
-  matrixPtrMap::iterator vectorsItr = usedVectors.begin();
+   matrixPtrSetType::iterator usedItr = usedQuants.vects.find(&_matrixRef);
 
-  while (vectorsItr != usedVectors.end())
-    {
-      if (vectorsItr->second == &_matrixRef)
-        {
-          return vectorsItr->first;
-        }
-      vectorsItr++;
-    }
-  return "";
+   if (usedItr != usedQuants.vects.end())
+   {
+      matrixPtrMap::iterator vectsItr = knownVects.begin();
+      while (vectsItr != knownVects.end())
+      {
+         if (vectsItr->second == &_matrixRef)
+            return(vectsItr->first);
+
+         vectsItr++;
+      }
+      return("");
+   }
+   else
+      return("");
 }
 
 ///
@@ -613,17 +783,23 @@ std::string ParticleManager::getName(matrixRefType _matrixRef)
 ///
 std::string ParticleManager::getName(valvectRefType _valvectRef)
 {
-  valVectPtrMap::iterator scalarsItr = usedScalars.begin();
+   valvectPtrSetType::iterator usedItr =
+      usedQuants.scalars.find(&_valvectRef);
 
-  while (scalarsItr != usedScalars.end())
-    {
-      if (scalarsItr->second == &_valvectRef)
-        {
-          return scalarsItr->first;
-        }
-      scalarsItr++;
-    }
-  return "";
+   if (usedItr != usedQuants.scalars.end())
+   {
+      valvectPtrMap::iterator scalItr = knownScalars.begin();
+      while (scalItr != knownScalars.end())
+      {
+         if (scalItr->second == &_valvectRef)
+            return(scalItr->first);
+
+         scalItr++;
+      }
+      return("");
+   }
+   else
+      return("");
 }
 
 ///
@@ -631,17 +807,22 @@ std::string ParticleManager::getName(valvectRefType _valvectRef)
 ///
 std::string ParticleManager::getName(idvectRefType _idvectRef)
 {
-  idVectPtrMap::iterator intsItr = usedIntegers.begin();
+   idvectPtrSetType::iterator usedItr = usedQuants.ints.find(&_idvectRef);
 
-  while (intsItr != usedIntegers.end())
-    {
-      if (intsItr->second == &_idvectRef)
-        {
-          return intsItr->first;
-        }
-      intsItr++;
-    }
-  return "";
+   if (usedItr != usedQuants.ints.end())
+   {
+      idvectPtrMap::iterator intItr = knownIntegers.begin();
+      while (intItr != knownIntegers.end())
+      {
+         if (intItr->second == &_idvectRef)
+            return(intItr->first);
+
+         intItr++;
+      }
+      return("");
+   }
+   else
+      return("");
 }
 
 ///
@@ -649,16 +830,18 @@ std::string ParticleManager::getName(idvectRefType _idvectRef)
 ///
 matrixPtrType ParticleManager::getVectRef(std::string _name)
 {
-  matrixPtrMap::iterator matrItr = usedVectors.find(_name);
+   _name = resolveSynonym(_name);
+   matrixPtrMap::iterator matrItr = knownVects.find(_name);
 
-  if (matrItr == usedVectors.end())
-    {
-      return NULL;
-    }
-  else
-    {
-      return matrItr->second;
-    }
+   if (matrItr == knownVects.end())
+      return(NULL);
+   else
+   {
+      if (usedQuants.vects.count(matrItr->second) > 0)
+         return(matrItr->second);
+      else
+         return(NULL);
+   }
 }
 
 ///
@@ -666,16 +849,18 @@ matrixPtrType ParticleManager::getVectRef(std::string _name)
 ///
 valvectPtrType ParticleManager::getScalarRef(std::string _name)
 {
-  valVectPtrMap::iterator vectItr = usedScalars.find(_name);
+   _name = resolveSynonym(_name);
+   valvectPtrMap::iterator vectItr = knownScalars.find(_name);
 
-  if (vectItr == usedScalars.end())
-    {
-      return NULL;
-    }
-  else
-    {
-      return vectItr->second;
-    }
+   if (vectItr == knownScalars.end())
+      return(NULL);
+   else
+   {
+      if (usedQuants.scalars.count(vectItr->second) > 0)
+         return(vectItr->second);
+      else
+         return(NULL);
+   }
 }
 
 ///
@@ -683,47 +868,42 @@ valvectPtrType ParticleManager::getScalarRef(std::string _name)
 ///
 idvectPtrType ParticleManager::getIdRef(std::string _name)
 {
-  idVectPtrMap::iterator intItr = usedIntegers.find(_name);
+   _name = resolveSynonym(_name);
+   idvectPtrMap::iterator intItr = knownIntegers.find(_name);
 
-  if (intItr == usedIntegers.end())
-    {
-      return NULL;
-    }
-  else
-    {
-      return intItr->second;
-    }
+   if (intItr == knownIntegers.end())
+      return(NULL);
+   else
+   {
+      if (usedQuants.ints.count(intItr->second) > 0)
+         return(intItr->second);
+      else
+         return(NULL);
+   }
 }
-
 
 ///
 /// register an auxilliary quantity, for example integration vars
 ///
 void ParticleManager::regQuantity(matrixRefType _matrixRef,
-                                  std::string _name)
+                                  std::string   _name)
 {
-  if ( _name.size() > 0 )
-  {
-    usedVectors[ _name ] = &_matrixRef;
-  }
+   knownVects[_name] = &_matrixRef;
+   usedQuants.vects.insert(&_matrixRef);
 }
 
 void ParticleManager::regQuantity(valvectRefType _valvectRef,
-                                  std::string _name)
+                                  std::string    _name)
 {
-  if ( _name.size() > 0 )
-  {
-  usedScalars[ _name ] = &_valvectRef;
-  }
+   knownScalars[_name] = &_valvectRef;
+   usedQuants.scalars.insert(&_valvectRef);
 }
 
 void ParticleManager::regQuantity(idvectRefType _idvectRef,
-                                  std::string _name)
+                                  std::string   _name)
 {
-  if ( _name.size() > 0 )
-  {
-  usedIntegers[ _name ] = &_idvectRef;
-  }
+   knownIntegers[_name] = &_idvectRef;
+   usedQuants.ints.insert(&_idvectRef);
 }
 
 ///
@@ -731,26 +911,17 @@ void ParticleManager::regQuantity(idvectRefType _idvectRef,
 ///
 void ParticleManager::unRegQuantity(matrixRefType _matrRef)
 {
-  while ( getName(_matrRef).size() > 0 )
-  {
-    usedVectors.erase( getName(_matrRef) );
-  }
+   usedQuants.vects.erase(&_matrRef);
 }
 
 void ParticleManager::unRegQuantity(valvectRefType _valvectRef)
 {
-  while ( getName(_valvectRef).size() > 0 )
-  {
-    usedScalars.erase( getName(_valvectRef) );
-  }
+   usedQuants.scalars.erase(&_valvectRef);
 }
 
 void ParticleManager::unRegQuantity(idvectRefType _idvectRef)
 {
-  while ( getName(_idvectRef).size() > 0 )
-  {
-    usedIntegers.erase( getName(_idvectRef) );
-  }
+   usedQuants.ints.erase(&_idvectRef);
 }
 
 ///
@@ -758,8 +929,8 @@ void ParticleManager::unRegQuantity(idvectRefType _idvectRef)
 ///
 bool ParticleManager::attrExists(std::string _name)
 {
-  return(attributes.find(_name) != attributes.end());
+   return(attributes.find(_name) != attributes.end());
 }
 };
 
- #endif
+#endif

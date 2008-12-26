@@ -50,7 +50,6 @@ void readerToPartMgr(matrixType&      _mat,
                      size_t           _idx)
 {
    const size_t noParts = _mat.size1();
-
    for (size_t i = 0; i < noParts; i++)
    {
       _mat(i, _j) = _rdr.read(i, _idx);
@@ -62,7 +61,6 @@ void readerToPartMgr(valvectType&     _vct,
                      size_t           _idx)
 {
    const size_t noParts = _vct.size();
-
    for (size_t i = 0; i < noParts; i++)
    {
       _vct(i) = _rdr.read(i, _idx);
@@ -74,7 +72,6 @@ void readerToPartMgr(idvectType&      _ivct,
                      size_t           _idx)
 {
    const size_t noParts = _ivct.size();
-
    for (size_t i = 0; i < noParts; i++)
    {
       _ivct(i) = static_cast<identType>(lrint(_rdr.read(i, _idx)));
@@ -205,6 +202,13 @@ int main(int argc, char* argv[])
          PartManager.useEnergy();
          saveQuants.scalars += &PartManager.u;
       }
+      
+      if (vars[curIdx] == "T")
+      {
+         std::cout << vars[curIdx] << " ";
+         PartManager.useTemperature();
+         saveQuants.scalars += &PartManager.T;
+      }
 
       if ((vars[curIdx] == "dam") || (vars[curIdx] == "dm"))
       {
@@ -230,6 +234,7 @@ int main(int argc, char* argv[])
 
    for (size_t curIdx = 0; curIdx < vars.size(); curIdx++)
    {
+      std::cout << vars[curIdx] << " " << std::flush;
       if (vars[curIdx] == "id")
          readerToPartMgr(PartManager.id, cdatReader, curIdx);
       if (vars[curIdx] == "mat")
@@ -266,6 +271,8 @@ int main(int argc, char* argv[])
          readerToPartMgr(PartManager.rho, cdatReader, curIdx);
       if (vars[curIdx] == "u")
          readerToPartMgr(PartManager.u, cdatReader, curIdx);
+      if (vars[curIdx] == "T")
+         readerToPartMgr(PartManager.T, cdatReader, curIdx);
       if ((vars[curIdx] == "graveps") || (vars[curIdx] == "eps"))
          readerToPartMgr(PartManager.eps, cdatReader, curIdx);
       if ((vars[curIdx] == "dam") || (vars[curIdx] == "dm"))
@@ -285,6 +292,7 @@ int main(int argc, char* argv[])
       if (vars[curIdx] == "syz")
          readerToPartMgr(PartManager.S, YZ, cdatReader, curIdx);
    }
+   std::cout << " -> " << outputFileName << "\n";
    cdatReader.close();
 
    IOManager.setSinglePrecOut();

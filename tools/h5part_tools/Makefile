@@ -15,3 +15,5 @@ h5partReadAttr:
 h5partWriteAttr:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o h5part_writeattr h5part_writeattr.cpp
 
+h5partSlice:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o h5part_slice h5part_slice.cpp
