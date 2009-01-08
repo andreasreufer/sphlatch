@@ -22,8 +22,10 @@ tillotsonTest:
 				      -DSPHLATCH_TILLOTSON \
 				      -o tillotson_test eos_test.cpp
 
-findrhoTest:
+findrhoTest: aneos
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz \
+				      -DSPHLATCH_ANEOS \
+				      -lgfortran libaneos.o \
 				      -o findrho_test findrho_test.cpp
 
 

@@ -1,7 +1,8 @@
 * aneos equation of state initialisation file
 *------------------------------------------------------------------------ 
 * The following lines must be present in the correct order
-*materials=2     : number of different material types in file
+*materials=3     : number of different material types in file
+*type=2          : material number to initialize
 *type=4          : material number to initialize
 *type=5          : material number to initialize
 *------------------------------------------------------------------------
@@ -67,3 +68,19 @@ ANEOS5      26.      1.
 *          Z(I)     F(I)
 *ANEOS5      26.      1.
 *****   END of input for ANEOS *****************
+*************************************************************************
+ANEOS1 -2  'test for ice' THUG=-1   RHUG=-1  LONG
+*      nel  neos  rhoref    tref   pref   Bref    Grun.     Tdebye
+ANEOS2  2    4     1.11    0.02008   0   -1.7e5     0.58      -0.045
+*          Tg   3C24     Es         Tmelt      C53     C54   H0   C41
+ANEOS3     .9   2       3.34e10      0.0224      0       0    0    0
+*     rhomin  D1    D2    D3    D4    D5    Hf     -rholiq
+ANEOS4   0.0   0.0   0.0   0.0   0.0   0.0  4.85e9  -1.
+*       Up    Lo   alpha  beta  gamma  C60   C61   C62
+ANEOS5   0.0  0.0   0.0    0.0   0.0   0.8   0.     0.26
+*   Ionization model  Reactive chemistry     Molecular Clusters         Pc
+*       Flag          Eshift     Sshift     Rbond  Ebind  IntDOF  flag  exp
+ANEOS6   1              0.        0.        0.E-8    3.2     0.     1.   1.8
+*       Zi      fi
+ANEOS7   1      2./3.
+ANEOS8   8      1./3.

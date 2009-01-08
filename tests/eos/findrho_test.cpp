@@ -17,8 +17,11 @@ typedef sphlatch::IOManager io_type;
 //#include "eos_idealgas.h"
 //typedef sphlatch::IdealGas eos_type;
 
-#include "eos_tillotson.h"
-typedef sphlatch::Tillotson eos_type;
+//#include "eos_tillotson.h"
+//typedef sphlatch::Tillotson eos_type;
+
+#include "eos_aneos.h"
+typedef sphlatch::ANEOS eos_type;
 
 using namespace sphlatch::vectindices;
 
@@ -28,7 +31,7 @@ int main(int argc, char* argv[])
 
   eos_type& EOS(eos_type::instance());
 
-  std::cout << EOS.findRho( 1.72e9, 4, 0., 1., 1.0, 10. ) << "\n";
+  std::cout << EOS.findRho( 1.72e9, 2, 0., 1., 0.5, 10. ) << "\n";
 
   MPI::Finalize();
   return EXIT_SUCCESS;
