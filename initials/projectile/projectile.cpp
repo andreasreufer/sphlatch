@@ -34,37 +34,37 @@
 namespace po = boost::program_options;
 
 #include "typedefs.h"
-typedef sphlatch::fType                  fType;
-typedef sphlatch::identType              identType;
-typedef sphlatch::valvectType            valvectType;
+typedef sphlatch::fType fType;
+typedef sphlatch::identType identType;
+typedef sphlatch::valvectType valvectType;
 
-typedef sphlatch::valvectRefType         valvectRefType;
-typedef sphlatch::idvectRefType          idvectRefType;
-typedef sphlatch::matrixRefType          matrixRefType;
+typedef sphlatch::valvectRefType valvectRefType;
+typedef sphlatch::idvectRefType idvectRefType;
+typedef sphlatch::matrixRefType matrixRefType;
 
 #include "particle_manager.h"
-typedef sphlatch::ParticleManager        part_type;
+typedef sphlatch::ParticleManager part_type;
 
 #include "io_manager.h"
-typedef sphlatch::IOManager              io_type;
+typedef sphlatch::IOManager io_type;
 
 #include "communication_manager.h"
-typedef sphlatch::CommunicationManager   comm_type;
+typedef sphlatch::CommunicationManager comm_type;
 
 #include "costzone.h"
-typedef sphlatch::CostZone               costzone_type;
+typedef sphlatch::CostZone costzone_type;
 
 #include "rankspace.h"
-typedef sphlatch::Rankspace              neighsearch_type;
+typedef sphlatch::Rankspace neighsearch_type;
 
 #include "eos_tillotson.h"
-typedef sphlatch::Tillotson              till_type;
+typedef sphlatch::Tillotson till_type;
 
 #ifdef SPHLATCH_ANEOS
  #include "eos_aneos.h"
-typedef sphlatch::ANEOS                  eos_type;
+typedef sphlatch::ANEOS eos_type;
 #else
-typedef till_type                        eos_type;
+typedef till_type eos_type;
 #endif
 
 
@@ -73,79 +73,81 @@ using namespace sphlatch::vectindices;
 
 int main(int argc, char* argv[])
 {
-   MPI::Init(argc, argv);
+  MPI::Init(argc, argv);
 
-   po::options_description Options("Global Options");
-   Options.add_options()
-   ("help,h", "Produces this Help")
-   ("output-file,o", po::value<std::string>(), "output  file")
-   ("input-file,i", po::value<std::string>(), "input   file");
+  po::options_description Options("Global Options");
+  Options.add_options()
+  ("help,h", "Produces this Help")
+  ("output-file,o", po::value<std::string>(), "output  file")
+  ("input-file,i", po::value<std::string>(), "input   file")
+  ("scale,s", po::value<fType>(), "scale       ");
 
-   po::variables_map VMap;
-   po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
-   po::notify(VMap);
+  po::variables_map VMap;
+  po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
+  po::notify(VMap);
 
-   if (VMap.count("help"))
-   {
+  if (VMap.count("help"))
+    {
       std::cerr << Options << std::endl;
       return(EXIT_FAILURE);
-   }
+    }
 
-   if (!VMap.count("output-file") ||
-       !VMap.count("input-file"))
-   {
+  if (!VMap.count("output-file") ||
+      !VMap.count("input-file") ||
+      !VMap.count("scale"))
+    {
       std::cerr << Options << std::endl;
       return(EXIT_FAILURE);
-   }
+    }
 
-   io_type&       IOManager(io_type::instance());
-   part_type&     PartManager(part_type::instance());
-   comm_type&     CommManager(comm_type::instance());
-   costzone_type& CostZone(costzone_type::instance());
-   till_type&     Tillotson(till_type::instance());
-   eos_type&      EOS(eos_type::instance());
+  io_type&       IOManager(io_type::instance());
+  part_type&     PartManager(part_type::instance());
+  comm_type&     CommManager(comm_type::instance());
+  costzone_type& CostZone(costzone_type::instance());
+  till_type&     Tillotson(till_type::instance());
+  eos_type&      EOS(eos_type::instance());
 
-   matrixRefType pos(PartManager.pos);
-   matrixRefType vel(PartManager.vel);
-   matrixRefType S(PartManager.S);
+  matrixRefType pos(PartManager.pos);
+  matrixRefType vel(PartManager.vel);
+  matrixRefType S(PartManager.S);
 
-   valvectRefType m(PartManager.m);
-   valvectRefType h(PartManager.h);
-   valvectRefType rho(PartManager.rho);
-   valvectRefType u(PartManager.u);
+  valvectRefType m(PartManager.m);
+  valvectRefType h(PartManager.h);
+  valvectRefType rho(PartManager.rho);
+  valvectRefType u(PartManager.u);
 
-   valvectRefType dam(PartManager.dam);
-   valvectRefType epsmin(PartManager.epsmin);
-   valvectRefType acoef(PartManager.acoef);
-   valvectRefType mweib(PartManager.mweib);
-   valvectRefType young(PartManager.young);
+  valvectRefType dam(PartManager.dam);
+  valvectRefType epsmin(PartManager.epsmin);
+  valvectRefType acoef(PartManager.acoef);
+  valvectRefType mweib(PartManager.mweib);
+  valvectRefType young(PartManager.young);
 
-   idvectRefType id(PartManager.id);
-   idvectRefType mat(PartManager.mat);
-   idvectRefType noflaws(PartManager.noflaws);
+  idvectRefType id(PartManager.id);
+  idvectRefType mat(PartManager.mat);
+  idvectRefType noflaws(PartManager.noflaws);
 
-   PartManager.useBasicSPH();
-   PartManager.useEnergy();
-   PartManager.useMaterials();
-   PartManager.useDamage();
-   PartManager.useStress();
+  PartManager.useBasicSPH();
+  PartManager.useEnergy();
+  PartManager.useMaterials();
+  PartManager.useDamage();
+  PartManager.useStress();
 
-   ///
-   /// load particles
-   ///
-   std::string inputFilename = VMap["input-file"].as<std::string>();
-   IOManager.loadDump(inputFilename);
-   std::cerr << " read particle positions from: " << inputFilename << "\n";
+  ///
+  /// load particles
+  ///
+  std::string inputFilename = VMap["input-file"].as<std::string>();
+  IOManager.loadDump(inputFilename);
+  std::cerr << " read particle positions from: " << inputFilename << "\n";
 
-   ///
-   /// scale position, specific volume and smoothing length
-   ///
-   const fType rScale   = 12.1;
-   const fType volScale = pow(rScale, 3.);
+  ///
+  /// scale position, specific volume and smoothing length
+  ///
+  const fType rScale = VMap["scale"].as<fType>();
+  const fType volScale = pow(rScale, 3.);
 
-   const size_t noParts = PartManager.getNoLocalParts();
-   for (size_t k = 0; k < noParts; k++)
-   {
+  const size_t noParts = PartManager.getNoLocalParts();
+  for (size_t k = 0; k < noParts; k++)
+    {
       pos(k, X) *= rScale;
       pos(k, Y) *= rScale;
       pos(k, Z) *= rScale;
@@ -153,28 +155,27 @@ int main(int argc, char* argv[])
       h(k) *= rScale;
 
       m(k) *= volScale;
-   }
+    }
 
-   /// dunite: 4
-   identType            surfId     = 4;
-   till_type::paramType surfParams = Tillotson.getMatParams(surfId);
-   const fType          surfU      = 1.72e9;
+  /// dunite: 4
+  identType surfId = 4;
+  till_type::paramType surfParams = Tillotson.getMatParams(surfId);
+  const fType surfU = 1.72e9;
 
-   ///
-   /// set particle mass by multiplyin the particle volume
-   /// with the desired density
-   ///
-   for (size_t k = 0; k < noParts; k++)
-   {
+  ///
+  /// set particle mass by multiplyin the particle volume
+  /// with the desired density
+  ///
+  for (size_t k = 0; k < noParts; k++)
+    {
       ///
       /// the flawed surface
       ///
-      const fType surfRho = EOS.findRho(surfU, surfId,
-                                              0., 1.e-2, 0.1, 10.);
-      m(k)  *= surfRho;
+      const fType surfRho = EOS.findRho(surfU, surfId, 0., 1.e-2, 3.0, 3.5);
+      m(k) *= surfRho;
       rho(k) = surfRho;
 
-      u(k)   = surfU;
+      u(k) = surfU;
       mat(k) = surfId;
 
       acoef(k) = 0.4 * sqrt((surfParams.A + (4. / 3.) * surfParams.xmu) /
@@ -190,38 +191,38 @@ int main(int argc, char* argv[])
       S(k, XZ) = 0.;
       S(k, YY) = 0.;
       S(k, YZ) = 0.;
-   }
+    }
 
-   ///
-   /// assign flaws to particles
-   ///
-   const size_t noTotFlaws = std::max(10 * noParts, 1000lu);
+  ///
+  /// assign flaws to particles
+  ///
+  const size_t noTotFlaws = std::max(10 * noParts, 1000lu);
 
-   std::cerr << "assigning " << noTotFlaws << " flaws to " << noParts
-             << " particles\n";
+  std::cerr << "assigning " << noTotFlaws << " flaws to " << noParts
+            << " particles\n";
 
-   ///
-   /// factor 300 from Benz setup-collision.f
-   ///
-   const fType weibKV  = 300. / (surfParams.cweib * volScale);
-   const fType weibExp = 1. / surfParams.pweib;
+  ///
+  /// factor 300 from Benz setup-collision.f
+  ///
+  const fType weibKV = 300. / (surfParams.cweib * volScale);
+  const fType weibExp = 1. / surfParams.pweib;
 
-   boost::progress_display flawsProgress(noTotFlaws);
-   size_t noSetFlaws = 0;
-   while (noSetFlaws < noTotFlaws)
-   {
+  boost::progress_display flawsProgress(noTotFlaws);
+  size_t noSetFlaws = 0;
+  while (noSetFlaws < noTotFlaws)
+    {
       const size_t i = lrint(noParts * (rand()
                                         / static_cast<double>(RAND_MAX)));
 
       const fType curEps =
-         pow(weibKV * (static_cast<fType>(noSetFlaws) + 1), weibExp);
+        pow(weibKV * (static_cast<fType>(noSetFlaws) + 1), weibExp);
 
       ///
       /// the first flaw is always the weakest,
       /// as noSetFlaws rises monotonously
       ///
       if (noflaws(i) == 0)
-         epsmin(i) = curEps;
+        epsmin(i) = curEps;
 
       noflaws(i)++;
       ++flawsProgress;
@@ -230,46 +231,45 @@ int main(int argc, char* argv[])
       mweib(i) = curEps;
 
       noSetFlaws++;
-   }
+    }
 
-   ///
-   /// set Weibull parameters
-   ///
-   for (size_t k = 0; k < noParts; k++)
-   {
+  ///
+  /// set Weibull parameters
+  ///
+  for (size_t k = 0; k < noParts; k++)
+    {
       dam(k) = 0.;
 
       ///
       /// no flaw was assigned, so give it one flaw with maximal strength
       ///
       if (noflaws(k) < 1)
-      {
-         noflaws(k) = 1;
-         epsmin(k)  =
+        {
+          noflaws(k) = 1;
+          epsmin(k) =
             pow(weibKV * static_cast<fType>(noTotFlaws + 1), weibExp);
-      }
+        }
 
       if (noflaws(k) == 1)
-         mweib(k) = 1.;
+        mweib(k) = 1.;
       else
-         mweib(k) = log(static_cast<fType>(noflaws(k)))
-                    / log(mweib(k) / epsmin(k));
-   }
+        mweib(k) = log(static_cast<fType>(noflaws(k)))
+        / log(mweib(k) / epsmin(k));
+    }
 
-   sphlatch::quantsType saveQuants;
-   saveQuants.vects   += &pos, &vel, &S;
-   saveQuants.scalars += &m, &h, &rho, &u, &dam, &epsmin, &acoef, &mweib,
-   &young;
-   saveQuants.ints    += &id, &mat, &noflaws;
+  sphlatch::quantsType saveQuants;
+  saveQuants.vects += &pos, &vel, &S;
+  saveQuants.scalars += &m, &h, &rho, &u, &dam, &epsmin, &acoef, &mweib, &young;
+  saveQuants.ints += &id, &mat, &noflaws;
 
-   PartManager.step = 0;
-   PartManager.attributes["time"] = 0.;
+  PartManager.step = 0;
+  PartManager.attributes["time"] = 0.;
 
-   std::string outputFilename = VMap["output-file"].as<std::string>();
-   std::cerr << " -> " << outputFilename << "\n";
-   IOManager.saveDump(outputFilename, saveQuants);
-   std::cerr << "particles saved ... \n";
+  std::string outputFilename = VMap["output-file"].as<std::string>();
+  std::cerr << " -> " << outputFilename << "\n";
+  IOManager.saveDump(outputFilename, saveQuants);
+  std::cerr << "particles saved ... \n";
 
-   MPI::Finalize();
-   return(EXIT_SUCCESS);
+  MPI::Finalize();
+  return(EXIT_SUCCESS);
 }

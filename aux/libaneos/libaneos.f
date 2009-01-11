@@ -8278,7 +8278,13 @@ C
      44586D-05,-9.81419282D-05,3.47428588D-01,1.92460032D-05,1.63833189D
      5-04,8.35133112D-04,6.47337758D-06,3.32487001D-06,9.99997670D-01/
 C
-       IF(ZLTOMF.NE.ZBARM) THEN
+C commented if condition out, so that the variables
+C are declared and initialized in any case. FORTRAN
+C is such a sick language
+C
+C Andreas Reufer, 08.01.09
+C
+C      IF(ZLTOMF.NE.ZBARM) THEN
          CONV2=ZBARM**ANV13
          CONV4=CONV2*ZBARM**2
          CONV1=ANVA*ABARX*ZBARM
@@ -8288,7 +8294,7 @@ C
          CONV5=CONV2*CONV4*EV
          CONV6=CONV2*EV
          ZLTOMF=ZBARM
-       END IF
+C      END IF
 C
        VF=CONV1/RHOX
        TF=CONV6*TEVX

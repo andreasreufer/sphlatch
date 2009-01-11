@@ -294,6 +294,7 @@ ParticleManager::ParticleManager(void)
    /// known scalar quantities
    ///
    knownScalars["m"]        = &m;
+   knownScalars["h"]        = &h;
    knownScalars["dhdt"]     = &dhdt;
    knownScalars["rho"]      = &rho;
    knownScalars["drhodt"]   = &drhodt;
