@@ -205,10 +205,10 @@ int main(int argc, char* argv[])
   /// with the desired density
   ///
 
-  const fType surfRho = EOS.findRho(surfU, surfId, 0., 1.e5, 3.00, 3.50);
+  const fType surfRho = EOS.findRho(surfU, surfId, 1.e2, 1.e1, 0.10, 10.0);
   std::cout << "surface   energy: " << surfU << "   equ. density: " << surfRho << "\n";
 
-  const fType baseRho = EOS.findRho(baseU, baseId, 0., 1.e5, 0.95, 1.20);
+  const fType baseRho = EOS.findRho(baseU, baseId, 2.e4, 1.e2, 0.10, 10.0);
   std::cout << "base      energy: " << baseU << "   equ. density: " << baseRho << "\n";
 
   size_t noSurfParts = 0, noBaseParts = 0;
