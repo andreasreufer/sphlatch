@@ -79,8 +79,8 @@ int main(int argc, char* argv[])
   Options.add_options()
   ("help,h", "Produces this Help")
   ("output-file,o", po::value<std::string>(), "output  file")
-  ("input-file,i", po::value<std::string>(),  "input   file")
-  ("scale,s", po::value<fType>(),             "scale       ");
+  ("input-file,i", po::value<std::string>(), "input   file")
+  ("scale,s", po::value<fType>(), "scale       ");
 
   po::variables_map VMap;
   po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
@@ -160,7 +160,19 @@ int main(int argc, char* argv[])
   /// dunite: 4
   identType surfId = 4;
   till_type::paramType surfParams = Tillotson.getMatParams(surfId);
+
+#ifdef SPHLATCH_ANEOS
+  const fType KtoEV = 1.1604505e4;
+  fType dummy;
+
+  const fType surfRhoGuess = 3.32;
+  const fType surfT = 240 / KtoEV;
+  fType surfU = 0.;
+  EOS.getSpecEnergy(surfRhoGuess, surfT, surfId, dummy, dummy, surfU);
+#else
   const fType surfU = 1.72e9;
+#endif
+
 
   ///
   /// set particle mass by multiplyin the particle volume

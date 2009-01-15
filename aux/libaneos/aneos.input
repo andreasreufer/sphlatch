@@ -2,9 +2,9 @@
 *------------------------------------------------------------------------ 
 * The following lines must be present in the correct order
 *materials=3     : number of different material types in file
-*type=2          : material number to initialize
 *type=4          : material number to initialize
 *type=5          : material number to initialize
+*type=2          : material number to initialize
 *------------------------------------------------------------------------
 *ANEOS 'Dunite ANEOS without molecules'
 *

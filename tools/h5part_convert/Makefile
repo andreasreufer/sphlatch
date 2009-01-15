@@ -1,8 +1,11 @@
 all: cdattoh5part tomsasciitoh5part h5partAddscalpos fuchsbintoh5part h5parttoparasph
 
 cdattoh5part:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -I../../aux/oosph -lhdf5 -lz -lboost_program_options -o cdat2h5part cdat2h5part.cpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o cdat2h5part cdat2h5part.cpp
 	
+cdattoascii:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lboost_program_options -o cdat2ascii cdat2ascii.cpp
+
 tomsasciitoh5part:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o tomascii2h5part tomascii2h5part.cpp
 

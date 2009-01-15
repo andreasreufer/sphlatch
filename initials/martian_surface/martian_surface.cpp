@@ -193,12 +193,29 @@ int main(int argc, char* argv[])
   identType baseId = 17;
 #endif
   till_type::paramType baseParams = Tillotson.getMatParams(17);
-  const fType baseU = 5.04e9;
 
   /// dunite: 4
   identType surfId = 4;
   till_type::paramType surfParams = Tillotson.getMatParams(surfId);
+  
+  
+#ifdef SPHLATCH_ANEOS
+  const fType KtoEV = 1.1604505e4;
+  fType dummy;
+
+  const fType baseRhoGuess = 1.10;
+  const fType baseT = 240 / KtoEV;
+  fType baseU = 0.;
+  EOS.getSpecEnergy(baseRhoGuess, baseT, baseId, dummy, dummy, baseU);
+  
+  const fType surfRhoGuess = 3.32;
+  const fType surfT = 240 / KtoEV;
+  fType surfU = 0.;
+  EOS.getSpecEnergy(surfRhoGuess, surfT, surfId, dummy, dummy, surfU);
+#else
+  const fType baseU = 5.04e9;
   const fType surfU = 1.72e9;
+#endif
 
   ///
   /// set particle mass by multiplyin the particle volume

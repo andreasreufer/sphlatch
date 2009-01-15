@@ -90,7 +90,7 @@ void CDATreader::open(std::string _filename)
    size_t noTotParts = boost::lexical_cast<size_t>(
       curLine.substr(0, curLine.find(',', 0)));
    int noVarsRaw = boost::lexical_cast<int>(
-      curLine.substr(curLine.find(' ', 0) + 1));
+      curLine.substr(curLine.find(',', 0) + 1));
 
    /// noAttrsRaw means, there are also attributes in the header
    if (noVarsRaw < 0)
