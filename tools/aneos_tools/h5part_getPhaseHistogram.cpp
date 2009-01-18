@@ -25,6 +25,9 @@ namespace po = boost::program_options;
 #include "typedefs.h"
 typedef sphlatch::fType fType;
 typedef sphlatch::valvectType valvectType;
+typedef sphlatch::zerovalvectType zerovalvectType;
+
+typedef sphlatch::identType identType;
 
 typedef sphlatch::valvectRefType valvectRefType;
 typedef sphlatch::idvectRefType idvectRefType;
@@ -37,9 +40,6 @@ typedef sphlatch::ParticleManager part_type;
 #include "io_manager.h"
 typedef sphlatch::IOManager io_type;
 
-#include "eos_aneos.h"
-typedef sphlatch::ANEOS eos_type;
-
 using namespace boost::assign;
 using namespace sphlatch::vectindices;
 
@@ -49,14 +49,18 @@ int main(int argc, char* argv[])
 
   Options.add_options()
   ("help,h", "Produces this Help")
-  ("input-file,i", po::value<std::string>(), "input  file");
+  ("input-file,i", po::value<std::string>(), "input  file")
+  ("output-file,o", po::value<std::string>(), "output file")
+  ("mat-number,n", po::value<identType>(),   "material number");
 
   po::variables_map VMap;
   po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
   po::notify(VMap);
 
   if (VMap.count("help") ||
-      not VMap.count("input-file"))
+      not VMap.count("input-file") ||
+      not VMap.count("output-file") ||
+      not VMap.count("mat-number") )
     {
       std::cerr << Options << std::endl;
       return EXIT_FAILURE;
@@ -67,68 +71,39 @@ int main(int argc, char* argv[])
   io_type&        IOManager(io_type::instance());
 
   std::string inputFilename = VMap["input-file"].as<std::string>();
-
-  std::cerr << "add T, p and phase to " << inputFilename << " ... \n";
+  std::string outputFilename = VMap["output-file"].as<std::string>();
+  const identType matNumber = VMap["mat-number"].as<identType>();
 
   PartManager.useBasicSPH();
-  PartManager.useEnergy();
   PartManager.useMaterials();
   PartManager.usePhase();
-  PartManager.useTemperature();
 
   IOManager.loadDump(inputFilename);
 
-  valvectRefType p(PartManager.p);
-  valvectRefType T(PartManager.T);
-  valvectRefType cs(PartManager.cs);
-
+  valvectRefType m(PartManager.m);
+  
   idvectRefType mat(PartManager.mat);
   idvectRefType phase(PartManager.phase);
 
   const size_t noParts = PartManager.getNoLocalParts();
 
-#ifdef SPHLATCH_ANEOS_TABLE
-  valvectRefType u(PartManager.u);
-  valvectRefType rho(PartManager.rho);
-
-  fType uMax = 0., rhoMax = 0.;
-  fType uMin = 1.e99, rhoMin = 1.e99;
-
+  valvectType phaseHistogram = zerovalvectType(6);
   for (size_t i = 0; i < noParts; i++)
     {
-      const fType rhoCur = rho(i);
-      const fType uCur = u(i);
-
-      uMin = uMin < uCur ? uMin : uCur;
-      uMax = uMax > uCur ? uMax : uCur;
-
-      rhoMin = rhoMin < rhoCur ? rhoMin : rhoCur;
-      rhoMax = rhoMax > rhoCur ? rhoMax : rhoCur;
+      if ( mat(i) == matNumber )
+        phaseHistogram( phase(i) - 1 ) += m(i);
     }
 
-  PartManager.attributes["umin"] = 0.99*uMin;
-  PartManager.attributes["umax"] = 1.01*uMax;
-
-  PartManager.attributes["rhomin"] = 0.99*rhoMin;
-  PartManager.attributes["rhomax"] = 1.01*rhoMax;
-#endif
-  eos_type&      EOS(eos_type::instance());
-
-  boost::progress_display partProg(noParts);
-  for (size_t i = 0; i < noParts; i++)
-    {
-      EOS(i, p(i), cs(i));
-      ++partProg;
-    }
-
-  sphlatch::quantsType saveQuants;
-
-  saveQuants.ints += &mat, &phase;
-  saveQuants.scalars += &p, &T, &cs;
-
-  IOManager.saveDump(inputFilename, saveQuants);
-
-  std::cerr << " -> " << inputFilename << "\n";
+  std::fstream fout;
+  
+  fout.open( outputFilename.c_str(), std::ios::app | std::ios::out);
+  fout << std::setw(14) << std::setprecision(6) << std::scientific << PartManager.attributes["TIME"];
+  for (size_t i = 0; i < 6; i++)
+  {
+    fout << std::setw(14) << std::setprecision(6) << std::scientific << phaseHistogram(i);
+  }
+  fout << "\n";
+  fout.close();
 
   return EXIT_SUCCESS;
 }

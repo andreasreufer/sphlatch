@@ -13,6 +13,12 @@ h5partAddANEOStable: libaneos
 				      -DSPHLATCH_ANEOS_TABLE \
 				      -o h5part_add_ANEOSout_table h5part_add_ANEOSout.cpp
 
+h5partGetPhaseHistogram:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -I../../src \
+				      -o h5part_get_phase_histogram h5part_getPhaseHistogram.cpp
+
+
 libaneos:
 	$(FC) $(FFLAGS) -c ../../aux/libaneos/libaneos.f -o libaneos.o
 
