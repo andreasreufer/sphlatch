@@ -44,9 +44,14 @@ class Eos {
 private:
   int              number;
   Material<eosMat> eosTab;
+#ifdef DIST
   void (Eos::*eosfunc)(const ftype&, const ftype &, const ftype &, const int &,
-		       ftype &, ftype &, ftype &) const;
-
+		        const ftype &, const ftype &, ftype &, ftype &, ftype &,
+                        ftype &, ftype &, const int &) const;
+#else
+  void (Eos::*eosfunc)(const ftype&, const ftype &, const ftype &, const int &,
+                       ftype &, ftype &, ftype &) const;
+#endif
 public:
   class ErrorNoNumber {
   public:
@@ -81,30 +86,59 @@ public:
     }
   }
 
+#ifdef DIST
   void eos(const ftype &rho, const ftype &rhom1, const ftype &u, 
-	   const int &mat, ftype &p, ftype &cs, ftype &T) const {
+	   const int &mat, const ftype &dad, const ftype &dist,
+           ftype &p, ftype &cs, ftype &T, ftype &dpdrho, ftype &dpdu, const int &distmodel) const {
+    (*this.*eosfunc)(rho, rhom1, u, mat, dad, dist, p, cs, T, dpdrho, dpdu, distmodel);
+  }
+#else
+  void eos(const ftype &rho, const ftype &rhom1, const ftype &u,
+           const int &mat, ftype &p, ftype &cs, ftype &T) const {
     (*this.*eosfunc)(rho, rhom1, u, mat, p, cs, T);
   }
+#endif
 
   //---------------------------------------------------------------------------
   // Define a new EOS here
   //---------------------------------------------------------------------------
-  void idealGas(const ftype &rho, const ftype &rhom1, const ftype &u, 
-		const int &mat, ftype &P, ftype &cs, ftype &T) const {
+#ifdef DIST
+  void idealGas(const ftype &rho, const ftype &rhom1, const ftype &u,
+           const int &mat, const ftype &dad, const ftype &dist,
+           ftype &P, ftype &cs, ftype &T, ftype &dpdrho, ftype &dpdu, const int &distmodel) const {
     ftype Rgas = 0.00820292998, gamma = 1.6666666, meanm=1.0;
     P  = (gamma - 1.0) * rho * u;
     cs = sqrt(gamma*P/rho);
     T  = meanm*(gamma-1.)*u/Rgas;
   }
-
+#else
+  void idealGas(const ftype &rho, const ftype &rhom1, const ftype &u,
+                const int &mat, ftype &P, ftype &cs, ftype &T) const {
+    ftype Rgas = 0.00820292998, gamma = 1.6666666, meanm=1.0;
+    P  = (gamma - 1.0) * rho * u;
+    cs = sqrt(gamma*P/rho);
+    T  = meanm*(gamma-1.)*u/Rgas;
+  }
+#endif
+#ifdef DIST
   void tillotson(const ftype &rho, const ftype &rhom1, const ftype &u, 
-		 const int &mat, ftype &P, ftype &cs, ftype &T) const {
+		 const int &mat, const ftype &dad, const ftype &dist, 
+                 ftype &P, ftype &cs, ftype &T, ftype &dpdrho, ftype &dpdu, const int &distmodel) const {
+#else
+  void tillotson(const ftype &rho, const ftype &rhom1, const ftype &u,
+                 const int &mat, ftype &P, ftype &cs, ftype &T) const {
+#endif
     eosMat m = eosTab.get(mat);
     ftype PC     = 0.;
     ftype csC    = 0.;
+    ftype dpdrhoC= 0.;
+    ftype dpduC   = 0.;
     ftype rho0m1 = 1. / m.rho0;
     ftype eta    = rho*rho0m1;
     ftype mu     = eta - 1.;
+#ifdef DIST
+//    if(mu<0.0)mu=0.0;
+#endif
 
     ftype csmin  = 0.25*m.A*rho0m1;
     ftype Pmin   = -1.e15;
@@ -121,19 +155,48 @@ public:
       P   = m.a*rho*u;
       P  += ex2*(m.b*rho*u*c2 + m.A*mu*ex1);
       
+#ifdef DIST
+      dpdrho  = m.b*u*(3.*c1 + 1)*c2*c2 + 2.*m.alpha*d2*m.b*d1*u*c2;
+      dpdrho += m.A*ex1*((2.*m.alpha*d2 + m.beta)*mu*d1*rhom1 + rho0m1);
+      dpdrho  = dpdrho*ex2 + m.a*u;
+      dpdu    = (m.a + m.b*c2*c2*ex2)*rho;
+//    P=Ps/dist, P/rho^2= Ps/rhos^2*dist
+      if(distmodel==1){
+        ftype dadp=dad;
+        cs = (dist*dpdrho + P*rhom1*rhom1*dist*dpdu)/(dist+dadp*(P/dist-rho/dist*dpdrho)); 
+      }
+      if(distmodel==2){
+        ftype dadrho=dad;
+        cs = -1./(dist*dist)*dadrho*P+(dpdrho*(dist+rho/dist*dadrho)+dpdu*dist*P*rhom1*rhom1)/dist;
+      }
+#else
       cs  = m.b*u*(3.*c1 + 1)*c2*c2 + 2.*m.alpha*d2*m.b*d1*u*c2;
       cs += m.A*ex1*((2.*m.alpha*d2 + m.beta)*mu*d1*rhom1 + rho0m1);
       cs  = cs*ex2 + m.a*u;
       cs += P*rhom1*(m.a + m.b*c2*c2*ex2);
+#endif
       if (cs < 0.) cs = 0.;
     }
 
     if (u < m.Ecv || eta >= 1.) {
       PC   = (m.a + m.b*c2)*rho*u + m.A*mu + m.B*mu*mu;
 
-      csC  = m.a*u + rho0m1*(m.A + 2.*m.B*mu) + m.b*u*(3.*c1 + 1.)*c2*c2; 
+#ifdef DIST
+      dpdrhoC  = m.a*u + rho0m1*(m.A + 2.*m.B*mu) + m.b*u*(3.*c1 + 1.)*c2*c2; 
+      dpduC = (m.a + m.b*c2*c2)*rho;
+//    P=Ps/dist, P/rho^2= Ps/rhos^2*dist
+      if(distmodel==1){
+        ftype dadp=dad;
+      csC = (dist*dpdrhoC + PC*rhom1*rhom1*dist*dpduC)/(dist+dadp*(PC/dist-rho/dist*dpdrhoC));
+      }
+      if(distmodel==2){
+        ftype dadrho=dad;
+        csC = -1./(dist*dist)*dadrho*PC+(dpdrhoC*(dist+rho/dist*dadrho)+dpduC*dist*PC*rhom1*rhom1)/dist;
+      }
+#else
+      csC  = m.a*u + rho0m1*(m.A + 2.*m.B*mu) + m.b*u*(3.*c1 + 1.)*c2*c2;
       csC += PC*rhom1*(m.a + m.b*c2*c2);
-
+#endif
       if (u > m.Eiv && u < m.Ecv && eta < 1) {
 	ftype e1 = m.Ecv - u;
 	ftype e2 = u - m.Eiv;
@@ -143,6 +206,10 @@ public:
       } else {
 	P  = PC;
   	cs = csC;
+#ifdef DIST
+        dpdrho=dpdrhoC;
+        dpdu=dpduC;
+#endif
       }
     }
     if (cs < csmin) cs = csmin;
@@ -269,18 +336,34 @@ public:
       int   itmax = 50;
       ftype a = rho0, b = rho0, c, dx = 0.001 * rho0;
       ftype pa, pb, pc, cs, tol = 1.e-10, T;
+#ifdef DIST
+      ftype tmpdad=0.,tmpdist=1.,tmpdpdrho,tmpdpdu;
+      int tmpdistmodel=1;
+#endif
       do {
 	a -= dx;
-	eos(a, 1./a, _u0, mat, pa, cs, T);
+#ifdef DIST
+	eos(a, 1./a, _u0, mat, tmpdad,tmpdist,pa, cs, T,tmpdpdrho,tmpdpdu,tmpdistmodel);
+#else
+        eos(a, 1./a, _u0, mat, pa, cs, T);
+#endif
       } while (pa > 0. && a > 0.9*rho0);
       do {
 	b *= 1.005;
-	eos(b, 1./b, _u0, mat, pb, cs, T);
+#ifdef DIST
+	eos(b, 1./b, _u0, mat,tmpdad,tmpdist, pb, cs, T,tmpdpdrho,tmpdpdu,tmpdistmodel);
+#else
+        eos(b, 1./b, _u0, mat, pb, cs, T);
+#endif
       } while (pb < 0. && b < 0.1*rho0);
       
       for (int i = 0; i < itmax && b - a > tol; i++) {
 	c = a + (b - a) * .5;
-	eos(c, 1./c, _u0, mat, pc, cs, T);
+#ifdef DIST
+	eos(c, 1./c, _u0, mat, tmpdad,tmpdist, pc, cs, T,tmpdpdrho,tmpdpdu,tmpdistmodel);
+#else
+        eos(c, 1./c, _u0, mat, pc, cs, T);
+#endif
 	if (pc < 0.) { a = c; pa = pc; } else { b = c; pb = pc; }
       }
       rho0 = c;

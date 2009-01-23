@@ -40,6 +40,10 @@ public:
   ftype         reduce, sxx, sxy, sxz, syy, syz;
   bool          str;
 #endif
+#ifdef CORR
+  ftype ci11,ci12,ci13,ci21,ci22,ci23,ci31,ci32,ci33;
+  ftype detai;
+#endif
 #endif
 
 public:
@@ -77,6 +81,12 @@ public:
     reduce = o.reduce; str = o.str; 
     sxx    = o.sxx;    sxy = o.sxy; sxz = o.sxz; syy  = o.syy; syz  = o.syz; 
 #endif
+#ifdef CORR
+    ci11 = o.ci11; ci12 = o.ci12; ci13 = o.ci13;
+    ci21 = o.ci21; ci22 = o.ci22; ci23 = o.ci23;
+    ci31 = o.ci31; ci32 = o.ci32; ci33 = o.ci33;
+    detai = o.detai;
+#endif
 #endif
   }
 };
@@ -94,6 +104,9 @@ public:
 #ifdef SOLID
   ftype         epsxx, epsxy, epsxz, epsyy, epsyz, epszz, rxy, rxz, ryz;
 #endif
+#ifdef CORR
+  ftype ai11,ai12,ai13,ai21,ai22,ai23,ai31,ai32,ai33;
+#endif
 #endif
 
 public:
@@ -104,6 +117,9 @@ public:
     divv   = du = hc = xmumax = 0.; neib  = 0;
 #ifdef SOLID
     epsxx  = epsxy = epsxz = epsyy = epsyz = epszz = rxy = rxz = ryz = 0.;
+#endif
+#ifdef CORR
+   ai11 = ai12 = ai13 = ai21 = ai22 = ai23 = ai31 = ai32 = ai33 = 0;
 #endif
 #endif
   }
@@ -122,6 +138,11 @@ public:
     o->epsxx  += epsxx;  o->epsxy += epsxy; o->epsxz += epsxz; 
     o->epsyy  += epsyy;  o->epsyz += epsyz; o->epszz += epszz; 
     o->rxy    += rxy;    o->rxz   += rxz;   o->ryz   += ryz;
+#endif
+#ifdef CORR
+    o->ai11  += ai11;  o->ai12 += ai12; o->ai13 += ai13;
+    o->ai21  += ai21;  o->ai22 += ai22; o->ai23 += ai23;
+    o->ai31  += ai31;  o->ai32 += ai32; o->ai33 += ai33;
 #endif
 #endif
 #ifdef TENSILE

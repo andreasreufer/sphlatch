@@ -22,6 +22,9 @@ private:
   ftype           h, id, mass;
 #ifdef SPH
   ftype           mat, p, T, rho, u;
+#ifdef DIST
+  ftype           dist, diststate, ref,corrfact;
+#endif
 #ifdef SOLID
   ftype           dm, sLim, sxx, sxy, sxz, syy, syz;
 #endif
@@ -47,7 +50,16 @@ private:
   static Eos      eos;
   static ftype    avAlpha, avBeta, dampFactor, dtFactor, xsphFactor;
   static ftype    heatconG1, heatconG2;
-  static ftype    hMax, hMin, hMinm1, rhoMin, uMin;  
+  static ftype    hMax, hMin, hMinm1, rhoMin, uMin, pMin, dtpFactor;  
+
+#ifdef DIST
+  ftype           ddist,sddist,rhos,rhom1s, psolid, dadp,dadrho,dad,dpdrho,dpdu,dp,rhold,pold,diste,Pe;
+  bool            disteq1;
+  static ftype uini;
+  static Material<distMat> distTab;
+  static  Material<eosMat> eosTab;
+
+#endif
 
 #ifdef SOLID
   bool            str;
@@ -63,6 +75,13 @@ private:
   static Material<Mat> matTab;
   static ftype         dmMin, sMin, tiny;
 #endif
+
+#ifdef CORR
+  ftype ai11,ai12,ai13,ai21,ai22,ai23,ai31,ai32,ai33;
+  ftype ci11,ci12,ci13,ci21,ci22,ci23,ci31,ci32,ci33;
+  ftype detai;
+#endif
+
 #endif
 
   static ftype        G, gravHb1, gravHb12, gravHb1m1, gravHb1m2;
@@ -74,7 +93,7 @@ private:
 
 public:
   static bool         heatCon, xsph;
-  static int          numVar;
+  static int          numVar,distmodel;
   static std::string  varName;
 
 #ifdef SPH
@@ -104,6 +123,10 @@ public:
     
     man.getValue("thres.hMin",   hMin);
     man.getValue("thres.rhoMin", rhoMin);
+#ifdef DIST
+    man.getValue("thres.pMin", pMin);
+    man.getValue("thres.dtpFactor", dtpFactor);
+#endif
     man.getValue("thres.uMin",   uMin);
 
     man.getValue("SPH.avAlpha",    avAlpha);
@@ -112,6 +135,19 @@ public:
     man.getValue("SPH.damping",    dampFactor);
 
     hMinm1 = 1. / hMin;
+
+#ifdef DIST
+    numVar  += 4;
+    varName += "dist\ndiststate\nref\ncorrfact\n";
+    man.getValue("simulation.dist", distmodel);
+    man.getValue("SPH.uini", uini);
+    eosTab.read(global::noisy, eosDataFile);
+    std::string distDataFile;
+    man.getValue("input.distDataFile", distDataFile);
+    distDataFile.insert(0, path + "/");
+    distTab.read(global::noisy, distDataFile);
+#endif
+
 #ifdef SOLID
     numVar  += 7;
     varName += "dm\nsLim\nsxx\nsxy\nsxz\nsyy\nsyz\n";
@@ -176,6 +212,10 @@ public:
   const Vector<ftype> &getPos()    const { return pos; }
   const int           &getProc()   const { return proc; }
   const float         &getWork()   const { return work; }
+#ifdef DIST
+  const distMat       &getDistVar() const { return distTab.get(matNr()); }
+  const eosMat       &getEosVar() const { return eosTab.get(matNr()); }
+#endif
 #ifdef SOLID
   const Mat           &getMatVar() const { return matTab.get(matNr()); }
 #endif
@@ -188,6 +228,16 @@ public:
   void addToProc(const int           &_proc)    { proc    += _proc; }
   // The work is set to _work, only if it is 1. (default value),
   // otherwise it is changed slowly
+#ifdef DOUBLEPREC
+  void setWork  (const double         &_work)    {
+    //if (work == 1.) work = _work;
+    //else {
+     ftype ratio = _work/work;
+     ratio = Min(ratio,(double) 2.); ratio = Max(ratio, double (0.5));
+     work = ratio * work;
+    //}
+  }
+#else
   void setWork  (const float         &_work)    { 
     //if (work == 1.) work = _work; 
     //else {
@@ -196,7 +246,7 @@ public:
      work = ratio * work;
     //}
   }
-
+#endif
   // Read/write variables from/to a xdr-file
   // Changes: the first numVar variables of *this
   void read (Xdr &file) { file.read((ftype *)this); }
@@ -223,7 +273,14 @@ public:
 
 // equation of state
   void calleos() {
+#ifdef DIST
+    rhos=rho*dist;
+    rhom1s=1. /rhos;
+    eos.eos(rhos, rhom1s, u, matNr(), dad, dist, psolid, vsound, T, dpdrho, dpdu,distmodel);
+    p=psolid/dist;
+#else
     eos.eos(rho, rhom1, u, matNr(), p, vsound, T);
+#endif
   }
 #ifdef SOLID
   // Von Mises criterion to set plastic yielding
@@ -266,6 +323,17 @@ public:
 #ifdef SPH
     deltav = tif = Vector<ftype>(0., 0., 0.);
     divv   = drho = du = hc = xmumax = 0.; neib  = 0;
+#ifdef CORR
+    ai11=0.;
+    ai12= 0.;
+    ai13= 0.;
+    ai21=0.;
+    ai22= 0.;
+    ai23= 0.;
+    ai31= 0.;
+    ai32= 0.;
+    ai33= 0.;
+#endif
 #ifdef SOLID
     dsxx   = dsxy = dsxz = dsyy = dsyz = 0.;
     epsxx  = epsxy = epsxz = epsyy = epsyz = epszz = rxy = rxz = ryz = 0.;
@@ -286,6 +354,51 @@ public:
 #endif
     setZero();
   }  
+#ifdef CORR
+  void inverse() {
+    ftype detmin=1.e-20;    
+
+    detai       =  (double)(ai11*ai22*ai33) + (double)(ai12*ai23*ai31) + (double)(ai13*ai21*ai32) - (double)(ai13*ai22*ai31) - (double)(ai11*ai23*ai32) - (double)(ai12*ai21*ai33); 
+     
+    if(Fabs(detai )>detmin){
+     ci11        = (double)(ai22*ai33-ai23*ai32)/detai ;
+     ci12        = (double)(ai13*ai32-ai12*ai33)/detai ;
+     ci13        = (double)(ai12*ai23-ai13*ai22)/detai ;
+     ci21        = (double)(ai23*ai31-ai21*ai33)/detai ;
+     ci22        = (double)(ai11*ai33-ai13*ai31)/detai ;
+     ci23        = (double)(ai13*ai21-ai11*ai23)/detai ;
+     ci31        = (double)(ai21*ai32-ai22*ai31)/detai ;
+     ci32        = (double)(ai12*ai31-ai11*ai32)/detai ;
+     ci33        = (double)(ai11*ai22-ai12*ai21)/detai ;
+
+/*    if(id==100){
+    std::cout << "matrixi ";
+    std::cout << ai11 << " " << ai12 << " " << ai13 << " " ;
+    std::cout << ai21 << " " << ai22 << " " << ai23 << " " ;
+    std::cout << ai31 << " " << ai32 << " " << ai33 << " " ;
+    std::cout << "deti: " << detai;
+    std::cout << "inversei ";
+    std::cout << ci11 << " " << ci12 << " " << ci13 << " " ;
+    std::cout << ci21 << " " << ci22 << " " << ci23 << " " ;
+    std::cout << ci31 << " " << ci32 << " " << ci33 << " " ;
+    }*/
+
+    }else{
+     ci11        = 1. ;
+     ci12        = 0. ;
+     ci13        = 0. ;
+     ci21        = 0. ;
+     ci22        = 1. ;
+     ci23        = 0. ;
+     ci31        = 0. ;
+     ci32        = 0. ;
+     ci33        = 1. ;
+
+    }
+
+    }
+#endif
+
 
   /***************************************************************************
    * Forces                                                                  *
@@ -324,6 +437,58 @@ public:
     }
   }
 
+
+#ifdef CORR
+  template <class IN, class OUT>
+  void corrtensor(IN *read, OUT *write) {
+    if (!isNeighbour(read)) return;
+
+    ftype hmean   = .5*(h + read->h);
+    ftype hmean2  = hmean*hmean;
+    ftype hmeanm1 = 1. / hmean, hmeanm2 = hmeanm1 * hmeanm1;
+    ftype hmeanm3 = hmeanm2 * hmeanm1, hmeanm5 = hmeanm3 * hmeanm2;
+
+    Vector<ftype> d    = pos - read->pos;
+    ftype         rij2 = d.len2();
+    ftype         v2   = rij2 * hmeanm2;
+    //ftype         v2 = d.len2() / (hmean*hmean);
+
+//    ftype W        = kern.getW(v2) * hmeanm3;
+    ftype gW         = kern.getgW(v2) * hmeanm5;
+    // direct kernel computation (requires a sqrt)
+    // ftype gW      = kern.fgW(sqrt(v2)) * hmeanm5;
+
+    ftype gWmi       = mass*gW;
+    ftype gWmj       = read->mass*gW;
+    ftype gWmri      = gWmi*rhom1;
+    ftype gWmrj      = gWmj*read->rhom1;
+
+    ai11       +=  d[0] * gWmrj * (-d[0]) ;
+    ai12       +=  d[0] * gWmrj * (-d[1]) ;
+    ai13       +=  d[0] * gWmrj * (-d[2]) ;
+    ai21       +=  d[1] * gWmrj * (-d[0]) ;
+    ai22       +=  d[1] * gWmrj * (-d[1]) ;
+    ai23       +=  d[1] * gWmrj * (-d[2]) ;
+    ai31       +=  d[2] * gWmrj * (-d[0]) ;
+    ai32       +=  d[2] * gWmrj * (-d[1]) ;
+    ai33       +=  d[2] * gWmrj * (-d[2]) ;
+
+//  particles are neighbours of themself ... (why?)
+    if(id != read->id){
+
+    write->ai11       +=  d[0] * gWmri * (-d[0]) ;
+    write->ai12       +=  d[0] * gWmri * (-d[1]) ;
+    write->ai13       +=  d[0] * gWmri * (-d[2]) ;
+    write->ai21       +=  d[1] * gWmri * (-d[0]) ;
+    write->ai22       +=  d[1] * gWmri * (-d[1]) ;
+    write->ai23       +=  d[1] * gWmri * (-d[2]) ;
+    write->ai31       +=  d[2] * gWmri * (-d[0]) ;
+    write->ai32       +=  d[2] * gWmri * (-d[1]) ;
+    write->ai33       +=  d[2] * gWmri * (-d[2]) ;
+    }
+
+  }
+#endif
 #ifdef SPH
   template <class T>
   bool isNeighbour(T *other) {
@@ -352,8 +517,9 @@ public:
     // One of the following two lines has to be a comment
     // First line: Pi/rhoi^2 + Pj/rhoj^2
     // 2nd line:   (Pi + Pj) / (rhoi * rhoj)
-    ftype rhoim2 = rhom1 * rhom1, rhojm2 = read->rhom1 * read->rhom1;
+//    ftype rhoim2 = rhom1 * rhom1, rhojm2 = read->rhom1 * read->rhom1;
     //**//ftype rhoim2 = rhom1 * other->rhom1, rhojm2 = rhoim2;
+    ftype rhoim2 = rhom1 * read->rhom1, rhojm2 = rhoim2;
       
     ftype gW         = kern.getgW(v2) * hmeanm5;
     // direct kernel computation (requires a sqrt)
@@ -363,7 +529,7 @@ public:
     ftype gWmj       = read->mass*gW;
     ftype gWmri      = gWmi*rhom1;
     ftype gWmrj      = gWmj*read->rhom1;
-    
+
     Vector<ftype> dv = v - read->v;
 
     ftype exx        = dv[0]*d[0];
@@ -388,7 +554,16 @@ public:
     // Pressure
     ftype pij  = p * rhoim2 + read->p * rhojm2;
     ftype diag = pij + Piij;
-    
+   
+#ifdef NOMULTIPHASESTRAIN
+    //
+    // remove strength between different materials
+    //
+    if ( (bodyNr() != read->bodyNr()) && diag < 0. ) {
+      diag = 0.;
+    }
+#endif
+
     f         -= d     * diag * gWmj;
     write->f  += d     * diag * gWmi;
     du        += projv * diag * gWmj;
@@ -423,6 +598,62 @@ public:
       du        -= tdv * gWmj;
       write->du -= tdv * gWmi;
       
+#ifdef CORR
+      // Strain rate tensor
+      epsxx        -= gWmrj*dv[0]*(d[0]*ci11+d[1]*ci21+d[2]*ci31);
+      epsyy        -= gWmrj*dv[1]*(d[0]*ci12+d[1]*ci22+d[2]*ci32);
+      epszz        -= gWmrj*dv[2]*(d[0]*ci13+d[1]*ci23+d[2]*ci33);
+      
+      ftype dvxyi    = dv[0]*(d[0]*ci12+d[1]*ci22+d[2]*ci32), dvyxi = dv[1]*(d[0]*ci11+d[1]*ci21+d[2]*ci31);
+      ftype dvxzi    = dv[0]*(d[0]*ci13+d[1]*ci23+d[2]*ci33), dvzxi = dv[2]*(d[0]*ci11+d[1]*ci21+d[2]*ci31);
+      ftype dvyzi    = dv[1]*(d[0]*ci13+d[1]*ci23+d[2]*ci33), dvzyi = dv[2]*(d[0]*ci12+d[1]*ci22+d[2]*ci32);
+
+      ftype exyi     = .5*(dvxyi + dvyxi);
+      ftype exzi     = .5*(dvxzi + dvzxi);
+      ftype eyzi     = .5*(dvyzi + dvzyi);
+
+      epsxy        -= gWmrj*exyi;
+      epsxz        -= gWmrj*exzi;
+      epsyz        -= gWmrj*eyzi;
+
+      // Rotation rate tensor
+      ftype rrxyi     = .5*(dvxyi - dvyxi);
+      ftype rrxzi     = .5*(dvxzi - dvzxi);
+      ftype rryzi     = .5*(dvyzi - dvzyi);
+
+      rxy        -= gWmrj*rrxyi;
+      rxz        -= gWmrj*rrxzi;
+      ryz        -= gWmrj*rryzi;
+
+      // Strain rate tensor
+      write->epsxx -= gWmri*dv[0]*(d[0]*read->ci11+d[1]*read->ci21+d[2]*read->ci31);
+      write->epsyy -= gWmri*dv[1]*(d[0]*read->ci12+d[1]*read->ci22+d[2]*read->ci32);
+      write->epszz -= gWmri*dv[2]*(d[0]*read->ci13+d[1]*read->ci23+d[2]*read->ci33);
+
+      ftype dvxyj    = dv[0]*(d[0]*read->ci12+d[1]*read->ci22+d[2]*read->ci32), dvyxj = dv[1]*(d[0]*read->ci11+d[1]*read->ci21+d[2]*read->ci31);
+      ftype dvxzj    = dv[0]*(d[0]*read->ci13+d[1]*read->ci23+d[2]*read->ci33), dvzxj = dv[2]*(d[0]*read->ci11+d[1]*read->ci21+d[2]*read->ci31);
+      ftype dvyzj    = dv[1]*(d[0]*read->ci13+d[1]*read->ci23+d[2]*read->ci33), dvzyj = dv[2]*(d[0]*read->ci12+d[1]*read->ci22+d[2]*read->ci32);
+       
+      ftype exyj     = .5*(dvxyj + dvyxj);
+      ftype exzj     = .5*(dvxzj + dvzxj);
+      ftype eyzj     = .5*(dvyzj + dvzyj);
+      
+      write->epsxy -= gWmri*exyj;
+      write->epsxz -= gWmri*exzj;
+      write->epsyz -= gWmri*eyzj;
+      
+      // Rotation rate tensor
+      //
+      
+      ftype rrxyj     = .5*(dvxyj - dvyxj);
+      ftype rrxzj     = .5*(dvxzj - dvzxj);
+      ftype rryzj     = .5*(dvyzj - dvzyj);
+      
+      write->rxy -= gWmri*rrxyj;
+      write->rxz -= gWmri*rrxzj;
+      write->ryz -= gWmri*rryzj;
+
+#else      
       // Strain rate tensor
       epsxx        -= gWmrj*exx;
       epsyy        -= gWmrj*eyy;
@@ -453,6 +684,8 @@ public:
       write->rxy -= gWmri*rrxy;
       write->rxz -= gWmri*rrxz;
       write->ryz -= gWmri*rryz;
+#endif
+      
     } else sigxx = sigxy = sigxz = sigyy = sigyz = sigzz = 0.0;
 #endif	
 
@@ -573,19 +806,153 @@ public:
   void addTif()  { f += tif; }
 
   ftype getEnergy() { return mass * (u + .5*v.len2()); }
-  
+
+#ifdef DIST
+  void distention() {
+    ftype dadps,dadps1,dadps2,dadrhos,distt,n1,n2;
+    ftype dadpe = 0.;
+    ftype dadrhoe=0.;
+    static    ftype deltadam=0.01;
+    ftype cddm = pow(pow(1+deltadam,0.333333)-pow(deltadam,0.333333),-1);
+    distMat  dmat  = distTab.get(matNr());
+    diste = dmat.dist0;
+    distt = dmat.distt;
+    n1 = dmat.n1;
+    n2 = dmat.n2;
+    Pe = dmat.Pe;
+    
+    eosMat mt = eosTab.get(matNr());
+    ftype    densitye = mt.rho0*(2.0*mt.B-mt.A-(mt.a+mt.b)*uini*mt.rho0+pow((mt.A*mt.A+4.*diste*mt.B*dmat.Pe+(mt.a+mt.b)*uini*mt.rho0*(-4*mt.B+2*mt.A+(mt.a+mt.b)*uini*mt.rho0)),0.5))/(2.*diste*mt.B);
+    ftype    densitys = mt.rho0*(2.0*mt.B-mt.A-(mt.a+mt.b)*uini*mt.rho0+pow((mt.A*mt.A+4.*1.0*mt.B*dmat.Ps+(mt.a+mt.b)*uini*mt.rho0*(-4*mt.B+2*mt.A+(mt.a+mt.b)*uini*mt.rho0)),0.5))/(2.*1.0*mt.B);
+
+    disteq1=false;
+    ddm=0.;
+//
+    if(distmodel==1){
+    if (dmat.dist0 > 1.0 && p < dmat.Ps) {
+       dadp=dadpe;
+       if(p > dmat.Pe && p > ref || diststate > 0.5){
+         double aptmp1=(double)pow(dmat.Pt-p,n1-1)*(double)pow(dmat.Pt-dmat.Pe,-n1);
+         dadps1=-n1*(diste-distt)*aptmp1;
+         double aptmp2=(double)pow(dmat.Ps-p,n2-1) * (double)pow(dmat.Ps-dmat.Pe,-n2);
+         dadps2=-n2*(distt-1.0) * aptmp2;
+         if(p<dmat.Pt){
+           dadps=dadps1+dadps2;
+         }else{
+           dadps=dadps2;
+         }
+         dadp=dadps;
+         diststate=1.0;
+       }
+       dp=(du*dpdu+dist*drho*dpdrho)/(dist+dadp*(-dpdrho*rho+p));
+       if(dp<0. && diststate > 0.5){
+          dadp=dadpe;
+          diststate=0.0;
+          dp=(du*dpdu+dist*drho*dpdrho)/(dist+dadp*(-dpdrho*rho+p));
+          ref=p;
+       }
+       ddist=dadp*dp;
+       if(ddist > 0.){
+         std::cout << "ddist>0:" << ddist << "    "; 
+       }
+
+      if(diststate > 0.5) {
+         ddm=0.3333333*pow((-1)/(diste-1)*(dist-1)+1+deltadam,-0.666666)*(-1)/(diste-1)*cddm*ddist;
+      }else {
+         ddm=0;
+      }
+    }else {
+       dp=(du*dpdu+dist*drho*dpdrho)/dist;
+       ddist=0.;
+       dadp=0.;
+       diststate=0;
+       disteq1=true;
+       ddm=0.;
+    }
+     ftype dadrhocf=((p/(rho*rho)*dpdu+dist*dpdrho)/(dist+dadp*(-dpdrho*rho+p)))*dadp;
+     corrfact=1.+dadrhocf*rho/dist;
+     dad=dadp;
+    } 
+//
+    if(distmodel==2){
+    rhos=rho*dist;
+    if (dmat.dist0 > 1.0 && rhos < densitys) {
+       dadrho=dadrhoe;
+       if(rho > densitye && rho > ref || diststate > 0.5){
+         ftype rho0m1 = 1.0 / mt.rho0;
+         ftype eta    = rhos*rho0m1;
+         ftype ur     = eta - 1.0;
+         ftype pr=(mt.A*ur+mt.B*ur*ur)/dist;
+         ftype dadpr1 = Min(-n1*(diste-distt) *pow(dmat.Pt-pr,n1-1)*pow(dmat.Pt-dmat.Pe,-n1),0.);
+         ftype dadpr2 = Min(-n2*(distt-1.0) *pow(dmat.Ps-pr,n2-1) * pow(dmat.Ps-dmat.Pe,-n2),0.);
+         ftype dadpr=dadpr1+dadpr2;
+         ftype dprdrho= (mt.A+2.0*mt.B*ur)/mt.rho0;
+         dadrhos=(dist*dprdrho)/(dist+dadpr*(-dprdrho*rho+pr))*dadpr;
+
+         if(dadrhos>0.){
+           std::cout << "dadrhos:" << dadrhos;
+         }
+         dadrho=dadrhos;
+         diststate=1;
+       }
+       if(drho<0. && diststate > 0.5){
+          dadrho=dadrhoe;
+          diststate=0;
+          ref=rhold; 
+       }
+       ddist=dadrho*drho;
+//
+       if(ddist > 0.){
+         std::cout << "ddist>0:" << ddist << "    ";
+       }
+//
+       if(diststate > 0.5) {
+         ddm=0.3333333*pow((-1)/(diste-1)*(dist-1)+1+deltadam,-0.666666)*(-1)/(diste-1)*cddm*ddist;
+       }else {
+          ddm=0;
+       }
+    }else {
+       ddist=0.;
+       dadrho=0.;
+       diststate=0;
+       disteq1=true;
+       ddm=0.;
+    }
+     dad=dadrho;
+     corrfact=1.+dadrho*rho/dist;
+    }
+  }
+#endif  
+
 #ifdef SOLID
   void deviator() {
     if (bodyNr() == 0 && dm < 1.) {
-//    if (dm < 1.) {
       ftype mu   = matTab.get(matNr()).mu;
       ftype szz  = - sxx - syy;
+#ifdef DIST
+      epsxx*=corrfact;
+      epsyy*=corrfact;
+      epszz*=corrfact;
+      epsxy*=corrfact;
+      epsxz*=corrfact;
+      epsyz*=corrfact;
+      rxy*=corrfact;
+      rxz*=corrfact;
+      ryz*=corrfact;
+#endif
       ftype div3 = (epsxx + epsyy + epszz) * third;
       dsxx = 2.*(mu*(epsxx - div3) + sxy*rxy + sxz*rxz);
       dsyy = 2.*(mu*(epsyy - div3) - sxy*rxy + syz*ryz);
       dsxy = 2.*mu*epsxy + (syy-sxx)*rxy + sxz*ryz + syz*rxz;
       dsxz = 2.*mu*epsxz + (szz-sxx)*rxz - sxy*ryz + syz*rxy;
       dsyz = 2.*mu*epsyz + (szz-syy)*ryz - sxy*rxz - sxz*rxy;
+#ifdef DIST
+      dsxx=dsxx/dist-sxx*ddist/(dist*dist);
+      dsyy=dsyy/dist-syy*ddist/(dist*dist);
+      dsxy=dsxy/dist-sxy*ddist/(dist*dist);
+      dsxz=dsxz/dist-sxz*ddist/(dist*dist);
+      dsyz=dsyz/dist-syz*ddist/(dist*dist);
+#endif
     } else {
       dsxx = 0.0; dsxy = 0.0; dsxz = 0.0; dsyy = 0.0; dsyz = 0.0;
     }
@@ -602,13 +969,13 @@ public:
     if (Smax == 0.) {
        sig1 = sig2 = sig3 = -p-grav;
 #ifdef TENSILE
-       pa1  = Vector<ftype>(1.,0.,0.);
-       pa2  = Vector<ftype>(0.,1.,0.);
-       pa3  = Vector<ftype>(0.,0.,1.);
+//       pa1  = Vector<ftype>(1.,0.,0.);
+//       pa2  = Vector<ftype>(0.,1.,0.);
+//       pa3  = Vector<ftype>(0.,0.,1.);
 #endif
        }
     else {
-      Smax = Max(Smax, Fabs(Sxx), Fabs(Syy), Fabs(Szz));
+      ftype Smax = Max(Smax, Fabs(Sxx), Fabs(Syy), Fabs(Szz));
       Sxx /= Smax; Syy /= Smax; Szz /= Smax;
       Sxy /= Smax; Sxz /= Smax; Syz /= Smax;
       ftype pp = - Sxx - Syy - Szz,
@@ -635,29 +1002,29 @@ public:
 
   // compute fracture growth - Damage limited to 1/Nflaws
   void fracture() {
-    double rft,aflaws,dmmax,epstres,youngn;
-//    epstres=0.000999724091;
-    epstres=0.000392380345;
-//    youngn=530623529000.0;
+    double rft,aflaws,dmmax;
+#ifdef DIST
+#else
     ddm = 0.;
+#endif
     if (dm < 1.) {
       pstresses();
       ftype youngi = young*(1.-dm*dm*dm) + tiny ;
-      rft    = Max(sig1, sig2, sig3) / (epstres * youngi);
+      rft    = Max(sig1, sig2, sig3) / (epsmin * youngi);
       if (rft > 1. && epsmin < 1.e10){
-//         aflaws = pow(rft,m);
-//         if (aflaws > flaws) {
-//            ddm = acoef * pow(flaws,third);}
-//         else{
-//            dmmax= aflaws/flaws;
-//            if (dm*dm*dm < dmmax){
-//               ddm = acoef * pow(aflaws,third);}
-//            else{
-//               ddm = 0.;}
-//         }
-        ddm = acoef * pow(flaws,third);
-//        ddm= 1899653.5316;
-// that corresponds to # of flaws of 10*100k*sqrt(2)
+         aflaws = pow(rft,m);
+         if (aflaws > flaws) {
+            ddm += acoef * pow(flaws,third);}
+         else{
+            dmmax= aflaws/flaws;
+            if (dm*dm*dm < dmmax){
+               ddm += acoef * pow(aflaws,third);}
+#ifdef DIST
+#else
+            else{
+               ddm = 0.;}
+#endif
+         }
       }
     }
   }
@@ -685,6 +1052,9 @@ public:
     energy();
     damping();
     addTif();
+#ifdef DIST
+    distention();
+#endif
 #ifdef SOLID
     deviator();
     fracture();
@@ -701,13 +1071,13 @@ public:
     dh = h * divv * third;
     
     ftype dhs   = -divmax[bodyNr()] * h * third;
-    int   dnsup = Max(120 - neib, -50);
-    int   dninf = Max(neib -  10, -50);
+    int   dnsup = Max(100 - neib, -50);
+    int   dninf = Max(neib -  25, -50);
     if (dnsup < 10) {
       ftype wsex1 = exp(dnsup * 0.2);
       ftype wsex2 = 1. / wsex1;
       dh = (wsex1 * dh + wsex2 * dhs)/(wsex1 + wsex2);
-    } else if (dninf < 20) {
+    } else if (dninf < 10) {
       ftype wiex1 = exp(dninf * 0.2);
       ftype wiex2 = 1. / wiex1;
       dh = (wiex1 * dh - wiex2 * dhs)/(wiex1 + wiex2);
@@ -732,7 +1102,7 @@ public:
     if (help < tc.dt) tc.set(help, 2, (int)getId(), -1, -1);
 
     // energy cond
-    if (u > uMin) if (du != 0.0) {
+    if (u > 2.* uMin) if (du != 0.0) {
       help = dtFactor*(u + uMin)/Fabs(du);
       if (help < tc.dt)	tc.set(help, 3, (int)getId(), u, du);
     }
@@ -748,47 +1118,60 @@ public:
       help = dtFactor*(rho + rhoMin)/Fabs(drho);
       if (help < tc.dt) tc.set(help, 5, (int)getId(), rho, drho);
     }
+#ifdef DIST
+    // pressure cond
+    if (p > 0.8 * Pe && p < 1.2* Pe && dist > 0.9 *diste && diste >0.) if (dp != 0.0 && dp > 0.) {
+      help = dtFactor*dtpFactor*(p + pMin)/Fabs(dp);
+      if (help < tc.dt) tc.set(help, 6, (int)getId(), p, dp);
+    }
+/*
+    // distention cond 1
+    if ((1.5-dist) > 0.02) if (ddist != 0.0) {
+      help = dtFactor*(1.5-dist+0.01)/Fabs(ddist);
+
+      if (help < tc.dt) tc.set(help, 6, (int)getId(), dist, ddist);
+    }
+   // distention cond 2
+    if((1.5-dist) < 0.02) if (ddist != 0.0){
+      help= (double)0.1/Fabs(ddist);
+      if (help < tc.dt) tc.set(help, 7, (int)getId(), dist, ddist);
+    }*/
+#endif
 #ifdef SOLID
     // damage cond
     if (dm > 2. * dmMin) if (ddm != 0.0) {
       help = dtFactor*(dm + dmMin)/Fabs(ddm);
-      if (help < tc.dt) tc.set(help, 6, (int)getId(), dm, ddm);
+      if (help < tc.dt) tc.set(help, 7, (int)getId(), dm, ddm);
     }
-//    if (ddm != -1.0) {
-//      help = dtFactor*(0.1)/Fabs(ddm);
-//      help=7.0e-9;
-//      if (help < tc.dt) tc.set(help, 6, (int)getId(), dm, ddm);
-//    }
-
     
     // sxx cond
     if (Fabs(sxx) > 2.*sMin) if (dsxx != 0.0) {
       help = dtFactor*(Fabs(sxx) + sMin)/Fabs(dsxx);
-      if (help < tc.dt) tc.set(help, 7, (int)getId(), sxx, dsxx);
+      if (help < tc.dt) tc.set(help, 8, (int)getId(), sxx, dsxx);
     }
     
     // sxy cond
     if (Fabs(sxy) > 2.*sMin) if (dsxy != 0.0) {
       help = dtFactor*(Fabs(sxy) + sMin)/Fabs(dsxy);
-      if (help < tc.dt) tc.set(help, 8, (int)getId(), sxy, dsxy);
+      if (help < tc.dt) tc.set(help, 9, (int)getId(), sxy, dsxy);
     }
     
     // sxz cond
     if (Fabs(sxz) > 2.*sMin) if (dsxz != 0.0) {
       help = dtFactor*(Fabs(sxz) + sMin)/Fabs(dsxz);
-      if (help < tc.dt) tc.set(help, 9, (int)getId(), sxz, dsxz);
+      if (help < tc.dt) tc.set(help, 10, (int)getId(), sxz, dsxz);
     }
     
     // syy cond
     if (Fabs(syy) > 2.*sMin) if (dsyy != 0.0) {
       help = dtFactor*(Fabs(syy) + sMin)/Fabs(dsyy);
-      if (help < tc.dt) tc.set(help, 10, (int)getId(), syy, dsyy);
+      if (help < tc.dt) tc.set(help, 11, (int)getId(), syy, dsyy);
     }
     
     // syz cond
     if (Fabs(syz) > 2.*sMin) if (dsyz != 0.0) {
       help = dtFactor*(Fabs(syz) + sMin)/Fabs(dsyz);
-      if (help < tc.dt) tc.set(help, 11, (int)getId(), sxz, dsyz);
+      if (help < tc.dt) tc.set(help, 12, (int)getId(), sxz, dsyz);
     }
 #endif
 #endif
@@ -803,6 +1186,10 @@ public:
     v   += f*dt;
     sf   = f;
 #ifdef SPH
+#ifdef DIST
+    rhold=rho;
+    pold=p;
+#endif
     h    += dt*dh;
     rho  += dt*drho; 
     u    += dt*du;
@@ -814,6 +1201,12 @@ public:
     rho   = Max(rho, rhoMin);
     u     = Max(u,   uMin);
     sdh   = dh; sdrho = drho; sdu = du;
+#ifdef DIST
+    dist += dt*ddist;
+    dist  = Max(dist,(ftype)1.0);
+    if(disteq1) dist=1.0;
+    sddist=ddist;
+#endif
 #ifdef SOLID
     dm   += dt*ddm;
     sxx  += dt*dsxx;
@@ -846,6 +1239,11 @@ public:
     h    = Max(h,   hMin);
     rho  = Max(rho, rhoMin);
     u    = Max(u,   uMin);
+#ifdef DIST
+    dist+= Cdt*(ddist-sddist);
+    dist = Max(dist,(ftype)1.0);
+    if(disteq1) dist=1.0;
+#endif
 #ifdef SOLID
     sxx += Cdt*(dsxx - sdsxx);
     syy += Cdt*(dsyy - sdsyy);
@@ -869,8 +1267,13 @@ public:
 Eos           Particle::eos;
 ftype         Particle::avAlpha,  Particle::avBeta, Particle::dampFactor;
 ftype         Particle::dtFactor, Particle::hMax,   Particle::hMin;
-ftype         Particle::hMinm1,   Particle::rhoMin, Particle::uMin;
+ftype         Particle::hMinm1,   Particle::rhoMin, Particle::uMin, Particle::pMin, Particle::dtpFactor;
 ftype         Particle::xsphFactor, Particle::heatconG1, Particle::heatconG2;
+#ifdef DIST
+Material<distMat> Particle::distTab;
+Material<eosMat> Particle::eosTab;
+ftype         Particle::uini;
+#endif
 #ifdef SOLID
 Material<Mat> Particle::matTab;
 ftype         Particle::dmMin, Particle::sMin, Particle::tiny;
@@ -890,7 +1293,7 @@ const ftype   Particle::C         = .5;          // corrector
 const Kernel  Particle::kern;
 double        Particle::totNumPartm1;
 bool          Particle::heatCon, Particle::xsph;
-int           Particle::numVar;
+int           Particle::numVar, Particle::distmodel;
 std::string   Particle::varName;
 
 #endif

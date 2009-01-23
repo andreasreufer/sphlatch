@@ -33,7 +33,9 @@
 typedef struct {
   ftype rho0, A, B, a, b, alpha, beta, u0, Eiv, Ecv;
 } eosMat;
-
+typedef struct {
+  ftype dist0, Pe, Ps, distt, Pt, n1, n2, uini;
+} distMat;
 typedef struct {
   ftype mu, umelt, yield, pweib, cweib;
 } Mat;

@@ -69,7 +69,15 @@ public:
 
     cellList.pFindNeighbourCells();
     cellList.pSpreadGhosts();
+#ifdef CORR
+    for (p = 0; p < size; p++) cellList.corrtensor(&pList[p]);
+    cellList.pCollectGhosts();
 
+    for (p = 0; p < size; p++) pList[p].inverse();
+
+    cellList.pFindNeighbourCells();
+    cellList.pSpreadGhosts();
+#endif
     DMORE("s", "calculating Forces ...");
     for (p = 0; p < size; p++) {
       t.reset(); t.start();
@@ -236,7 +244,7 @@ public:
 	//psDraw(pList[i].pos[0], pList[i].pos[1], i, true);
 
       done = paraIO.produceOutput(man, time, lastSave);
-      //if (intStep >= 5) done = true;
+//      if (intStep >= 1) done = true;
     }
     //psClose();
   }

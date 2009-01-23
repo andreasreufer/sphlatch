@@ -175,6 +175,29 @@ public:
 	    }
   }
 #endif
+#ifdef CORR
+  void corrtensor(Particle *part) {
+    int        i, j, k;
+    Link       l;
+    Range<int> near = part->getNear();
+
+    near.min[0] *= global::dim2; near.max[0] *= global::dim2;
+    near.min[1] *= global::dim;  near.max[1] *= global::dim;
+
+    for (i = near.min[0]; i < near.max[0]; i += global::dim2)
+      for (j = near.min[1]; j < near.max[1]; j += global::dim)
+        for (k = near.min[2]; k < near.max[2]; k++)
+          for (l = cellList[i + j + k].first; l.nr > -1;)
+            if (l.proc == global::rank) {
+              part->corrtensor(&pList[l.nr], &pList[l.nr]);
+              l = pList[l.nr].getNext();
+            } else {
+              part->corrtensor(&readGhostList[l.proc][l.nr],
+                              &writeGhostList[l.proc][l.nr]);
+              l = readGhostList[l.proc][l.nr].getNext();
+            }
+  }
+#endif
 #ifdef GRAV
   void forcesGrav(Particle *part) {
     int  i, sum = tree.forcesGrav(part, newtonCell);
