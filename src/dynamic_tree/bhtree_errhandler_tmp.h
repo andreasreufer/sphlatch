@@ -10,7 +10,7 @@
  */
 
 #include "typedefs.h"
-#include "bhtree_nodes.h"
+#include "bhtree_node_cells.h"
 #include "err_handler.h"
 
 using namespace sphlatch::vectindices;

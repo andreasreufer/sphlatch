@@ -10,7 +10,8 @@
  */
 
 #include "bhtree_dynamic.h"
-#include "bhtree_nodes.h"
+#include "bhtree_node_cells.h"
+#include "bhtree_node_particle.h"
 
 #include "particle_manager.h"
 
@@ -39,7 +40,7 @@ protected:
    void goNext();
    void goSkip();
    void goChild(const size_t _n);
-   void goSibling(const size_t _n);
+   void goNeighbour(const size_t _n);
 
    bool pointInsideCell(const fType _x, const fType _y, const fType _z);
    size_t getOctant(const fType _x, const fType _y, const fType _z);
@@ -128,9 +129,9 @@ void BHTreeWorker::goChild(const size_t _n)
    assert(curPtr != NULL);
 }
 
-void BHTreeWorker::goSibling(const size_t _n)
+void BHTreeWorker::goNeighbour(const size_t _n)
 {
-   curPtr = static_cast<czllPtrT>(curPtr)->sibling[_n];
+   curPtr = static_cast<czllPtrT>(curPtr)->neighbour[_n];
    assert(curPtr != NULL);
 }
 
@@ -158,8 +159,8 @@ size_t BHTreeWorker::getOctant(const fType _x,
 
    assert(curPtr != NULL);
    targetOctant += _x < static_cast<cellPtrT>(curPtr)->xCen ? 0 : 1;
-   targetOctant += _y < static_cast<cellPtrT>(curPtr)->xCen ? 0 : 2;
-   targetOctant += _z < static_cast<cellPtrT>(curPtr)->xCen ? 0 : 4;
+   targetOctant += _y < static_cast<cellPtrT>(curPtr)->yCen ? 0 : 2;
+   targetOctant += _z < static_cast<cellPtrT>(curPtr)->zCen ? 0 : 4;
    return(targetOctant);
 }
 };

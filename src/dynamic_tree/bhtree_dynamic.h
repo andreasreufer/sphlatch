@@ -15,7 +15,8 @@
 
 #include "typedefs.h"
 
-#include "bhtree_nodes.h"
+#include "bhtree_node_cells.h"
+#include "bhtree_node_particle.h"
 #include "stack_allocator.h"
 
 namespace sphlatch {
