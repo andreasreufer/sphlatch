@@ -35,6 +35,9 @@ public:
    typedef particleNode            partT;
    typedef particleNode*           partPtrT;
 
+   typedef genericCellNode         gcllT;
+   typedef genericCellNode*        gcllPtrT;
+
    typedef quadrupoleCellNode      cellT;
    typedef quadrupoleCellNode*     cellPtrT;
 
@@ -54,7 +57,7 @@ private:
    static selfPtr _instance;
 
 protected:
-   czllPtrT rootPtr;
+   nodePtrT rootPtr;
 
    StackAllocator<partT, 1048576> partAllocator;
    StackAllocator<cellT, 262144>  cellAllocator;
@@ -72,18 +75,17 @@ BHTree::BHTree()
    /// size, add root cell to CZbottom
    /// cells list
    ///
-   rootPtr           = czllAllocator.pop();
-   rootPtr->atBottom = true;
+   rootPtr = czllAllocator.pop();
+   static_cast<czllPtrT>(rootPtr)->atBottom = true;
 
    ///
    /// resize particle proxy vector
    ///
    partProxies.reserve(1048576);
-   
    partProxies.resize(1048576);
    for (size_t i = 0; i < 1048576; i++)
    {
-     partProxies[i] = NULL;
+      partProxies[i] = NULL;
    }
    partProxies.resize(0);
 }

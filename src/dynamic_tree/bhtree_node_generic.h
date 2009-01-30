@@ -27,16 +27,33 @@ public:
    size_t    depth;
    identType ident;
 
-   bool isParticle : 1;
-   bool isRemote   : 1;
-   bool isCZ       : 1;
+   ///
+   /// is a node a particle / a CZ cell, is it remote
+   ///
+   bool isParticle  : 1;
+   bool isCZ        : 1;
+   bool isRemote    : 1;
+
+   ///
+   /// indicate whether a CZ cell is at the bottom
+   /// of the CZ tree and whether the neighbours are set
+   ///
+   bool atBottom    : 1;
    bool neighSet    : 1;
 
-   genericNode() { clear(); }
+   ///
+   /// indicates whether a particle node is settled
+   /// at the correct position in the tree
+   ///
+   bool isSettled   : 1;
+
+   genericNode() { }
    ~genericNode() { }
 
    void clear();
    genericNodePtrT operator*();
+
+private:
 };
 
 void genericNode::clear()
@@ -48,9 +65,13 @@ void genericNode::clear()
    ident = 0;
 
    isParticle = false;
-   isRemote   = false;
    isCZ       = false;
+   isRemote   = false;
+   
+   atBottom   = false;
    neighSet   = false;
+   
+   isSettled  = false;
 }
 
 genericNode::genericNodePtrT genericNode::operator*()

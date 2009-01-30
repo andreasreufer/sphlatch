@@ -1,4 +1,4 @@
-all: treefun
+all: treefun nodesize
 
 treefun:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
@@ -12,6 +12,11 @@ nodesfun:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
 	  -I../../src -I../../src/dynamic_tree \
 	  -o nodesFun nodesFun.cpp
+
+nodesize:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	  -I../../src -I../../src/dynamic_tree \
+	  -o nodeSize nodeSize.cpp
 
 clean:
 	rm treeFun nodesFun 2>&1 >/dev/null; true

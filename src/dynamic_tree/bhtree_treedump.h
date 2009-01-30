@@ -15,7 +15,7 @@
 namespace sphlatch {
 class BHTreeDump : public BHTreeWorker {
 public:
-   BHTreeDump(treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
+   BHTreeDump(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
    BHTreeDump(const BHTreeDump& _dumper) : BHTreeWorker(_dumper) { }
    ~BHTreeDump() { }
 

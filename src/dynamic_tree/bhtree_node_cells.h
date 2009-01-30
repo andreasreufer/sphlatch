@@ -1,8 +1,6 @@
 #ifndef BHTREE_NODE_CELLS_H
 #define BHTREE_NODE_CELLS_H
 
-//#define SPHLATCH_AMD64PADDING
-
 /*
  *  bhtree_node_cells.h
  *
@@ -29,13 +27,15 @@ public:
    fType xCen, yCen, zCen;
    fType clSz, cost;
 
-   genericCellNode() { clear(); }
+   genericCellNode() { }
    ~genericCellNode() { }
 
    void clear();
    void inheritCellPos(size_t _n);
    bool pointInsideCell(const fType _x, const fType _y, const fType _z);
    size_t getOctant(const fType _x, const fType _y, const fType _z);
+
+private:
 };
 
 ///
@@ -46,10 +46,14 @@ public:
    fType xCom, yCom, zCom;
    fType mass;
 
-   monopoleCellNode() { clear(); }
+   monopoleCellNode() { }
    ~monopoleCellNode() { }
 
    void clear();
+
+#ifdef SPHLATCH_AMD64PADDING
+   char pad[0];
+#endif
 };
 
 ///
@@ -63,7 +67,7 @@ public:
 
    fType q11, q22, q33, q12, q13, q23;
 
-   quadrupoleCellNode() { clear(); }
+   quadrupoleCellNode() { }
    ~quadrupoleCellNode() { }
 
    void clear();
@@ -71,7 +75,7 @@ public:
 
 private:
 #ifdef SPHLATCH_AMD64PADDING
-   char pad[48];
+   char pad[16];
 #endif
 };
 
@@ -85,9 +89,9 @@ public:
 
    genericNodePtrT neighbour[27];
    identType       domain;
-   bool            atBottom : 1;
+   countsType       noParts;
 
-   costzoneCellNode() { clear(); }
+   costzoneCellNode() { }
    ~costzoneCellNode() { }
 
    void clear();
@@ -97,7 +101,7 @@ public:
 
 private:
 #ifdef SPHLATCH_AMD64PADDING
-   char pad[28];
+   char pad[12];
 #endif
 };
 
@@ -107,7 +111,7 @@ private:
 ///
 void genericCellNode::clear()
 {
-   this->genericNode::clear();
+   genericNode::clear();
 
    for (size_t i = 0; i < 8; i++)
    {
@@ -123,7 +127,7 @@ void genericCellNode::clear()
 
 void monopoleCellNode::clear()
 {
-   this->genericCellNode::clear();
+   genericCellNode::clear();
 
    xCom = 0.;
    yCom = 0.;
@@ -133,7 +137,7 @@ void monopoleCellNode::clear()
 
 void quadrupoleCellNode::clear()
 {
-   this->monopoleCellNode::clear();
+   monopoleCellNode::clear();
 
    q11 = 0.;
    q22 = 0.;
@@ -145,7 +149,7 @@ void quadrupoleCellNode::clear()
 
 void costzoneCellNode::clear()
 {
-   this->quadrupoleCellNode::clear();
+   quadrupoleCellNode::clear();
 
    for (size_t i = 0; i < 27; i++)
    {
@@ -153,6 +157,7 @@ void costzoneCellNode::clear()
    }
 
    domain   = 0;
+   noParts = 0;
    atBottom = false;
 }
 
@@ -170,6 +175,8 @@ void genericCellNode::inheritCellPos(size_t _n)
    zCen = ((_n >> 2) % 2) ?
           static_cast<gcllPtr>(parent)->zCen + hcSize :
           static_cast<gcllPtr>(parent)->zCen - hcSize;
+
+   depth = parent->depth + 1;
 }
 
 bool genericCellNode::pointInsideCell(const fType _x,
@@ -245,7 +252,6 @@ void costzoneCellNode::pushdownNeighbours()
       {
          for (int iz = -1; iz < 3; iz++)
          {
-
             ///
             /// is the current cell i a sibling?
             ///
@@ -332,13 +338,13 @@ void costzoneCellNode::pushdownNeighbours()
                /// iterate through all child cells j
                /// and set their corresponding neighbour
                ///
-               int jxmin = std::max( 0, ix-1);
-               int jymin = std::max( 0, iy-1);
-               int jzmin = std::max( 0, iz-1);
-               
-               int jxmax = std::min( 1, ix+1);
-               int jymax = std::min( 1, iy+1);
-               int jzmax = std::min( 1, iz+1);
+               int jxmin = std::max(0, ix - 1);
+               int jymin = std::max(0, iy - 1);
+               int jzmin = std::max(0, iz - 1);
+
+               int jxmax = std::min(1, ix + 1);
+               int jymax = std::min(1, iy + 1);
+               int jzmax = std::min(1, iz + 1);
 
                for (int jx = jxmin; jx <= jxmax; jx++)
                {

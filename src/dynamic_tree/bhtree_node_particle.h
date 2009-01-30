@@ -25,19 +25,23 @@ public:
    fType xPos, yPos, zPos;
    fType mass;
 
-   particleNode() { clear(); }
+   //bool isSettled;
+
+   particleNode() { }
    ~particleNode() { }
 
    void clear();
-
+   
 #ifdef SPHLATCH_AMD64PADDING
 private:
-   char pad[0];
+   char pad[8];
 #endif
 };
 
 void particleNode::clear()
 {
+  genericNode::clear();
+
    next = NULL;
    skip = NULL;
 
@@ -53,5 +57,6 @@ void particleNode::clear()
    zPos = 0.;
    mass = 0.;
 }
+
 };
 #endif

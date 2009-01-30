@@ -27,11 +27,12 @@ public:
    typedef BHTree::partPtrT       partPtrT;
    typedef BHTree::cellPtrT       cellPtrT;
    typedef BHTree::czllPtrT       czllPtrT;
+   typedef BHTree::gcllPtrT       gcllPtrT;
 
    typedef BHTree::czllPtrListT   czllPtrListT;
 
    BHTreeWorker(const BHTreeWorker& _worker);
-   BHTreeWorker(treePtrT _treePtr);
+   BHTreeWorker(const treePtrT _treePtr);
    ~BHTreeWorker();
 
 protected:
@@ -43,18 +44,19 @@ protected:
    void goNeighbour(const size_t _n);
 
    bool pointInsideCell(const fType _x, const fType _y, const fType _z);
+   bool pointInsideCell(const fType _x, const fType _y, const fType _z,
+                        nodePtrT _node);
    size_t getOctant(const fType _x, const fType _y, const fType _z);
+   size_t getOctant(nodePtrT _nodePtr);
 
-   nodePtrT curPtr, rootPtr;
-   treePtrT treePtr;
+   const treePtrT treePtr;
+   nodePtrT       curPtr, rootPtr;
 
 public:
    partManagerT& PartManager;
 
    matrixRefType  pos, acc;
    valvectRefType eps, m, h, cost;
-
-   void setTree(treePtrT _treePtr);
 };
 
 ///
@@ -63,6 +65,8 @@ public:
 /// the original worker
 ///
 BHTreeWorker::BHTreeWorker(const BHTreeWorker& _worker) :
+   treePtr(_worker.treePtr),
+   rootPtr(_worker.rootPtr),
    PartManager(partManagerT::instance()),
    pos(PartManager.pos),
    acc(PartManager.acc),
@@ -70,15 +74,15 @@ BHTreeWorker::BHTreeWorker(const BHTreeWorker& _worker) :
    m(PartManager.m),
    h(PartManager.h),
    cost(PartManager.cost)
-{
-   setTree(_worker.treePtr);
-}
+{ }
 
 ///
 /// the standard constructor for a Tree worker
 /// with the tree pointer as an argument
 ///
-BHTreeWorker::BHTreeWorker(treePtrT _treePtr) :
+BHTreeWorker::BHTreeWorker(const treePtrT _treePtr) :
+   treePtr(_treePtr),
+   rootPtr(_treePtr->rootPtr),
    PartManager(partManagerT::instance()),
    pos(PartManager.pos),
    acc(PartManager.acc),
@@ -86,19 +90,10 @@ BHTreeWorker::BHTreeWorker(treePtrT _treePtr) :
    m(PartManager.m),
    h(PartManager.h),
    cost(PartManager.cost)
-{
-   setTree(_treePtr);
-}
+{ }
 
 BHTreeWorker::~BHTreeWorker()
 { }
-
-void BHTreeWorker::setTree(treePtrT _treePtr)
-{
-   treePtr = _treePtr;
-   rootPtr = _treePtr->rootPtr;
-   curPtr  = _treePtr->rootPtr;
-}
 
 void BHTreeWorker::goRoot()
 {
@@ -151,6 +146,23 @@ bool BHTreeWorker::pointInsideCell(const fType _x,
           static_cast<cellPtrT>(curPtr)->zCen + hclSz > _z);
 }
 
+bool BHTreeWorker::pointInsideCell(const fType    _x,
+                                   const fType    _y,
+                                   const fType    _z,
+                                   const nodePtrT _node)
+{
+   assert(curPtr != NULL);
+   const fType hclSz = 0.5 * static_cast<gcllPtrT>(_node)->clSz;
+
+   // also try opposite logic for performance tests ...
+   return(static_cast<gcllPtrT>(_node)->xCen - hclSz < _x &&
+          static_cast<gcllPtrT>(_node)->xCen + hclSz > _x &&
+          static_cast<gcllPtrT>(_node)->yCen - hclSz < _y &&
+          static_cast<gcllPtrT>(_node)->yCen + hclSz > _y &&
+          static_cast<gcllPtrT>(_node)->zCen - hclSz < _z &&
+          static_cast<gcllPtrT>(_node)->zCen + hclSz > _z);
+}
+
 size_t BHTreeWorker::getOctant(const fType _x,
                                const fType _y,
                                const fType _z)
@@ -162,6 +174,18 @@ size_t BHTreeWorker::getOctant(const fType _x,
    targetOctant += _y < static_cast<cellPtrT>(curPtr)->yCen ? 0 : 2;
    targetOctant += _z < static_cast<cellPtrT>(curPtr)->zCen ? 0 : 4;
    return(targetOctant);
+}
+
+size_t BHTreeWorker::getOctant(nodePtrT _nodePtr)
+{
+   for (size_t i = 0; i < 8; i++)
+   {
+      if (static_cast<gcllPtrT>(curPtr)->child[i] == _nodePtr)
+      {
+         return(i);
+      }
+   }
+   return(8);
 }
 };
 #endif
