@@ -1,8 +1,6 @@
 #ifndef BHTREE_NODE_GENERIC_H
 #define BHTREE_NODE_GENERIC_H
 
-//#define SPHLATCH_AMD64PADDING
-
 /*
  *  bhtree_node_generic.h
  *
@@ -22,10 +20,10 @@ class genericNode {
 public:
    typedef genericNode*   genericNodePtrT;
 
-   genericNodePtrT parent, next, skip;
+   genericNodePtrT parent, next;
 
-   size_t    depth;
    identType ident;
+   short unsigned int depth;
 
    ///
    /// is a node a particle / a CZ cell, is it remote
@@ -59,7 +57,6 @@ private:
 void genericNode::clear()
 {
    next = NULL;
-   skip = NULL;
 
    depth = -1;
    ident = 0;

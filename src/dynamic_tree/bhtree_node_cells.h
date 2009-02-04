@@ -22,10 +22,13 @@ public:
    typedef genericNode*       nodePtr;
    typedef genericCellNode*   gcllPtr;
 
+   nodePtr skip;
    nodePtr child[8];
 
    fType xCen, yCen, zCen;
    fType clSz, cost;
+
+   countsType noParts;
 
    genericCellNode() { }
    ~genericCellNode() { }
@@ -51,8 +54,8 @@ public:
 
    void clear();
 
-#ifdef SPHLATCH_AMD64PADDING
-   char pad[0];
+#ifdef SPHLATCH_PADTO64BYTES
+   char pad[4];
 #endif
 };
 
@@ -74,7 +77,7 @@ public:
    void initFromCZll(czllT& _czll);
 
 private:
-#ifdef SPHLATCH_AMD64PADDING
+#ifdef SPHLATCH_PADTO64BYTES
    char pad[16];
 #endif
 };
@@ -84,12 +87,14 @@ private:
 ///
 class costzoneCellNode : public quadrupoleCellNode {
 public:
-   typedef costzoneCellNode*     czllPtr;
-   typedef quadrupoleCellNode*   cellPtr;
+   typedef costzoneCellNode*     czllPtrT;
+   typedef quadrupoleCellNode*   cellPtrT;
+   typedef std::list<czllPtrT>   czllPtrListT;
 
    genericNodePtrT neighbour[27];
    identType       domain;
-   countsType       noParts;
+
+   czllPtrListT::iterator listItr;
 
    costzoneCellNode() { }
    ~costzoneCellNode() { }
@@ -99,9 +104,11 @@ public:
 
    void pushdownNeighbours();
 
+   partsIndexListT partsList;
+
 private:
-#ifdef SPHLATCH_AMD64PADDING
-   char pad[12];
+#ifdef SPHLATCH_PADTO64BYTES
+   char pad[4];
 #endif
 };
 
@@ -113,6 +120,7 @@ void genericCellNode::clear()
 {
    genericNode::clear();
 
+   skip = NULL;
    for (size_t i = 0; i < 8; i++)
    {
       child[i] = NULL;
@@ -122,7 +130,9 @@ void genericCellNode::clear()
    yCen = 0.;
    zCen = 0.;
    clSz = 0.;
-   cost = 0.;
+
+   cost    = 0.;
+   noParts = 0;
 }
 
 void monopoleCellNode::clear()
@@ -156,9 +166,8 @@ void costzoneCellNode::clear()
       neighbour[i] = NULL;
    }
 
-   domain   = 0;
-   noParts = 0;
-   atBottom = false;
+   domain = 0;
+   isCZ   = true;
 }
 
 void genericCellNode::inheritCellPos(size_t _n)
@@ -213,7 +222,7 @@ void quadrupoleCellNode::initFromCZll(czllT& _czll)
 
 void costzoneCellNode::initFromCell(quadrupoleCellNode& _cell)
 {
-   *static_cast<cellPtr>(this) = _cell;
+   *static_cast<cellPtrT>(this) = _cell;
    isCZ = true;
 
    for (size_t i = 0; i < 27; i++)
@@ -235,7 +244,7 @@ void costzoneCellNode::pushdownNeighbours()
    /// then push down neighbours of parent
    ///
    if (not neighSet)
-      static_cast<czllPtr>(parent)->pushdownNeighbours();
+      static_cast<czllPtrT>(parent)->pushdownNeighbours();
 
    ///
    /// temporary neighbour pointer
@@ -285,7 +294,7 @@ void costzoneCellNode::pushdownNeighbours()
                                        (iy - jy + 1) * 3 +
                                        (iz - jz + 1) * 9;
 
-                        static_cast<czllPtr>(child[jc])->neighbour[js] =
+                        static_cast<czllPtrT>(child[jc])->neighbour[js] =
                            child[ic];
                      }
                   }
@@ -314,7 +323,7 @@ void costzoneCellNode::pushdownNeighbours()
                   /// is not already at the costzone bottom.
                   ///
                   if ((static_cast<gcllPtr>(neighbour[ps])->clSz == clSz) &&
-                      not static_cast<czllPtr>(neighbour[ps])->atBottom)
+                      not static_cast<czllPtrT>(neighbour[ps])->atBottom)
                   {
                      ///
                      /// determine the neighbours child index
@@ -360,7 +369,7 @@ void costzoneCellNode::pushdownNeighbours()
                                        (iy - jy + 1) * 3 +
                                        (iz - jz + 1) * 9;
 
-                        static_cast<czllPtr>(child[jc])->neighbour[js] =
+                        static_cast<czllPtrT>(child[jc])->neighbour[js] =
                            neighPtr;
                      }
                   }

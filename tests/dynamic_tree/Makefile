@@ -1,4 +1,4 @@
-all: treefun nodesize
+all: treefun nodesize buildcz
 
 treefun:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
@@ -17,6 +17,20 @@ nodesize:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
 	  -I../../src -I../../src/dynamic_tree \
 	  -o nodeSize nodeSize.cpp
+
+buildcz:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	  -I../../src -I../../src/dynamic_tree \
+	  -fopenmp \
+	  -lhdf5 -lz \
+	  -o buildCZ buildCZ.cpp
+
+workertest:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	  -I../../src -I../../src/dynamic_tree \
+	  -fopenmp \
+	  -lhdf5 -lz \
+	  -o workerTest workerTest.cpp
 
 clean:
 	rm treeFun nodesFun 2>&1 >/dev/null; true

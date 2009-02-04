@@ -18,18 +18,28 @@
 namespace sphlatch {
 class BHTreeWorker {
 public:
-   typedef BHTree&                treeRefT;
-   typedef BHTree*                treePtrT;
+   typedef BHTree&                    treeRefT;
+   typedef BHTree*                    treePtrT;
 
-   typedef ParticleManager        partManagerT;
+   typedef ParticleManager            partManagerT;
 
-   typedef BHTree::nodePtrT       nodePtrT;
-   typedef BHTree::partPtrT       partPtrT;
-   typedef BHTree::cellPtrT       cellPtrT;
-   typedef BHTree::czllPtrT       czllPtrT;
-   typedef BHTree::gcllPtrT       gcllPtrT;
+   typedef BHTree::nodePtrT           nodePtrT;
+   typedef BHTree::nodePtrCT          nodePtrCT;
 
-   typedef BHTree::czllPtrListT   czllPtrListT;
+   typedef BHTree::partT              partT;
+   typedef BHTree::partPtrT           partPtrT;
+
+   typedef BHTree::cellT              cellT;
+   typedef BHTree::cellPtrT           cellPtrT;
+
+   typedef BHTree::czllT              czllT;
+   typedef BHTree::czllPtrT           czllPtrT;
+
+   typedef BHTree::gcllPtrT           gcllPtrT;
+
+   typedef BHTree::czllPtrListT       czllPtrListT;
+   typedef BHTree::czllPtrListItrT    czllPtrListItrT;
+   typedef BHTree::czllPtrListCItrT   czllPtrListCItrT;
 
    BHTreeWorker(const BHTreeWorker& _worker);
    BHTreeWorker(const treePtrT _treePtr);
@@ -47,7 +57,14 @@ protected:
    bool pointInsideCell(const fType _x, const fType _y, const fType _z,
                         nodePtrT _node);
    size_t getOctant(const fType _x, const fType _y, const fType _z);
-   size_t getOctant(nodePtrT _nodePtr);
+   size_t getOctant(const fType _x, const fType _y, const fType _z,
+                    const gcllPtrT _cellPtrT);
+
+   size_t getChildNo(nodePtrT _nodePtr);
+
+   void czllToCell(nodePtrT _nodePtr);
+   void cellToCZll(nodePtrT _nodePtr);
+   void partToCell(nodePtrT _nodePtr, const size_t _oct);
 
    const treePtrT treePtr;
    nodePtrT       curPtr, rootPtr;
@@ -108,28 +125,29 @@ void BHTreeWorker::goUp()
 
 void BHTreeWorker::goNext()
 {
-   curPtr = curPtr->next;
    assert(curPtr != NULL);
+   curPtr = curPtr->next;
 }
 
 void BHTreeWorker::goSkip()
 {
-   curPtr = curPtr->skip;
    assert(curPtr != NULL);
+   curPtr = static_cast<gcllPtrT>(curPtr)->skip;
 }
 
 void BHTreeWorker::goChild(const size_t _n)
 {
-   curPtr = static_cast<cellPtrT>(curPtr)->child[_n];
    assert(curPtr != NULL);
+   curPtr = static_cast<gcllPtrT>(curPtr)->child[_n];
 }
 
 void BHTreeWorker::goNeighbour(const size_t _n)
 {
-   curPtr = static_cast<czllPtrT>(curPtr)->neighbour[_n];
    assert(curPtr != NULL);
+   curPtr = static_cast<czllPtrT>(curPtr)->neighbour[_n];
 }
 
+// \todo try const fType &_x
 bool BHTreeWorker::pointInsideCell(const fType _x,
                                    const fType _y,
                                    const fType _z)
@@ -137,13 +155,14 @@ bool BHTreeWorker::pointInsideCell(const fType _x,
    assert(curPtr != NULL);
    const fType hclSz = 0.5 * static_cast<cellPtrT>(curPtr)->clSz;
 
-   // also try opposite logic for performance tests ...
-   return(static_cast<cellPtrT>(curPtr)->xCen - hclSz < _x &&
-          static_cast<cellPtrT>(curPtr)->xCen + hclSz > _x &&
-          static_cast<cellPtrT>(curPtr)->yCen - hclSz < _y &&
-          static_cast<cellPtrT>(curPtr)->yCen + hclSz > _y &&
-          static_cast<cellPtrT>(curPtr)->zCen - hclSz < _z &&
-          static_cast<cellPtrT>(curPtr)->zCen + hclSz > _z);
+   const fType xCen = static_cast<cellPtrT>(curPtr)->xCen;
+   const fType yCen = static_cast<cellPtrT>(curPtr)->yCen;
+   const fType zCen = static_cast<cellPtrT>(curPtr)->zCen;
+
+   // \todo also try opposite logic for performance tests ...
+   return(xCen - hclSz < _x && xCen + hclSz > _x &&
+          yCen - hclSz < _y && yCen + hclSz > _y &&
+          zCen - hclSz < _z && zCen + hclSz > _z);
 }
 
 bool BHTreeWorker::pointInsideCell(const fType    _x,
@@ -154,13 +173,14 @@ bool BHTreeWorker::pointInsideCell(const fType    _x,
    assert(curPtr != NULL);
    const fType hclSz = 0.5 * static_cast<gcllPtrT>(_node)->clSz;
 
-   // also try opposite logic for performance tests ...
-   return(static_cast<gcllPtrT>(_node)->xCen - hclSz < _x &&
-          static_cast<gcllPtrT>(_node)->xCen + hclSz > _x &&
-          static_cast<gcllPtrT>(_node)->yCen - hclSz < _y &&
-          static_cast<gcllPtrT>(_node)->yCen + hclSz > _y &&
-          static_cast<gcllPtrT>(_node)->zCen - hclSz < _z &&
-          static_cast<gcllPtrT>(_node)->zCen + hclSz > _z);
+   const fType xCen = static_cast<cellPtrT>(_node)->xCen;
+   const fType yCen = static_cast<cellPtrT>(_node)->yCen;
+   const fType zCen = static_cast<cellPtrT>(_node)->zCen;
+
+   // \todo also try opposite logic for performance tests ...
+   return(xCen - hclSz < _x && xCen + hclSz > _x &&
+          yCen - hclSz < _y && yCen + hclSz > _y &&
+          zCen - hclSz < _z && zCen + hclSz > _z);
 }
 
 size_t BHTreeWorker::getOctant(const fType _x,
@@ -170,22 +190,97 @@ size_t BHTreeWorker::getOctant(const fType _x,
    size_t targetOctant = 0;
 
    assert(curPtr != NULL);
-   targetOctant += _x < static_cast<cellPtrT>(curPtr)->xCen ? 0 : 1;
-   targetOctant += _y < static_cast<cellPtrT>(curPtr)->yCen ? 0 : 2;
-   targetOctant += _z < static_cast<cellPtrT>(curPtr)->zCen ? 0 : 4;
+   targetOctant += _x < static_cast<gcllPtrT>(curPtr)->xCen ? 0 : 1;
+   targetOctant += _y < static_cast<gcllPtrT>(curPtr)->yCen ? 0 : 2;
+   targetOctant += _z < static_cast<gcllPtrT>(curPtr)->zCen ? 0 : 4;
    return(targetOctant);
 }
 
-size_t BHTreeWorker::getOctant(nodePtrT _nodePtr)
+size_t BHTreeWorker::getOctant(const fType    _x,
+                               const fType    _y,
+                               const fType    _z,
+                               const gcllPtrT _cellPtr)
+{
+   size_t targetOctant = 0;
+
+   assert(_cellPtr != NULL);
+   targetOctant += _x < static_cast<gcllPtrT>(_cellPtr)->xCen ? 0 : 1;
+   targetOctant += _y < static_cast<gcllPtrT>(_cellPtr)->yCen ? 0 : 2;
+   targetOctant += _z < static_cast<gcllPtrT>(_cellPtr)->zCen ? 0 : 4;
+   return(targetOctant);
+}
+
+size_t BHTreeWorker::getChildNo(nodePtrT _nodePtr)
 {
    for (size_t i = 0; i < 8; i++)
    {
       if (static_cast<gcllPtrT>(curPtr)->child[i] == _nodePtr)
-      {
          return(i);
-      }
    }
    return(8);
 }
+
+void BHTreeWorker::czllToCell(nodePtrT _nodePtr)
+{
+   const cellPtrT newCellPtr = treePtr->cellAllocator.pop();
+
+   newCellPtr->initFromCZll(static_cast<czllT&>(*_nodePtr));
+   treePtr->czllAllocator.push(static_cast<czllPtrT>(_nodePtr));
+   _nodePtr = newCellPtr;
+}
+
+void BHTreeWorker::cellToCZll(nodePtrT _nodePtr)
+{
+   const czllPtrT newCZllPtr = treePtr->czllAllocator.pop();
+
+   newCZllPtr->initFromCell(static_cast<cellT&>(*_nodePtr));
+   treePtr->cellAllocator.push(static_cast<cellPtrT>(_nodePtr));
+   _nodePtr = newCZllPtr;
+}
+
+void BHTreeWorker::partToCell(nodePtrT _nodePtr, const size_t _oct)
+{
+   assert(_nodePtr->isParticle);
+   const cellPtrT newCellPtr = treePtr->cellAllocator.pop();
+   newCellPtr->clear();
+
+   // wire new cell and its parent
+   newCellPtr->parent = _nodePtr->parent;
+   static_cast<gcllPtrT>(_nodePtr->parent)->child[_oct] = newCellPtr;
+
+   // set cell position
+   newCellPtr->inheritCellPos(_oct);
+
+   // add cost of the particle to be added
+   static_cast<gcllPtrT>(newCellPtr)->cost =
+      static_cast<partPtrT>(_nodePtr)->cost;
+   static_cast<gcllPtrT>(newCellPtr)->noParts = 1;
+
+   // wire particle to new node
+   const fType  posX   = static_cast<partPtrT>(_nodePtr)->xPos;
+   const fType  posY   = static_cast<partPtrT>(_nodePtr)->yPos;
+   const fType  posZ   = static_cast<partPtrT>(_nodePtr)->zPos;
+   const size_t newOct = getOctant(posX, posY, posZ, newCellPtr);
+
+   newCellPtr->child[newOct] = _nodePtr;
+   _nodePtr->parent          = newCellPtr;
+
+   //_nodePtr = newCellPtr;
+}
+
+///
+/// specialization for a read-only BHTree worker (eg. gravity walk)
+///
+class BHTreeWorkerRO : public BHTreeWorker {
+public:
+   BHTreeWorkerRO(treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
+   BHTreeWorkerRO(const BHTreeWorkerRO& _workerRO) : BHTreeWorker(_workerRO) { }
+
+protected:
+   ///
+   /// overwrite curPtr by a faster read-only version
+   ///
+   nodePtrCT curPtr, rootPtr;
+};
 };
 #endif

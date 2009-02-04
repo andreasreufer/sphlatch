@@ -1,8 +1,8 @@
-#ifndef CHUNK_ALLOCATOR_H
-#define CHUNK_ALLOCATOR_H
+#ifndef ALLOCATOR_FIXEDBUCKET_H
+#define ALLOCATOR_FIXEDBUCKET_H
 
 /*
- *  stack_allocator.h
+ *  allocator_fixedbucket.h
  *
  *  generic stacked allocator. pushed elements are put back on
  *  the stack, when stack does not contain more than <maxScratch>
@@ -13,11 +13,9 @@
  *
  */
 
-#include <stack>
-
 namespace sphlatch {
 template<class T, size_t maxScratch>
-class StackAllocator {
+class FixedBucketAllocator {
 public:
    typedef T*   Tptr;
 
@@ -26,12 +24,12 @@ private:
    Tptr ptrPivot;
 
 public:
-   StackAllocator()
+   FixedBucketAllocator()
    {
       ptrsCont.reserve(maxScratch);
    }
 
-   ~StackAllocator()
+   ~FixedBucketAllocator()
    {
       const size_t noElems = ptrsCont.size();
       for (size_t i = 0; i < noElems; i++)

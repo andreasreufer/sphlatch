@@ -1,7 +1,7 @@
 #ifndef BHTREE_NODE_PARTICLE_H
 #define BHTREE_NODE_PARTICLE_H
 
-//#define SPHLATCH_AMD64PADDING
+//#define SPHLATCH_PADTO64BYTES
 
 /*
  *  bhtree_node_particle.h
@@ -24,39 +24,29 @@ class particleNode : public genericNode {
 public:
    fType xPos, yPos, zPos;
    fType mass;
-
-   //bool isSettled;
+   fType cost;
 
    particleNode() { }
    ~particleNode() { }
 
    void clear();
-   
-#ifdef SPHLATCH_AMD64PADDING
+
+#ifdef SPHLATCH_PADTO64BYTES
 private:
-   char pad[8];
+   char pad[0];
 #endif
 };
 
 void particleNode::clear()
 {
-  genericNode::clear();
-
-   next = NULL;
-   skip = NULL;
-
-   depth = -1;
-   ident = 0;
+   genericNode::clear();
 
    isParticle = true;
-   isRemote   = false;
-   isCZ       = false;
 
    xPos = 0.;
    yPos = 0.;
    zPos = 0.;
    mass = 0.;
 }
-
 };
 #endif

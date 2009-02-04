@@ -1,13 +1,13 @@
-#ifndef CHUNK_ALLOCATOR_H
-#define CHUNK_ALLOCATOR_H
+#ifndef ALLOCATOR_CHUNK_H
+#define ALLOCATOR_CHUNK_H
 
 /*
- *  chunk_allocator.h
+ *  allocator_chunk.h
  *
- *  generic chunk allocator
+ *  generic chunked allocator
  *
- *  Created by Andreas Reufer on 09.12.08.
- *  Copyright 2007 University of Berne. All rights reserved.
+ *  Created by Andreas Reufer on 03.02.09.
+ *  Copyright 2009 University of Berne. All rights reserved.
  *
  */
 
@@ -17,7 +17,6 @@ namespace sphlatch {
 template<class T, size_t chunkSize>
 class ChunkAllocator {
 public:
-
    typedef T*   Tptr;
 
 private:
@@ -88,7 +87,7 @@ public:
       return(chunks.top()->pop());
    }
 
-   void push()
+   void push(Tpr _ptr)
    {
       chunks.top()->push();
 

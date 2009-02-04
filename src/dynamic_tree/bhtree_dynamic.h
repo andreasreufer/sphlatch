@@ -17,7 +17,8 @@
 
 #include "bhtree_node_cells.h"
 #include "bhtree_node_particle.h"
-#include "stack_allocator.h"
+
+#include "allocator_simple.h"
 
 namespace sphlatch {
 class BHTree {
@@ -25,28 +26,33 @@ public:
    friend class BHTreeWorker;
    friend class BHTreeCZBuilder;
    friend class BHTreePartsInsertMover;
+   friend class BHTreeWorkerGrav;
 
-   typedef BHTree                  selfType;
-   typedef BHTree&                 selfRef;
-   typedef BHTree*                 selfPtr;
+   typedef BHTree                         selfType;
+   typedef BHTree&                        selfRef;
+   typedef BHTree*                        selfPtr;
 
-   typedef genericNode*            nodePtrT;
+   typedef genericNode*                   nodePtrT;
+   typedef const genericNode*             nodePtrCT;
 
-   typedef particleNode            partT;
-   typedef particleNode*           partPtrT;
+   typedef particleNode                   partT;
+   typedef particleNode*                  partPtrT;
 
-   typedef genericCellNode         gcllT;
-   typedef genericCellNode*        gcllPtrT;
+   typedef genericCellNode                gcllT;
+   typedef genericCellNode*               gcllPtrT;
 
-   typedef quadrupoleCellNode      cellT;
-   typedef quadrupoleCellNode*     cellPtrT;
+   typedef quadrupoleCellNode             cellT;
+   typedef quadrupoleCellNode*            cellPtrT;
 
-   typedef costzoneCellNode        czllT;
-   typedef costzoneCellNode*       czllPtrT;
+   typedef costzoneCellNode               czllT;
+   typedef costzoneCellNode*              czllPtrT;
 
-   typedef std::list<czllPtrT>     czllPtrListT;
+   typedef std::list<czllPtrT>            czllPtrListT;
+   typedef czllPtrListT::iterator         czllPtrListItrT;
+   typedef czllPtrListT::const_iterator   czllPtrListCItrT;
 
-   typedef std::vector<partPtrT>   partPtrVectT;
+   typedef std::vector<partPtrT>          partPtrVectT;
+
 
    BHTree();
    ~BHTree();
@@ -57,11 +63,18 @@ private:
    static selfPtr _instance;
 
 protected:
+   enum config
+   {
+      partAllocSize = 1048576,
+      cellAllocSize = 262144,
+      czllAllocSize = 16384
+   };
+
    nodePtrT rootPtr;
 
-   StackAllocator<partT, 1048576> partAllocator;
-   StackAllocator<cellT, 262144>  cellAllocator;
-   StackAllocator<czllT, 16384>   czllAllocator;
+   SimpleAllocator<partT, partAllocSize>         partAllocator;
+   SimpleAllocator<cellT, cellAllocSize>         cellAllocator;
+   SimpleAllocator<czllT, czllAllocSize>         czllAllocator;
 
    czllPtrListT CZbottomCells;
 
@@ -76,14 +89,17 @@ BHTree::BHTree()
    /// cells list
    ///
    rootPtr = czllAllocator.pop();
+   CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
+
    static_cast<czllPtrT>(rootPtr)->atBottom = true;
+   static_cast<czllPtrT>(rootPtr)->listItr  = CZbottomCells.end();
 
    ///
    /// resize particle proxy vector
    ///
-   partProxies.reserve(1048576);
-   partProxies.resize(1048576);
-   for (size_t i = 0; i < 1048576; i++)
+   partProxies.reserve(partAllocSize);
+   partProxies.resize(partAllocSize);
+   for (size_t i = 0; i < partAllocSize; i++)
    {
       partProxies[i] = NULL;
    }

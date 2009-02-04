@@ -15,7 +15,7 @@ namespace sphlatch {
 class BHTreeMyWorker : public BHTreeWorker {
 public:
 
-BHTreeMyWorker(treePtrT _treePtr) : BHTreeWorker(_treePtr) {};
+BHTreeMyWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) {};
 BHTreeMyWorker(const BHTree &_) : BHTreeWorker(_) {};
 ~BHTreeMyWorker() {};
 

@@ -12,36 +12,68 @@
 #include "bhtree_worker.h"
 
 namespace sphlatch {
-class BHTreeWorkerGrav : public BHTreeWorker {
+class BHTreeWorkerGrav : public BHTreeWorkerRO {
 public:
+   BHTreeWorkerGrav(treePtrT _treePtr) : BHTreeWorkerRO(_treePtr)
+   {
+      //const size_t tid = omp_get_thread_num();
+      //std::cout << tid << ":tpc:" << curPtr << ":" << this << "\n";
+   }
 
-/*typedef particleNode partType;
-typedef quadrupoleCellNode cellType;
-typedef costzoneCellNode czllType;
+   BHTreeWorkerGrav(const BHTreeWorkerGrav& _gravwork)
+      : BHTreeWorkerRO(_gravwork)
+   {
+      //const size_t tid = omp_get_thread_num();
+      //std::cout << tid << ":cpc:" << curPtr << ":" << this << "\n";
+   }
 
-typedef genericNode* nodePtr;*/
+   ~BHTreeWorkerGrav() { }
 
-///
-/// constructors and destructors
-///
-BHTreeWorkerGrav(treePtrT _treePtr) : BHTreeWorker(_treePtr)
+private:
+   void calcGravParticle(const size_t _i);
+};
+
+
+void BHTreeWorkerGrav::calcGravParticle(const size_t _i)
 {
-  const size_t tid = omp_get_thread_num();
-  std::cout << tid << ":tpc:" << curPtr << ":" << this << "\n";
-};
+   const fType posX = pos(_i, X);
+   const fType posY = pos(_i, Y);
+   const fType posZ = pos(_i, Z);
 
-BHTreeWorkerGrav(const BHTreeWorkerGrav &_gravwork)
-  : BHTreeWorker(_gravwork)
-{
-  const size_t tid = omp_get_thread_num();
-  std::cout << tid << ":cpc:" << curPtr << ":" << this << "\n";
-};
-~BHTreeWorkerGrav() {};
+   nodePtrT const curPartPtr = treePtr->partProxies[_i];
 
-};
+   fType accX = 0., accY = 0., accZ = 0.;
 
+   ///
+   /// the complete tree walk
+   ///
+   goRoot();
+   do
+   {
+      if (not curPtr->isParticle)
+      {
+         if (true) // MAC()
+         {
+            //calcGravMP
+            goSkip();
+         }
+         else
+            goNext();
+      }
+      else
+      {
+         if (curPtr != curPartPtr)
+         {
+         //calcGravPart
+         }
+         goNext();
+      }
+   } while (curPtr != NULL);
 
+   acc(_i, X) += accX;
+   acc(_i, Y) += accY;
+   acc(_i, Z) += accZ;
+}
 };
 
 #endif
-

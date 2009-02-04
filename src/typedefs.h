@@ -126,6 +126,10 @@ typedef std::vector<size_t>               partsIndexVectType;
 typedef std::vector<size_t>&              partsIndexVectRefType;
 typedef std::vector<size_t> *             partsIndexVectPtrType;
 
+typedef std::list<size_t>                 partsIndexListT;
+typedef std::list<size_t>&                partsIndexListRefT;
+typedef std::list<size_t> *               partsIndexListPtrT;
+
 ///
 /// a vector of counts
 /// countsType has to be compatible with MPI_INT
