@@ -94,7 +94,7 @@ public:
    genericNodePtrT neighbour[27];
    identType       domain;
 
-   czllPtrListT::iterator listItr;
+   //czllPtrListT::iterator listItr;
 
    costzoneCellNode() { }
    ~costzoneCellNode() { }

@@ -5,7 +5,7 @@
  *  allocator_fixedbucket.h
  *
  *  generic stacked allocator. pushed elements are put back on
- *  the stack, when stack does not contain more than <maxScratch>
+ *  the stack, when stack does not contain more than <bucketSize>
  *  elements
  *
  *  Created by Andreas Reufer on 17.12.08.
@@ -14,24 +14,27 @@
  */
 
 namespace sphlatch {
-template<class T, size_t maxScratch>
+template<class T>
 class FixedBucketAllocator {
 public:
    typedef T*   Tptr;
 
 private:
    std::vector<Tptr> ptrsCont;
-   Tptr ptrPivot;
+   Tptr         ptrPivot;
+   const size_t bucketSize
 
 public:
-   FixedBucketAllocator()
+   FixedBucketAllocator(const size_t _bucketSize) :
+      bucketSize(_bucketSize)
    {
-      ptrsCont.reserve(maxScratch);
+      ptrsCont.reserve(_bucketSize);
    }
 
    ~FixedBucketAllocator()
    {
       const size_t noElems = ptrsCont.size();
+
       for (size_t i = 0; i < noElems; i++)
          delete ptrsCont[i];
    }
@@ -50,7 +53,7 @@ public:
 
    void push(Tptr _ptr)
    {
-      if (ptrsCont.size() < maxScratch)
+      if (ptrsCont.size() < bucketSize)
          ptrsCont.push_back(_ptr);
       else
          delete _ptr;

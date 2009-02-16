@@ -29,6 +29,8 @@ public:
    void pushToCZ();
    void pushDown();
 
+   void pushDown(const size_t _i);
+
 private:
    void pushToCZsingle(const partPtrT _partPtr);
    void pushUpAndToCZsingle(const partPtrT _partPtr);
@@ -85,7 +87,7 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const partPtrT _partPtr)
    curPtr = _partPtr->parent;
    const size_t oldOct = getChildNo(_partPtr);
 
-   assert(oldOct >= 0 && oldOct < 8);
+   assert(oldOct < 8);
 
    const size_t partIdx = _partPtr->ident;
    const fType  posX    = pos(partIdx, X);
@@ -113,7 +115,7 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const partPtrT _partPtr)
    ///
    if (not pointInsideCell(posX, posY, posZ, rootPtr))
    {
-     // \todo do something about it
+      // \todo do something about it
    }
 
    ///
@@ -121,7 +123,7 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const partPtrT _partPtr)
    /// soon as we hit a CZ cell, start substracting relative
    /// cost from each CZ cell we encounter
    ///
-   bool  CZencounter = false;
+   bool        CZencounter = false;
    const fType partCost    = static_cast<partPtrT>(_partPtr)->cost;
    while (not pointInsideCell(posX, posY, posZ))
    {
@@ -151,6 +153,15 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const partPtrT _partPtr)
    }
 
    _partPtr->parent = curPtr;
+}
+
+void BHTreePartsInsertMover::pushDown(const size_t _i)
+{
+   const partPtrT _partPtr = treePtr->partProxies[_i];
+
+   pushUpAndToCZsingle(_partPtr);
+
+  // pushDownSingle(_partPtr);
 }
 
 ///
@@ -192,13 +203,10 @@ void BHTreePartsInsertMover::pushDownSingle(const partPtrT _partPtr)
          // if current child is a particle, make a cell out of it
          //
          if (curPtr->isParticle)
-           partToCell(curPtr, curOct);
-
-         
+            partToCell(curPtr, curOct);
       }
    }
 }
-
 };
 
 #endif
