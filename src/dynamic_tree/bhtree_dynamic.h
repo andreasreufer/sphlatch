@@ -67,7 +67,8 @@ protected:
    {
       partAllocSize = 1048576,
       cellAllocSize = 262144,
-      czllAllocSize = 16384
+      //czllAllocSize = 16384
+      czllAllocSize = 16385
    };
 
    nodePtrT rootPtr;
