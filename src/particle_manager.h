@@ -912,16 +912,19 @@ void ParticleManager::regQuantity(idvectRefType _idvectRef,
 ///
 void ParticleManager::unRegQuantity(matrixRefType _matrRef)
 {
+   knownVects.erase( getName( _matrRef ) );
    usedQuants.vects.erase(&_matrRef);
 }
 
 void ParticleManager::unRegQuantity(valvectRefType _valvectRef)
 {
+   knownScalars.erase( getName( _valvectRef ) );
    usedQuants.scalars.erase(&_valvectRef);
 }
 
 void ParticleManager::unRegQuantity(idvectRefType _idvectRef)
 {
+   knownIntegers.erase( getName( _idvectRef ) );
    usedQuants.ints.erase(&_idvectRef);
 }
 
