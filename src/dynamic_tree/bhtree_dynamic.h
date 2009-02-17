@@ -72,16 +72,19 @@ protected:
 
    nodePtrT rootPtr;
 
-   SimpleAllocator<partT, partAllocSize>         partAllocator;
-   SimpleAllocator<cellT, cellAllocSize>         cellAllocator;
-   SimpleAllocator<czllT, czllAllocSize>         czllAllocator;
+   SimpleAllocator<partT>         partAllocator;
+   SimpleAllocator<cellT>         cellAllocator;
+   SimpleAllocator<czllT>         czllAllocator;
 
    czllPtrListT CZbottomCells;
 
    partPtrVectT partProxies;
 };
 
-BHTree::BHTree()
+BHTree::BHTree() :
+  partAllocator(partAllocSize),
+  cellAllocator(cellAllocSize),
+  czllAllocator(czllAllocSize)
 {
    ///
    /// allocate root cell and set cell

@@ -20,7 +20,7 @@ public:
 private:
 
 public:
-   SimpleAllocator() { }
+   SimpleAllocator(const size_t _size) { }
 
    ~SimpleAllocator() { }
 
