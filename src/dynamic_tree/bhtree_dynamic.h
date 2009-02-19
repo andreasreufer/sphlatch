@@ -79,12 +79,16 @@ protected:
    czllPtrListT CZbottomCells;
 
    partPtrVectT partProxies;
+
+   size_t noCells, noParts;
 };
 
 BHTree::BHTree() :
-  partAllocator(partAllocSize),
-  cellAllocator(cellAllocSize),
-  czllAllocator(czllAllocSize)
+   partAllocator(partAllocSize),
+   cellAllocator(cellAllocSize),
+   czllAllocator(czllAllocSize),
+   noCells(0),
+   noParts(0)
 {
    ///
    /// allocate root cell and set cell
@@ -93,9 +97,20 @@ BHTree::BHTree() :
    ///
    rootPtr = czllAllocator.pop();
    CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
-
+   
+   static_cast<czllPtrT>(rootPtr)->clear();
    static_cast<czllPtrT>(rootPtr)->atBottom = true;
-   static_cast<czllPtrT>(rootPtr)->listItr  = CZbottomCells.end();
+   static_cast<czllPtrT>(rootPtr)->depth   = 0;
+   static_cast<czllPtrT>(rootPtr)->ident   = 0;
+   noCells++;
+   
+   CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
+   static_cast<czllPtrT>(rootPtr)->listItr = CZbottomCells.begin();
+
+   static_cast<czllPtrT>(rootPtr)->xCen = 0.5;
+   static_cast<czllPtrT>(rootPtr)->yCen = 0.5;
+   static_cast<czllPtrT>(rootPtr)->zCen = 0.5;
+   static_cast<czllPtrT>(rootPtr)->clSz = 5.0;
 
    ///
    /// resize particle proxy vector
@@ -107,6 +122,11 @@ BHTree::BHTree() :
       partProxies[i] = NULL;
    }
    partProxies.resize(0);
+   
+   std::cout << static_cast<czllPtrT>(rootPtr)->xCen << "  "
+             << static_cast<czllPtrT>(rootPtr)->yCen << "  "
+             << static_cast<czllPtrT>(rootPtr)->zCen << "  "
+             << static_cast<czllPtrT>(rootPtr)->clSz << "\n";
 }
 
 BHTree::~BHTree()

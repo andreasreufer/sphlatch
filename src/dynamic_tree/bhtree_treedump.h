@@ -21,11 +21,14 @@ public:
 
 public:
    void dotDump(std::string _dotFilename);
+   void ptrDump();
+   void ptrDump(const nodePtrT _node);
 
 private:
    std::fstream dumpFile;
 
    void dotRecursor();
+   void ptrRecursor();
 };
 
 void BHTreeDump::dotDump(std::string _dotFilename)
@@ -87,6 +90,50 @@ void BHTreeDump::dotRecursor()
       }
    }
 }
+
+
+void BHTreeDump::ptrDump()
+{
+   goRoot();
+   ptrRecursor();
+}
+
+void BHTreeDump::ptrDump(const nodePtrT _node)
+{
+   curPtr = _node;
+   ptrRecursor();
+}
+
+void BHTreeDump::ptrRecursor()
+{
+   std::cout << curPtr << " @d" << curPtr->depth << " "
+             << "part" << curPtr->isParticle << " "
+             << "czll" << curPtr->isCZ << " "
+             << "remo" << curPtr->isRemote << " "
+             << "nSet" << curPtr->neighSet << " "
+             << "atBo" << curPtr->atBottom << " "
+             << "setl" << curPtr->isSettled << "\n";
+   
+   std::cout << "  p -> " << curPtr->parent << "\n";
+   std::cout << "  n -> " << curPtr->next << "\n";
+
+   if (curPtr->isParticle == false)
+   {
+      for (size_t i = 0; i < 8; i++)
+      {
+         std::cout << " c" << i << " -> " << static_cast<cellPtrT>(curPtr)->child[i] << "\n";
+         if (static_cast<cellPtrT>(curPtr)->child[i] != NULL)
+         {
+            goChild(i);
+            ptrRecursor();
+            goUp();
+         }
+      }
+   }
+}
+
+
+
 };
 
 #endif

@@ -58,7 +58,7 @@ protected:
                         nodePtrT _node);
    size_t getOctant(const fType _x, const fType _y, const fType _z);
    size_t getOctant(const fType _x, const fType _y, const fType _z,
-                    const gcllPtrT _cellPtrT);
+                    const gcllPtrT _cellPtr);
 
    size_t getChildNo(nodePtrT _nodePtr);
 
@@ -238,32 +238,48 @@ void BHTreeWorker::cellToCZll(nodePtrT _nodePtr)
    _nodePtr = newCZllPtr;
 }
 
-void BHTreeWorker::partToCell(nodePtrT _nodePtr, const size_t _oct)
+void BHTreeWorker::partToCell(nodePtrT _cellPtr, const size_t _oct)
 {
-   assert(_nodePtr->isParticle);
+   assert(static_cast<gcllPtrT>(_cellPtr)->child[_oct] != NULL);
+   assert(static_cast<gcllPtrT>(_cellPtr)->child[_oct]->isParticle);
+   const partPtrT resPartPtr =
+      static_cast<partPtrT>(static_cast<gcllPtrT>(_cellPtr)->child[_oct]);
+
    const cellPtrT newCellPtr = treePtr->cellAllocator.pop();
+
    newCellPtr->clear();
+   newCellPtr->ident = treePtr->noCells;
+   treePtr->noCells++;
+
+   //std::cout << " part " << _nodePtr << " -> cell " << newCellPtr << "\n";
 
    // wire new cell and its parent
-   newCellPtr->parent = _nodePtr->parent;
-   static_cast<gcllPtrT>(_nodePtr->parent)->child[_oct] = newCellPtr;
+   newCellPtr->parent = _cellPtr;
+   static_cast<gcllPtrT>(_cellPtr)->child[_oct] = newCellPtr;
+   //static_cast<gcllPtrT>(_nodePtr->parent)->child[_oct] = newCellPtr;
 
    // set cell position
    newCellPtr->inheritCellPos(_oct);
 
    // add cost of the particle to be added
-   static_cast<gcllPtrT>(newCellPtr)->cost =
-      static_cast<partPtrT>(_nodePtr)->cost;
+   static_cast<gcllPtrT>(newCellPtr)->cost = resPartPtr->cost;
+   //static_cast<partPtrT>(_cellPtr)->cost;
    static_cast<gcllPtrT>(newCellPtr)->noParts = 1;
 
    // wire particle to new node
-   const fType  posX   = static_cast<partPtrT>(_nodePtr)->xPos;
-   const fType  posY   = static_cast<partPtrT>(_nodePtr)->yPos;
-   const fType  posZ   = static_cast<partPtrT>(_nodePtr)->zPos;
+
+   /*const fType  posX   = static_cast<partPtrT>(_cellPtr)->xPos;
+      const fType  posY   = static_cast<partPtrT>(_nodePtr)->yPos;
+      const fType  posZ   = static_cast<partPtrT>(_nodePtr)->zPos;*/
+   const fType  posX   = resPartPtr->xPos;
+   const fType  posY   = resPartPtr->yPos;
+   const fType  posZ   = resPartPtr->zPos;
    const size_t newOct = getOctant(posX, posY, posZ, newCellPtr);
 
-   newCellPtr->child[newOct] = _nodePtr;
-   _nodePtr->parent          = newCellPtr;
+   /*newCellPtr->child[newOct] = _nodePtr;
+      _nodePtr->parent          = newCellPtr;*/
+   newCellPtr->child[newOct] = resPartPtr;
+   resPartPtr->parent        = newCellPtr;
 
    //_nodePtr = newCellPtr;
 }

@@ -11,7 +11,7 @@ typedef sphlatch::ParticleManager          partMgrT;
 
 #include "bhtree_dynamic.h"
 typedef sphlatch::BHTree                   treeT;
-typedef sphlatch::BHTree::BHTreeConfig     treeConfigT;
+//typedef sphlatch::BHTree::BHTreeConfig     treeConfigT;
 
 typedef sphlatch::particleNode             partT;
 
@@ -64,8 +64,9 @@ int main(int argc, char* argv[])
    pos(1, Y) = 0.75;
    pos(1, Z) = 0.75;
 
-   treeConfigT treeConfig;
-   treeT&      Tree(treeT::instance(treeConfig));
+   //treeConfigT treeConfig;
+   //treeT&      Tree(treeT::instance(treeConfig));
+   treeT&      Tree(treeT::instance());
 
    inserterT    inserter(&Tree);
    dumpT        dumper(&Tree);
@@ -74,16 +75,22 @@ int main(int argc, char* argv[])
 
    std::cout << "insert particle ...\n";
    inserter.insert(0);
+   inserter.insert(1);
    std::cout << " done!\n";
    dumper.dotDump("test0.dot");
+   //dumper.ptrDump();
    
    std::cout << "push down particle ...\n";
    inserter.pushDown(0);
+   //dumper.ptrDump();
+   inserter.pushDown(1);
+   //dumper.ptrDump();
    std::cout << " done!\n";
    dumper.dotDump("test1.dot");
+   //dumper.ptrDump();
 
-   testWorker.build();
-   testWorker.test();
+   /*testWorker.build();
+   testWorker.test();*/
 
    MPI::Finalize();
    return(0);

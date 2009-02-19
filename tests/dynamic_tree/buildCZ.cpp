@@ -34,10 +34,10 @@ int main()
   treeType& Tree(treeType::instance());
   sleep(1);
 
-  /*dumpType dumper(&Tree);
+  dumpType dumper(&Tree);
   dumper.dotDump("test.dot");
 
-  inserterType inserter(&Tree);
+  /*inserterType inserter(&Tree);
   
   gravworkerType worker(&Tree);
 #pragma omp parallel for firstprivate(worker)
