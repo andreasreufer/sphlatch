@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 
+#define SPHLATCH_OPENMP
 #include <omp.h>
 
 #include "bhtree_dynamic.h"

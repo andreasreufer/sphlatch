@@ -76,39 +76,30 @@ protected:
 
    nodePtrT rootPtr;
 
-   /*SimpleAllocator<partT>         partAllocator;
-      SimpleAllocator<cellT>         cellAllocator;
-      SimpleAllocator<czllT>         czllAllocator;*/
-
    typedef SimpleAllocator<partT>   partAllocT;
    typedef SimpleAllocator<cellT>   cellAllocT;
    typedef SimpleAllocator<czllT>   czllAllocT;
-
-   std::vector<partAllocT*> partAllocPtrs;
-   std::vector<cellAllocT*> cellAllocPtrs;
-   std::vector<czllAllocT*> czllAllocPtrs;
 
    czllPtrListT CZbottomCells;
 
    partPtrVectT partProxies;
 
    size_t noCells, noParts;
+
+   const size_t noThreads;
 };
 
 BHTree::BHTree() :
-
-   /*partAllocator(partAllocSize),
-      cellAllocator(cellAllocSize),
-      czllAllocator(czllAllocSize),*/
    noCells(0),
-   noParts(0)
+   noParts(0),
+   noThreads(omp_get_num_threads())
 {
    ///
    /// allocate root cell and set cell
    /// size, add root cell to CZbottom
    /// cells list
    ///
-   rootPtr = czllAllocator.pop();
+   rootPtr = new czllT;
    CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
 
    static_cast<czllPtrT>(rootPtr)->clear();

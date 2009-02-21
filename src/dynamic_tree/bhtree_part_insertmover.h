@@ -51,7 +51,7 @@ void BHTreePartsInsertMover::insert(const size_t _i)
    /// allocate particle node, wire it to its proxy and
    /// set nodes parameters
    ///
-   const partPtrT newPartPtr = treePtr->partAllocator.pop();
+   const partPtrT newPartPtr = new partT;
    newPartPtr->clear();
 
    treePtr->partProxies[_i] = newPartPtr;
