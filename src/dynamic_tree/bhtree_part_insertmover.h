@@ -72,7 +72,6 @@ void BHTreePartsInsertMover::insert(const size_t _i)
    ///
    newPartPtr->parent = treePtr->rootPtr;
 
-   std::cout << "part " << _i << "  " << newPartPtr << " " << pos(_i, X) << " " << pos(_i, Y) << " " << pos(_i, Z) << "\n";
    //pushUpAndToCZsingle(newPartPtr);
 }
 
@@ -167,7 +166,6 @@ void BHTreePartsInsertMover::pushDown(const size_t _i)
 
 void BHTreePartsInsertMover::pushDownSingle(const partPtrT _partPtr)
 {
-   std::cout << "push down " << _partPtr << "   " << _partPtr->isParticle << "\n";
    curPtr = _partPtr->parent;
 
    const fType posX = _partPtr->xPos;
@@ -180,10 +178,7 @@ void BHTreePartsInsertMover::pushDownSingle(const partPtrT _partPtr)
    bool isSettled = false;
    while (not isSettled)
    {
-      if ( curPtr->depth > 10 )
-        break;
       const size_t curOct = getOctant(posX, posY, posZ);
-      std::cout << curPtr << " at " << curPtr->depth << " go to oct " << curOct << "\n";
       ///
       /// child is empty, particle can be inserted directly
       ///
@@ -196,26 +191,13 @@ void BHTreePartsInsertMover::pushDownSingle(const partPtrT _partPtr)
          _partPtr->isSettled = true;
 
          isSettled = true;
-         std::cout << "particle " << _partPtr << " settled as child " << curOct << " of " << curPtr << "!\n";
       }
       else
       {
-         /*if (static_cast<cellPtrT>(curPtr)->child[curOct]->isParticle)
-           partToCell(static_cast<cellPtrT>(curPtr)->child[curOct], curOct);*/
-         //if (curPtr->isParticle)
          if (static_cast<cellPtrT>(curPtr)->child[curOct]->isParticle)
            partToCell(curPtr, curOct);
 
          goChild(curOct);
-
-         //
-         // if current child is a particle, make a cell out of it
-         //
-         /*if (curPtr->isParticle)
-         {
-           std::cout << "convert " << curPtr << " to cell\n";
-           partToCell(curPtr, curOct);
-         }*/
       }
    }
 }

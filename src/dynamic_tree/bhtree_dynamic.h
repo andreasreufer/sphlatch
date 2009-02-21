@@ -11,7 +11,11 @@
  *
  */
 
-#include <omp.h>
+#include <vector>
+
+#ifdef SPHLATCH_OPENMP
+ #include <omp.h>
+#endif
 
 #include "typedefs.h"
 
@@ -72,9 +76,17 @@ protected:
 
    nodePtrT rootPtr;
 
-   SimpleAllocator<partT>         partAllocator;
-   SimpleAllocator<cellT>         cellAllocator;
-   SimpleAllocator<czllT>         czllAllocator;
+   /*SimpleAllocator<partT>         partAllocator;
+      SimpleAllocator<cellT>         cellAllocator;
+      SimpleAllocator<czllT>         czllAllocator;*/
+
+   typedef SimpleAllocator<partT>   partAllocT;
+   typedef SimpleAllocator<cellT>   cellAllocT;
+   typedef SimpleAllocator<czllT>   czllAllocT;
+
+   std::vector<partAllocT*> partAllocPtrs;
+   std::vector<cellAllocT*> cellAllocPtrs;
+   std::vector<czllAllocT*> czllAllocPtrs;
 
    czllPtrListT CZbottomCells;
 
@@ -84,9 +96,10 @@ protected:
 };
 
 BHTree::BHTree() :
-   partAllocator(partAllocSize),
-   cellAllocator(cellAllocSize),
-   czllAllocator(czllAllocSize),
+
+   /*partAllocator(partAllocSize),
+      cellAllocator(cellAllocSize),
+      czllAllocator(czllAllocSize),*/
    noCells(0),
    noParts(0)
 {
@@ -97,13 +110,13 @@ BHTree::BHTree() :
    ///
    rootPtr = czllAllocator.pop();
    CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
-   
+
    static_cast<czllPtrT>(rootPtr)->clear();
    static_cast<czllPtrT>(rootPtr)->atBottom = true;
-   static_cast<czllPtrT>(rootPtr)->depth   = 0;
-   static_cast<czllPtrT>(rootPtr)->ident   = 0;
+   static_cast<czllPtrT>(rootPtr)->depth    = 0;
+   static_cast<czllPtrT>(rootPtr)->ident    = 0;
    noCells++;
-   
+
    CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
    static_cast<czllPtrT>(rootPtr)->listItr = CZbottomCells.begin();
 
@@ -122,7 +135,7 @@ BHTree::BHTree() :
       partProxies[i] = NULL;
    }
    partProxies.resize(0);
-   
+
    std::cout << static_cast<czllPtrT>(rootPtr)->xCen << "  "
              << static_cast<czllPtrT>(rootPtr)->yCen << "  "
              << static_cast<czllPtrT>(rootPtr)->zCen << "  "

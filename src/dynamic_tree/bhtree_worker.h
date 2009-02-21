@@ -41,6 +41,10 @@ public:
    typedef BHTree::czllPtrListItrT    czllPtrListItrT;
    typedef BHTree::czllPtrListCItrT   czllPtrListCItrT;
 
+   typedef BHTree::partAllocT         partAllocT;
+   typedef BHTree::cellAllocT         cellAllocT;
+   typedef BHTree::czllAllocT         czllAllocT;
+
    BHTreeWorker(const BHTreeWorker& _worker);
    BHTreeWorker(const treePtrT _treePtr);
    ~BHTreeWorker();
@@ -251,37 +255,25 @@ void BHTreeWorker::partToCell(nodePtrT _cellPtr, const size_t _oct)
    newCellPtr->ident = treePtr->noCells;
    treePtr->noCells++;
 
-   //std::cout << " part " << _nodePtr << " -> cell " << newCellPtr << "\n";
-
    // wire new cell and its parent
    newCellPtr->parent = _cellPtr;
    static_cast<gcllPtrT>(_cellPtr)->child[_oct] = newCellPtr;
-   //static_cast<gcllPtrT>(_nodePtr->parent)->child[_oct] = newCellPtr;
 
    // set cell position
    newCellPtr->inheritCellPos(_oct);
 
    // add cost of the particle to be added
-   static_cast<gcllPtrT>(newCellPtr)->cost = resPartPtr->cost;
-   //static_cast<partPtrT>(_cellPtr)->cost;
+   static_cast<gcllPtrT>(newCellPtr)->cost    = resPartPtr->cost;
    static_cast<gcllPtrT>(newCellPtr)->noParts = 1;
 
    // wire particle to new node
-
-   /*const fType  posX   = static_cast<partPtrT>(_cellPtr)->xPos;
-      const fType  posY   = static_cast<partPtrT>(_nodePtr)->yPos;
-      const fType  posZ   = static_cast<partPtrT>(_nodePtr)->zPos;*/
    const fType  posX   = resPartPtr->xPos;
    const fType  posY   = resPartPtr->yPos;
    const fType  posZ   = resPartPtr->zPos;
    const size_t newOct = getOctant(posX, posY, posZ, newCellPtr);
 
-   /*newCellPtr->child[newOct] = _nodePtr;
-      _nodePtr->parent          = newCellPtr;*/
    newCellPtr->child[newOct] = resPartPtr;
    resPartPtr->parent        = newCellPtr;
-
-   //_nodePtr = newCellPtr;
 }
 
 ///
