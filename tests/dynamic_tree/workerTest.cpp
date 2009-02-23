@@ -52,7 +52,6 @@ int main(int argc, char* argv[])
    partMgrT&  PartManager(partMgrT::instance());
    matrixRefT pos(PartManager.pos);
 
-
    treeT&      Tree(treeT::instance());
 
    inserterT    inserter(&Tree);

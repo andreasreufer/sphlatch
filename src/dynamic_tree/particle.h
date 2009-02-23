@@ -19,11 +19,12 @@
 namespace sphlatch {
 class particleNode;
 
-class particleBasic {
+class particleGeneric {
 public:
    typedef particleNode*   partNodePtrT;
    fType        x, y, z, m;
    partNodePtrT treeNode;
 };
+
 };
 #endif

@@ -30,8 +30,8 @@ public:
    typedef BHTree::nodePtrT           nodePtrT;
    typedef BHTree::nodePtrCT          nodePtrCT;
 
-   typedef BHTree::partT              partT;
-   typedef BHTree::partPtrT           partPtrT;
+   typedef BHTree::pnodT              pnodT;
+   typedef BHTree::pnodPtrT           pnodPtrT;
 
    typedef BHTree::cellT              cellT;
    typedef BHTree::cellPtrT           cellPtrT;
@@ -262,8 +262,8 @@ void BHTreeWorker::partToCell(nodePtrT _cellPtr, const size_t _oct)
 {
    assert(static_cast<gcllPtrT>(_cellPtr)->child[_oct] != NULL);
    assert(static_cast<gcllPtrT>(_cellPtr)->child[_oct]->isParticle);
-   const partPtrT resPartPtr =
-      static_cast<partPtrT>(static_cast<gcllPtrT>(_cellPtr)->child[_oct]);
+   const pnodPtrT resPartPtr =
+      static_cast<pnodPtrT>(static_cast<gcllPtrT>(_cellPtr)->child[_oct]);
 
    const cellPtrT newCellPtr = new cellT;
 

@@ -12,15 +12,16 @@
  */
 
 #ifdef SPHLATCH_OPENMP
-#include <omp.h>
+ #include <omp.h>
 #endif
 
 #include "typedefs.h"
 
+#include "particle.h"
+
 #include "bhtree_node_cells.h"
 #include "bhtree_node_particle.h"
 
-#include "allocator_simple.h"
 
 namespace sphlatch {
 class BHTree {
@@ -36,9 +37,11 @@ public:
 
    typedef genericNode*                   nodePtrT;
    typedef const genericNode*             nodePtrCT;
-
+   
    typedef particleNode                   partT;
-   typedef particleNode*                  partPtrT;
+
+   typedef particleNode                   pnodT;
+   typedef particleNode*                  pnodPtrT;
 
    typedef genericCellNode                gcllT;
    typedef genericCellNode*               gcllPtrT;
@@ -53,8 +56,7 @@ public:
    typedef czllPtrListT::iterator         czllPtrListItrT;
    typedef czllPtrListT::const_iterator   czllPtrListCItrT;
 
-   typedef std::vector<partPtrT>          partPtrVectT;
-
+   typedef std::vector<pnodPtrT>          pnodPtrVectT;
 
    BHTree();
    ~BHTree();
@@ -65,22 +67,9 @@ private:
    static selfPtr _instance;
 
 protected:
-   enum config
-   {
-      partAllocSize = 1048576,
-      cellAllocSize = 262144,
-      czllAllocSize = 16384
-   };
-   
-   typedef SimpleAllocator<partT>   partAllocT;
-   typedef SimpleAllocator<cellT>   cellAllocT;
-   typedef SimpleAllocator<czllT>   czllAllocT;
-
    nodePtrT rootPtr;
 
    czllPtrListT CZbottomCells;
-
-   partPtrVectT partProxies;
 
    size_t noCells, noParts;
 
@@ -113,17 +102,6 @@ BHTree::BHTree() :
    static_cast<czllPtrT>(rootPtr)->yCen = 0.5;
    static_cast<czllPtrT>(rootPtr)->zCen = 0.5;
    static_cast<czllPtrT>(rootPtr)->clSz = 5.0;
-
-   ///
-   /// resize particle proxy vector
-   ///
-   partProxies.reserve(partAllocSize);
-   partProxies.resize(partAllocSize);
-   for (size_t i = 0; i < partAllocSize; i++)
-   {
-      partProxies[i] = NULL;
-   }
-   partProxies.resize(0);
 
    std::cout << static_cast<czllPtrT>(rootPtr)->xCen << "  "
              << static_cast<czllPtrT>(rootPtr)->yCen << "  "
