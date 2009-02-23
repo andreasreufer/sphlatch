@@ -15,6 +15,7 @@
 
 #include "typedefs.h"
 #include "bhtree_node_generic.h"
+#include "particle.h"
 
 namespace sphlatch {
 ///

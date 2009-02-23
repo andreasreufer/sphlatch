@@ -25,7 +25,7 @@ public:
    typedef BHTree&                    treeRefT;
    typedef BHTree*                    treePtrT;
 
-   typedef ParticleManager            partManagerT;
+   //typedef ParticleManager            partManagerT;
 
    typedef BHTree::nodePtrT           nodePtrT;
    typedef BHTree::nodePtrCT          nodePtrCT;
@@ -76,10 +76,10 @@ protected:
    nodePtrT       curPtr, rootPtr;
 
 public:
-   partManagerT& PartManager;
+   /*partManagerT& PartManager;
 
    matrixRefType  pos, acc;
-   valvectRefType eps, m, h, cost;
+   valvectRefType eps, m, h, cost;*/
 };
 
 ///
@@ -96,14 +96,14 @@ BHTreeWorker::BHTreeWorker(const BHTreeWorker& _worker) :
    myThread(0),
 #endif
    treePtr(_worker.treePtr),
-   rootPtr(_worker.rootPtr),
-   PartManager(partManagerT::instance()),
+   rootPtr(_worker.rootPtr)//,
+   /*PartManager(partManagerT::instance()),
    pos(PartManager.pos),
    acc(PartManager.acc),
    eps(PartManager.eps),
    m(PartManager.m),
    h(PartManager.h),
-   cost(PartManager.cost)
+   cost(PartManager.cost)*/
 { }
 
 ///
@@ -119,14 +119,14 @@ BHTreeWorker::BHTreeWorker(const treePtrT _treePtr) :
    myThread(0),
 #endif
    treePtr(_treePtr),
-   rootPtr(_treePtr->rootPtr),
+   rootPtr(_treePtr->rootPtr)/*,
    PartManager(partManagerT::instance()),
    pos(PartManager.pos),
    acc(PartManager.acc),
    eps(PartManager.eps),
    m(PartManager.m),
    h(PartManager.h),
-   cost(PartManager.cost)
+   cost(PartManager.cost)*/
 { }
 
 BHTreeWorker::~BHTreeWorker()
@@ -242,22 +242,18 @@ size_t BHTreeWorker::getChildNo(nodePtrT _nodePtr)
 
 void BHTreeWorker::czllToCell(nodePtrT _nodePtr)
 {
-   //const cellPtrT newCellPtr = treePtr->cellAllocator.pop();
    const cellPtrT newCellPtr = new cellT;
 
    newCellPtr->initFromCZll(static_cast<czllT&>(*_nodePtr));
-   //treePtr->czllAllocator.push(static_cast<czllPtrT>(_nodePtr));
    delete static_cast<czllPtrT>(_nodePtr);
    _nodePtr = newCellPtr;
 }
 
 void BHTreeWorker::cellToCZll(nodePtrT _nodePtr)
 {
-   //const czllPtrT newCZllPtr = treePtr->czllAllocator.pop();
    const czllPtrT newCZllPtr = new czllT;
 
    newCZllPtr->initFromCell(static_cast<cellT&>(*_nodePtr));
-   //treePtr->cellAllocator.push(static_cast<cellPtrT>(_nodePtr));
    delete static_cast<cellPtrT>(_nodePtr);
    _nodePtr = newCZllPtr;
 }
@@ -269,7 +265,6 @@ void BHTreeWorker::partToCell(nodePtrT _cellPtr, const size_t _oct)
    const partPtrT resPartPtr =
       static_cast<partPtrT>(static_cast<gcllPtrT>(_cellPtr)->child[_oct]);
 
-   //const cellPtrT newCellPtr = treePtr->cellAllocator.pop();
    const cellPtrT newCellPtr = new cellT;
 
    newCellPtr->clear();

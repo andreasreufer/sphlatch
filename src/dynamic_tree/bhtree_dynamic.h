@@ -11,10 +11,8 @@
  *
  */
 
-#include <vector>
-
 #ifdef SPHLATCH_OPENMP
- #include <omp.h>
+#include <omp.h>
 #endif
 
 #include "typedefs.h"
@@ -73,12 +71,12 @@ protected:
       cellAllocSize = 262144,
       czllAllocSize = 16384
    };
-
-   nodePtrT rootPtr;
-
+   
    typedef SimpleAllocator<partT>   partAllocT;
    typedef SimpleAllocator<cellT>   cellAllocT;
    typedef SimpleAllocator<czllT>   czllAllocT;
+
+   nodePtrT rootPtr;
 
    czllPtrListT CZbottomCells;
 

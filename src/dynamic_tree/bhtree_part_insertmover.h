@@ -10,7 +10,7 @@
  */
 
 #include "bhtree_worker.h"
-#include "bhtree_errhandler_tmp.h"
+//#include "bhtree_errhandler_tmp.h"
 
 namespace sphlatch {
 class BHTreePartsInsertMover : public BHTreeWorker {
@@ -26,18 +26,18 @@ public:
 
 public:
    void insert(const size_t _i);
+   void insert(partT& _part);
+   //void insert(std::vector<particle>& _parts);
+   //void insert(std::vector<ghost>& _ghosts);
    void pushToCZ();
+
+   // temporary
    void pushDown(const size_t _i);
 
 private:
    void pushToCZsingle(const partPtrT _partPtr);
-
    void pushUpAndToCZsingle(const partPtrT _partPtr);
-
    void pushDownSingle(const partPtrT _partPtr);
-
-   //void recursor(const size_t _i);
-   //void move(const size_t _i);
 };
 
 ///
@@ -60,10 +60,10 @@ void BHTreePartsInsertMover::insert(const size_t _i)
    newPartPtr->depth     = 0;
    newPartPtr->isSettled = false;
 
-   newPartPtr->xPos = pos(_i, X);
+   /*newPartPtr->xPos = pos(_i, X);
    newPartPtr->yPos = pos(_i, Y);
    newPartPtr->zPos = pos(_i, Z);
-   newPartPtr->mass = m(_i);
+   newPartPtr->mass = m(_i);*/
 
    ///
    /// wire the root cell as particles parent (in case the tree
@@ -91,10 +91,10 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const partPtrT _partPtr)
    assert(oldOct >= 0 && oldOct < 8);
 
    const size_t partIdx = _partPtr->ident;
-   const fType  posX    = pos(partIdx, X);
+   /*const fType  posX    = pos(partIdx, X);
    const fType  posY    = pos(partIdx, Y);
    const fType  posZ    = pos(partIdx, Z);
-   const fType  mass    = m(partIdx);
+   const fType  mass    = m(partIdx);*/
 
    _partPtr->xPos = posX;
    _partPtr->yPos = posY;
@@ -121,8 +121,8 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const partPtrT _partPtr)
 
    ///
    /// go up until the particle lies in the current cell. as
-   /// soon as we hit a CZ cell, start substracting relative
-   /// cost from each CZ cell we encounter
+   /// soon as we hit a CZ cell, start substracting cost from
+   /// each CZ cell we encounter
    ///
    bool  CZencounter = false;
    const fType partCost    = static_cast<partPtrT>(_partPtr)->cost;
@@ -161,7 +161,7 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const partPtrT _partPtr)
 ///
 void BHTreePartsInsertMover::pushDown(const size_t _i)
 {
-   pushDownSingle(treePtr->partProxies[_i]);
+   //pushDownSingle(treePtr->partProxies[_i]);
 };
 
 void BHTreePartsInsertMover::pushDownSingle(const partPtrT _partPtr)
