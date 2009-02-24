@@ -29,7 +29,9 @@
 #include <limits>
 #include <valarray>
 
+#define BZ_THREADSAFE
 #include <blitz/array.h>
+#include <blitz/tinyvec-et.h>
 
 namespace sphlatch {
 ///

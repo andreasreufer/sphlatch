@@ -21,11 +21,15 @@ namespace sphlatch {
 ///
 /// particle node
 ///
+
+class treeParticle;
+
 class particleNode : public genericNode {
 public:
-   fType xPos, yPos, zPos;
+   typedef treeParticle*   partPtrT;
+   partPtrT partPtr;
+   vect3dT pos;
    fType mass;
-   fType cost;
 
    particleNode() { }
    ~particleNode() { }
@@ -44,9 +48,8 @@ void particleNode::clear()
 
    isParticle = true;
 
-   xPos = 0.;
-   yPos = 0.;
-   zPos = 0.;
+   partPtr = NULL;
+   pos = 0.,0.,0.;
    mass = 0.;
 }
 };

@@ -185,7 +185,7 @@ bool genericCellNode::pointInsideCell(const vect3dT& _pos)
 {
    const fType hclSz = 0.5 * clSz;
 
-   //cen - _pos;
+   //return ( all( cen - _pos < hclSz ) && all( cen - _pos > -hclSz ) );
 
    return(cen[0] - hclSz < _pos[0] && cen[0] + hclSz > _pos[0] &&
           cen[1] - hclSz < _pos[1] && cen[1] + hclSz > _pos[1] &&
