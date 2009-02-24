@@ -28,13 +28,14 @@ class particleNode : public genericNode {
 public:
    typedef treeParticle*   partPtrT;
    partPtrT partPtr;
-   vect3dT pos;
-   fType mass;
+   vect3dT  pos;
+   fType    m;
 
    particleNode() { }
    ~particleNode() { }
 
    void clear();
+   void update();
 
 #ifdef SPHLATCH_PADTO64BYTES
 private:
@@ -49,8 +50,16 @@ void particleNode::clear()
    isParticle = true;
 
    partPtr = NULL;
-   pos = 0.,0.,0.;
-   mass = 0.;
+   pos     = 0., 0., 0.;
+   m       = 0.;
 }
+
+void particleNode::update()
+{
+   assert(partPtr != NULL);
+   pos = partPtr->pos;
+   m   = partPtr->m;
+}
+
 };
 #endif

@@ -35,7 +35,6 @@ public:
    void pushDown(const size_t _i);
 
 private:
-   //void pushToCZsingle(const pnodPtrT _pnodPtr);
    void pushToCZsingle(const pnodPtrT _pnodPtr);
    void pushUpAndToCZsingle(const pnodPtrT _pnodPtr);
    void pushDownSingle(const pnodPtrT _pnodPtr);
@@ -55,16 +54,12 @@ void BHTreePartsInsertMover::insert(partT& _part)
    const pnodPtrT newPartPtr = new pnodT;
    newPartPtr->clear();
 
-   treePtr->partProxies[_i] = newPartPtr;
-
+   newPartPtr->partPtr = &_part;
+   newPartPtr->update();
+   
    newPartPtr->ident     = _i;
    newPartPtr->depth     = 0;
    newPartPtr->isSettled = false;
-
-   /*newPartPtr->xPos = pos(_i, X);
-   newPartPtr->yPos = pos(_i, Y);
-   newPartPtr->zPos = pos(_i, Z);
-   newPartPtr->mass = m(_i);*/
 
    ///
    /// wire the root cell as particles parent (in case the tree
@@ -91,16 +86,10 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
 
    assert(oldOct >= 0 && oldOct < 8);
 
-   const size_t partIdx = _pnodPtr->ident;
-   /*const fType  posX    = pos(partIdx, X);
-   const fType  posY    = pos(partIdx, Y);
-   const fType  posZ    = pos(partIdx, Z);
-   const fType  mass    = m(partIdx);*/
-
-   _pnodPtr->xPos = posX;
-   _pnodPtr->yPos = posY;
-   _pnodPtr->zPos = posZ;
-   _pnodPtr->mass = mass;
+   ///
+   /// update particle position and mass
+   ///
+   _pnodPtr->update();
 
    if (pointInsideCell(posX, posY, posZ) &&
        (getOctant(posX, posY, posZ) == oldOct))
@@ -115,10 +104,7 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    ///
    /// check whether the particle lies inside the root cell
    ///
-   if (not pointInsideCell(posX, posY, posZ, rootPtr))
-   {
-     // \todo do something about it
-   }
+   if (not pointInsideCell(posX, posY, posZ, rootPtr)) {}
 
    ///
    /// go up until the particle lies in the current cell. as
@@ -168,18 +154,15 @@ void BHTreePartsInsertMover::pushDown(const size_t _i)
 void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
 {
    curPtr = _pnodPtr->parent;
+   const vect3dT pos = _pnodPtr->pos;
 
-   const fType posX = _pnodPtr->xPos;
-   const fType posY = _pnodPtr->yPos;
-   const fType posZ = _pnodPtr->zPos;
-
-   assert(pointInsideCell(posX, posY, posZ));
+   assert(pointInsideCell(pos));
    assert(not curPtr->isParticle);
 
    bool isSettled = false;
    while (not isSettled)
    {
-      const size_t curOct = getOctant(posX, posY, posZ);
+      const size_t curOct = getOctant(pos);
       ///
       /// child is empty, particle can be inserted directly
       ///
@@ -196,7 +179,7 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
       else
       {
          if (static_cast<cellPtrT>(curPtr)->child[curOct]->isParticle)
-           part ToCell(curPtr, curOct);
+           partToCell(curPtr, curOct);
 
          goChild(curOct);
       }

@@ -5,7 +5,6 @@
 #include <omp.h>
 
 #include "typedefs.h"
-typedef sphlatch::matrixRefType            matrixRefT;
 
 //#include "particle_manager.h"
 //typedef sphlatch::ParticleManager          partMgrT;
@@ -67,12 +66,14 @@ int main(int argc, char* argv[])
    //dumper.ptrDump();
    
    std::cout << "push down particle ...\n";
-   inserter.pushDown(0);
+   
+   //inserter.pushDown(0);
    //dumper.ptrDump();
-   inserter.pushDown(1);
+   //inserter.pushDown(1);
    //dumper.ptrDump();
    std::cout << " done!\n";
    dumper.dotDump("test1.dot");
+   
    //dumper.ptrDump();
 
    /*testWorker.build();

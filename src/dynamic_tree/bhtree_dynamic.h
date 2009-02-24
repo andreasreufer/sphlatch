@@ -39,6 +39,7 @@ public:
    typedef const genericNode*             nodePtrCT;
    
    typedef treeParticle                   partT;
+   typedef treeParticle*                  partPtrT;
 
    typedef particleNode                   pnodT;
    typedef particleNode*                  pnodPtrT;

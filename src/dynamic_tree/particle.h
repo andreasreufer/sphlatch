@@ -14,7 +14,6 @@
 
 
 #include "typedefs.h"
-#include "bhtree_node_particle.h"
 
 namespace sphlatch {
 class particleNode;
@@ -22,11 +21,11 @@ class particleNode;
 class treeParticle {
 public:
    typedef particleNode*   partNodePtrT;
-   fType        pos[3], m;
+   vect3dT      pos;
+   fType        m, cost;
    partNodePtrT treeNode;
 
    fType eps;
 };
-
 };
 #endif
