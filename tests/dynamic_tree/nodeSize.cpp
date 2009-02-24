@@ -14,7 +14,7 @@ typedef sphlatch::monopoleCellNode     monoType;
 typedef sphlatch::quadrupoleCellNode   cellType;
 typedef sphlatch::costzoneCellNode     czllType;
 
-typedef sphlatch::particleGeneric      partType;
+typedef sphlatch::treeParticle         partType;
 
 int main()
 {

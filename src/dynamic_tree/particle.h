@@ -4,10 +4,10 @@
 //#define SPHLATCH_PADTO64BYTES
 
 /*
- *  bhtree_node_particle.h
+ *  particle.h
  *
  *
- *  Created by Andreas Reufer on 20.01.09
+ *  Created by Andreas Reufer on 23.02.09
  *  Copyright 2009 University of Berne. All rights reserved.
  *
  */
@@ -19,11 +19,13 @@
 namespace sphlatch {
 class particleNode;
 
-class particleGeneric {
+class treeParticle {
 public:
    typedef particleNode*   partNodePtrT;
-   fType        x, y, z, m;
+   fType        pos[3], m;
    partNodePtrT treeNode;
+
+   fType eps;
 };
 
 };

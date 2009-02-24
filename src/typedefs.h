@@ -14,24 +14,28 @@
 #include <map>
 #include <set>
 #include <list>
+
+/*
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_expression.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/vector_expression.hpp>
 #include <boost/numeric/ublas/vector_proxy.hpp>
-#include <boost/numeric/ublas/io.hpp>
+#include <boost/numeric/ublas/io.hpp>*/
 #include <boost/dynamic_bitset.hpp>
 
 #include <cmath>
 #include <limits>
 #include <valarray>
 
+#include <blitz/array.h>
+
 namespace sphlatch {
 ///
 /// the BLAS namespace
 ///
-namespace blas = boost::numeric::ublas;
+//namespace blas = boost::numeric::ublas;
 
 ///
 /// fType: should be a float
@@ -44,7 +48,9 @@ typedef double   fType;
 typedef fType*   fPtrType;
 typedef fType&   fRefType;
 
-///
+
+
+/*///
 /// a fType matrix
 /// please note that the communication manager
 /// assumes this type to have continuous storage
@@ -103,7 +109,9 @@ typedef blas::vector<fType> *             valvectPtrType;
 typedef blas::zero_vector<fType>          zerovalvectType;
 
 
-typedef blas::vector_range<valvectType>   valvectRangeType;
+typedef blas::vector_range<valvectType>   valvectRangeType;*/
+
+typedef blitz::TinyVector<fType,3> vect3dT;
 
 ///
 /// type for particle or tree node IDs
@@ -113,11 +121,11 @@ typedef int                               identType;
 ///
 /// a vector of IDs
 ///
-typedef blas::vector<identType>           idvectType;
+/*typedef blas::vector<identType>           idvectType;
 typedef blas::vector<identType>&          idvectRefType;
 typedef blas::vector<identType> *         idvectPtrType;
 
-typedef blas::vector_range<idvectType>    idvectRangeType;
+typedef blas::vector_range<idvectType>    idvectRangeType;*/
 
 ///
 /// a vector of (particle) indices
@@ -168,13 +176,13 @@ typedef std::map<std::string, fType>              attrMapType;
 typedef attrMapType&                              attrMapRefType;
 typedef attrMapType*                              attrMapPtrType;
 
-typedef std::set<matrixPtrType>                   matrixPtrSetType;
+/*typedef std::set<matrixPtrType>                   matrixPtrSetType;
 typedef std::set<valvectPtrType>                  valvectPtrSetType;
 typedef std::set<idvectPtrType>                   idvectPtrSetType;
 
 typedef std::map<std::string, matrixPtrType>      matrixPtrMapType;
 typedef std::map<std::string, valvectPtrType>     valvectPtrMapType;
-typedef std::map<std::string, idvectPtrType>      idvectPtrMapType;
+typedef std::map<std::string, idvectPtrType>      idvectPtrMapType;*/
 
 
 ///
@@ -197,7 +205,7 @@ typedef std::list<std::string>     stringListType;
 /// three possible containers for physical
 /// quantities
 ///
-struct quantsType
+/*struct quantsType
 {
    matrixPtrSetType  vects;
    valvectPtrSetType scalars;
@@ -205,7 +213,7 @@ struct quantsType
 };
 
 typedef quantsType&   quantsRefType;
-typedef quantsType*   quantPtrType;
+typedef quantsType*   quantPtrType;*/
 };
 
 #endif

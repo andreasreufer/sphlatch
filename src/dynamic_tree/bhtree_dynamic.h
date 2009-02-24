@@ -38,7 +38,7 @@ public:
    typedef genericNode*                   nodePtrT;
    typedef const genericNode*             nodePtrCT;
    
-   typedef particleNode                   partT;
+   typedef treeParticle                   partT;
 
    typedef particleNode                   pnodT;
    typedef particleNode*                  pnodPtrT;
@@ -98,14 +98,10 @@ BHTree::BHTree() :
    CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
    static_cast<czllPtrT>(rootPtr)->listItr = CZbottomCells.begin();
 
-   static_cast<czllPtrT>(rootPtr)->xCen = 0.5;
-   static_cast<czllPtrT>(rootPtr)->yCen = 0.5;
-   static_cast<czllPtrT>(rootPtr)->zCen = 0.5;
+   static_cast<czllPtrT>(rootPtr)->cen = 0.5, 0.5, 0.5;
    static_cast<czllPtrT>(rootPtr)->clSz = 5.0;
 
-   std::cout << static_cast<czllPtrT>(rootPtr)->xCen << "  "
-             << static_cast<czllPtrT>(rootPtr)->yCen << "  "
-             << static_cast<czllPtrT>(rootPtr)->zCen << "  "
+   std::cout << static_cast<czllPtrT>(rootPtr)->cen << "  "
              << static_cast<czllPtrT>(rootPtr)->clSz << "\n";
 }
 

@@ -25,8 +25,8 @@ public:
    nodePtr skip;
    nodePtr child[8];
 
-   fType xCen, yCen, zCen;
-   fType clSz, cost;
+   vect3dT cen;
+   fType   clSz, cost;
 
    countsType noParts;
 
@@ -35,8 +35,8 @@ public:
 
    void clear();
    void inheritCellPos(size_t _n);
-   bool pointInsideCell(const fType _x, const fType _y, const fType _z);
-   size_t getOctant(const fType _x, const fType _y, const fType _z);
+   bool pointInsideCell(const vect3dT& _pos);
+   size_t getOctant(const vect3dT& _pos);
 
 private:
 };
@@ -46,8 +46,8 @@ private:
 ///
 class monopoleCellNode : public genericCellNode {
 public:
-   fType xCom, yCom, zCom;
-   fType mass;
+   vect3dT com;
+   fType   mass;
 
    monopoleCellNode() { }
    ~monopoleCellNode() { }
@@ -126,9 +126,7 @@ void genericCellNode::clear()
       child[i] = NULL;
    }
 
-   xCen = 0.;
-   yCen = 0.;
-   zCen = 0.;
+   cen  = 0., 0., 0.;
    clSz = 0.;
 
    cost    = 0.;
@@ -139,9 +137,7 @@ void monopoleCellNode::clear()
 {
    genericCellNode::clear();
 
-   xCom = 0.;
-   yCom = 0.;
-   zCom = 0.;
+   com  = 0., 0., 0.;
    mass = 0.;
 }
 
@@ -173,41 +169,36 @@ void costzoneCellNode::clear()
 void genericCellNode::inheritCellPos(size_t _n)
 {
    clSz = 0.5 * (static_cast<gcllPtr>(parent)->clSz);
-   const fType hcSize = 0.5 * clSz;
 
-   xCen = ((_n) % 2) ?
-          static_cast<gcllPtr>(parent)->xCen + hcSize :
-          static_cast<gcllPtr>(parent)->xCen - hcSize;
-   yCen = ((_n >> 1) % 2) ?
-          static_cast<gcllPtr>(parent)->yCen + hcSize :
-          static_cast<gcllPtr>(parent)->yCen - hcSize;
-   zCen = ((_n >> 2) % 2) ?
-          static_cast<gcllPtr>(parent)->zCen + hcSize :
-          static_cast<gcllPtr>(parent)->zCen - hcSize;
+   const fType hcSize   = 0.5 * clSz;
+
+   cen = static_cast<gcllPtr>(parent)->cen;
+
+   cen[0] += ((_n >> 0) % 2) ? hcSize : -hcSize;
+   cen[1] += ((_n >> 1) % 2) ? hcSize : -hcSize;
+   cen[2] += ((_n >> 2) % 2) ? hcSize : -hcSize;
 
    depth = parent->depth + 1;
 }
 
-bool genericCellNode::pointInsideCell(const fType _x,
-                                      const fType _y,
-                                      const fType _z)
+bool genericCellNode::pointInsideCell(const vect3dT& _pos)
 {
    const fType hclSz = 0.5 * clSz;
 
-   return(xCen - hclSz < _x && xCen + hclSz > _x &&
-          yCen - hclSz < _y && yCen + hclSz > _y &&
-          zCen - hclSz < _z && zCen + hclSz > _z);
+   //cen - _pos;
+
+   return(cen[0] - hclSz < _pos[0] && cen[0] + hclSz > _pos[0] &&
+          cen[1] - hclSz < _pos[1] && cen[1] + hclSz > _pos[1] &&
+          cen[2] - hclSz < _pos[2] && cen[2] + hclSz > _pos[2]);
 }
 
-size_t genericCellNode::getOctant(const fType _x,
-                                  const fType _y,
-                                  const fType _z)
+size_t genericCellNode::getOctant(const vect3dT& _pos)
 {
    size_t targetOctant = 0;
 
-   targetOctant += _x < xCen ? 0 : 1;
-   targetOctant += _y < yCen ? 0 : 2;
-   targetOctant += _z < zCen ? 0 : 4;
+   targetOctant += _pos[0] < cen[0] ? 0 : 1;
+   targetOctant += _pos[1] < cen[1] ? 0 : 2;
+   targetOctant += _pos[2] < cen[2] ? 0 : 4;
    return(targetOctant);
 }
 
