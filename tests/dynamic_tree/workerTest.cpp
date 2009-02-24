@@ -48,9 +48,6 @@ int main(int argc, char* argv[])
    sleep(1);
    //MPI::Init(argc, argv);
 
-   partMgrT&  PartManager(partMgrT::instance());
-   matrixRefT pos(PartManager.pos);
-
    treeT&      Tree(treeT::instance());
 
    inserterT    inserter(&Tree);
@@ -59,8 +56,8 @@ int main(int argc, char* argv[])
    std::cout << "tree workers instantiated\n";
 
    std::cout << "insert particle ...\n";
-   inserter.insert(0);
-   inserter.insert(1);
+   //inserter.insert(0);
+   //inserter.insert(1);
    std::cout << " done!\n";
    dumper.dotDump("test0.dot");
    //dumper.ptrDump();

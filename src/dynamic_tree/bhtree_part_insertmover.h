@@ -57,7 +57,7 @@ void BHTreePartsInsertMover::insert(partT& _part)
    newPartPtr->partPtr = &_part;
    newPartPtr->update();
    
-   newPartPtr->ident     = _i;
+   //newPartPtr->ident     = _i;
    newPartPtr->depth     = 0;
    newPartPtr->isSettled = false;
 
@@ -90,9 +90,10 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    /// update particle position and mass
    ///
    _pnodPtr->update();
+   const vect3dT pos = _pnodPtr->pos;
 
-   if (pointInsideCell(posX, posY, posZ) &&
-       (getOctant(posX, posY, posZ) == oldOct))
+   if (pointInsideCell(pos) &&
+       (getOctant(pos) == oldOct))
       return;
 
    ///
@@ -104,7 +105,7 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    ///
    /// check whether the particle lies inside the root cell
    ///
-   if (not pointInsideCell(posX, posY, posZ, rootPtr)) {}
+   if (not pointInsideCell(pos, rootPtr)) {}
 
    ///
    /// go up until the particle lies in the current cell. as
@@ -112,8 +113,8 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    /// each CZ cell we encounter
    ///
    bool  CZencounter = false;
-   const fType partCost    = static_cast<pnodPtrT>(_pnodPtr)->cost;
-   while (not pointInsideCell(posX, posY, posZ))
+   const fType partCost    = static_cast<pnodPtrT>(_pnodPtr)->partPtr->cost;
+   while (not pointInsideCell(pos))
    {
       if (not CZencounter)
       {
@@ -135,7 +136,7 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    {
       while (not curPtr->atBottom)
       {
-         goChild(getOctant(posX, posY, posZ));
+         goChild(getOctant(pos));
          static_cast<gcllPtrT>(curPtr)->cost += partCost;
       }
    }
