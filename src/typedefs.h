@@ -118,7 +118,7 @@ typedef blitz::TinyVector<fType,3> vect3dT;
 ///
 /// type for particle or tree node IDs
 ///
-typedef int                               identType;
+typedef int                               idType;
 
 ///
 /// a vector of IDs

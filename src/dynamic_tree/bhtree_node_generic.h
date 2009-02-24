@@ -22,7 +22,7 @@ public:
 
    genericNodePtrT parent, next;
 
-   identType ident;
+   idType             ident;
    short unsigned int depth;
 
    ///
@@ -64,11 +64,11 @@ void genericNode::clear()
    isParticle = false;
    isCZ       = false;
    isRemote   = false;
-   
-   atBottom   = false;
-   neighSet   = false;
-   
-   isSettled  = false;
+
+   atBottom = false;
+   neighSet = false;
+
+   isSettled = false;
 }
 
 genericNode::genericNodePtrT genericNode::operator*()

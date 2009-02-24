@@ -32,7 +32,7 @@ public:
    void pushToCZ();
 
    // temporary
-   void pushDown(const size_t _i);
+   void pushDown(const partT& _part);
 
 private:
    void pushToCZsingle(const pnodPtrT _pnodPtr);
@@ -52,12 +52,14 @@ void BHTreePartsInsertMover::insert(partT& _part)
    /// set nodes parameters
    ///
    const pnodPtrT newPartPtr = new pnodT;
+
    newPartPtr->clear();
 
    newPartPtr->partPtr = &_part;
+   _part.treeNode      = newPartPtr;
    newPartPtr->update();
-   
-   //newPartPtr->ident     = _i;
+
+   newPartPtr->id        = _part.id;
    newPartPtr->depth     = 0;
    newPartPtr->isSettled = false;
 
@@ -105,14 +107,15 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    ///
    /// check whether the particle lies inside the root cell
    ///
-   if (not pointInsideCell(pos, rootPtr)) {}
+   if (not pointInsideCell(pos, rootPtr))
+   { }
 
    ///
    /// go up until the particle lies in the current cell. as
    /// soon as we hit a CZ cell, start substracting cost from
    /// each CZ cell we encounter
    ///
-   bool  CZencounter = false;
+   bool        CZencounter = false;
    const fType partCost    = static_cast<pnodPtrT>(_pnodPtr)->partPtr->cost;
    while (not pointInsideCell(pos))
    {
@@ -147,10 +150,13 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
 ///
 /// push down a single particle
 ///
-void BHTreePartsInsertMover::pushDown(const size_t _i)
+void BHTreePartsInsertMover::pushDown(const partT& _part)
 {
-   //pushDownSingle(treePtr->partProxies[_i]);
-};
+   std::cout << "push down ...\n";
+   std::cout << _part.treeNode << "\n";
+   pushDownSingle(_part.treeNode);
+   std::cout << "   done!     \n";
+}
 
 void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
 {
@@ -180,13 +186,12 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
       else
       {
          if (static_cast<cellPtrT>(curPtr)->child[curOct]->isParticle)
-           partToCell(curPtr, curOct);
+            partToCell(curPtr, curOct);
 
          goChild(curOct);
       }
    }
 }
-
 };
 
 #endif

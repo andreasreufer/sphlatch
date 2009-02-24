@@ -22,10 +22,14 @@ class treeParticle {
 public:
    typedef particleNode*   partNodePtrT;
    vect3dT      pos;
-   fType        m, cost;
+   fType        m, eps;
    partNodePtrT treeNode;
+   idType id;
+   fType        cost;
 
-   fType eps;
+#ifdef SPHLATCH_PADTO64BYTES
+   char pad[8];
+#endif
 };
 };
 #endif

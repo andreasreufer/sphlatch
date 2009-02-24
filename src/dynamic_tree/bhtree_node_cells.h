@@ -92,7 +92,7 @@ public:
    typedef std::list<czllPtrT>   czllPtrListT;
 
    genericNodePtrT neighbour[27];
-   identType       domain;
+   idType          domain;
 
    czllPtrListT::iterator listItr;
 
@@ -170,7 +170,7 @@ void genericCellNode::inheritCellPos(size_t _n)
 {
    clSz = 0.5 * (static_cast<gcllPtr>(parent)->clSz);
 
-   const fType hcSize   = 0.5 * clSz;
+   const fType hcSize = 0.5 * clSz;
 
    cen = static_cast<gcllPtr>(parent)->cen;
 
