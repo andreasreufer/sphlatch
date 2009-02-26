@@ -120,8 +120,10 @@ void BHTreeDump::ptrRecursor()
    if (curPtr->isParticle == false)
    {
       for (size_t i = 0; i < 8; i++)
-      {
          std::cout << " c" << i << " -> " << static_cast<cellPtrT>(curPtr)->child[i] << "\n";
+      
+      for (size_t i = 0; i < 8; i++)
+      {
          if (static_cast<cellPtrT>(curPtr)->child[i] != NULL)
          {
             goChild(i);

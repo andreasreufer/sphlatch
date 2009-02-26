@@ -59,7 +59,7 @@ void BHTreePartsInsertMover::insert(partT& _part)
    _part.treeNode      = newPartPtr;
    newPartPtr->update();
 
-   newPartPtr->id        = _part.id;
+   newPartPtr->ident     = _part.id;
    newPartPtr->depth     = 0;
    newPartPtr->isSettled = false;
 

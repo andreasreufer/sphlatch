@@ -6,12 +6,8 @@
 
 #include "typedefs.h"
 
-//#include "particle_manager.h"
-//typedef sphlatch::ParticleManager          partMgrT;
-
 #include "bhtree_dynamic.h"
 typedef sphlatch::BHTree                   treeT;
-//typedef sphlatch::BHTree::BHTreeConfig     treeConfigT;
 
 typedef sphlatch::particleNode             pnodT;
 
@@ -28,6 +24,9 @@ typedef sphlatch::BHTreePartsInsertMover   inserterT;
 
 #include "bhtree_treedump.h"
 typedef sphlatch::BHTreeDump               dumpT;
+
+#include "bhtree_cz_builder.h"
+typedef sphlatch::BHTreeCZBuilder          czbldT;
 
 #include "particle.h"
 typedef sphlatch::treeParticle             partT;
@@ -56,6 +55,7 @@ int main(int argc, char* argv[])
    inserterT    inserter(&Tree);
    dumpT        dumper(&Tree);
    BHTreeTester testWorker(&Tree);
+   czbldT       CZbuilder(&Tree);
    std::cout << "tree workers instantiated\n";
 
 
@@ -63,27 +63,23 @@ int main(int argc, char* argv[])
 
    partT part1, part2;
 
-   part1.pos = 0.,0.,0.;
-   part1.id = 0;
+   part1.pos = 0., 0., 0.;
+   part1.id  = 0;
 
-   part2.pos = 1.,1.,1.;
-   part2.id = 1;
-   
+   part2.pos = 1., 1., 1.;
+   part2.id  = 1;
+
    std::cout << "insert particle ...\n";
    inserter.insert(part1);
    inserter.insert(part2);
    std::cout << " done!\n";
    dumper.dotDump("test0.dot");
-   //dumper.ptrDump();
 
    inserter.pushDown(part1);
-   //dumper.ptrDump();
    inserter.pushDown(part2);
-   //dumper.ptrDump();
+   dumper.ptrDump();
    std::cout << " done!\n";
    dumper.dotDump("test1.dot");
-
-   //dumper.ptrDump();
 
    /*testWorker.build();
       testWorker.test();*/
