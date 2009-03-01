@@ -50,7 +50,10 @@ void BHTreeDump::dotRecursor()
       dumpFile << "C";
 
    dumpFile << abs(curPtr->ident) << " [";
-   dumpFile << "label=\"\",";
+   //if (curPtr->isParticle)
+   //   dumpFile << "label=" << curPtr->ident << ",";
+   //else
+      dumpFile << "label=\"\",";
 
    if (curPtr->isParticle)
       dumpFile << "shape=circle,color=green";
@@ -66,7 +69,14 @@ void BHTreeDump::dotRecursor()
       dumpFile << "shape=box,color=red";
 
    dumpFile << ",style=filled";
-   dumpFile << ",width=0.1,height=0.1];\n";
+   
+   //if (curPtr->isParticle)
+     dumpFile << ",width=0.1,height=0.1];\n";
+   /*else
+   {
+     const fType curSize = 0.1*sqrt( static_cast<fType>( static_cast<gcllPtrT>(curPtr)->noParts ) );
+     dumpFile << ",width=" << curSize << ",height=" << curSize << "];\n";
+   }*/
 
    if (curPtr->isParticle == false)
    {
@@ -91,7 +101,6 @@ void BHTreeDump::dotRecursor()
    }
 }
 
-
 void BHTreeDump::ptrDump()
 {
    goRoot();
@@ -113,15 +122,19 @@ void BHTreeDump::ptrRecursor()
              << "nSet" << curPtr->neighSet << " "
              << "atBo" << curPtr->atBottom << " "
              << "setl" << curPtr->isSettled << "\n";
-   
+
    std::cout << "  p -> " << curPtr->parent << "\n";
    std::cout << "  n -> " << curPtr->next << "\n";
 
    if (curPtr->isParticle == false)
    {
+      std::cout << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
+      std::cout << "  noParts " << static_cast<gcllPtrT>(curPtr)->noParts << "\n";
+
       for (size_t i = 0; i < 8; i++)
-         std::cout << " c" << i << " -> " << static_cast<cellPtrT>(curPtr)->child[i] << "\n";
-      
+         std::cout << " c" << i << " -> " <<
+         static_cast<cellPtrT>(curPtr)->child[i] << "\n";
+
       for (size_t i = 0; i < 8; i++)
       {
          if (static_cast<cellPtrT>(curPtr)->child[i] != NULL)
@@ -133,9 +146,6 @@ void BHTreeDump::ptrRecursor()
       }
    }
 }
-
-
-
 };
 
 #endif

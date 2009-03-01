@@ -1,10 +1,11 @@
 #include <iostream>
 #include <vector>
 
-#define SPHLATCH_OPENMP
 #include <omp.h>
+#define SPHLATCH_OPENMP
 
 #include "typedefs.h"
+typedef sphlatch::fType                    fType;
 
 #include "bhtree_dynamic.h"
 typedef sphlatch::BHTree                   treeT;
@@ -25,11 +26,11 @@ typedef sphlatch::BHTreePartsInsertMover   inserterT;
 #include "bhtree_treedump.h"
 typedef sphlatch::BHTreeDump               dumpT;
 
-#include "bhtree_cz_builder.h"
-typedef sphlatch::BHTreeCZBuilder          czbldT;
+//#include "bhtree_cz_builder.h"
+//typedef sphlatch::BHTreeCZBuilder          czbldT;
 
 #include "particle.h"
-typedef sphlatch::treeParticle             partT;
+typedef sphlatch::treeParticle   partT;
 
 #include "bhtree_worker.h"
 class BHTreeTester : public sphlatch::BHTreeWorker {
@@ -55,31 +56,43 @@ int main(int argc, char* argv[])
    inserterT    inserter(&Tree);
    dumpT        dumper(&Tree);
    BHTreeTester testWorker(&Tree);
-   czbldT       CZbuilder(&Tree);
+   //czbldT       CZbuilder(&Tree);
    std::cout << "tree workers instantiated\n";
 
 
    std::cout << "push down particle ...\n";
 
-   partT part1, part2;
+   const size_t noParts = 100;
 
-   part1.pos = 0., 0., 0.;
-   part1.id  = 0;
+   std::vector<partT> particles(noParts);
 
-   part2.pos = 1., 1., 1.;
-   part2.id  = 1;
+   for (size_t i = 0; i < noParts; i++)
+   {
+      particles[i].pos[0] = static_cast<fType>(rand()) / RAND_MAX;
+      particles[i].pos[1] = static_cast<fType>(rand()) / RAND_MAX;
+      particles[i].pos[2] = static_cast<fType>(rand()) / RAND_MAX;
 
-   std::cout << "insert particle ...\n";
-   inserter.insert(part1);
-   inserter.insert(part2);
-   std::cout << " done!\n";
-   dumper.dotDump("test0.dot");
+      particles[i].id = i;
 
-   inserter.pushDown(part1);
-   inserter.pushDown(part2);
-   dumper.ptrDump();
-   std::cout << " done!\n";
-   dumper.dotDump("test1.dot");
+      inserter.insert(particles[i]);
+   }
+
+
+  //dumper.dotDump("test0.dot");
+   for (size_t i = 0; i < noParts; i++)
+   {
+      inserter.pushDown(particles[i]);
+
+      /*if ( i == 7 )
+        dumper.dotDump("test0.dot");
+      
+      if ( i == 8 )
+        dumper.dotDump("test1.dot");*/
+
+   }
+  dumper.ptrDump();
+  dumper.dotDump("test2.dot");
+  //dumper.dotDump("test1.dot");
 
    /*testWorker.build();
       testWorker.test();*/

@@ -31,14 +31,15 @@ public:
 
    typedef BHTree::pnodT              pnodT;
    typedef BHTree::pnodPtrT           pnodPtrT;
+   
+   typedef BHTree::gcllT              gcllT;
+   typedef BHTree::gcllPtrT           gcllPtrT;
 
    typedef BHTree::cellT              cellT;
    typedef BHTree::cellPtrT           cellPtrT;
 
    typedef BHTree::czllT              czllT;
    typedef BHTree::czllPtrT           czllPtrT;
-
-   typedef BHTree::gcllPtrT           gcllPtrT;
 
    typedef BHTree::czllPtrListT       czllPtrListT;
    typedef BHTree::czllPtrListItrT    czllPtrListItrT;

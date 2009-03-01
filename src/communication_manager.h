@@ -5,9 +5,9 @@
 #include <list>
 #include <mpi.h>
 
-#include <boost/assign/std/vector.hpp>
+//#include <boost/assign/std/vector.hpp>
 
-#include "particle_manager.h"
+//#include "particle_manager.h"
 
 namespace sphlatch
 {
@@ -18,33 +18,33 @@ typedef CommunicationManager self_type;
 typedef CommunicationManager& self_reference;
 typedef CommunicationManager* self_pointer;
 
-typedef sphlatch::ParticleManager PartManagerType;
+//typedef sphlatch::ParticleManager PartManagerType;
 
 static self_reference instance(void);
 
-PartManagerType& PartManager;
+//PartManagerType& PartManager;
 
 ///
 /// this is the central exchange part
 ///
-void exchange(domainPartsIndexRefType _partsIndices, size_t _noGhosts);
+//void exchange(domainPartsIndexRefType _partsIndices, size_t _noGhosts);
 
-quantsType exchangeQuants;
+//quantsType exchangeQuants;
 
-void sendGhostsPrepare(domainPartsIndexRefType _ghostsIndices);
+//void sendGhostsPrepare(domainPartsIndexRefType _ghostsIndices);
 
-void sendGhosts(idvectRefType _idVect);
-void sendGhosts(valvectRefType _valVect);
-void sendGhosts(matrixRefType _matrix);
+//void sendGhosts(idvectRefType _idVect);
+//void sendGhosts(valvectRefType _valVect);
+//void sendGhosts(matrixRefType _matrix);
 
-void sendGhosts(quantsRefType _quantities);
+//void sendGhosts(quantsRefType _quantities);
 
-void regExchQuant(idvectRefType _idVect);
-void regExchQuant(valvectRefType _valVect);
-void regExchQuant(matrixRefType _matrix);
+//void regExchQuant(idvectRefType _idVect);
+//void regExchQuant(valvectRefType _valVect);
+//void regExchQuant(matrixRefType _matrix);
 
 private:
-void calcOffsets(domainPartsIndexRefType _indices,
+/*void calcOffsets(domainPartsIndexRefType _indices,
                  size_t _totalOffset,
                  countsVectRefType _sendOffset,
                  countsVectRefType _partsTo,
@@ -52,7 +52,7 @@ void calcOffsets(domainPartsIndexRefType _indices,
                  countsVectRefType _partsFrom);
 
 domainPartsIndexType ghostIndices;
-countsVectType gSendOffsets, gRecvOffsets, gPartsFrom, gPartsTo;
+countsVectType gSendOffsets, gRecvOffsets, gPartsFrom, gPartsTo;*/
 size_t identSize, floatSize, newNoParts, noSendGhosts;
 MPI_Datatype mpiFloatType, mpiCountType;
 
@@ -61,8 +61,8 @@ MPI_Datatype mpiFloatType, mpiCountType;
 ///
 ///
 public:
-void sendMatrix(matrixRefType _matrix, size_t _recvDomain);
-void recvMatrix(matrixRefType _matrix, size_t _sendDomain);
+//void sendMatrix(matrixRefType _matrix, size_t _recvDomain);
+//void recvMatrix(matrixRefType _matrix, size_t _sendDomain);
 
 void sendBitset(bitsetRefType _bitset, size_t _recvDomain);
 void recvBitset(bitsetRefType _bitset, size_t _sendDomain);
@@ -75,8 +75,8 @@ void sumUpCounts(countsVectRefType _indexVect);
 void max(fRefType _val);
 void min(fRefType _val);
 void sum(fRefType _val);
-void sum(valvectRefType _vect);
-void sum(matrixRefType _mat);
+//void sum(valvectRefType _vect);
+//void sum(matrixRefType _mat);
 void sum(countsRefType _cnt);
 
 size_t getMyDomain();
@@ -114,8 +114,8 @@ CommunicationManager::self_reference CommunicationManager::instance(void)
     }
 }
 
-CommunicationManager::CommunicationManager(void) :
-  PartManager(PartManagerType::instance())
+CommunicationManager::CommunicationManager(void) //:
+  //PartManager(PartManagerType::instance())
 {
   noDomains = MPI::COMM_WORLD.Get_size();
   noRanks = noDomains;
@@ -136,12 +136,12 @@ CommunicationManager::CommunicationManager(void) :
   myRank = MPI::COMM_WORLD.Get_rank();
   myDomain = rankToDomain[ myRank ];
 
-  gSendOffsets.resize(noDomains);
+  /*gSendOffsets.resize(noDomains);
   gRecvOffsets.resize(noDomains);
   gPartsFrom.resize(noDomains);
-  gPartsTo.resize(noDomains);
+  gPartsTo.resize(noDomains);*/
 
-  identSize = sizeof(identType);
+  identSize = sizeof(idType);
   floatSize = sizeof(fType);
 
 #ifdef SPHLATCH_SINGLEPREC
@@ -163,7 +163,7 @@ size_t CommunicationManager::commBuffSize = 131072;   //  128 kByte
 //size_t CommunicationManager::commBuffSize = 1048576;    // 1024 kByte
 //size_t CommunicationManager::commBuffSize = 8388608;  // 8096 kByte
 
-void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
+/*void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
                                     size_t _noGhosts)
 {
   ///
@@ -194,7 +194,7 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
   ///
   /// set new number of particles (noGhosts needs to be known)
   ///
-  PartManager.setNoParts(newNoParts, _noGhosts);
+  //PartManager.setNoParts(newNoParts, _noGhosts);
 
   ///
   /// iterators for the particle index vectors
@@ -248,7 +248,7 @@ void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
       ///
       /// resize the quantitiy
       ///
-      PartManager.resize(**intsItr, false);
+      //PartManager.resize(**intsItr, false);
 
       ///
       /// exchange data
@@ -637,9 +637,9 @@ void CommunicationManager::calcOffsets(domainPartsIndexRefType _indices,
       _sendOffset[i] = _sendOffset[i - 1] + _partsTo[i - 1];
       _recvOffset[i] = _recvOffset[i - 1] + _partsFrom[i - 1];
     }
-}
+}*/
 
-void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvDomain)
+/*void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvDomain)
 {
   static size_t noRemElems, noCurElems, noCurBytes, round;
   const size_t noBuffElems = commBuffSize / sizeof(fType);
@@ -699,7 +699,7 @@ void CommunicationManager::recvMatrix(matrixRefType _matrix, size_t _sendDomain)
       noRemElems -= noCurElems;
       round++;
     }
-}
+}*/
 
 void CommunicationManager::sendBitset(bitsetRefType _bitset, size_t _recvRank)
 {
@@ -842,7 +842,7 @@ void CommunicationManager::sum(fRefType _val)
   _val = static_cast<fType>(doubleBuff);
 }
 
-void CommunicationManager::sum(valvectRefType _vect)
+/*void CommunicationManager::sum(valvectRefType _vect)
 {
   const size_t vectLength = _vect.size();
 
@@ -870,7 +870,7 @@ void CommunicationManager::sum(matrixRefType _mat)
                             mpiFloatType, MPI::SUM);
   _mat = recvBuff;
 #endif
-}
+}*/
 
 void CommunicationManager::sum(countsRefType _cnt)
 {
@@ -878,7 +878,7 @@ void CommunicationManager::sum(countsRefType _cnt)
   MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE, &_cnt, 1,
                             mpiCountType, MPI::SUM);
 #else
-  identType countBuff;
+  idType countBuff;
   MPI::COMM_WORLD.Allreduce(&_cnt, &countBuff, 1,
                             mpiCountType, MPI::SUM);
   _cnt = countBuff;

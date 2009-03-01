@@ -69,6 +69,7 @@ void BHTreePartsInsertMover::insert(partT& _part)
    /// a tree walk, as it is not yet wired as a child of a cell)
    ///
    newPartPtr->parent = treePtr->rootPtr;
+   static_cast<gcllPtrT>(newPartPtr->parent)->noParts++;
 
    //pushUpAndToCZsingle(newPartPtr);
 }
@@ -124,10 +125,10 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
          if (curPtr->isCZ)
             CZencounter = true;
       }
-      else
-         static_cast<czllPtrT>(curPtr)->noParts--;
 
       static_cast<gcllPtrT>(curPtr)->cost -= partCost;
+      static_cast<gcllPtrT>(curPtr)->noParts--;
+
       goUp();
    }
 
@@ -141,6 +142,7 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
       {
          goChild(getOctant(pos));
          static_cast<gcllPtrT>(curPtr)->cost += partCost;
+         static_cast<gcllPtrT>(curPtr)->noParts++;
       }
    }
 
@@ -152,16 +154,14 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
 ///
 void BHTreePartsInsertMover::pushDown(const partT& _part)
 {
-   std::cout << "push down ...\n";
-   std::cout << _part.treeNode << "\n";
    pushDownSingle(_part.treeNode);
-   std::cout << "   done!     \n";
 }
 
 void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
 {
    curPtr = _pnodPtr->parent;
    const vect3dT pos = _pnodPtr->pos;
+   const fType partCost = _pnodPtr->partPtr->cost;
 
    assert(pointInsideCell(pos));
    assert(not curPtr->isParticle);
@@ -189,6 +189,9 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
             partToCell(curPtr, curOct);
 
          goChild(curOct);
+         
+         static_cast<gcllPtrT>(curPtr)->cost += partCost;
+         static_cast<gcllPtrT>(curPtr)->noParts++;
       }
    }
 }

@@ -24,12 +24,33 @@ public:
    vect3dT      pos;
    fType        m, eps;
    partNodePtrT treeNode;
+
    idType id;
-   fType        cost;
+   fType  cost;
 
 #ifdef SPHLATCH_PADTO64BYTES
+private:
    char pad[8];
 #endif
 };
+
+class SPHghost {
+public:
+   fType h, rho;
+#ifdef SPHLATCH_PADTO64BYTES
+private:
+   char pad[8];
+#endif
+};
+
+class SPHpart : public SPHghost {
+public:
+  fType dhdt;
+#ifdef SPHLATCH_PADTO64BYTES
+private:
+   char pad[0];
+#endif
+};
+
 };
 #endif

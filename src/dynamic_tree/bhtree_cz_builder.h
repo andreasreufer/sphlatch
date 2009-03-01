@@ -145,18 +145,19 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
          goChild(i);
          if (curPtr->isParticle)
          {
-           const partPtrT resPartPtr = static_cast<partPtrT>(curPtr);
-           curPtr = treePtr->cellAllocator.pop();
-          static_cast<cellPtrT>(curPtr)->clear();
-          static_cast<cellPtrT>(curPtr)->inheritCellPos(i);
-          curPtr->parent = _czllPtr;
+            const partPtrT resPartPtr = static_cast<partPtrT>(curPtr);
+            //curPtr = treePtr->cellAllocator.pop();
+            curPtr = new czllT;
+            static_cast<cellPtrT>(curPtr)->clear();
+            static_cast<cellPtrT>(curPtr)->inheritCellPos(i);
+            curPtr->parent = _czllPtr;
 
-          resPartPtr->parent = curPtr;
-          //pushDownSingle(resPartPtr);
+            resPartPtr->parent = curPtr;
+            //pushDownSingle(resPartPtr);
 
             /*resPartPtr = static_cast<gcllPtr>(curPtr)->child[i];
-            static_cast<gcllPtr>(curPtr)->child[i] = 
-              t*/
+               static_cast<gcllPtr>(curPtr)->child[i] =
+               t*/
          }
 
          //static_cast<gcllPtr>(curPtr)->
