@@ -1,10 +1,10 @@
-#ifndef PARTICLE_H
-#define PARTICLE_H
+#ifndef BHTREE_PARTICLE_H
+#define BHTREE_PARTICLE_H
 
 //#define SPHLATCH_PADTO64BYTES
 
 /*
- *  particle.h
+ *  bhtree_particle.h
  *
  *
  *  Created by Andreas Reufer on 23.02.09
@@ -12,13 +12,15 @@
  *
  */
 
-
 #include "typedefs.h"
 
 namespace sphlatch {
-class particleNode;
 
-class treeParticle {
+class particleNode;
+///
+/// basic tree particle class
+///
+class treeGhost {
 public:
    typedef particleNode*   partNodePtrT;
    vect3dT      pos;
@@ -34,22 +36,10 @@ private:
 #endif
 };
 
-class SPHghost {
-public:
-   fType h, rho;
-#ifdef SPHLATCH_PADTO64BYTES
-private:
-   char pad[8];
-#endif
-};
-
-class SPHpart : public SPHghost {
-public:
-  fType dhdt;
-#ifdef SPHLATCH_PADTO64BYTES
-private:
-   char pad[0];
-#endif
+///
+/// dummy resident class
+/// 
+class treePart : public treeGhost {
 };
 
 };

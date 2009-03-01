@@ -28,8 +28,8 @@ typedef sphlatch::BHTreeDump               dumpT;
 //#include "bhtree_cz_builder.h"
 //typedef sphlatch::BHTreeCZBuilder          czbldT;
 
-#include "particle.h"
-typedef sphlatch::treeParticle           partT;
+#include "bhtree_particle.h"
+typedef sphlatch::treeGhost           partT;
 
 #include "communication_manager.h"
 typedef sphlatch::CommunicationManager   commT;
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 
    partT part;
 
-   sphlatch::SPHpart sph_part;
+   //sphlatch::SPHpart sph_part;
 
    const MPI::Aint addr_base = MPI::Get_address(&part);
    const MPI::Aint addr_mass = MPI::Get_address(&part.m);

@@ -17,11 +17,10 @@
 
 #include "typedefs.h"
 
-#include "particle.h"
 
 #include "bhtree_node_cells.h"
 #include "bhtree_node_particle.h"
-
+#include "bhtree_particle.h"
 
 namespace sphlatch {
 class BHTree {
@@ -37,9 +36,9 @@ public:
 
    typedef genericNode*                   nodePtrT;
    typedef const genericNode*             nodePtrCT;
-   
-   typedef treeParticle                   partT;
-   typedef treeParticle*                  partPtrT;
+
+   typedef treeGhost                      partT;
+   typedef treeGhost*                     partPtrT;
 
    typedef particleNode                   pnodT;
    typedef particleNode*                  pnodPtrT;
@@ -99,7 +98,7 @@ BHTree::BHTree() :
    CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
    static_cast<czllPtrT>(rootPtr)->listItr = CZbottomCells.begin();
 
-   static_cast<czllPtrT>(rootPtr)->cen = 0.5, 0.5, 0.5;
+   static_cast<czllPtrT>(rootPtr)->cen  = 0.5, 0.5, 0.5;
    static_cast<czllPtrT>(rootPtr)->clSz = 1.;
 
    std::cout << static_cast<czllPtrT>(rootPtr)->cen << "  "

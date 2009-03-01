@@ -15,18 +15,18 @@
 
 #include "typedefs.h"
 #include "bhtree_node_generic.h"
-#include "particle.h"
+#include "bhtree_particle.h"
 
 namespace sphlatch {
 ///
 /// particle node
 ///
 
-class treeParticle;
+class treeGhost;
 
 class particleNode : public genericNode {
 public:
-   typedef treeParticle*   partPtrT;
+   typedef treeGhost*   partPtrT;
    partPtrT partPtr;
    vect3dT  pos;
    fType    m;

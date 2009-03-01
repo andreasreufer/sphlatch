@@ -29,8 +29,8 @@ typedef sphlatch::BHTreeDump               dumpT;
 //#include "bhtree_cz_builder.h"
 //typedef sphlatch::BHTreeCZBuilder          czbldT;
 
-#include "particle.h"
-typedef sphlatch::treeParticle   partT;
+#include "bhtree_particle.h"
+typedef sphlatch::treeGhost   partT;
 
 #include "bhtree_worker.h"
 class BHTreeTester : public sphlatch::BHTreeWorker {
