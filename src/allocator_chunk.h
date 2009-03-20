@@ -11,47 +11,61 @@
  *
  */
 
-#include <vector>
 #include <stack>
 
 namespace sphlatch {
-template<class T>
+template<class T, size_t chunkSize>
 class ChunkAllocator {
 public:
-   typedef T*                                      Tptr;
+   typedef T*   Tptr;
 
 private:
    class Chunk {
 public:
-      typedef std::vector<T>                       dataVectT;
-      typedef typename dataVectT::iterator         dataVectItrT;
-      typedef typename dataVectT::const_iterator   dataVectCItrT;
+      Chunk()
+      {
+         elemsUsed = 0;
+      }
 
-      Chunk(const size_t _chunkSize) :
-         data(_chunkSize),
-         curElem(data.begin()),
-         fstElem(data.begin()),
-         endElem(data.end())
-      { }
       ~Chunk() { }
 
-      dataVectT           data;
-      dataVectItrT        curElem;
-      const dataVectCItrT fstElem;
-      const dataVectCItrT endElem;
+      Tptr pop()
+      {
+         return(&(data[elemsUsed++]));
+      }
+
+      void push()
+      {
+         if (elemsUsed > 0)
+         {
+            elemsUsed--;
+         }
+      }
+
+      bool isFull()
+      {
+         return(elemsUsed >= chunkSize);
+      }
+
+      bool isEmpty()
+      {
+         return(elemsUsed == 0);
+      }
+
+private:
+      size_t elemsUsed;
+      T      data[chunkSize];
    };
 
    typedef Chunk    ChunkT;
    typedef Chunk*   ChunkPtrT;
 
    std::stack<ChunkPtrT> chunks;
-   const size_t          chunkSize;
 
 public:
-   ChunkAllocator(size_t _chunkSize) :
-      chunkSize(_chunkSize)
+   ChunkAllocator()
    {
-      chunks.push(new Chunk(_chunkSize));
+      chunks.push(new Chunk);
    }
 
    ~ChunkAllocator()
@@ -65,21 +79,23 @@ public:
 
    Tptr pop()
    {
-      if (chunks.top()->curElem == chunks.top()->endElem)
-         chunks.push(new Chunk(chunkSize));
+      if (chunks.top()->isFull())
+      {
+         chunks.push(new Chunk);
+      }
 
-      return(& * (chunks.top()->curElem++));
+      return(chunks.top()->pop());
    }
 
-   void push(Tptr _ptr)
+   void push(Tpr _ptr)
    {
-      if (chunks.top()->curElem == chunks.top()->fstElem)
+      chunks.top()->push();
+
+      if (chunks.top()->isEmpty() && (chunks.size() > 1))
       {
          delete chunks.top();
          chunks.pop();
       }
-
-      chunks.top()->curElem--;
    }
 };
 };

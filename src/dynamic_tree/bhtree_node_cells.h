@@ -55,7 +55,7 @@ public:
    void clear();
 
 #ifdef SPHLATCH_PADTO64BYTES
-   char pad[12];
+   char pad[4];
 #endif
 };
 
