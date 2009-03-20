@@ -15,21 +15,27 @@
 
 #include "typedefs.h"
 #include "bhtree_node_generic.h"
+#include "bhtree_particle.h"
 
 namespace sphlatch {
 ///
 /// particle node
 ///
+
+class treeGhost;
+
 class particleNode : public genericNode {
 public:
-   fType xPos, yPos, zPos;
-   fType mass;
-   fType cost;
+   typedef treeGhost*   partPtrT;
+   partPtrT partPtr;
+   vect3dT  pos;
+   fType    m;
 
    particleNode() { }
    ~particleNode() { }
 
    void clear();
+   void update();
 
 #ifdef SPHLATCH_PADTO64BYTES
 private:
@@ -43,10 +49,17 @@ void particleNode::clear()
 
    isParticle = true;
 
-   xPos = 0.;
-   yPos = 0.;
-   zPos = 0.;
-   mass = 0.;
+   partPtr = NULL;
+   pos     = 0., 0., 0.;
+   m       = 0.;
 }
+
+void particleNode::update()
+{
+   assert(partPtr != NULL);
+   pos = partPtr->pos;
+   m   = partPtr->m;
+}
+
 };
 #endif

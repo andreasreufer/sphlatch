@@ -13,6 +13,8 @@
 #include "Timer.cc"
 #include "TList.cc"
 
+#include <fstream>
+
 class Processor {
 private:
   CellList        cellList;
@@ -66,6 +68,43 @@ public:
     Timer t;
 
     for (p = 0; p < size; p++) pList[p].preForces();
+#ifdef PHASESTAT
+    const size_t noPhases = 8;
+    ftype phase_histogram[noPhases];
+    for (p = 0; p < size; p++) 
+    {
+      // quick hack: only do it for ice
+      if ( lrint(pList[p].getMatId()) == 17 )
+      {
+        const size_t phase = pList[p].getPhase();
+        phase_histogram[phase] += pList[p].getMass();
+      }
+    };  
+      
+    ftype phase_histogram_tot[noPhases];
+    MCW.Allreduce(&phase_histogram,
+                  &phase_histogram_tot,
+                  noPhases, MPI_ftype, MPI_SUM);
+    
+    if (global::noisy)
+    {
+      std::fstream fout;
+      fout.open("ice_phases_histogram.txt", std::ios::out | std::ios::app);
+      
+      std::cout << "  >>> ice phases: [";
+      fout << time << "\t";
+
+      for (size_t i = 0; i < noPhases; i++)
+      {
+        fout << phase_histogram_tot[i] << "\t";
+        std::cout << phase_histogram_tot[i] << ",";
+      }
+      
+      fout << "\n";
+      fout.close();
+      std::cout << "]\n";
+    }
+#endif
 
     cellList.pFindNeighbourCells();
     cellList.pSpreadGhosts();

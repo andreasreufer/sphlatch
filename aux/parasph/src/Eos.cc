@@ -50,7 +50,7 @@ private:
                         ftype &, ftype &, const int &) const;
 #else
   void (Eos::*eosfunc)(const ftype&, const ftype &, const ftype &, const int &,
-                       ftype &, ftype &, ftype &) const;
+                       ftype &, ftype &, ftype &, int &) const;
 #endif
 public:
   class ErrorNoNumber {
@@ -94,8 +94,8 @@ public:
   }
 #else
   void eos(const ftype &rho, const ftype &rhom1, const ftype &u,
-           const int &mat, ftype &p, ftype &cs, ftype &T) const {
-    (*this.*eosfunc)(rho, rhom1, u, mat, p, cs, T);
+           const int &mat, ftype &p, ftype &cs, ftype &T, int &phase) const {
+    (*this.*eosfunc)(rho, rhom1, u, mat, p, cs, T, phase);
   }
 #endif
 
@@ -113,11 +113,12 @@ public:
   }
 #else
   void idealGas(const ftype &rho, const ftype &rhom1, const ftype &u,
-                const int &mat, ftype &P, ftype &cs, ftype &T) const {
+                const int &mat, ftype &P, ftype &cs, ftype &T, int &phase) const {
     ftype Rgas = 0.00820292998, gamma = 1.6666666, meanm=1.0;
     P  = (gamma - 1.0) * rho * u;
     cs = sqrt(gamma*P/rho);
     T  = meanm*(gamma-1.)*u/Rgas;
+    phase = 0;
   }
 #endif
 #ifdef DIST
@@ -126,7 +127,7 @@ public:
                  ftype &P, ftype &cs, ftype &T, ftype &dpdrho, ftype &dpdu, const int &distmodel) const {
 #else
   void tillotson(const ftype &rho, const ftype &rhom1, const ftype &u,
-                 const int &mat, ftype &P, ftype &cs, ftype &T) const {
+                 const int &mat, ftype &P, ftype &cs, ftype &T, int &phase) const {
 #endif
     eosMat m = eosTab.get(mat);
     ftype PC     = 0.;
@@ -136,6 +137,7 @@ public:
     ftype rho0m1 = 1. / m.rho0;
     ftype eta    = rho*rho0m1;
     ftype mu     = eta - 1.;
+    phase = 0;
 #ifdef DIST
 //    if(mu<0.0)mu=0.0;
 #endif
@@ -219,14 +221,14 @@ public:
   
 #ifdef ANEOS
   void aneos(const ftype &rho, const ftype &rhom1, const ftype &u,
-	     const int &mat, ftype &p, ftype &cs, ftype &t) const {
+	     const int &mat, ftype &p, ftype &cs, ftype &t, int &phase) const {
     int    KPA , MAT = mat;
 
     double RHO = (double)rho, U = (double)u, P = (double)p, CS = (double)cs,
            T   = (double)t;
 
     rooten(RHO, U, MAT, T, P, CS, KPA);
-    p = (ftype)P; cs = (ftype)CS; t = (ftype)T;
+    p = (ftype)P; cs = (ftype)CS; t = (ftype)T, phase = KPA;
   }
 
   void rooten(double &rhoi, double &ui, int &mati,
@@ -336,6 +338,7 @@ public:
       int   itmax = 50;
       ftype a = rho0, b = rho0, c, dx = 0.001 * rho0;
       ftype pa, pb, pc, cs, tol = 1.e-10, T;
+      int phtmp;
 #ifdef DIST
       ftype tmpdad=0.,tmpdist=1.,tmpdpdrho,tmpdpdu;
       int tmpdistmodel=1;
@@ -345,7 +348,7 @@ public:
 #ifdef DIST
 	eos(a, 1./a, _u0, mat, tmpdad,tmpdist,pa, cs, T,tmpdpdrho,tmpdpdu,tmpdistmodel);
 #else
-        eos(a, 1./a, _u0, mat, pa, cs, T);
+        eos(a, 1./a, _u0, mat, pa, cs, T, phtmp);
 #endif
       } while (pa > 0. && a > 0.9*rho0);
       do {
@@ -353,7 +356,7 @@ public:
 #ifdef DIST
 	eos(b, 1./b, _u0, mat,tmpdad,tmpdist, pb, cs, T,tmpdpdrho,tmpdpdu,tmpdistmodel);
 #else
-        eos(b, 1./b, _u0, mat, pb, cs, T);
+        eos(b, 1./b, _u0, mat, pb, cs, T, phtmp);
 #endif
       } while (pb < 0. && b < 0.1*rho0);
       
@@ -362,7 +365,7 @@ public:
 #ifdef DIST
 	eos(c, 1./c, _u0, mat, tmpdad,tmpdist, pc, cs, T,tmpdpdrho,tmpdpdu,tmpdistmodel);
 #else
-        eos(c, 1./c, _u0, mat, pc, cs, T);
+        eos(c, 1./c, _u0, mat, pc, cs, T, phtmp);
 #endif
 	if (pc < 0.) { a = c; pa = pc; } else { b = c; pb = pc; }
       }

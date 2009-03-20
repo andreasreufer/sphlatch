@@ -16,6 +16,7 @@ nodesfun:
 nodesize:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
 	  -I../../src -I../../src/dynamic_tree \
+	  -fopenmp \
 	  -o nodeSize nodeSize.cpp
 
 buildcz:
