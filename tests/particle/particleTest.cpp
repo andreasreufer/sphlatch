@@ -18,16 +18,30 @@ typedef sphlatch::SPHfluidPart           sphPartT;
 #include "communication_manager.h"
 typedef sphlatch::CommunicationManager   commT;
 
-class partT : public treePartT, public sphPartT
-{
-public:
-
-};
+#include "bhtree_node_particle.h"
 
 class ghostT : public treeGhostT, public sphGhostT
 {
 public:
 };
+
+class partT : public treePartT, public sphPartT
+{
+public:
+  void swap(partT& _swpPart)
+  {
+    static partT _tmp; 
+    _tmp = _swpPart;
+    _swpPart = *this;
+    *this = _tmp;
+
+    _swpPart.treeNode->partPtr = &_swpPart;
+    treeNode->partPtr = this;
+  }
+};
+
+#include "particle_allocator.h"
+
 
 int main(int argc, char* argv[])
 {
@@ -38,6 +52,10 @@ int main(int argc, char* argv[])
 
    ghostT ghost;
    partT  part;
+
+   partT* partPtr = &part;
+   
+   treePartT* treePartPtr = &part;
 
    commT::DataTypeCreator creator(&ghost);
    creator += &ghost.pos;
@@ -74,7 +92,6 @@ int main(int argc, char* argv[])
                 << "   pos" << ghost.pos
                 << "\n";
    }
-
 
    MPI::Finalize();
    return(0);

@@ -13,12 +13,18 @@
 #include "typedefs.h"
 
 namespace sphlatch {
+/*namespace indices
+{
+enum 3Dvect
+{ X, Y, Z };
+};*/
+
 ///
 /// basic SPH fluid ghost particle class
 ///
 class SPHfluidGhost {
 public:
-   fType        h, rho, p, cs;
+   fType h, rho, p, cs;
 #ifdef SPHLATCH_PADTO64BYTES
 private:
    char pad[0];
@@ -29,28 +35,27 @@ private:
 /// basic SPH fluid resident particle class
 ///
 class SPHfluidPart : public SPHfluidGhost {
-  countsType noneigh;
+   countsType noneigh;
 };
 
 ///
 /// particle with specific energy
 ///
-class energyGhost {};
+class energyGhost { };
 
 class energyPart : public energyGhost
 {
-  fType u, dudt;
+   fType u, dudt;
 };
 
 ///
 /// variable smoothing length ghost
 ///
-class varHGhost {};
+class varHGhost { };
 
 class varHPart : public varHGhost
 {
-  fType dhdt, divv;
+   fType dhdt, divv;
 };
-
 };
 #endif

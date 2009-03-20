@@ -40,6 +40,7 @@ private:
 /// dummy resident class
 /// 
 class treePart : public treeGhost {
+
 };
 
 ///

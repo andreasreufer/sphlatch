@@ -48,6 +48,9 @@ private:
   static ftype    avAlpha, avBeta, dampFactor, dtFactor, xsphFactor;
   static ftype    heatconG1, heatconG2;
   static ftype    hMax, hMin, hMinm1, rhoMin, uMin;  
+#ifdef ANEOS
+  int             phase;
+#endif
 
 #ifdef SOLID
   bool            str;
@@ -179,6 +182,10 @@ public:
 #ifdef SOLID
   const Mat           &getMatVar() const { return matTab.get(matNr()); }
 #endif
+#ifdef ANEOS
+  const int           &getPhase() const { return phase; }
+  const ftype         &getMatId() const { return mat; }
+#endif
 
   // Set variables
   void setCoord (const int &c, const int &x)    { coord[c] = x; }  
@@ -223,7 +230,7 @@ public:
 
 // equation of state
   void calleos() {
-    eos.eos(rho, rhom1, u, matNr(), p, vsound, T);
+    eos.eos(rho, rhom1, u, matNr(), p, vsound, T, phase);
   }
 #ifdef SOLID
   // Von Mises criterion to set plastic yielding

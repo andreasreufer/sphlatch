@@ -105,6 +105,7 @@ public:
    void pushdownNeighbours();
 
    partsIndexListT partsList;
+   size_t noPartsNoAlloc;
 
 private:
 #ifdef SPHLATCH_PADTO64BYTES
