@@ -48,10 +48,6 @@ private:
   static ftype    avAlpha, avBeta, dampFactor, dtFactor, xsphFactor;
   static ftype    heatconG1, heatconG2;
   static ftype    hMax, hMin, hMinm1, rhoMin, uMin;  
-#ifdef ANEOS
-  int             phase;
-#endif
-
 #ifdef SOLID
   bool            str;
   ftype           epsxx, epsyy, epszz, epsxy, epsxz, epsyz;
@@ -79,6 +75,9 @@ public:
   static bool         heatCon, xsph;
   static int          numVar;
   static std::string  varName;
+#ifdef ANEOS
+  int             phase;
+#endif
 
 #ifdef SPH
   class ErrorHTooBig {
@@ -592,8 +591,8 @@ public:
   
 #ifdef SOLID
   void deviator() {
-    if (bodyNr() == 0 && dm < 1.) {
-//    if (dm < 1.) {
+//    if (bodyNr() == 0 && dm < 1.) {
+    if (dm < 1.) {
       ftype mu   = matTab.get(matNr()).mu;
       ftype szz  = - sxx - syy;
       ftype div3 = (epsxx + epsyy + epszz) * third;
