@@ -18,6 +18,11 @@ h5partGetPhaseHistogram:
 				      -I../../src \
 				      -o h5part_get_phase_histogram h5part_getPhaseHistogram.cpp
 
+phaseDiagram: libaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
+				      -I../../src \
+				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -o aneos_phase_diagram phase_diagram.cpp
 
 libaneos:
 	$(FC) $(FFLAGS) -c ../../aux/libaneos/libaneos.f -o libaneos.o

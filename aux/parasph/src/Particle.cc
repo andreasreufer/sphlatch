@@ -25,6 +25,9 @@ private:
 #ifdef SOLID
   ftype           dm, sLim, sxx, sxy, sxz, syy, syz;
 #endif
+#ifdef PEAKP
+    ftype peakp;
+#endif
 #endif
 
   // Temporarily used variables
@@ -48,10 +51,6 @@ private:
   static ftype    avAlpha, avBeta, dampFactor, dtFactor, xsphFactor;
   static ftype    heatconG1, heatconG2;
   static ftype    hMax, hMin, hMinm1, rhoMin, uMin;  
-#ifdef ANEOS
-  int             phase;
-#endif
-
 #ifdef SOLID
   bool            str;
   ftype           epsxx, epsyy, epszz, epsxy, epsxz, epsyz;
@@ -79,6 +78,9 @@ public:
   static bool         heatCon, xsph;
   static int          numVar;
   static std::string  varName;
+#ifdef ANEOS
+  int             phase;
+#endif
 
 #ifdef SPH
   class ErrorHTooBig {
@@ -127,6 +129,10 @@ public:
     man.getValue("thres.dmMin",  dmMin);
     man.getValue("thres.sMin",   sMin);
     man.getValue("thres.tiny",   tiny);
+#endif
+#ifdef PEAKP
+    numVar  += 1;
+    varName += "peakp\n";
 #endif
 #endif
     man.getValue("physics.G", G);
@@ -227,6 +233,10 @@ public:
   // getRankH_j, ie. if (h_i > h_j), or in case that (h_i == h_j) just
   // if (id_i > id_j).
   void setRankH() { rankH = h * hMinm1 + id * totNumPartm1; }
+
+#ifdef PEAKP
+  void peakPress() { peakp = peakp < p ? p : peakp; }
+#endif
 
 // equation of state
   void calleos() {
@@ -592,8 +602,8 @@ public:
   
 #ifdef SOLID
   void deviator() {
-    if (bodyNr() == 0 && dm < 1.) {
-//    if (dm < 1.) {
+//    if (bodyNr() == 0 && dm < 1.) {
+    if (dm < 1.) {
       ftype mu   = matTab.get(matNr()).mu;
       ftype szz  = - sxx - syy;
       ftype div3 = (epsxx + epsyy + epszz) * third;
