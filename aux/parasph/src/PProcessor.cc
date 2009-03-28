@@ -105,6 +105,12 @@ public:
       std::cout << "]\n";
     }
 #endif
+#ifdef SPH
+#ifdef PEAKP
+    for (p = 0; p < size; p++) 
+      pList[p].peakPress();
+#endif
+#endif
 
     cellList.pFindNeighbourCells();
     cellList.pSpreadGhosts();

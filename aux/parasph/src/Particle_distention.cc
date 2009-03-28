@@ -28,6 +28,9 @@ private:
 #ifdef SOLID
   ftype           dm, sLim, sxx, sxy, sxz, syy, syz;
 #endif
+#ifdef PEAKP
+  ftype peakp;
+#endif
 #endif
 
   // Temporarily used variables
@@ -161,6 +164,10 @@ public:
     man.getValue("thres.sMin",   sMin);
     man.getValue("thres.tiny",   tiny);
 #endif
+#ifdef PEAKP
+    numVar  += 1;
+    varName += "peakp\n";
+#endif
 #endif
     man.getValue("physics.G", G);
     man.getValue("simulation.gravHb1", gravHb1);
@@ -270,6 +277,10 @@ public:
   // getRankH_j, ie. if (h_i > h_j), or in case that (h_i == h_j) just
   // if (id_i > id_j).
   void setRankH() { rankH = h * hMinm1 + id * totNumPartm1; }
+
+#ifdef PEAKP
+  void peakPress() { peakp = peakp < p ? p : peakp; }
+#endif
 
 // equation of state
   void calleos() {
