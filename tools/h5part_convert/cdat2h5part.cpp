@@ -50,6 +50,7 @@ void readerToPartMgr(matrixType&      _mat,
                      size_t           _idx)
 {
    const size_t noParts = _mat.size1();
+
    for (size_t i = 0; i < noParts; i++)
    {
       _mat(i, _j) = _rdr.read(i, _idx);
@@ -61,6 +62,7 @@ void readerToPartMgr(valvectType&     _vct,
                      size_t           _idx)
 {
    const size_t noParts = _vct.size();
+
    for (size_t i = 0; i < noParts; i++)
    {
       _vct(i) = _rdr.read(i, _idx);
@@ -72,6 +74,7 @@ void readerToPartMgr(idvectType&      _ivct,
                      size_t           _idx)
 {
    const size_t noParts = _ivct.size();
+
    for (size_t i = 0; i < noParts; i++)
    {
       _ivct(i) = static_cast<identType>(lrint(_rdr.read(i, _idx)));
@@ -202,7 +205,7 @@ int main(int argc, char* argv[])
          PartManager.useEnergy();
          saveQuants.scalars += &PartManager.u;
       }
-      
+
       if (vars[curIdx] == "T")
       {
          std::cout << vars[curIdx] << " ";
@@ -226,6 +229,13 @@ int main(int argc, char* argv[])
          std::cout << vars[curIdx] << " ";
          PartManager.useStress();
          saveQuants.vects += &PartManager.S;
+      }
+
+      if (vars[curIdx] == "peakp")
+      {
+         std::cout << vars[curIdx] << " ";
+         PartManager.usePeakPress();
+         saveQuants.scalars += &PartManager.peakp;
       }
    }
    std::cout << "\n";
@@ -291,6 +301,9 @@ int main(int argc, char* argv[])
          readerToPartMgr(PartManager.S, YY, cdatReader, curIdx);
       if (vars[curIdx] == "syz")
          readerToPartMgr(PartManager.S, YZ, cdatReader, curIdx);
+
+      if (vars[curIdx] == "peakp")
+         readerToPartMgr(PartManager.peakp, cdatReader, curIdx);
    }
    std::cout << " -> " << outputFileName << "\n";
    cdatReader.close();
