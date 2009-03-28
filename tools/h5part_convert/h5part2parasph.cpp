@@ -111,7 +111,8 @@ int main(int argc, char* argv[])
 
 #ifdef PEAKP
   varNames += "peakp";
-  const fType minFloat = std::numeric_limits<fType>::min();
+  //const fType minFloat = std::numeric_limits<fType>::min();
+  const fType minFloat = -1.e50;
 #endif
 
   CDATWriter.open("initial.xdr", "none", PartManager.attributes["time"],
