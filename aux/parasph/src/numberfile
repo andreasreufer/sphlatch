@@ -1,5 +1,1 @@
-<<<<<<< HEAD:aux/parasph/src/numberfile
-#define BUILDNUM 3934
-=======
-#define BUILDNUM 3926
->>>>>>> 381dc562b9881a82438b3eb3efd907d6c6d5b2e9:aux/parasph/src/numberfile
+#define BUILDNUM 3935
