@@ -288,7 +288,9 @@ int main(int argc, char* argv[])
    ///
    /// assign flaws to particles
    ///
-   const size_t noTotSurfFlaws = std::max(10 * noSurfParts, 10000000lu);
+   size_t noTotSurfFlaws = 0;
+   if ( noSurfParts > 0 )
+     noTotSurfFlaws = std::max(10 * noSurfParts, 10000000lu);
 
    std::cerr << "assigning " << noTotSurfFlaws << " flaws to " << noSurfParts
              << " surface particles\n";
