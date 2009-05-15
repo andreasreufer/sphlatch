@@ -84,7 +84,7 @@ namespace po = boost::program_options;
 
 #include "typedefs.h"
 typedef sphlatch::fType fType;
-typedef sphlatch::valueRefType fRefType;
+typedef sphlatch::fRefType fRefType;
 
 typedef sphlatch::valvectType valvectType;
 typedef sphlatch::valvectRefType valvectRefType;
