@@ -6514,6 +6514,7 @@ C       The constants are functions of zbar, abar and various
 C       physical constants.
 C
 C****************************************** last mod  slt 4/89 *********
+C****************************************** last mod  are 1/09 *********
 C
        IMPLICIT DOUBLE PRECISION (A-H,O-Z)
 C                    inputs
