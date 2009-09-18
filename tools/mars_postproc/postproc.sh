@@ -72,8 +72,24 @@ do
     if [ ! -e gifs/${FILEPRFX}.gif ]
     then
       touch gifs/${FILEPRFX}.gif
+      if [ "$SURFDIM" = "2.0m" ]
+      then
+        ZOOM="4"
+        PTSIZE="0.2"
+      fi
+      if [ "$SURFDIM" = "4.0m" ]
+      then
+        ZOOM="2"
+        PTSIZE="0.4"
+      fi
+      if [ "$SURFDIM" = "8.0m" ]
+      then
+        ZOOM="1"
+        PTSIZE="0.8"
+      fi
+
       TIMESTR=`h5part_readattr -i $FILEPRFX.h5part -k TIME|cut -c 7-17`
-      ./scatterplot.py ${FILEPRFX}_cut.txt $TIMESTR
+      ./scatterplot.py ${FILEPRFX}_cut.txt $TIMESTR $ZOOM $PTSIZE
       convert ${FILEPRFX}_cut.txt.png gifs/$FILEPRFX.gif
       rm ${FILEPRFX}_cut.txt.png
     fi

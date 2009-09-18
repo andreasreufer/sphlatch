@@ -1,4 +1,4 @@
-#!/usr/bin/env ipython
+#!/usr/bin/python
 import matplotlib
 matplotlib.use('Agg')
 
