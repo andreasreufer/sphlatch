@@ -7,7 +7,7 @@
 //#define SPHLATCH_SINGLEPREC
 
 // enable parallel version
-#define SPHLATCH_PARALLEL
+//#define SPHLATCH_PARALLEL
 
 //#define SPHLATCH_RANKSPACESERIALIZE
 
@@ -70,6 +70,22 @@ typedef till_type                        eos_type;
 using namespace boost::assign;
 using namespace sphlatch::vectindices;
 
+struct layerT
+{
+   identType            mat;
+   fType                top, bottom;
+
+   // acoef has to be divided by 2h for use in the Benz&Asphaug fracture model
+   fType                rho, U, acoef, young, dam;
+
+   size_t               noParts;
+   size_t               noFlaws;
+
+   till_type::paramType matParams;
+
+   fType                weibKV, weibExp;
+};
+
 int main(int argc, char* argv[])
 {
    MPI::Init(argc, argv);
@@ -79,8 +95,10 @@ int main(int argc, char* argv[])
    ("help,h", "Produces this Help")
    ("output-file,o", po::value<std::string>(), "output  file")
    ("input-file,i", po::value<std::string>(), "input   file")
-   ("surf-thick,t", po::value<fType>(), "rel. surf. thickness")
-   ("surf-dam,d", po::value<fType>(), "ini..surf. damage")
+   ("layA-thick,a", po::value<fType>(), "surface dunite layer thickness")
+   ("layB-thick,b", po::value<fType>(), "buried  ice    layer thickness")
+   //("layC-thick,c", po::value<fType>(), "buried  dunite layer thickness")
+   ("dun-dam,d", po::value<fType>(), "initial dunite damage")
    ("scale,s", po::value<fType>(), "scaling constant    ");
 
    po::variables_map VMap;
@@ -95,9 +113,11 @@ int main(int argc, char* argv[])
 
    if (!VMap.count("output-file") ||
        !VMap.count("input-file") ||
+       !VMap.count("layA-thick") ||
+       !VMap.count("layB-thick") ||
+       //!VMap.count("layC-thick") ||
        !VMap.count("scale") ||
-       !VMap.count("surf-thick") ||
-       !VMap.count("surf-dam"))
+       !VMap.count("dun-dam"))
    {
       std::cerr << Options << std::endl;
       return(EXIT_FAILURE);
@@ -183,98 +203,106 @@ int main(int argc, char* argv[])
       m(k) *= volScale;
    }
 
-   fType       surfRelThickness = VMap["surf-thick"].as<fType>();
-   const fType surfThickness    = surfRelThickness * rScale;
-
-   const fType surfDamage = VMap["surf-dam"].as<fType>();
+   ///
+   /// define materials
+   ///
 
 #ifdef SPHLATCH_ANEOS
    /// ice: 2
-   identType baseId = 2;
+   identType iceId = 2;
 #else
    /// ice: 17
-   identType baseId = 17;
+   identType iceId = 17;
 #endif
-   till_type::paramType baseParams = Tillotson.getMatParams(17);
+   till_type::paramType iceParams = Tillotson.getMatParams(17);
 
    /// dunite: 4
-   identType            surfId     = 4;
-   till_type::paramType surfParams = Tillotson.getMatParams(surfId);
+   identType            dunId     = 4;
+   till_type::paramType dunParams = Tillotson.getMatParams(dunId);
 
 
 #ifdef SPHLATCH_ANEOS
    const fType KtoEV = 1.1604505e4;
    fType       dummy;
 
-   const fType baseRhoGuess = 1.10;
-   const fType baseT        = 240 / KtoEV;
-   fType       baseU        = 0.;
-   EOS.getSpecEnergy(baseRhoGuess, baseT, baseId, dummy, dummy, baseU);
+   const fType iceRhoGuess = 1.10;
+   const fType iceT        = 240 / KtoEV;
+   fType       iceU        = 0.;
+   EOS.getSpecEnergy(iceRhoGuess, iceT, iceId, dummy, dummy, iceU);
 
-   const fType surfRhoGuess = 3.32;
-   const fType surfT        = 240 / KtoEV;
-   fType       surfU        = 0.;
-   EOS.getSpecEnergy(surfRhoGuess, surfT, surfId, dummy, dummy, surfU);
+   const fType dunRhoGuess = 3.32;
+   const fType dunT        = 240 / KtoEV;
+   fType       dunU        = 0.;
+   EOS.getSpecEnergy(dunRhoGuess, dunT, dunId, dummy, dummy, dunU);
 #else
-   const fType baseU = 5.04e9;
-   const fType surfU = 1.72e9;
+   const fType iceU = 5.04e9;
+   const fType dunU = 1.72e9;
 #endif
+   const fType iceDamage = 0.;
+   const fType dunDamage = VMap["dun-dam"].as<fType>();
+
+   std::vector<layerT> layers(3);
+
+   std::cerr << "get equilibrium densities for ice ...";
+   const fType iceRho   = EOS.findRho(iceU, iceId, 1.e2, 1.e1, 0.50, 10.0);
+   const fType iceAcoef = 0.4 * sqrt(
+      (iceParams.A + (4. / 3.) * iceParams.xmu) /
+      iceParams.rho0);
+   const fType iceYoung = 9. * iceParams.A * iceParams.xmu /
+                          (3. * iceParams.A + iceParams.xmu);
+
+   std::cerr << " done!\n";
+   std::cerr << "get equilibrium densities for dunite ...";
+
+   const fType dunRho   = EOS.findRho(dunU, dunId, 1.e2, 1.e1, 0.10, 10.0);
+   const fType dunAcoef = 0.4 * sqrt(
+      (dunParams.A + (4. / 3.) * dunParams.xmu) /
+      dunParams.rho0);
+   const fType dunYoung = 9. * dunParams.A * dunParams.xmu /
+                          (3. * dunParams.A + dunParams.xmu);
+   std::cerr << " done!\n";
+
+   layers[0].mat       = dunId;
+   layers[0].matParams = dunParams;
+   layers[0].top       = 0.;
+   layers[0].bottom    = -VMap["layA-thick"].as<fType>();
+   layers[0].rho       = dunRho;
+   layers[0].U         = dunU;
+   layers[0].acoef     = dunAcoef;
+   layers[0].young     = dunYoung;
+   layers[0].dam       = dunDamage;
+   layers[0].noParts   = 0;
+
+   layers[1].mat       = iceId;
+   layers[1].matParams = iceParams;
+   layers[1].top       = layers[0].bottom;
+   layers[1].bottom    = layers[1].top - VMap["layB-thick"].as<fType>();
+   layers[1].rho       = iceRho;
+   layers[1].U         = iceU;
+   layers[1].acoef     = iceAcoef;
+   layers[1].young     = iceYoung;
+   layers[1].dam       = iceDamage;
+   layers[1].noParts   = 0;
+
+   layers[2].mat       = dunId;
+   layers[2].matParams = dunParams;
+   layers[2].top       = layers[1].bottom;
+   layers[2].bottom    = -std::numeric_limits<fType>::infinity();
+   layers[2].rho       = dunRho;
+   layers[2].U         = dunU;
+   layers[2].acoef     = dunAcoef;
+   layers[2].young     = dunYoung;
+   layers[2].dam       = dunDamage;
+   layers[2].noParts   = 0;
+
 
    ///
-   /// set particle mass by multiplyin the particle volume
+   /// set particle mass by multiplying the particle volume
    /// with the desired density
    ///
-
-   const fType surfRho = EOS.findRho(surfU, surfId, 1.e2, 1.e1, 0.10, 10.0);
-   std::cout << "surface   energy: " << surfU << "   equ. density: " <<
-   surfRho << "\n";
-
-   const fType baseRho = EOS.findRho(baseU, baseId, 2.e4, 1.e2, 0.10, 10.0);
-   std::cout << "base      energy: " << baseU << "   equ. density: " <<
-   baseRho << "\n";
-
-   size_t noSurfParts = 0, noBaseParts = 0;
+   std::vector<size_t> layerID(noParts);
    for (size_t k = 0; k < noParts; k++)
    {
-      if (pos(k, Z) < -surfThickness)
-      {
-         ///
-         /// the unflawed base
-         ///
-         m(k)  *= baseRho;
-         rho(k) = baseRho;
-
-         u(k)   = baseU;
-         mat(k) = baseId;
-
-         acoef(k) = 0.4 * sqrt((baseParams.A + (4. / 3.) * baseParams.xmu) /
-                               baseParams.rho0) / (2. * h(k));
-         young(k) = 9. * baseParams.A * baseParams.xmu
-                    / (3. * baseParams.A + baseParams.xmu);
-
-         dam(k) = 0.0;
-         noBaseParts++;
-      }
-      else
-      {
-         ///
-         /// the flawed surface
-         ///
-         m(k)  *= surfRho;
-         rho(k) = surfRho;
-
-         u(k)   = surfU;
-         mat(k) = surfId;
-
-         acoef(k) = 0.4 * sqrt((surfParams.A + (4. / 3.) * surfParams.xmu) /
-                               surfParams.rho0) / (2. * h(k));
-         young(k) = 9. * surfParams.A * surfParams.xmu
-                    / (3. * surfParams.A + surfParams.xmu);
-
-         dam(k) = surfDamage;
-         noSurfParts++;
-      }
-
       ///
       /// no initial stress
       ///
@@ -283,105 +311,85 @@ int main(int argc, char* argv[])
       S(k, XZ) = 0.;
       S(k, YY) = 0.;
       S(k, YZ) = 0.;
-   }
 
-   ///
-   /// assign flaws to particles
-   ///
-   size_t noTotSurfFlaws = 0;
-   if ( noSurfParts > 0 )
-     noTotSurfFlaws = std::max(10 * noSurfParts, 10000000lu);
-
-   std::cerr << "assigning " << noTotSurfFlaws << " flaws to " << noSurfParts
-             << " surface particles\n";
-
-   ///
-   /// the typical surface volume
-   ///
-   const fType surfVol = surfThickness * surfThickness * surfThickness;
-
-   ///
-   /// set surface flaws
-   /// factor 300 from Benz setup-collision.f
-   ///
-   const fType surfWeibKV  = 300. / (surfParams.cweib * surfVol);
-   const fType surfWeibExp = 1. / surfParams.pweib;
-
-   boost::progress_display flawsSurfProgress(noTotSurfFlaws);
-   size_t noSetFlaws = 0;
-   while (noSetFlaws < noTotSurfFlaws)
-   {
-      const size_t i = lrint(noParts * (rand()
-                                        / static_cast<double>(RAND_MAX)));
-
-      if (mat(i) == surfId)
+      size_t layIdx = 0;
+      layerID[k] = 0;
+      for (size_t i = 0; i < 3; i++)
       {
-         const fType curEps =
-            pow(surfWeibKV * (static_cast<fType>(noSetFlaws) + 1), surfWeibExp);
-
-         ///
-         /// the first flaw is always the weakest,
-         /// as noSetFlaws rises monotonously
-         ///
-         if (noflaws(i) == 0)
-            epsmin(i) = curEps;
-
-         noflaws(i)++;
-         ++flawsSurfProgress;
-
-         /// just for temporary storage
-         mweib(i) = curEps;
-
-         noSetFlaws++;
+         if ((pos(k, Z) < layers[i].top) &&
+             (pos(k, Z) > layers[i].bottom))
+         {
+            layIdx     = i;
+            layerID[k] = i;
+            break;
+         }
       }
+
+      m(k)  *= layers[layIdx].rho;
+      rho(k) = layers[layIdx].rho;
+
+      u(k)   = layers[layIdx].U;
+      mat(k) = layers[layIdx].mat;
+      dam(k) = layers[layIdx].dam;
+
+      acoef(k) = layers[layIdx].acoef / (2 * h(k));
+      young(k) = layers[layIdx].young;
+
+      layers[layIdx].noParts++;
    }
 
-   ///
-   /// assign flaws to particles
-   ///
-   const size_t noTotBaseFlaws = std::max(10 * noBaseParts, 10000000lu);
-
-   std::cerr << "assigning " << noTotBaseFlaws << " flaws to " << noBaseParts
-             << " base    particles\n";
-
-   ///
-   /// the typical base volume
-   ///
-   const fType baseVol = pow(rScale - surfThickness, 3.);
-
-   ///
-   /// set base flaws
-   /// factor 300 from Benz setup-collision.f
-   ///
-   const fType baseWeibKV  = 300. / (baseParams.cweib * baseVol);
-   const fType baseWeibExp = 1. / baseParams.pweib;
-
-   boost::progress_display flawsBaseProgress(noTotBaseFlaws);
-   noSetFlaws = 0;
-   while (noSetFlaws < noTotBaseFlaws)
+   for (size_t i = 0; i < 3; i++)
    {
-      const size_t i = lrint(noParts * (rand()
-                                        / static_cast<double>(RAND_MAX)));
-
-      if (mat(i) == baseId)
+      if (layers[i].noParts > 0)
       {
-         const fType curEps =
-            pow(baseWeibKV * (static_cast<fType>(noSetFlaws) + 1), baseWeibExp);
+         layers[i].noFlaws = std::max(10 * layers[i].noParts, 10000000lu);
+
+         std::cerr << "assigning " << layers[i].noFlaws << " flaws to layer " << i
+                   << " with " << layers[i].noParts << " particles\n";
+
+         const fType typVol = pow(fabs(layers[i].top - layers[i].bottom), 3);
 
          ///
-         /// the first flaw is always the weakest,
-         /// as noSetFlaws rises monotonously
+         /// set surface flaws
+         /// factor 300 from Benz setup-collision.f
          ///
-         if (noflaws(i) == 0)
-            epsmin(i) = curEps;
+         const fType weibKV  = 300. / (layers[i].matParams.cweib * typVol);
+         const fType weibExp = 1. / layers[i].matParams.pweib;
 
-         noflaws(i)++;
-         ++flawsBaseProgress;
+         layers[i].weibKV  = weibKV;
+         layers[i].weibExp = weibExp;
 
-         /// just for temporary storage
-         mweib(i) = curEps;
+         boost::progress_display flawsProgress(layers[i].noFlaws);
+         size_t noSetFlaws = 0;
+         while (noSetFlaws < layers[i].noFlaws)
+         {
+            const size_t j =
+               lrint(noParts * (rand() / static_cast<double>(RAND_MAX)));
 
-         noSetFlaws++;
+            if (layerID[j] == i)
+            {
+               const fType curEps = pow(
+                  weibKV *
+                  (static_cast<fType>(noSetFlaws) + 1.),
+                  weibExp);
+
+               ///
+               /// the first flaw is always the weakest,
+               /// as noSetFlaws rises monotonously
+               ///
+               if (noflaws(j) == 0)
+                  epsmin(j) = curEps;
+
+               noflaws(j)++;
+               ++flawsProgress;
+               noSetFlaws++;
+
+               ///
+               /// just for temporary storage
+               ///
+               mweib(j) = curEps;
+            }
+         }
       }
    }
 
@@ -396,21 +404,18 @@ int main(int argc, char* argv[])
       if (noflaws(k) < 1)
       {
          noflaws(k) = 1;
-         if (mat(k) == surfId)
-            epsmin(k) =
-               pow(surfWeibKV * static_cast<fType>(noTotSurfFlaws + 1),
-                   surfWeibExp);
-         else
-            epsmin(k) =
-               pow(baseWeibKV * static_cast<fType>(noTotBaseFlaws + 1),
-                   baseWeibExp);
+         const size_t curLay = layerID[k];
+
+         epsmin(k) = pow(layers[curLay].weibKV * static_cast<fType>(
+                            layers[curLay].noFlaws + 1), layers[curLay].weibExp);
       }
 
       if (noflaws(k) == 1)
          mweib(k) = 1.;
       else
-         mweib(k) = log(static_cast<fType>(noflaws(k)))
-                    / log(mweib(k) / epsmin(k));
+         mweib(k) =
+            log(static_cast<fType>(noflaws(k)))
+            / log(mweib(k) / epsmin(k));
 
       ///
       /// no flaws
@@ -422,16 +427,20 @@ int main(int argc, char* argv[])
 
    sphlatch::quantsType saveQuants;
    saveQuants.vects   += &pos, &vel, &S;
-   saveQuants.scalars += &m, &h, &rho, &u, &dam, &epsmin, &acoef, &mweib,
+   saveQuants.scalars += &m, &h, &rho, &u,
+   &dam, &epsmin, &acoef, &mweib,
    &young;
    saveQuants.ints += &id, &mat, &noflaws;
 
    PartManager.step = 0;
    PartManager.attributes["time"] = 0.;
 
-   std::string outputFilename = VMap["output-file"].as<std::string>();
-   std::cerr << " -> " << outputFilename << "\n";
-   IOManager.saveDump(outputFilename, saveQuants);
+   std::string outputFilename =
+      VMap["output-file"].as<std::string>();
+   std::cerr << " -> " << outputFilename <<
+   "\n";
+   IOManager.saveDump(outputFilename,
+                      saveQuants);
    std::cerr << "particles saved ... \n";
 
    MPI::Finalize();
