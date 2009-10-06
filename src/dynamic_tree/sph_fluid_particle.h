@@ -13,11 +13,13 @@
 #include "typedefs.h"
 
 namespace sphlatch {
-/*namespace indices
+namespace indices
 {
-enum 3Dvect
-{ X, Y, Z };
-};*/
+enum 3D vect
+{
+   X, Y, Z
+};
+};
 
 ///
 /// basic SPH fluid ghost particle class

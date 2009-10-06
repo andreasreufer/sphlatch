@@ -129,7 +129,7 @@ void BHTreeDump::ptrRecursor()
    if (curPtr->isParticle == false)
    {
       std::cout << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
-      std::cout << "  noParts " << static_cast<gcllPtrT>(curPtr)->noParts << "\n";
+      //std::cout << "  noParts " << static_cast<gcllPtrT>(curPtr)->noParts << "\n";
 
       for (size_t i = 0; i < 8; i++)
          std::cout << " c" << i << " -> " <<

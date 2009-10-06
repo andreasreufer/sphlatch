@@ -27,6 +27,7 @@ class treeGhost;
 class particleNode : public genericNode {
 public:
    typedef treeGhost*   partPtrT;
+   
    partPtrT partPtr;
    vect3dT  pos;
    fType    m;
@@ -37,7 +38,7 @@ public:
    void clear();
    void update();
 
-#ifdef SPHLATCH_PADTO64BYTES
+#ifdef SPHLATCH_PADD64
 private:
    char pad[0];
 #endif
@@ -56,10 +57,10 @@ void particleNode::clear()
 
 void particleNode::update()
 {
-   assert(partPtr != NULL);
-   pos = partPtr->pos;
-   m   = partPtr->m;
+   pos     = partPtr->pos;
+   m       = partPtr->m;
 }
+
 
 };
 #endif

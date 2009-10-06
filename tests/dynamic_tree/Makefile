@@ -1,4 +1,4 @@
-all: treefun nodesize buildcz
+all: treefun nodesize buildcz nodesfun workertest
 
 treefun:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \

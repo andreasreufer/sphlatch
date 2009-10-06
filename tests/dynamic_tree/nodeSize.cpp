@@ -3,7 +3,7 @@
 
 #include <omp.h>
 
-#define SPHLATCH_PADTO64BYTES
+#define SPHLATCH_PADD64
 #include "bhtree_dynamic.h"
 typedef sphlatch::BHTree               treeType;
 
@@ -14,7 +14,7 @@ typedef sphlatch::monopoleCellNode     monoType;
 typedef sphlatch::quadrupoleCellNode   cellType;
 typedef sphlatch::costzoneCellNode     czllType;
 
-typedef sphlatch::treeParticle         partType;
+typedef sphlatch::treePart         partType;
 
 int main()
 {

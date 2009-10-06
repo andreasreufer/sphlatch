@@ -41,9 +41,9 @@ public:
    typedef BHTree::czllT              czllT;
    typedef BHTree::czllPtrT           czllPtrT;
 
-   typedef BHTree::czllPtrListT       czllPtrListT;
+   /*typedef BHTree::czllPtrListT       czllPtrListT;
    typedef BHTree::czllPtrListItrT    czllPtrListItrT;
-   typedef BHTree::czllPtrListCItrT   czllPtrListCItrT;
+   typedef BHTree::czllPtrListCItrT   czllPtrListCItrT;*/
 
    BHTreeWorker(const BHTreeWorker& _worker);
    BHTreeWorker(const treePtrT _treePtr);
@@ -164,6 +164,10 @@ bool BHTreeWorker::pointInsideCell(const vect3dT& _pos, nodePtrT _nodePtr)
           all(static_cast<gcllPtrT>(_nodePtr)->cen - _pos > -hclSz));
 }
 
+///
+/// get the cell octant for a position, no checks are performed whether
+/// the position is actually in the cell
+///
 size_t BHTreeWorker::getOctant(const vect3dT& _pos)
 {
    size_t targetOctant = 0;
@@ -175,6 +179,10 @@ size_t BHTreeWorker::getOctant(const vect3dT& _pos)
    return(targetOctant);
 }
 
+///
+/// get the cell octant for a position, no checks are performed whether
+/// the position is actually in the cell
+///
 size_t BHTreeWorker::getOctant(const vect3dT& _pos, const nodePtrT _nodePtr)
 {
    size_t targetOctant = 0;
@@ -186,6 +194,9 @@ size_t BHTreeWorker::getOctant(const vect3dT& _pos, const nodePtrT _nodePtr)
    return(targetOctant);
 }
 
+///
+/// get the child index for a node ptr
+///
 size_t BHTreeWorker::getChildNo(nodePtrT _nodePtr)
 {
    for (size_t i = 0; i < 8; i++)
@@ -196,6 +207,9 @@ size_t BHTreeWorker::getChildNo(nodePtrT _nodePtr)
    return(8);
 }
 
+///
+/// transforms a CZ cell into a cell
+///
 void BHTreeWorker::czllToCell(nodePtrT _nodePtr)
 {
    const cellPtrT newCellPtr = new cellT;
@@ -205,6 +219,9 @@ void BHTreeWorker::czllToCell(nodePtrT _nodePtr)
    _nodePtr = newCellPtr;
 }
 
+///
+/// transforms a cell into a CZ cell
+///
 void BHTreeWorker::cellToCZll(nodePtrT _nodePtr)
 {
    const czllPtrT newCZllPtr = new czllT;
@@ -235,8 +252,8 @@ void BHTreeWorker::partToCell(nodePtrT _cellPtr, const size_t _oct)
    newCellPtr->inheritCellPos(_oct);
 
    // add cost of the particle to be added
-   static_cast<gcllPtrT>(newCellPtr)->cost    = resPartPtr->partPtr->cost;
-   static_cast<gcllPtrT>(newCellPtr)->noParts = 1;
+   //static_cast<gcllPtrT>(newCellPtr)->cost    = resPartPtr->partPtr->cost;
+   //static_cast<gcllPtrT>(newCellPtr)->noParts = 1;
 
    // wire particle to new node
    const size_t newOct = getOctant(resPartPtr->pos, newCellPtr);

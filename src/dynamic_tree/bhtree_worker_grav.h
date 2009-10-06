@@ -36,11 +36,12 @@ private:
 
 void BHTreeWorkerGrav::calcGravParticle(const size_t _i)
 {
-   const fType posX = pos(_i, X);
+   /*const fType posX = pos(_i, X);
    const fType posY = pos(_i, Y);
-   const fType posZ = pos(_i, Z);
+   const fType posZ = pos(_i, Z);*/
 
-   nodePtrT const curPartPtr = treePtr->partProxies[_i];
+   //nodePtrT const curPartPtr = treePtr->partProxies[_i];
+   nodePtrT const curPartPtr = NULL;
 
    fType accX = 0., accY = 0., accZ = 0.;
 
@@ -70,9 +71,9 @@ void BHTreeWorkerGrav::calcGravParticle(const size_t _i)
       }
    } while (curPtr != NULL);
 
-   acc(_i, X) += accX;
+   /*acc(_i, X) += accX;
    acc(_i, Y) += accY;
-   acc(_i, Z) += accZ;
+   acc(_i, Z) += accZ;*/
 }
 };
 

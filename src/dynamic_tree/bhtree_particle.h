@@ -30,7 +30,7 @@ public:
    idType id;
    fType  cost;
 
-#ifdef SPHLATCH_PADTO64BYTES
+#ifdef SPHLATCH_PADD64
 private:
    char pad[8];
 #endif

@@ -52,12 +52,6 @@ public:
    typedef costzoneCellNode               czllT;
    typedef costzoneCellNode*              czllPtrT;
 
-   typedef std::list<czllPtrT>            czllPtrListT;
-   typedef czllPtrListT::iterator         czllPtrListItrT;
-   typedef czllPtrListT::const_iterator   czllPtrListCItrT;
-
-   typedef std::vector<pnodPtrT>          pnodPtrVectT;
-
    BHTree();
    ~BHTree();
 
@@ -69,7 +63,11 @@ private:
 protected:
    nodePtrT rootPtr;
 
-   czllPtrListT CZbottomCells;
+   ///
+   /// first and last (local) CZ cell at bottom
+   ///
+   czllPtrT btStart, btEnd;
+   czllPtrT lbtStart, lbtEnd;
 
    size_t noCells, noParts;
 
@@ -87,7 +85,11 @@ BHTree::BHTree() :
    /// cells list
    ///
    rootPtr = new czllT;
-   CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
+   
+   btStart = static_cast<czllPtrT>(rootPtr);
+   btEnd   = static_cast<czllPtrT>(rootPtr);
+   lbtStart = NULL;
+   lbtEnd   = NULL;
 
    static_cast<czllPtrT>(rootPtr)->clear();
    static_cast<czllPtrT>(rootPtr)->atBottom = true;
@@ -95,9 +97,7 @@ BHTree::BHTree() :
    static_cast<czllPtrT>(rootPtr)->ident    = 0;
    noCells++;
 
-   CZbottomCells.push_back(static_cast<czllPtrT>(rootPtr));
-   static_cast<czllPtrT>(rootPtr)->listItr = CZbottomCells.begin();
-
+   // just temporary
    static_cast<czllPtrT>(rootPtr)->cen  = 0.5, 0.5, 0.5;
    static_cast<czllPtrT>(rootPtr)->clSz = 1.;
 

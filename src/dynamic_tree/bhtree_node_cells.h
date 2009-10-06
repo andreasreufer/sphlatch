@@ -26,9 +26,10 @@ public:
    nodePtr child[8];
 
    vect3dT cen;
-   fType   clSz, cost;
+   fType   clSz;
 
-   countsType noParts;
+   // what for should this be good?
+   //countsType noParts;
 
    genericCellNode() { }
    ~genericCellNode() { }
@@ -54,8 +55,8 @@ public:
 
    void clear();
 
-#ifdef SPHLATCH_PADTO64BYTES
-   char pad[4];
+#ifdef SPHLATCH_PADD64
+   char pad[0];
 #endif
 };
 
@@ -77,8 +78,8 @@ public:
    void initFromCZll(czllT& _czll);
 
 private:
-#ifdef SPHLATCH_PADTO64BYTES
-   char pad[16];
+#ifdef SPHLATCH_PADD64
+   char pad[46];
 #endif
 };
 
@@ -89,12 +90,12 @@ class costzoneCellNode : public quadrupoleCellNode {
 public:
    typedef costzoneCellNode*     czllPtrT;
    typedef quadrupoleCellNode*   cellPtrT;
-   typedef std::list<czllPtrT>   czllPtrListT;
 
    genericNodePtrT neighbour[27];
    idType          domain;
 
-   czllPtrListT::iterator listItr;
+   fType      absCost, relCost;
+   countsType noParts;
 
    costzoneCellNode() { }
    ~costzoneCellNode() { }
@@ -104,12 +105,9 @@ public:
 
    void pushdownNeighbours();
 
-   partsIndexListT partsList;
-   size_t noPartsNoAlloc;
-
 private:
-#ifdef SPHLATCH_PADTO64BYTES
-   char pad[4];
+#ifdef SPHLATCH_PADD64
+   char pad[8];
 #endif
 };
 
@@ -129,9 +127,6 @@ void genericCellNode::clear()
 
    cen  = 0., 0., 0.;
    clSz = 0.;
-
-   cost    = 0.;
-   noParts = 0;
 }
 
 void monopoleCellNode::clear()
@@ -163,8 +158,12 @@ void costzoneCellNode::clear()
       neighbour[i] = NULL;
    }
 
-   domain = 0;
-   isCZ   = true;
+   domain  = 0;
+   noParts = 0;
+   absCost = 0.;
+   relCost = 0.;
+
+   isCZ = true;
 }
 
 void genericCellNode::inheritCellPos(size_t _n)
@@ -223,6 +222,9 @@ void costzoneCellNode::initFromCell(quadrupoleCellNode& _cell)
 
    domain   = 0;
    atBottom = false;
+
+   absCost = 0.;
+   relCost = 0.;
 }
 
 ///

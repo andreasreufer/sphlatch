@@ -43,7 +43,8 @@ public:
    /// indicates whether a particle node is settled
    /// at the correct position in the tree
    ///
-   bool isSettled   : 1;
+   bool isSettled    : 1;
+   bool needsUpdate  : 1;
 
    genericNode() { }
    ~genericNode() { }
@@ -68,7 +69,8 @@ void genericNode::clear()
    atBottom = false;
    neighSet = false;
 
-   isSettled = false;
+   isSettled   = false;
+   needsUpdate = true;
 }
 
 genericNode::genericNodePtrT genericNode::operator*()
