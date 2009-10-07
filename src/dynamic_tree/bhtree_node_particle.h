@@ -1,8 +1,6 @@
 #ifndef BHTREE_NODE_PARTICLE_H
 #define BHTREE_NODE_PARTICLE_H
 
-//#define SPHLATCH_PADTO64BYTES
-
 /*
  *  bhtree_node_particle.h
  *

@@ -38,7 +38,7 @@ int main()
   treeType& Tree(treeType::instance());
   sleep(1);
 
-  /*IOManager.loadDump("test.h5part");
+  //IOManager.loadDump("test.h5part");
 
   dumpType dumper(&Tree);
   dumper.dotDump("test.dot");
@@ -49,10 +49,10 @@ int main()
 #pragma omp parallel for firstprivate(worker)
   for (int i = 0; i < 8; i++)
   {
-    //const size_t tid = omp_get_thread_num();
-    //std::cout << tid << ":" << i << ":" << &worker << "\n";
+    const size_t tid = omp_get_thread_num();
+    std::cout << tid << ":" << i << ":" << &worker << "\n";
   }
-  sleep(1);*/
+  sleep(1);
   return 0;
 }
 

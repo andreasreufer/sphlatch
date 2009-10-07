@@ -1,8 +1,6 @@
 #ifndef BHTREE_PARTICLE_H
 #define BHTREE_PARTICLE_H
 
-//#define SPHLATCH_PADTO64BYTES
-
 /*
  *  bhtree_particle.h
  *
@@ -12,6 +10,7 @@
  *
  */
 
+#include "bhtree_nodes.h"
 #include "typedefs.h"
 
 namespace sphlatch {

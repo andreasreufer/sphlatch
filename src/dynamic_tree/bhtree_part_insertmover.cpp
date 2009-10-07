@@ -1,15 +1,15 @@
-#ifndef BHTREE_PART_INSERTMOVER_H
-#define BHTREE_PART_INSERTMOVER_H
+#ifndef BHTREE_PART_INSERTMOVER_CPP
+#define BHTREE_PART_INSERTMOVER_CPP
 
 /*
- *  bhtree_part_insertmover.h
+ *  bhtree_part_insertmover.cpp
  *
  *  Created by Andreas Reufer on 02.12.08.
  *  Copyright 2007 University of Berne. All rights reserved.
  *
  */
 
-#include "bhtree_worker.h"
+#include "bhtree_worker.cpp"
 //#include "bhtree_errhandler_tmp.h"
 
 namespace sphlatch {
@@ -68,8 +68,11 @@ void BHTreePartsInsertMover::insert(partT& _part)
    /// is not cleaned before use, this particle is not found in
    /// a tree walk, as it is not yet wired as a child of a cell)
    ///
-   newPartPtr->parent = treePtr->rootPtr;
-   static_cast<czllPtrT>(newPartPtr->parent)->noParts++;
+   
+   //newPartPtr->parent = treePtr->rootPtr;
+   //static_cast<czllPtrT>(newPartPtr->parent)->noParts++;
+
+   // wire to 
 
    //pushUpAndToCZsingle(newPartPtr);
 }

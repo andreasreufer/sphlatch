@@ -83,13 +83,17 @@ private:
 #endif
 };
 
+
 ///
 /// a quadrupole costzone cell
 ///
+class particleNode;
 class costzoneCellNode : public quadrupoleCellNode {
 public:
-   typedef costzoneCellNode*     czllPtrT;
+   typedef genericNode*          nodePtrT;
    typedef quadrupoleCellNode*   cellPtrT;
+   typedef costzoneCellNode*     czllPtrT;
+   typedef particleNode*         pnodPtrT;
 
    genericNodePtrT neighbour[27];
    idType          domain;
@@ -97,17 +101,22 @@ public:
    fType      absCost, relCost;
    countsType noParts;
 
+   pnodPtrT adopFrst, adopLast;
+   nodePtrT chldFrst, chldLast;
+
    costzoneCellNode() { }
    ~costzoneCellNode() { }
 
    void clear();
    void initFromCell(cellT& _cell);
 
+   void adopt(pnodPtrT _pnod);
+
    void pushdownNeighbours();
 
 private:
 #ifdef SPHLATCH_PADD64
-   char pad[8];
+   char pad[40];
 #endif
 };
 
@@ -376,6 +385,17 @@ void costzoneCellNode::pushdownNeighbours()
    /// childs neighbours are set in this cell
    ///
    neighSet = true;
+}
+
+void costzoneCellNode::adopt(pnodPtrT _pnod)
+{
+   if (adopFrst == NULL)
+      adopFrst = _pnod;
+   else
+      adopLast->next = _pnod;
+
+   _pnod->next = NULL;
+   adopLast    = _pnod;
 }
 }
 

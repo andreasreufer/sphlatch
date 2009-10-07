@@ -1,8 +1,8 @@
-#ifndef BHTREE_WORKER_TREEDUMP_H
-#define BHTREE_WORKER_TREEDUMP_H
+#ifndef BHTREE_WORKER_TREEDUMP_CPP
+#define BHTREE_WORKER_TREEDUMP_CPP
 
 /*
- *  bhtree_worker_treedump.h
+ *  bhtree_worker_treedump.cpp
  *
  *  Created by Andreas Reufer on 14.12.08.
  *  Copyright 2007 University of Berne. All rights reserved.
@@ -10,7 +10,7 @@
  */
 
 #include <fstream>
-#include "bhtree_worker.h"
+#include "bhtree_worker.cpp"
 
 namespace sphlatch {
 class BHTreeDump : public BHTreeWorker {
@@ -129,7 +129,6 @@ void BHTreeDump::ptrRecursor()
    if (curPtr->isParticle == false)
    {
       std::cout << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
-      //std::cout << "  noParts " << static_cast<gcllPtrT>(curPtr)->noParts << "\n";
 
       for (size_t i = 0; i < 8; i++)
          std::cout << " c" << i << " -> " <<

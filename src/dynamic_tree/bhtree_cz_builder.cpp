@@ -1,8 +1,8 @@
-#ifndef BHTREE_CZ_BUILDER_H
-#define BHTREE_CZ_BUILDER_H
+#ifndef BHTREE_CZ_BUILDER_CPP
+#define BHTREE_CZ_BUILDER_CPP
 
 /*
- *  bhtree_cz_builder.h
+ *  bhtree_cz_builder.cpp
  *
  *  Created by Andreas Reufer on 04.12.08.
  *  Copyright 2008 University of Berne. All rights reserved.
@@ -10,7 +10,7 @@
  */
 
 #include "typedefs.h"
-#include "bhtree_worker.h"
+#include "bhtree_worker.cpp"
 #include "communication_manager.h"
 typedef sphlatch::CommunicationManager   commT;
 

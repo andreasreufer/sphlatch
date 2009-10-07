@@ -1,8 +1,8 @@
-#ifndef BHTREE_WORKER_GRAV_H
-#define BHTREE_WORKER_GRAV_H
+#ifndef BHTREE_WORKER_GRAV_CPP
+#define BHTREE_WORKER_GRAV_CPP
 
 /*
- *  bhtree_worker_grav.h
+ *  bhtree_worker_grav.cpp
  *
  *  Created by Andreas Reufer on 14.12.08.
  *  Copyright 2007 University of Berne. All rights reserved.

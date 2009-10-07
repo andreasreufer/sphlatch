@@ -4,8 +4,11 @@
 #include <omp.h>
 
 #define SPHLATCH_PADD64
-#include "bhtree_dynamic.h"
-typedef sphlatch::BHTree               treeType;
+//include "bhtree_dynamic.h"
+//#include "bhtree_nodes.h"
+//#include "bhtree_particle.h"
+//typedef sphlatch::BHTree               treeType;
+#include "bhtree.cpp"
 
 typedef sphlatch::genericNode          nodeType;
 typedef sphlatch::particleNode         pnodType;
