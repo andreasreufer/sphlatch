@@ -13,19 +13,21 @@
 #include "typedefs.h"
 
 namespace sphlatch {
+
 class treeGhost;
-
 class genericNode;
-
 class genericCellNode;
 class monopoleCellNode;
 class quadrupoleCellNode;
 class costzoneCellNode;
+class particleNode;
 
+typedef treeGhost             treeghoT;
+typedef treeGhost*            treeghoPtrT;
 typedef genericNode           nodeT;
 typedef genericNode*          nodePtrT;
-typedef genericCellNode       cellT;
-typedef genericCellNode*      cellPtrT;
+typedef genericCellNode       gcllT;
+typedef genericCellNode*      gcllPtrT;
 typedef monopoleCellNode      mcllT;
 typedef monopoleCellNode*     mcllPtrT;
 typedef quadrupoleCellNode    qcllT;
@@ -35,11 +37,9 @@ typedef costzoneCellNode*     czllPtrT;
 typedef particleNode          pnodT;
 typedef particleNode*         pnodPtrT;
 
-typedef treeGhost             treeghoT;
-typedef treeGhost*            treeghoPtrT;
-
-class particleNode;
-
+///
+/// a generic tree node
+///
 class genericNode {
 public:
 
@@ -69,15 +69,14 @@ public:
    bool isSettled    : 1;
    bool needsUpdate  : 1;
 
-   genericNode() { }
-   ~genericNode() { }
+   genericNode() { };
+   ~genericNode() { };
 
    void clear();
    nodePtrT operator*();
 
 private:
 };
-
 
 ///
 /// generic cell node
@@ -93,8 +92,8 @@ public:
    // what for should this be good?
    //countsType noParts;
 
-   genericCellNode() { }
-   ~genericCellNode() { }
+   genericCellNode() { };
+   ~genericCellNode() { };
 
    void clear();
    void inheritCellPos(size_t _n);
@@ -112,8 +111,8 @@ public:
    vect3dT com;
    fType   mass;
 
-   monopoleCellNode() { }
-   ~monopoleCellNode() { }
+   monopoleCellNode() { };
+   ~monopoleCellNode() { };
 
    void clear();
 
@@ -130,8 +129,8 @@ public:
 
    fType q11, q22, q33, q12, q13, q23;
 
-   quadrupoleCellNode() { }
-   ~quadrupoleCellNode() { }
+   quadrupoleCellNode() { };
+   ~quadrupoleCellNode() { };
 
    void clear();
    void initFromCZll(czllT& _czll);
@@ -141,7 +140,6 @@ private:
    char pad[46];
 #endif
 };
-
 
 ///
 /// a quadrupole costzone cell
@@ -158,11 +156,11 @@ public:
    pnodPtrT adopFrst, adopLast;
    nodePtrT chldFrst, chldLast;
 
-   costzoneCellNode() { }
-   ~costzoneCellNode() { }
+   costzoneCellNode() { };
+   ~costzoneCellNode() { };
 
    void clear();
-   void initFromCell(cellT& _cell);
+   void initFromCell(qcllT& _qcll);
 
    void adopt(pnodPtrT _pnod);
 
@@ -174,17 +172,17 @@ private:
 #endif
 };
 
-
-
+///
+/// a particle node
+///
 class particleNode : public genericNode {
 public:
+   treeghoPtrT partPtr;
+   vect3dT     pos;
+   fType       m;
 
-   partPtrT partPtr;
-   vect3dT  pos;
-   fType    m;
-
-   particleNode() { }
-   ~particleNode() { }
+   particleNode() { };
+   ~particleNode() { };
 
    void clear();
    void update();
@@ -194,5 +192,7 @@ private:
    char pad[0];
 #endif
 };
+
+
 };
 #endif

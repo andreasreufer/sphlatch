@@ -49,4 +49,5 @@ protected:
    const size_t noThreads;
 };
 
+};
 #endif

@@ -4,30 +4,33 @@
 #include <omp.h>
 
 #define SPHLATCH_PADD64
-//include "bhtree_dynamic.h"
-//#include "bhtree_nodes.h"
-//#include "bhtree_particle.h"
-//typedef sphlatch::BHTree               treeType;
+//#include "bhtree.cpp"
+
+#include "typedefs.h"
+
+//#include "bhtree_nodes.cpp"
 #include "bhtree.cpp"
 
-typedef sphlatch::genericNode          nodeType;
-typedef sphlatch::particleNode         pnodType;
-typedef sphlatch::genericCellNode      gcllType;
-typedef sphlatch::monopoleCellNode     monoType;
-typedef sphlatch::quadrupoleCellNode   cellType;
-typedef sphlatch::costzoneCellNode     czllType;
+//typedef sphlatch::BHTree               treeT;
 
-typedef sphlatch::treePart         partType;
+typedef sphlatch::nodeT nodeT;
+typedef sphlatch::pnodT pnodT;
+typedef sphlatch::gcllT gcllT;
+typedef sphlatch::mcllT mcllT;
+typedef sphlatch::qcllT qcllT;
+typedef sphlatch::czllT czllT;
+
+typedef sphlatch::treeGhost        partT;
 
 int main()
 {
-   std::cout << " generic   node " << sizeof(nodeType) << "\n"
-             << " particle  node " << sizeof(pnodType) << "\n"
-             << " gen  cell node " << sizeof(gcllType) << "\n"
-             << " mono cell node " << sizeof(monoType) << "\n"
-             << " quad cell node " << sizeof(cellType) << "\n"
-             << " CZ   cell node " << sizeof(czllType) << "\n"
-             << " particle       " << sizeof(partType) << "\n";
+   std::cout << " generic   node " << sizeof(nodeT) << "\n"
+             << " particle  node " << sizeof(pnodT) << "\n"
+             << " gen  cell node " << sizeof(gcllT) << "\n"
+             << " mono cell node " << sizeof(mcllT) << "\n"
+             << " quad cell node " << sizeof(qcllT) << "\n"
+             << " CZ   cell node " << sizeof(czllT) << "\n"
+             << " particle       " << sizeof(partT) << "\n";
 
    return(0);
 }

@@ -13,7 +13,10 @@
  #include <omp.h>
 #endif
 
+#include "bhtree_nodes.cpp"
 #include "bhtree.h"
+
+namespace sphlatch {
 
 BHTree::BHTree() :
    noCells(0),
@@ -44,10 +47,10 @@ BHTree::BHTree() :
 
    std::cout << static_cast<czllPtrT>(rootPtr)->cen << "  "
              << static_cast<czllPtrT>(rootPtr)->clSz << "\n";
-}
+};
 
 BHTree::~BHTree()
-{ }
+{ };
 
 BHTree::selfPtr BHTree::_instance = NULL;
 BHTree::selfRef BHTree::instance()
@@ -55,6 +58,7 @@ BHTree::selfRef BHTree::instance()
    if (_instance == NULL)
       _instance = new BHTree;
    return(*_instance);
-}
+};
+
 };
 #endif
