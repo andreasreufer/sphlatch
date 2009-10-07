@@ -4,23 +4,20 @@
 #include <omp.h>
 
 #define SPHLATCH_PADD64
-//#include "bhtree.cpp"
 
+#include "bhtree.cpp"
 #include "typedefs.h"
 
-//#include "bhtree_nodes.cpp"
-#include "bhtree.cpp"
+typedef sphlatch::nodeT       nodeT;
+typedef sphlatch::pnodT       pnodT;
+typedef sphlatch::gcllT       gcllT;
+typedef sphlatch::mcllT       mcllT;
+typedef sphlatch::qcllT       qcllT;
+typedef sphlatch::czllT       czllT;
 
-//typedef sphlatch::BHTree               treeT;
+typedef sphlatch::treeGhost   partT;
 
-typedef sphlatch::nodeT nodeT;
-typedef sphlatch::pnodT pnodT;
-typedef sphlatch::gcllT gcllT;
-typedef sphlatch::mcllT mcllT;
-typedef sphlatch::qcllT qcllT;
-typedef sphlatch::czllT czllT;
-
-typedef sphlatch::treeGhost        partT;
+typedef sphlatch::BHTree      treeT;
 
 int main()
 {

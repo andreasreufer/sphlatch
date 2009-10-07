@@ -21,7 +21,11 @@ namespace sphlatch {
 BHTree::BHTree() :
    noCells(0),
    noParts(0),
+#ifdef SPHLATCH_OPENMP
    noThreads(omp_get_num_threads())
+#else
+   noThreads(1)
+#endif
 {
    ///
    /// allocate root cell and set cell

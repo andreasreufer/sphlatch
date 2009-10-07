@@ -3,25 +3,29 @@
 
 #include <omp.h>
 
-#include "bhtree_dynamic.h"
-typedef sphlatch::BHTree treeType;
+#include "bhtree.cpp"
+typedef sphlatch::BHTree treeT;
 
+typedef sphlatch::nodeT       nodeT;
+typedef sphlatch::pnodT       pnodT;
+typedef sphlatch::gcllT       gcllT;
+typedef sphlatch::mcllT       mcllT;
+typedef sphlatch::qcllT       qcllT;
+typedef sphlatch::czllT       czllT;
+
+typedef sphlatch::treeGhost   partT;
+
+/*
 #include "bhtree_part_insertmover.h"
-typedef sphlatch::BHTreePartsInsertMover inserterType;
+typedef sphlatch::BHTreePartsInsertMover inserterT;
 
-//#include "bhtree_cz_builder.h"
+#include "bhtree_cz_builder.h"
 
 #include "bhtree_worker_grav.h"
-typedef sphlatch::BHTreeWorkerGrav gravworkerType;
+typedef sphlatch::BHTreeWorkerGrav gravworkerT;
 
 #include "bhtree_treedump.h"
-typedef sphlatch::BHTreeDump dumpType;
-
-typedef sphlatch::particleNode partType;
-typedef sphlatch::genericNode nodeType;
-typedef sphlatch::quadrupoleCellNode cellType;
-typedef sphlatch::quadrupoleCellNode* cellPtr;
-typedef sphlatch::costzoneCellNode czllType;
+typedef sphlatch::BHTreeDump dumpT;*/
 
 #include "io_manager.h"
 typedef sphlatch::IOManager io_type;
@@ -34,25 +38,26 @@ int main()
   part_type& PartManager(part_type::instance());
   io_type& IOManager(io_type::instance());
 
+  /*
   sleep(1);
-  treeType& Tree(treeType::instance());
+  treeT& Tree(treeT::instance());
   sleep(1);
 
-  //IOManager.loadDump("test.h5part");
+  IOManager.loadDump("test.h5part");
 
-  dumpType dumper(&Tree);
+  dumpT dumper(&Tree);
   dumper.dotDump("test.dot");
 
-  inserterType inserter(&Tree);
+  inserterT inserter(&Tree);
   
-  gravworkerType worker(&Tree);
+  gravworkerT worker(&Tree);
 #pragma omp parallel for firstprivate(worker)
   for (int i = 0; i < 8; i++)
   {
     const size_t tid = omp_get_thread_num();
     std::cout << tid << ":" << i << ":" << &worker << "\n";
   }
-  sleep(1);
+  sleep(1);*/
   return 0;
 }
 
