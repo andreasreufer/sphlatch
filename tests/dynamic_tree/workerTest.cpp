@@ -7,24 +7,26 @@
 #include "typedefs.h"
 typedef sphlatch::fType                    fType;
 
-#include "bhtree_dynamic.h"
+#include "bhtree.cpp"
 typedef sphlatch::BHTree                   treeT;
 
-typedef sphlatch::particleNode             pnodT;
+typedef sphlatch::pnodT                    pnodT;
+typedef sphlatch::pnodPtrT                 pnodPtrT;
 
-typedef sphlatch::genericNode              nodeT;
-typedef sphlatch::genericNode*             nodePtrT;
+typedef sphlatch::nodeT                    nodeT;
+typedef sphlatch::nodePtrT                 nodePtrT;
 
-typedef sphlatch::quadrupoleCellNode       cellT;
-typedef sphlatch::quadrupoleCellNode*      cellPtrT;
+typedef sphlatch::gcllT                    gcllT;
+typedef sphlatch::gcllPtrT                 gcllPtrT;
 
-typedef sphlatch::costzoneCellNode         czllT;
+typedef sphlatch::czllT                    czllT;
+typedef sphlatch::czllPtrT                 czllPtrT;
 
-#include "bhtree_part_insertmover.h"
+#include "bhtree_part_insertmover.cpp"
 typedef sphlatch::BHTreePartsInsertMover   inserterT;
 
-#include "bhtree_treedump.h"
-typedef sphlatch::BHTreeDump               dumpT;
+//#include "bhtree_treedump.h"
+//typedef sphlatch::BHTreeDump               dumpT;
 
 //#include "bhtree_cz_builder.h"
 //typedef sphlatch::BHTreeCZBuilder          czbldT;
@@ -53,9 +55,9 @@ int main(int argc, char* argv[])
 
    treeT& Tree(treeT::instance());
 
-   inserterT    inserter(&Tree);
-   dumpT        dumper(&Tree);
-   BHTreeTester testWorker(&Tree);
+   inserterT inserter(&Tree);
+   //dumpT        dumper(&Tree);
+   //BHTreeTester testWorker(&Tree);
    //czbldT       CZbuilder(&Tree);
    std::cout << "tree workers instantiated\n";
 
@@ -78,21 +80,20 @@ int main(int argc, char* argv[])
    }
 
 
-  //dumper.dotDump("test0.dot");
+   //dumper.dotDump("test0.dot");
    for (size_t i = 0; i < noParts; i++)
    {
       inserter.pushDown(particles[i]);
 
       /*if ( i == 7 )
-        dumper.dotDump("test0.dot");
-      
-      if ( i == 8 )
-        dumper.dotDump("test1.dot");*/
+         dumper.dotDump("test0.dot");
 
+         if ( i == 8 )
+         dumper.dotDump("test1.dot");*/
    }
-  dumper.ptrDump();
-  dumper.dotDump("test2.dot");
-  //dumper.dotDump("test1.dot");
+   //dumper.ptrDump();
+   //dumper.dotDump("test2.dot");
+   //dumper.dotDump("test1.dot");
 
    /*testWorker.build();
       testWorker.test();*/

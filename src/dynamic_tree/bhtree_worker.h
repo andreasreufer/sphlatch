@@ -61,7 +61,7 @@ protected:
    ///
    /// overwrite curPtr by a faster read-only version
    ///
-   const nodePtrT curPtr, rootPtr;
+   nodePtrT curPtr, rootPtr;
 };
 };
 #endif

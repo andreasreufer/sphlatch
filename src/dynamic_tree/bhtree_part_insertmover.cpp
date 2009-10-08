@@ -11,12 +11,15 @@
 
 #include "bhtree_worker.cpp"
 //#include "bhtree_errhandler_tmp.h"
+#include "bhtree_particle.h"
 
 namespace sphlatch {
 class BHTreePartsInsertMover : public BHTreeWorker {
 public:
 
    typedef BHTreePartsInsertMover   selfT;
+
+   typedef treeGhost                partT;
 
    BHTreePartsInsertMover(treePtrT _treePtr)
       : BHTreeWorker(_treePtr) { }
@@ -57,7 +60,6 @@ void BHTreePartsInsertMover::insert(partT& _part)
 
    newPartPtr->partPtr = &_part;
    _part.treeNode      = newPartPtr;
-   newPartPtr->update();
 
    newPartPtr->ident     = _part.id;
    newPartPtr->depth     = 0;
@@ -68,13 +70,12 @@ void BHTreePartsInsertMover::insert(partT& _part)
    /// is not cleaned before use, this particle is not found in
    /// a tree walk, as it is not yet wired as a child of a cell)
    ///
-   
-   //newPartPtr->parent = treePtr->rootPtr;
-   //static_cast<czllPtrT>(newPartPtr->parent)->noParts++;
+   newPartPtr->parent = treePtr->rootPtr;
 
-   // wire to 
+   static_cast<czllPtrT>(rootPtr)->noParts++;
+   static_cast<czllPtrT>(rootPtr)->absCost += _part.cost;
 
-   //pushUpAndToCZsingle(newPartPtr);
+   pushUpAndToCZsingle(newPartPtr);
 }
 
 ///
@@ -88,8 +89,8 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    /// cell. if yes, do nothing and return.
    ///
    curPtr = _pnodPtr->parent;
-   const size_t oldOct = getChildNo(_pnodPtr);
 
+   const size_t oldOct = getChildNo(_pnodPtr);
    assert(oldOct >= 0 && oldOct < 8);
 
    ///
@@ -119,7 +120,7 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    /// soon as we hit a CZ cell, start substracting cost from
    /// each CZ cell we encounter
    ///
-   bool        CZencounter = false;
+   bool CZencounter = false;
    //const fType partCost    = static_cast<pnodPtrT>(_pnodPtr)->partPtr->cost;
    while (not pointInsideCell(pos))
    {
@@ -165,7 +166,7 @@ void BHTreePartsInsertMover::pushDown(const partT& _part)
 void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
 {
    curPtr = _pnodPtr->parent;
-   const vect3dT pos      = _pnodPtr->pos;
+   const vect3dT pos = _pnodPtr->pos;
    //const fType   partCost = _pnodPtr->partPtr->cost;
 
    assert(pointInsideCell(pos));
@@ -178,9 +179,9 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
       ///
       /// child is empty, particle can be inserted directly
       ///
-      if (static_cast<cellPtrT>(curPtr)->child[curOct] == NULL)
+      if (static_cast<gcllPtrT>(curPtr)->child[curOct] == NULL)
       {
-         static_cast<cellPtrT>(curPtr)->child[curOct] = _pnodPtr;
+         static_cast<gcllPtrT>(curPtr)->child[curOct] = _pnodPtr;
 
          _pnodPtr->parent    = curPtr;
          _pnodPtr->depth     = curPtr->depth + 1;
@@ -190,7 +191,7 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
       }
       else
       {
-         if (static_cast<cellPtrT>(curPtr)->child[curOct]->isParticle)
+         if (static_cast<gcllPtrT>(curPtr)->child[curOct]->isParticle)
             partToCell(curPtr, curOct);
 
          goChild(curOct);
