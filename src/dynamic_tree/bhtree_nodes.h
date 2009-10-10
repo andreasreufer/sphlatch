@@ -152,8 +152,15 @@ public:
 
    fType      absCost, relCost;
    countsType noParts;
+   
+   ///
+   /// adopted orphans
+   ///
+   pnodPtrT orphFrst, orphLast;
 
-   pnodPtrT adopFrst, adopLast;
+   ///
+   /// first and last nodes of CZ cell subtree
+   ///
    nodePtrT chldFrst, chldLast;
 
    costzoneCellNode() { };
@@ -165,6 +172,8 @@ public:
    void adopt(pnodPtrT _pnod);
 
    void pushdownNeighbours();
+
+   void delSubtree();
 
 private:
 #ifdef SPHLATCH_PADD64

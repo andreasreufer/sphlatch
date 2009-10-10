@@ -75,14 +75,18 @@ int main(int argc, char* argv[])
       particles[i].pos[2] = static_cast<fType>(rand()) / RAND_MAX;
 
       particles[i].id = i;
+      particles[i].cost = 1.;
 
+      std::cout << "try to insert :" << particles[i].pos << "\n";
       inserter.insert(particles[i]);
    }
+   return(0);
 
 
    //dumper.dotDump("test0.dot");
    for (size_t i = 0; i < noParts; i++)
    {
+      std::cout << "push down particle " << i << "\n";
       inserter.pushDown(particles[i]);
 
       /*if ( i == 7 )
