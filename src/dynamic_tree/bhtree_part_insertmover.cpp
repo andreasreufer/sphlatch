@@ -39,11 +39,10 @@ public:
 
 private:
    void pushUpAndToCZsingle(const pnodPtrT _pnodPtr);
-   
+
   
    // needed?
    void pushDownSingle(const pnodPtrT _pnodPtr);
-
    
 };
 
@@ -210,6 +209,8 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
       }
    }
 }
+
+
 };
 
 #endif

@@ -31,6 +31,8 @@ typedef sphlatch::BHTreePartsInsertMover   inserterT;
 //#include "bhtree_cz_builder.h"
 //typedef sphlatch::BHTreeCZBuilder          czbldT;
 
+#include "bhtree_housekeeper.cpp"
+
 #include "bhtree_particle.h"
 typedef sphlatch::treeGhost   partT;
 
@@ -46,6 +48,12 @@ public:
 
    void test()
    { }
+
+   void dispRoot()
+   {
+     std::cout << static_cast<czllPtrT>(rootPtr)->noParts << "\n";
+     std::cout << static_cast<czllPtrT>(rootPtr)->absCost << "\n";
+   }
 };
 
 int main(int argc, char* argv[])
@@ -57,7 +65,7 @@ int main(int argc, char* argv[])
 
    inserterT inserter(&Tree);
    //dumpT        dumper(&Tree);
-   //BHTreeTester testWorker(&Tree);
+   BHTreeTester testWorker(&Tree);
    //czbldT       CZbuilder(&Tree);
    std::cout << "tree workers instantiated\n";
 
@@ -80,7 +88,6 @@ int main(int argc, char* argv[])
       std::cout << "try to insert :" << particles[i].pos << "\n";
       inserter.insert(particles[i]);
    }
-   return(0);
 
 
    //dumper.dotDump("test0.dot");
@@ -95,6 +102,9 @@ int main(int argc, char* argv[])
          if ( i == 8 )
          dumper.dotDump("test1.dot");*/
    }
+
+   testWorker.dispRoot();
+
    //dumper.ptrDump();
    //dumper.dotDump("test2.dot");
    //dumper.dotDump("test1.dot");

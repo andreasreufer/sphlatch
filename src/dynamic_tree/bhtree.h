@@ -47,6 +47,8 @@ protected:
    size_t noCells, noParts;
 
    const size_t noThreads;
+
+   size_t maxDepth;
 };
 
 };
