@@ -32,9 +32,10 @@ typedef sphlatch::BHTreePartsInsertMover   inserterT;
 //typedef sphlatch::BHTreeCZBuilder          czbldT;
 
 #include "bhtree_housekeeper.cpp"
+typedef sphlatch::BHTreeHousekeeper   housekeeperT;
 
 #include "bhtree_particle.h"
-typedef sphlatch::treeGhost   partT;
+typedef sphlatch::treeGhost           partT;
 
 #include "bhtree_worker.h"
 class BHTreeTester : public sphlatch::BHTreeWorker {
@@ -51,8 +52,8 @@ public:
 
    void dispRoot()
    {
-     std::cout << static_cast<czllPtrT>(rootPtr)->noParts << "\n";
-     std::cout << static_cast<czllPtrT>(rootPtr)->absCost << "\n";
+      std::cout << static_cast<czllPtrT>(rootPtr)->noParts << "\n";
+      std::cout << static_cast<czllPtrT>(rootPtr)->absCost << "\n";
    }
 };
 
@@ -63,7 +64,8 @@ int main(int argc, char* argv[])
 
    treeT& Tree(treeT::instance());
 
-   inserterT inserter(&Tree);
+   inserterT    inserter(&Tree);
+   housekeeperT housekeeper(&Tree);
    //dumpT        dumper(&Tree);
    BHTreeTester testWorker(&Tree);
    //czbldT       CZbuilder(&Tree);
@@ -82,7 +84,7 @@ int main(int argc, char* argv[])
       particles[i].pos[1] = static_cast<fType>(rand()) / RAND_MAX;
       particles[i].pos[2] = static_cast<fType>(rand()) / RAND_MAX;
 
-      particles[i].id = i;
+      particles[i].id   = i;
       particles[i].cost = 1.;
 
       std::cout << "try to insert :" << particles[i].pos << "\n";
@@ -104,6 +106,7 @@ int main(int argc, char* argv[])
    }
 
    testWorker.dispRoot();
+   //housekeeper.;
 
    //dumper.ptrDump();
    //dumper.dotDump("test2.dot");

@@ -34,10 +34,9 @@ private:
    size_t   lastDepth;
 
    std::vector<gcllPtrT> lastSkipeeAtDepth;
-   size_t lastSkipeeDepth;
 };
 
-
+//FIXME: this is untested
 void BHTreeHousekeeper::setPreorder(const czllPtrT _czll)
 {
    ///
@@ -63,25 +62,30 @@ void BHTreeHousekeeper::setPreorder(const czllPtrT _czll)
    ///
    /// prepare the lastSkipee list
    ///
+   //FIXME: get maxdepth from tree
    //const size_t maxDepth = treePtr->maxDepth;
    const size_t maxDepth = 100;
+   
    if ( lastSkipeeAtDepth.size() != maxDepth )
      lastSkipeeAtDepth.resize(maxDepth);
    for (size_t i = 0; i < maxDepth; i++)
      lastSkipeeAtDepth[i] = NULL;
 
    const nodePtrT stopPtr = _czll;
-
-   lastSkipeeAtDepth[curPtr->depth] = _czll;
-   lastSkipeeDepth = curPtr->depth;
-
    while( curPtr != stopPtr )
    {
      goNext();
      const size_t depth = curPtr->depth;
      if ( not curPtr->isParticle )
      {
-       //lastSkipeeAtDepth[depth] 
+       size_t i = depth;
+       while ( lastSkipeeAtDepth[i] != NULL )
+       {
+         lastSkipeeAtDepth[i]->skip = static_cast<gcllPtrT>(curPtr);
+         lastSkipeeAtDepth[i] = NULL;
+         i++;
+       }
+       lastSkipeeAtDepth[depth] = static_cast<gcllPtrT>(curPtr);
      }
    }
 }
@@ -93,11 +97,6 @@ void BHTreeHousekeeper::setNextRecursor()
 
    if (not curPtr->isParticle)
    {
-      for (size_t i = 0; i < 8; i++)
-      {
-         if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
-         { }
-      }
       for (size_t i = 0; i < 8; i++)
       {
          if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
