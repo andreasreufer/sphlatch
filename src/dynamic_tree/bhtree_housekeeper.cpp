@@ -34,7 +34,6 @@ private:
    void setNextCZRecursor();
 
    nodePtrT lastPtr;
-   size_t   lastDepth;
 
    std::vector<gcllPtrT> lastSkipeeAtDepth;
 };

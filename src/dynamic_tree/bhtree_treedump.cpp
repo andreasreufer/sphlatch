@@ -21,8 +21,9 @@ public:
 
 public:
    void dotDump(std::string _dotFilename);
-   void ptrDump();
-   void ptrDump(const nodePtrT _node);
+
+   void ptrDump(const std::string _filename);
+   void ptrDump(const std::string _filename, const nodePtrT _node);
 
 private:
    std::fstream dumpFile;
@@ -53,7 +54,7 @@ void BHTreeDump::dotRecursor()
    //if (curPtr->isParticle)
    //   dumpFile << "label=" << curPtr->ident << ",";
    //else
-      dumpFile << "label=\"\",";
+   dumpFile << "label=\"\",";
 
    if (curPtr->isParticle)
       dumpFile << "shape=circle,color=green";
@@ -69,29 +70,30 @@ void BHTreeDump::dotRecursor()
       dumpFile << "shape=box,color=red";
 
    dumpFile << ",style=filled";
-   
+
    //if (curPtr->isParticle)
-     dumpFile << ",width=0.1,height=0.1];\n";
+   dumpFile << ",width=0.1,height=0.1];\n";
+
    /*else
-   {
-     const fType curSize = 0.1*sqrt( static_cast<fType>( static_cast<gcllPtrT>(curPtr)->noParts ) );
-     dumpFile << ",width=" << curSize << ",height=" << curSize << "];\n";
-   }*/
+      {
+      const fType curSize = 0.1*sqrt( static_cast<fType>( static_cast<gcllPtrT>(curPtr)->noParts ) );
+      dumpFile << ",width=" << curSize << ",height=" << curSize << "];\n";
+      }*/
 
    if (curPtr->isParticle == false)
    {
       for (size_t i = 0; i < 8; i++)
       {
-         if (static_cast<cellPtrT>(curPtr)->child[i] != NULL)
+         if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
             dumpFile << "C" << abs(curPtr->ident)
                      << " -> ";
-            if (static_cast<cellPtrT>(curPtr)->child[i]->isParticle)
+            if (static_cast<gcllPtrT>(curPtr)->child[i]->isParticle)
                dumpFile << "P";
             else
                dumpFile << "C";
 
-            dumpFile << abs(static_cast<cellPtrT>(curPtr)->child[i]->ident)
+            dumpFile << abs(static_cast<gcllPtrT>(curPtr)->child[i]->ident)
                      << " \n";
             goChild(i);
             dotRecursor();
@@ -101,42 +103,72 @@ void BHTreeDump::dotRecursor()
    }
 }
 
-void BHTreeDump::ptrDump()
+void BHTreeDump::ptrDump(std::string _filename)
 {
+   dumpFile.open(_filename.c_str(), std::ios::out);
    goRoot();
    ptrRecursor();
+   dumpFile.close();
 }
 
-void BHTreeDump::ptrDump(const nodePtrT _node)
+void BHTreeDump::ptrDump(std::string _filename, const nodePtrT _node)
 {
+   dumpFile.open(_filename.c_str(), std::ios::out);
    curPtr = _node;
    ptrRecursor();
+   dumpFile.close();
 }
 
 void BHTreeDump::ptrRecursor()
 {
-   std::cout << curPtr << " @d" << curPtr->depth << " "
-             << "part" << curPtr->isParticle << " "
-             << "czll" << curPtr->isCZ << " "
-             << "remo" << curPtr->isRemote << " "
-             << "nSet" << curPtr->neighSet << " "
-             << "atBo" << curPtr->atBottom << " "
-             << "setl" << curPtr->isSettled << "\n";
+   dumpFile << curPtr << " @d" << curPtr->depth << "  "
+            << "part? " << curPtr->isParticle << "  "
+            << "CZ? " << curPtr->isCZ << "  "
+            << "rem? " << curPtr->isRemote << "  "
+            << "nSet? " << curPtr->neighSet << "  "
+            << "atBo? " << curPtr->atBottom << "  "
+            << "setl? " << curPtr->isSettled << "\n";
 
-   std::cout << "  p -> " << curPtr->parent << "\n";
-   std::cout << "  n -> " << curPtr->next << "\n";
+   dumpFile << "  p -> " << curPtr->parent << "\n";
+   dumpFile << "  n -> " << curPtr->next << "\n";
 
-   if (curPtr->isParticle == false)
+   if (not curPtr->isParticle)
    {
-      std::cout << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
+      dumpFile << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
+
+      if (curPtr->isCZ)
+      {
+         const nodePtrT orphFrst = static_cast<czllPtrT>(curPtr)->orphFrst;
+
+         dumpFile << " of -> " << orphFrst;
+
+         if (orphFrst != NULL)
+         {
+            curPtr = orphFrst;
+            dumpFile << orphFrst << " -> ";
+            while (curPtr->next != NULL)
+            {
+               goNext();
+               dumpFile << curPtr << " -> ";
+            }
+            dumpFile << curPtr->next;
+         }
+         dumpFile << "\n";
+         dumpFile << " ol -> " << static_cast<czllPtrT>(curPtr)->orphLast
+                  << "\n";
+         dumpFile << " cf -> " << static_cast<czllPtrT>(curPtr)->chldFrst
+                  << "\n";
+         dumpFile << " cl -> " << static_cast<czllPtrT>(curPtr)->chldLast
+                  << "\n";
+      }
 
       for (size_t i = 0; i < 8; i++)
-         std::cout << " c" << i << " -> " <<
-         static_cast<cellPtrT>(curPtr)->child[i] << "\n";
+         dumpFile << " c" << i << " -> " <<
+         static_cast<gcllPtrT>(curPtr)->child[i] << "\n";
 
       for (size_t i = 0; i < 8; i++)
       {
-         if (static_cast<cellPtrT>(curPtr)->child[i] != NULL)
+         if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
             goChild(i);
             ptrRecursor();

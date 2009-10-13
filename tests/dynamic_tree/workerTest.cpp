@@ -25,8 +25,8 @@ typedef sphlatch::czllPtrT                 czllPtrT;
 #include "bhtree_part_insertmover.cpp"
 typedef sphlatch::BHTreePartsInsertMover   inserterT;
 
-//#include "bhtree_treedump.h"
-//typedef sphlatch::BHTreeDump               dumpT;
+#include "bhtree_treedump.cpp"
+typedef sphlatch::BHTreeDump               dumpT;
 
 //#include "bhtree_cz_builder.h"
 //typedef sphlatch::BHTreeCZBuilder          czbldT;
@@ -66,15 +66,14 @@ int main(int argc, char* argv[])
 
    inserterT    inserter(&Tree);
    housekeeperT housekeeper(&Tree);
-   //dumpT        dumper(&Tree);
-   BHTreeTester testWorker(&Tree);
+   dumpT        dumper(&Tree);
    //czbldT       CZbuilder(&Tree);
+   
+   BHTreeTester testWorker(&Tree);
    std::cout << "tree workers instantiated\n";
 
 
-   std::cout << "push down particle ...\n";
-
-   const size_t noParts = 100;
+   const size_t noParts = 1000;
 
    std::vector<partT> particles(noParts);
 
@@ -87,7 +86,7 @@ int main(int argc, char* argv[])
       particles[i].id   = i;
       particles[i].cost = 1.;
 
-      std::cout << "try to insert :" << particles[i].pos << "\n";
+      //std::cout << "try to insert :" << particles[i].pos << "\n";
       inserter.insert(particles[i]);
    }
 
@@ -95,7 +94,7 @@ int main(int argc, char* argv[])
    //dumper.dotDump("test0.dot");
    for (size_t i = 0; i < noParts; i++)
    {
-      std::cout << "push down particle " << i << "\n";
+      //std::cout << "push down particle " << i << "\n";
       inserter.pushDown(particles[i]);
 
       /*if ( i == 7 )
@@ -108,9 +107,8 @@ int main(int argc, char* argv[])
    testWorker.dispRoot();
    //housekeeper.;
 
-   //dumper.ptrDump();
-   //dumper.dotDump("test2.dot");
-   //dumper.dotDump("test1.dot");
+   dumper.ptrDump("ptrdump.txt");
+   dumper.dotDump("dump.dot");
 
    /*testWorker.build();
       testWorker.test();*/
