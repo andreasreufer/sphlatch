@@ -160,6 +160,7 @@ public:
 
    ///
    /// first and last nodes of CZ cell subtree
+   /// (chldFrst is always the same as next)
    ///
    nodePtrT chldFrst, chldLast;
 

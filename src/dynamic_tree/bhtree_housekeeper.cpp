@@ -21,14 +21,17 @@ public:
    BHTreeHousekeeper(const BHTreeHousekeeper& _hk) : BHTreeWorker(_hk) { }
    ~BHTreeHousekeeper() { }
 
-///
-/// set the next & skip pointers
-///
-   void setPreorder(const czllPtrT _czll);
+   ///
+   /// set the next & skip pointers
+   ///
 
+   void setNext(const czllPtrT _czll);
+   void setNextCZ();
+   void setSkip();
 
 private:
    void setNextRecursor();
+   void setNextCZRecursor();
 
    nodePtrT lastPtr;
    size_t   lastDepth;
@@ -37,7 +40,7 @@ private:
 };
 
 //FIXME: this is untested
-void BHTreeHousekeeper::setPreorder(const czllPtrT _czll)
+void BHTreeHousekeeper::setNext(const czllPtrT _czll)
 {
    ///
    /// wire next pointer by doing a preorder tree walk
@@ -45,12 +48,29 @@ void BHTreeHousekeeper::setPreorder(const czllPtrT _czll)
    curPtr  = _czll;
    lastPtr = _czll;
    setNextRecursor();
-   lastPtr->next = rootPtr;
-
-   curPtr = _czll;
+   lastPtr->next = NULL;
 
    ///
-   /// now do a preorder walk by using the next pointers
+   /// wire the child first and child last pointers
+   ///
+   _czll->chldFrst = _czll->next;
+   _czll->chldLast = lastPtr;
+
+   curPtr = _czll;
+}
+
+void BHTreeHousekeeper::setNextCZ()
+{
+   curPtr  = rootPtr;
+   lastPtr = rootPtr;
+   setNextCZRecursor();
+   lastPtr->next = rootPtr;
+}
+
+void BHTreeHousekeeper::setSkip()
+{
+   ///
+   /// do a preorder walk by using the next pointers
    /// and store at each depth the last cell encountered
    /// in a list
    ///
@@ -65,28 +85,30 @@ void BHTreeHousekeeper::setPreorder(const czllPtrT _czll)
    //FIXME: get maxdepth from tree
    //const size_t maxDepth = treePtr->maxDepth;
    const size_t maxDepth = 100;
-   
-   if ( lastSkipeeAtDepth.size() != maxDepth )
-     lastSkipeeAtDepth.resize(maxDepth);
-   for (size_t i = 0; i < maxDepth; i++)
-     lastSkipeeAtDepth[i] = NULL;
 
-   const nodePtrT stopPtr = _czll;
-   while( curPtr != stopPtr )
+   if (lastSkipeeAtDepth.size() != maxDepth)
+      lastSkipeeAtDepth.resize(maxDepth);
+   for (size_t i = 0; i < maxDepth; i++)
+      lastSkipeeAtDepth[i] = NULL;
+
+   ///
+   /// do the next-walk
+   ///
+   while (curPtr != rootPtr)
    {
-     goNext();
-     const size_t depth = curPtr->depth;
-     if ( not curPtr->isParticle )
-     {
-       size_t i = depth;
-       while ( lastSkipeeAtDepth[i] != NULL )
-       {
-         lastSkipeeAtDepth[i]->skip = static_cast<gcllPtrT>(curPtr);
-         lastSkipeeAtDepth[i] = NULL;
-         i++;
-       }
-       lastSkipeeAtDepth[depth] = static_cast<gcllPtrT>(curPtr);
-     }
+      goNext();
+      const size_t depth = curPtr->depth;
+      if (not curPtr->isParticle)
+      {
+         size_t i = depth;
+         while (lastSkipeeAtDepth[i] != NULL)
+         {
+            lastSkipeeAtDepth[i]->skip = static_cast<gcllPtrT>(curPtr);
+            lastSkipeeAtDepth[i]       = NULL;
+            i++;
+         }
+         lastSkipeeAtDepth[depth] = static_cast<gcllPtrT>(curPtr);
+      }
    }
 }
 
@@ -104,6 +126,33 @@ void BHTreeHousekeeper::setNextRecursor()
             goChild(i);
             setNextRecursor();
             goUp();
+         }
+      }
+   }
+}
+
+void BHTreeHousekeeper::setNextCZRecursor()
+{
+   if (not curPtr->isParticle)
+   {
+      lastPtr->next = curPtr;
+      
+      if (curPtr->atBottom)
+      {
+         lastPtr = static_cast<czllPtrT>(curPtr)->chldLast;
+      }
+      else
+      {
+         lastPtr = curPtr;
+
+         for (size_t i = 0; i < 8; i++)
+         {
+            if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
+            {
+               goChild(i);
+               setNextCZRecursor();
+               goUp();
+            }
          }
       }
    }
