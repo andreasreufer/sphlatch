@@ -15,7 +15,7 @@
 namespace sphlatch {
 namespace indices
 {
-enum 3D vect
+enum vect
 {
    X, Y, Z
 };

@@ -62,5 +62,12 @@ bhtree:
 #	  -o treeFun treeFun.cpp
 
 		
+sphworker:
+	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+		  -I../../src -I../../src/dynamic_tree \
+		  -lhdf5 -lz \
+		  -fopenmp \
+		  -o sphWorker sphWorker.cpp
+
 
 

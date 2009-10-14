@@ -28,7 +28,7 @@ typedef sphlatch::BHTreePartsInsertMover   inserterT;
 #include "bhtree_treedump.cpp"
 typedef sphlatch::BHTreeDump               dumpT;
 
-//#include "bhtree_cz_builder.h"
+//#include "bhtree_cz_builder.cpp"
 //typedef sphlatch::BHTreeCZBuilder          czbldT;
 
 #include "bhtree_housekeeper.cpp"
@@ -36,6 +36,16 @@ typedef sphlatch::BHTreeHousekeeper   housekeeperT;
 
 #include "bhtree_particle.h"
 typedef sphlatch::treeGhost           partT;
+
+struct densFunc {
+  void operator()(partT* _i, const partT* _j)
+  {
+    _i->pos = _j->pos;
+  }
+};
+
+#include "bhtree_worker_sphsum.cpp"
+typedef sphlatch::SPHsumWorker<densFunc> densSumT;
 
 #include "bhtree_worker.h"
 class BHTreeTester : public sphlatch::BHTreeWorker {
@@ -72,7 +82,6 @@ int main(int argc, char* argv[])
    BHTreeTester testWorker(&Tree);
    std::cout << "tree workers instantiated\n";
 
-
    const size_t noParts = 1000;
 
    std::vector<partT> particles(noParts);
@@ -96,16 +105,18 @@ int main(int argc, char* argv[])
    {
       //std::cout << "push down particle " << i << "\n";
       inserter.pushDown(particles[i]);
-
-      /*if ( i == 7 )
-         dumper.dotDump("test0.dot");
-
-         if ( i == 8 )
-         dumper.dotDump("test1.dot");*/
    }
 
    testWorker.dispRoot();
-   //housekeeper.;
+
+//#pragma omp parallel for firstprivate(housekeeper)
+//   for (size_t i = 0; i < 4; i++)
+   {
+     //std::cout << i << "\n";
+     housekeeper.setNextCZ();
+   }
+   std::cout << "setNextCZ() done!\n";
+
 
    dumper.ptrDump("ptrdump.txt");
    dumper.dotDump("dump.dot");

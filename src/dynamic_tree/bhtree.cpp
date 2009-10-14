@@ -51,8 +51,8 @@ BHTree::BHTree() :
 
    maxDepth = 100;
 
-   std::cout << static_cast<czllPtrT>(rootPtr)->cen << "  "
-             << static_cast<czllPtrT>(rootPtr)->clSz << "\n";
+/*   std::cout << static_cast<czllPtrT>(rootPtr)->cen << "  "
+             << static_cast<czllPtrT>(rootPtr)->clSz << "\n";*/
 };
 
 BHTree::~BHTree()

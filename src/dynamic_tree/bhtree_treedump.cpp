@@ -122,12 +122,12 @@ void BHTreeDump::ptrDump(std::string _filename, const nodePtrT _node)
 void BHTreeDump::ptrRecursor()
 {
    dumpFile << curPtr << " @d" << curPtr->depth << "  "
-            << "part? " << curPtr->isParticle << "  "
-            << "CZ? " << curPtr->isCZ << "  "
-            << "rem? " << curPtr->isRemote << "  "
-            << "nSet? " << curPtr->neighSet << "  "
-            << "atBo? " << curPtr->atBottom << "  "
-            << "setl? " << curPtr->isSettled << "\n";
+            << "part?" << curPtr->isParticle << "  "
+            << "CZ?" << curPtr->isCZ << "  "
+            << "rem?" << curPtr->isRemote << "  "
+            << "nSet?" << curPtr->neighSet << "  "
+            << "atBo?" << curPtr->atBottom << "  "
+            << "setl?" << curPtr->isSettled << "\n";
 
    dumpFile << "  p -> " << curPtr->parent << "\n";
    dumpFile << "  n -> " << curPtr->next << "\n";
