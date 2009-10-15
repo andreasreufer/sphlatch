@@ -18,6 +18,8 @@ public:
    typedef BHTree&                    treeRefT;
    typedef BHTree*                    treePtrT;
 
+   typedef BHTree::czllPtrListT    czllPtrListT;
+
    BHTreeWorker(const BHTreeWorker& _worker);
    BHTreeWorker(const treePtrT _treePtr);
    ~BHTreeWorker();

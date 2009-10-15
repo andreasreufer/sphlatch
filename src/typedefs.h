@@ -162,6 +162,10 @@ typedef blas::vector<fType>               valvectType;
 typedef blas::vector<fType>&              valvectRefType;
 typedef blas::vector<fType> *             valvectPtrType;
 
+typedef blas::vector<fType>               fvectT;
+typedef blas::vector<fType>&              fvectRefT;
+typedef blas::vector<fType>*              fvectPtrT;
+
 typedef blas::zero_vector<fType>          zerovalvectType;
 
 typedef blas::vector_range<valvectType>   valvectRangeType;

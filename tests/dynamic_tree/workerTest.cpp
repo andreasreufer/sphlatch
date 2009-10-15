@@ -28,8 +28,8 @@ typedef sphlatch::BHTreePartsInsertMover   inserterT;
 #include "bhtree_treedump.cpp"
 typedef sphlatch::BHTreeDump               dumpT;
 
-//#include "bhtree_cz_builder.cpp"
-//typedef sphlatch::BHTreeCZBuilder          czbldT;
+#include "bhtree_cz_builder.cpp"
+typedef sphlatch::BHTreeCZBuilder          czbldT;
 
 #include "bhtree_housekeeper.cpp"
 typedef sphlatch::BHTreeHousekeeper   housekeeperT;
@@ -70,14 +70,14 @@ public:
 int main(int argc, char* argv[])
 {
    sleep(1);
-   //MPI::Init(argc, argv);
+   MPI::Init(argc, argv);
 
    treeT& Tree(treeT::instance());
 
    inserterT    inserter(&Tree);
    housekeeperT housekeeper(&Tree);
    dumpT        dumper(&Tree);
-   //czbldT       CZbuilder(&Tree);
+   czbldT       CZbuilder(&Tree);
    
    BHTreeTester testWorker(&Tree);
    std::cout << "tree workers instantiated\n";
@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
       inserter.insert(particles[i]);
    }
 
+   CZbuilder();
 
    //dumper.dotDump("test0.dot");
    for (size_t i = 0; i < noParts; i++)
@@ -124,6 +125,6 @@ int main(int argc, char* argv[])
    /*testWorker.build();
       testWorker.test();*/
 
-   //MPI::Finalize();
+   MPI::Finalize();
    return(0);
 }

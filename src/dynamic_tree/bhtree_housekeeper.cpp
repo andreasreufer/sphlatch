@@ -81,9 +81,7 @@ void BHTreeHousekeeper::setSkip()
    ///
    /// prepare the lastSkipee list
    ///
-   //FIXME: get maxdepth from tree
-   //const size_t maxDepth = treePtr->maxDepth;
-   const size_t maxDepth = 100;
+   const size_t maxDepth = treePtr->maxDepth;
 
    if (lastSkipeeAtDepth.size() != maxDepth)
       lastSkipeeAtDepth.resize(maxDepth);

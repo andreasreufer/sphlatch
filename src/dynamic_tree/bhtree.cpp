@@ -34,10 +34,7 @@ BHTree::BHTree() :
    ///
    rootPtr = new czllT;
    
-   btStart = static_cast<czllPtrT>(rootPtr);
-   btEnd   = static_cast<czllPtrT>(rootPtr);
-   lbtStart = NULL;
-   lbtEnd   = NULL;
+   CZbottom.push_back( static_cast<czllPtrT>(rootPtr) );
 
    static_cast<czllPtrT>(rootPtr)->clear();
    static_cast<czllPtrT>(rootPtr)->atBottom = true;

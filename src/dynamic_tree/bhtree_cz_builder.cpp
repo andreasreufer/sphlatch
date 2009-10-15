@@ -25,10 +25,7 @@ public:
    BHTreeCZBuilder(const treePtrT _treePtr) :
       BHTreeWorker(_treePtr),
       CommManager(commT::instance()),
-      ///
-      /// how to get this value cleverly?
-      ///
-      CZcosts(_treePtr->CZbottomCells.size())
+      CZcosts(_treePtr->maxCZBottCells)
    { }
 
    ~BHTreeCZBuilder()
@@ -39,7 +36,7 @@ public:
 private:
    commT& CommManager;
 
-   valvectType CZcosts;
+   fvectT CZcosts;
 
    ///
    ///
@@ -47,6 +44,7 @@ private:
    void refineCZcell(const czllPtrT _czllPtr);
    void gatherCZcell(const czllPtrT _czllPtr);
    void sumCZcosts();
+   void sumCostRecursor();
 };
 
 ///  - particles have been moved inside the tree
@@ -66,36 +64,59 @@ void BHTreeCZBuilder::operator()()
 {
    bool CZbalanced = false;
 
+   const fType costHighMark = 1000.;
+   const fType costLowMark  = 10.;
+
+   std::cout << "start to balance ...\n";
    while (not CZbalanced)
    {
-      czllPtrListItrT        CZlistItr = treePtr->CZbottomCells.begin();
+      czllPtrListT::iterator       CZlistItr = treePtr->CZbottom.begin();
+      czllPtrListT::const_iterator CZlistEnd = treePtr->CZbottom.end();
+
+      while (CZlistItr != CZlistEnd)
+      {
+         ///
+         /// sum up CZ cost
+         ///
+         sumCZcosts();
+
+         ///
+         ///    - if a CZ cell contains too much particles, split it up
+         ///      into CZ cell children and delete current CZ cell from list.
+         ///      delete normal cells which were replaced by CZ cells and rewire
+         ///      everything again
+         ///    - if a CZ cell contains too little particles, go to parent, add
+         ///      up all its children and check if those are enough particles to
+         ///      build a new CZ cell. if so, merge all children to the new CZ
+         ///      cell and replace them by normal cells
+         ///
+
+         if ((*CZlistItr)->absCost > costHighMark)
+         {
+            refineCZcell(*CZlistItr);
+            CZbalanced = false;
+         }
+         else
+         if ((*CZlistItr)->parent != NULL)
+         {
+            if (static_cast<czllPtrT>((*CZlistItr)->parent)->absCost <
+                costLowMark)
+               gatherCZcell(static_cast<czllPtrT>((*CZlistItr)->parent));
+            CZbalanced = false;
+         }
+         CZlistItr++;
+      }
+      CZbalanced = true;
+   }
+
+   /*czllPtrListCItrT       CZlistItr = treePtr->CZbottomCells.begin();
       const czllPtrListCItrT CZlistEnd = treePtr->CZbottomCells.end();
 
       while (CZlistItr != CZlistEnd)
       {
-///
-///    - globally sum up particle counts in CZ cells
-///    - if a CZ cell contains too much particles, split it up
-///      into CZ cell children and delete current CZ cell from list.
-///      delete normal cells which were replaced by CZ cells and rewire
-///      everything again
-///    - if a CZ cell contains too little particles, go to parent, add
-///      up all its children and check if those are enough particles to
-///      build a new CZ cell. if so, merge all children to the new CZ
-///      cell and replace them by normal cells
-///
-         CZlistItr++;
-      }
-   }
-
-   czllPtrListCItrT       CZlistItr = treePtr->CZbottomCells.begin();
-   const czllPtrListCItrT CZlistEnd = treePtr->CZbottomCells.end();
-
-   while (CZlistItr != CZlistEnd)
-   {
       curPtr = (*CZlistItr);
       CZlistItr++;
-   }
+      }*/
 }
 
 void BHTreeCZBuilder::sumCZcosts()
@@ -103,14 +124,15 @@ void BHTreeCZBuilder::sumCZcosts()
    ///
    /// CZ cell list -> vector
    ///
-   czllPtrListCItrT       CZlistCItr = treePtr->CZbottomCells.begin();
-   const czllPtrListCItrT CZlistEnd  = treePtr->CZbottomCells.end();
+   czllPtrListT::const_iterator CZlistCItr = treePtr->CZbottom.begin();
+   czllPtrListT::const_iterator CZlistEnd  = treePtr->CZbottom.end();
    size_t i = 0;
 
    while (CZlistCItr != CZlistEnd)
    {
-      CZcosts[i] = (*CZlistCItr)->cost;
+      CZcosts[i] = (*CZlistCItr)->absCost;
       i++;
+      CZlistCItr++;
    }
 
    ///
@@ -121,13 +143,53 @@ void BHTreeCZBuilder::sumCZcosts()
    ///
    /// vector -> CZ cell list
    ///
-   czllPtrListItrT CZlistItr = treePtr->CZbottomCells.begin();
+   czllPtrListT::iterator CZlistItr = treePtr->CZbottom.begin();
    i = 0;
 
    while (CZlistItr != CZlistEnd)
    {
-      (*CZlistItr)->cost = CZcosts[i];
+      (*CZlistItr)->absCost = CZcosts[i];
       i++;
+      CZlistItr++;
+   }
+
+   ///
+   /// make sure the costs of all CZ cells is added up
+   ///
+std::cout << __LINE__ << "\n";
+   goRoot();
+std::cout << __LINE__ << "\n";
+   sumCostRecursor();
+std::cout << __LINE__ << "\n";
+}
+
+//FIXME: untested
+void BHTreeCZBuilder::sumCostRecursor()
+{
+   if (static_cast<gcllPtrT>(curPtr)->atBottom)
+   {
+std::cout << __LINE__ << "\n";
+      if (curPtr->parent != NULL)
+         static_cast<czllPtrT>(curPtr->parent)->absCost +=
+            static_cast<czllPtrT>(curPtr)->absCost;
+std::cout << __LINE__ << "\n";
+   }
+   else
+   {
+std::cout << __LINE__ << "\n";
+      static_cast<czllPtrT>(curPtr)->absCost = 0.;
+std::cout << __LINE__ << "\n";
+      for (size_t i = 0; i < 8; i++)
+      {
+std::cout << __LINE__ << "\n";
+         goChild(i);
+std::cout << __LINE__ << "\n";
+         sumCostRecursor();
+std::cout << __LINE__ << "\n";
+         goUp();
+std::cout << __LINE__ << "\n";
+      }
+std::cout << __LINE__ << "\n";
    }
 }
 
@@ -145,11 +207,11 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
          goChild(i);
          if (curPtr->isParticle)
          {
-            const partPtrT resPartPtr = static_cast<partPtrT>(curPtr);
+            const pnodPtrT resPartPtr = static_cast<pnodPtrT>(curPtr);
             //curPtr = treePtr->cellAllocator.pop();
             curPtr = new czllT;
-            static_cast<cellPtrT>(curPtr)->clear();
-            static_cast<cellPtrT>(curPtr)->inheritCellPos(i);
+            static_cast<gcllPtrT>(curPtr)->clear();
+            static_cast<gcllPtrT>(curPtr)->inheritCellPos(i);
             curPtr->parent = _czllPtr;
 
             resPartPtr->parent = curPtr;
@@ -176,15 +238,15 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
       }
    }
 
-   treePtr->CZbottomCells.erase(_czllPtr->listItr);
-   treePtr->CZbottomCells.push_front(_czllPtr);
+   /*treePtr->CZbottomCells.erase(_czllPtr->listItr);
+      treePtr->CZbottomCells.push_front(_czllPtr);*/
 }
 
 void BHTreeCZBuilder::gatherCZcell(const czllPtrT _czllPtr)
 {
-   treePtr->CZbottomCells.erase(_czllPtr->listItr);
-   treePtr->CZbottomCells.push_front(_czllPtr);
+   /*treePtr->CZbottomCells.erase(_czllPtr->listItr);
+      treePtr->CZbottomCells.push_front(_czllPtr);*/
 }
-}
+};
 
 #endif

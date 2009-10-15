@@ -14,7 +14,6 @@
 #include "typedefs.h"
 
 #include "bhtree_nodes.h"
-#include "bhtree_config.h"
 
 namespace sphlatch {
 class BHTree {
@@ -24,16 +23,28 @@ public:
    friend class BHTreePartsInsertMover;
    friend class BHTreeWorkerGrav;
 
-   typedef BHTree                         selfType;
-   typedef BHTree&                        selfRef;
-   typedef BHTree*                        selfPtr;
+   typedef BHTree    selfType;
+   typedef BHTree&   selfRef;
+   typedef BHTree*   selfPtr;
+
+   typedef std::list<czllPtrT> czllPtrListT;
 
    BHTree();
    ~BHTree();
 
    static selfRef instance(void);
 
-   BHTreeConfig config;
+   ///
+   /// some constants
+   ///
+   static const size_t maxDepth       = 128;
+   static const size_t maxCZBottCells = 16384;
+
+   ///
+   /// public functions
+   ///
+   void insertParticles();
+   void update();
 
 private:
    static selfPtr _instance;
@@ -44,13 +55,11 @@ protected:
    ///
    /// first and last (local) CZ cell at bottom
    ///
-   czllPtrT btStart, btEnd;
-   czllPtrT lbtStart, lbtEnd;
+   std::list<czllPtrT> CZbottom, CZbottomLoc;
 
    size_t noCells, noParts;
 
    const size_t noThreads;
 };
-
 };
 #endif
