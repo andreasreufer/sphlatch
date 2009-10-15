@@ -14,6 +14,7 @@
 #include "typedefs.h"
 
 #include "bhtree_nodes.h"
+#include "bhtree_config.h"
 
 namespace sphlatch {
 class BHTree {
@@ -32,6 +33,8 @@ public:
 
    static selfRef instance(void);
 
+   BHTreeConfig config;
+
 private:
    static selfPtr _instance;
 
@@ -47,11 +50,6 @@ protected:
    size_t noCells, noParts;
 
    const size_t noThreads;
-
-   size_t maxDepth;
-
-
-
 };
 
 };

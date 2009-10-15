@@ -49,7 +49,7 @@ BHTree::BHTree() :
    static_cast<czllPtrT>(rootPtr)->cen  = 0.5, 0.5, 0.5;
    static_cast<czllPtrT>(rootPtr)->clSz = 1.;
 
-   maxDepth = 100;
+   //maxDepth = 100;
 
 /*   std::cout << static_cast<czllPtrT>(rootPtr)->cen << "  "
              << static_cast<czllPtrT>(rootPtr)->clSz << "\n";*/
