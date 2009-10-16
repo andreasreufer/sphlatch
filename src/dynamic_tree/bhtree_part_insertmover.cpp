@@ -39,11 +39,8 @@ public:
 
 private:
    void pushUpAndToCZsingle(const pnodPtrT _pnodPtr);
-
-  
-   // needed?
    void pushDownSingle(const pnodPtrT _pnodPtr);
-   
+   void pushDownOrphans(const czllPtrT _czllPtr);
 };
 
 ///
@@ -107,13 +104,13 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    if (pointInsideCell(pos) &&
        (getOctant(pos) == oldOct))
       return;
-   
+
    ///
    /// if the particle was a child of the parent cell
-   /// and we already come so far, it doesn't  
+   /// and we already come so far, it doesn't
    ///
-   if ( oldOct != 8 )
-     static_cast<gcllPtrT>(curPtr)->child[oldOct] = NULL;
+   if (oldOct != 8)
+      static_cast<gcllPtrT>(curPtr)->child[oldOct] = NULL;
 
    ///
    /// check whether the particle lies inside the root cell
@@ -126,9 +123,9 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    /// soon as we hit a CZ cell, start substracting cost from
    /// each CZ cell we encounter
    ///
-   bool CZencounter = false;
+   bool        CZencounter = false;
    const fType partCost    = static_cast<pnodPtrT>(_pnodPtr)->partPtr->cost;
-   
+
    while (not pointInsideCell(pos))
    {
       if (not CZencounter)
@@ -157,6 +154,11 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
          static_cast<czllPtrT>(curPtr)->absCost += partCost;
          static_cast<czllPtrT>(curPtr)->noParts++;
       }
+      static_cast<czllPtrT>(curPtr)->adopt(_pnodPtr);
+   }
+   else
+   {
+      pushDownSingle(_pnodPtr);
    }
 
    _pnodPtr->parent = curPtr;
@@ -170,12 +172,11 @@ void BHTreePartsInsertMover::pushDown(const partT& _part)
    pushDownSingle(_part.treeNode);
 }
 
-   // needed?
+// needed?
 void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
 {
    curPtr = _pnodPtr->parent;
    const vect3dT pos = _pnodPtr->pos;
-   //const fType   partCost = _pnodPtr->partPtr->cost;
 
    assert(pointInsideCell(pos));
    assert(not curPtr->isParticle);
@@ -203,14 +204,9 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
             partToCell(curPtr, curOct);
 
          goChild(curOct);
-
-         //static_cast<gcllPtrT>(curPtr)->cost += partCost;
-         //static_cast<gcllPtrT>(curPtr)->noParts++;
       }
    }
 }
-
-
 };
 
 #endif

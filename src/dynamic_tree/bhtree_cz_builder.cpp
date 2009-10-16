@@ -15,7 +15,7 @@
 typedef sphlatch::CommunicationManager   commT;
 
 #include "bhtree_treedump.cpp"
-typedef sphlatch::BHTreeDump               dumpT;
+typedef sphlatch::BHTreeDump             dumpT;
 
 using namespace sphlatch::vectindices;
 
@@ -81,7 +81,6 @@ void BHTreeCZBuilder::operator()()
    const fType costHighMark = 5.;
    const fType costLowMark  = 2.;
 
-   std::cout << "start to balance ...\n";
    while (not CZbalanced)
    {
       ///
@@ -89,12 +88,10 @@ void BHTreeCZBuilder::operator()()
       ///
       sumCZcosts();
 
-      std::cout << __LINE__ << "\n";
       czllPtrListT::iterator       CZlistItr = CZbottom.begin();
       czllPtrListT::const_iterator CZlistEnd = CZbottom.end();
-      std::cout << __LINE__ << "\n";
 
-      //while (CZlistItr != CZlistEnd)
+      while (CZlistItr != CZlistEnd)
       {
          ///
          ///    - if a CZ cell contains too much particles, split it up
@@ -112,19 +109,17 @@ void BHTreeCZBuilder::operator()()
          {
             const czllPtrT refdCellPtr = *CZlistItr;
             // refine the cell
-            std::cout << __LINE__ << " refine cell " << refdCellPtr << " " << refdCellPtr->atBottom << "\n";
             refineCZcell(refdCellPtr);
-            std::cout << __LINE__ << " refined cell\n";
 
             // delete from list and insert new ones
             for (size_t i = 0; i < 8; i++)
             {
                if (refdCellPtr->child[i] != NULL)
                {
-                  std::cout << __LINE__ << ":" << i << "\n";
                   CZbottom.insert(CZlistItr,
-                                  static_cast<czllPtrT>(refdCellPtr->child[i]));
-                  static_cast<czllPtrT>(refdCellPtr->child[i])->atBottom = true;
+                                static_cast<czllPtrT>(refdCellPtr->child[i]));
+                  static_cast<czllPtrT>(refdCellPtr->child[i])->atBottom =
+                     true;
                }
             }
 
@@ -141,16 +136,14 @@ void BHTreeCZBuilder::operator()()
                gatherCZcell(static_cast<czllPtrT>(curPtr));
             CZbalanced = false;
          }
-         std::cout << __LINE__ << " next CZlist \n";
          CZlistItr++;
       }
    }
-   std::cout << __LINE__ << "\n";
+   //std::cout << __LINE__ << "\n";
 }
 
 void BHTreeCZBuilder::sumCZcosts()
 {
-   std::cout << __LINE__ << "sumCZcosts()\n";
    ///
    /// CZ cell list -> vector
    ///
@@ -189,16 +182,13 @@ void BHTreeCZBuilder::sumCZcosts()
    ///
    /// make sure the costs of all CZ cells is added up
    ///
-   std::cout << __LINE__ << "\n";
    goRoot();
    sumCostRecursor();
-   std::cout << __LINE__ << "\n";
 }
 
 //FIXME: untested
 void BHTreeCZBuilder::sumCostRecursor()
 {
-   std::cout << __LINE__ << ":" << curPtr << "\n";
    if (static_cast<gcllPtrT>(curPtr)->atBottom)
    {
       if (curPtr->parent != NULL)
@@ -217,7 +207,6 @@ void BHTreeCZBuilder::sumCostRecursor()
       {
          if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
-            std::cout << __LINE__ << ":" << curPtr->depth << "\n";
             goChild(i);
             sumCostRecursor();
             goUp();
@@ -228,65 +217,90 @@ void BHTreeCZBuilder::sumCostRecursor()
 
 void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
 {
-   std::cout << "refine cell!\n";
-   std::cout << __LINE__ << " refine\n";
    ///
    /// transform all children to empty CZ cells. if a child
    /// is a particle, first link a empty cell in between.
    ///
    curPtr = _czllPtr;
 
-   const fType relCost = (_czllPtr->absCost / _czllPtr->noParts);
-   std::cout << __LINE__ << "\n";
-
    for (size_t i = 0; i < 8; i++)
    {
-      if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
+      if (static_cast<gcllPtrT>(curPtr)->child[i] == NULL)
       {
+         static_cast<gcllPtrT>(curPtr)->child[i] = new czllT;
+         std::cout << static_cast<gcllPtrT>(curPtr)->child[i] << "\n";
          goChild(i);
-         std::cout << __LINE__ << "\n";
-
-         if (curPtr->isParticle)
-         {
-            std::cout << __LINE__ << "\n";
-            const pnodPtrT resPartPtr = static_cast<pnodPtrT>(curPtr);
-
-            curPtr = new czllT;
-            static_cast<gcllPtrT>(curPtr)->clear();
-            static_cast<gcllPtrT>(curPtr)->inheritCellPos(i);
-            curPtr->parent = _czllPtr;
-
-            const size_t newOct = getOctant(resPartPtr->pos);
-            static_cast<gcllPtrT>(curPtr)->child[newOct] = resPartPtr;
-            resPartPtr->depth++;
-            resPartPtr->parent = curPtr;
-         }
-         else if (not curPtr->isCZ)
-         {
-            std::cout << __LINE__ << "\n";
-            const czllPtrT newCZllPtr = new czllT;
-            newCZllPtr->initFromCell(*static_cast<czllPtrT>(curPtr));
-
-            delete static_cast<qcllPtrT>(curPtr);
-            curPtr = newCZllPtr;
-         }
-
-         ///
-         /// now count the particles of this child
-         /// estimate the absolute cost of those
-         ///
-         std::cout << __LINE__ << "\n";
-         countParts = 0;
-         countPartsRecursor();
-         static_cast<czllPtrT>(curPtr)->absCost = countParts * relCost;
-         static_cast<czllPtrT>(curPtr)->noParts = countParts;
-         std::cout << __LINE__ << "\n";
-
+         static_cast<czllPtrT>(curPtr)->clear();
+         curPtr->parent = _czllPtr;
+         static_cast<gcllPtrT>(curPtr)->inheritCellPos(i);
          goUp();
-         std::cout << __LINE__ << "\n";
+      }
+      else if (static_cast<gcllPtrT>(curPtr)->child[i]->isParticle)
+      {
+         const pnodPtrT resPartPtr =
+            static_cast<pnodPtrT>(static_cast<gcllPtrT>(curPtr)->child[i]);
+
+         static_cast<gcllPtrT>(curPtr)->child[i] = new czllT;
+
+         goChild(i);
+         static_cast<czllPtrT>(curPtr)->clear();
+         curPtr->parent = _czllPtr;
+         static_cast<czllPtrT>(curPtr)->inheritCellPos(i);
+
+         const size_t newOct = getOctant(resPartPtr->pos);
+         static_cast<gcllPtrT>(curPtr)->child[newOct] = resPartPtr;
+         resPartPtr->depth++;
+         resPartPtr->parent = curPtr;
+         goUp();
+      }
+      else
+      if (not static_cast<gcllPtrT>(curPtr)->child[i]->isCZ)
+      {
+         const qcllPtrT oldCell =
+            static_cast<qcllPtrT>(static_cast<gcllPtrT>(curPtr)->child[i]);
+         static_cast<gcllPtrT>(curPtr)->child[i] = new czllT;
+         goChild(i);
+         static_cast<czllPtrT>(curPtr)->clear();
+         static_cast<czllPtrT>(curPtr)->initFromCell(*oldCell);
+         delete oldCell;
+         goUp();
       }
    }
-   std::cout << __LINE__ << "refine finished\n";
+
+
+   ///
+   /// now count the particles of this child
+   /// estimate the absolute cost of those
+   ///
+   const fType relCost = (_czllPtr->absCost / _czllPtr->noParts);
+   for (size_t i = 0; i < 8; i++)
+   {
+      goChild(i);
+      countParts = 0;
+      countPartsRecursor();
+      static_cast<czllPtrT>(curPtr)->absCost = countParts * relCost;
+      static_cast<czllPtrT>(curPtr)->noParts = countParts;
+
+      goUp();
+   }
+    
+   ///
+   /// now also distribute the orphans of the former parent cell to
+   /// the new bottom cells
+   ///
+   curPtr = _czllPtr->orphFrst;
+   while (curPtr != NULL)
+   {
+     const pnodPtrT curPart = static_cast<pnodPtrT>(curPtr);
+     const size_t newOct = getOctant( curPart->pos );
+     static_cast<czllPtrT>(_czllPtr->child[newOct])->adopt(curPart);
+     static_cast<czllPtrT>(_czllPtr->child[newOct])->noParts++;
+     static_cast<czllPtrT>(_czllPtr->child[newOct])->absCost += relCost;
+     goNext();
+   }
+   curPtr = _czllPtr;
+   static_cast<czllPtrT>(curPtr)->orphFrst = NULL;
+   static_cast<czllPtrT>(curPtr)->orphLast = NULL;
 }
 
 void BHTreeCZBuilder::countPartsRecursor()
@@ -309,7 +323,6 @@ void BHTreeCZBuilder::countPartsRecursor()
 
 void BHTreeCZBuilder::gatherCZcell(const czllPtrT _czllPtr)
 {
-   std::cout << "gather!\n";
    for (size_t i = 0; i < 8; i++)
    {
       if (_czllPtr->child[i] != NULL)

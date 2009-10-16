@@ -174,7 +174,8 @@ public:
 
    void pushdownNeighbours();
 
-   void delSubtree();
+   // FIXME: wtf?
+   //void delSubtree();
 
 private:
 #ifdef SPHLATCH_PADD64
