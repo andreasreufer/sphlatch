@@ -71,6 +71,10 @@ typedef std::vector<countsType>     countsVectType;
 typedef std::vector<countsType>&    countsVectRefType;
 typedef std::vector<countsType> *   countsVectPtrType;
 
+typedef std::vector<countsType>     ivectT;
+typedef std::vector<countsType>&    ivectRefT;
+typedef std::vector<countsType>*    ivectPtrT;
+
 ///
 /// a vector of particle indices vectors
 /// used to map lists of particles to a list of domains

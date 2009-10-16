@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
    BHTreeTester testWorker(&Tree);
    std::cout << "tree workers instantiated\n";
 
-   const size_t noParts = 1000;
+   const size_t noParts = 100;
 
    std::vector<partT> particles(noParts);
 
@@ -99,14 +99,22 @@ int main(int argc, char* argv[])
       inserter.insert(particles[i]);
    }
 
-   CZbuilder();
 
    //dumper.dotDump("test0.dot");
-   for (size_t i = 0; i < noParts; i++)
+   /*for (size_t i = 0; i < noParts; i++)
    {
       //std::cout << "push down particle " << i << "\n";
       inserter.pushDown(particles[i]);
-   }
+   }*/
+   
+   dumper.ptrDump("preCZdump.txt");
+   dumper.dotDump("preCZdump.dot");
+   
+   CZbuilder();
+   std::cout << "setNextCZ() done!\n";
+   
+   dumper.ptrDump("postCZdump.txt");
+   dumper.dotDump("postCZdump.dot");
 
    testWorker.dispRoot();
 
@@ -116,10 +124,8 @@ int main(int argc, char* argv[])
      //std::cout << i << "\n";
      //housekeeper.setNextCZ();
    }
-   std::cout << "setNextCZ() done!\n";
 
 
-   dumper.ptrDump("ptrdump.txt");
    dumper.dotDump("dump.dot");
 
    /*testWorker.build();

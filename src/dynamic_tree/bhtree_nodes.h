@@ -126,8 +126,9 @@ public:
 ///
 class quadrupoleCellNode : public monopoleCellNode {
 public:
-
+   
    fType q11, q22, q33, q12, q13, q23;
+   countsType noParts;
 
    quadrupoleCellNode() { };
    ~quadrupoleCellNode() { };
@@ -150,8 +151,7 @@ public:
    nodePtrT neighbour[27];
    idType   domain;
 
-   fType      absCost, relCost;
-   countsType noParts;
+   fType      absCost;
    
    ///
    /// adopted orphans

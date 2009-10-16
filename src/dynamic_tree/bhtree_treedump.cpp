@@ -160,6 +160,10 @@ void BHTreeDump::ptrRecursor()
                   << "\n";
          dumpFile << " cl -> " << static_cast<czllPtrT>(curPtr)->chldLast
                   << "\n";
+         dumpFile << " noParts:" << static_cast<czllPtrT>(curPtr)->noParts
+                  << "\n";
+         dumpFile << " absCost:" << static_cast<czllPtrT>(curPtr)->absCost
+                  << "\n";
       }
 
       for (size_t i = 0; i < 8; i++)
