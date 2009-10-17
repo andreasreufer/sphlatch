@@ -45,6 +45,8 @@ BHTree::BHTree() :
    // just temporary
    static_cast<czllPtrT>(rootPtr)->cen  = 0.5, 0.5, 0.5;
    static_cast<czllPtrT>(rootPtr)->clSz = 1.;
+   
+   static_cast<czllPtrT>(rootPtr)->parent    = NULL;
 
    //maxDepth = 100;
 

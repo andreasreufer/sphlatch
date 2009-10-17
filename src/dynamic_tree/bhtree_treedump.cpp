@@ -50,11 +50,18 @@ void BHTreeDump::dotRecursor()
    else
       dumpFile << "C";
 
-   dumpFile << abs(curPtr->ident) << " [";
+   dumpFile << curPtr << " [";
+   //dumpFile << abs(curPtr->ident) << " [";
+   
    //if (curPtr->isParticle)
    //   dumpFile << "label=" << curPtr->ident << ",";
    //else
    dumpFile << "label=\"\",";
+
+   /*if (curPtr->isParticle)
+     dumpFile << "label=\"\",";
+   else
+     dumpFile << "label=\" " << curPtr << "\",";*/
 
    if (curPtr->isParticle)
       dumpFile << "shape=circle,color=green";
@@ -86,14 +93,16 @@ void BHTreeDump::dotRecursor()
       {
          if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
-            dumpFile << "C" << abs(curPtr->ident)
+            //dumpFile << "C" << abs(curPtr->ident)
+            dumpFile << "C" << curPtr
                      << " -> ";
             if (static_cast<gcllPtrT>(curPtr)->child[i]->isParticle)
                dumpFile << "P";
             else
                dumpFile << "C";
 
-            dumpFile << abs(static_cast<gcllPtrT>(curPtr)->child[i]->ident)
+            //dumpFile << abs(static_cast<gcllPtrT>(curPtr)->child[i]->ident)
+            dumpFile << static_cast<gcllPtrT>(curPtr)->child[i]
                      << " \n";
             goChild(i);
             dotRecursor();
