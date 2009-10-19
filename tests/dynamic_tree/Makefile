@@ -69,5 +69,12 @@ sphworker:
 		  -fopenmp \
 		  -o sphWorker sphWorker.cpp
 
+includefun:
+	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+		  -I../../src -I../../src/dynamic_tree \
+		  -lhdf5 -lz \
+		  -fopenmp \
+		  -o includeFun include.cpp
+
 
 

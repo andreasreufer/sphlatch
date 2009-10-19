@@ -14,6 +14,7 @@
 #include "typedefs.h"
 
 #include "bhtree_nodes.h"
+#include "bhtree_housekeeper.h"
 
 namespace sphlatch {
 class BHTree {
@@ -29,6 +30,8 @@ public:
 
    typedef std::list<czllPtrT> czllPtrListT;
 
+   typedef std::vector<treeGhost> partVectT;
+
    BHTree();
    ~BHTree();
 
@@ -43,7 +46,7 @@ public:
    ///
    /// public functions
    ///
-   void insertParticles();
+   void insertParts(partVectT& _parts);
    void update();
 
 private:

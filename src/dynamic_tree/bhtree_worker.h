@@ -10,18 +10,18 @@
  */
 
 #include "bhtree_nodes.h"
-
 #include "bhtree.h"
-//class BHTree;
+
 
 namespace sphlatch {
+class BHTree;
+
 class BHTreeWorker {
 public:
-   typedef BHTree&                    treeRefT;
-   typedef BHTree*                    treePtrT;
+   typedef BHTree&               treeRefT;
+   typedef BHTree*               treePtrT;
 
-   //typedef BHTree::czllPtrListT    czllPtrListT;
-   typedef std::list<czllPtrT> czllPtrListT;
+   typedef std::list<czllPtrT>   czllPtrListT;
 
    BHTreeWorker(const BHTreeWorker& _worker);
    BHTreeWorker(const treePtrT _treePtr);
@@ -57,16 +57,17 @@ protected:
 ///
 /// specialization for a read-only BHTree worker (eg. gravity walk)
 ///
-class BHTreeWorkerRO : public BHTreeWorker {
-public:
+
+/*class BHTreeWorkerRO : public BHTreeWorker {
+   public:
    BHTreeWorkerRO(treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
    BHTreeWorkerRO(const BHTreeWorkerRO& _workerRO) : BHTreeWorker(_workerRO) { }
 
-protected:
+   protected:
    ///
    /// overwrite curPtr by a faster read-only version
    ///
    nodePtrT curPtr, rootPtr;
-};
+   };*/
 };
 #endif

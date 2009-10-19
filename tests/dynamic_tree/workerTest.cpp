@@ -95,9 +95,8 @@ int main(int argc, char* argv[])
       particles[i].id   = i;
       particles[i].cost = 1.;
 
-      //std::cout << "try to insert :" << particles[i].pos << "\n";
-      inserter.insert(particles[i]);
    }
+   Tree.insertParts(particles);
 
 
    //dumper.dotDump("test0.dot");
@@ -125,7 +124,7 @@ int main(int argc, char* argv[])
      //housekeeper.setNextCZ();
    }
 
-   housekeeper.setNext();
+   //housekeeper.setNext();
 
 
    dumper.dotDump("dump.dot");

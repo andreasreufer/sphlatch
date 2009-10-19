@@ -11,30 +11,24 @@
 
 #include <vector>
 
+#include "bhtree_housekeeper.h"
 #include "bhtree_worker.cpp"
 
 namespace sphlatch {
-class BHTreeHousekeeper : public BHTreeWorker {
-public:
 
-   BHTreeHousekeeper(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
-   BHTreeHousekeeper(const BHTreeHousekeeper& _hk) : BHTreeWorker(_hk) { }
-   ~BHTreeHousekeeper() { }
+BHTreeHousekeeper::BHTreeHousekeeper(const treePtrT _treePtr) :
+  BHTreeWorker(_treePtr)
+{
+  std::cout << "HK inst.\n";
+};
 
-   ///
-   /// set the next & skip pointers
-   ///
-   void setNext(const czllPtrT _czll);
-   void setNextCZ();
-   void setSkip();
+BHTreeHousekeeper::BHTreeHousekeeper(const BHTreeHousekeeper& _hk) :
+  BHTreeWorker(_hk)
+{
+};
 
-private:
-   void setNextRecursor();
-   void setNextCZRecursor();
-
-   nodePtrT lastPtr;
-
-   std::vector<gcllPtrT> lastSkipeeAtDepth;
+BHTreeHousekeeper::~BHTreeHousekeeper()
+{
 };
 
 //FIXME: this is untested
@@ -55,7 +49,7 @@ void BHTreeHousekeeper::setNext(const czllPtrT _czll)
    _czll->chldLast = lastPtr;
 
    curPtr = _czll;
-}
+};
 
 void BHTreeHousekeeper::setNextCZ()
 {
@@ -63,7 +57,7 @@ void BHTreeHousekeeper::setNextCZ()
    lastPtr = rootPtr;
    setNextCZRecursor();
    lastPtr->next = rootPtr;
-}
+};
 
 void BHTreeHousekeeper::setSkip()
 {
@@ -106,7 +100,7 @@ void BHTreeHousekeeper::setSkip()
          lastSkipeeAtDepth[depth] = static_cast<gcllPtrT>(curPtr);
       }
    }
-}
+};
 
 void BHTreeHousekeeper::setNextRecursor()
 {
@@ -125,7 +119,7 @@ void BHTreeHousekeeper::setNextRecursor()
          }
       }
    }
-}
+};
 
 void BHTreeHousekeeper::setNextCZRecursor()
 {
@@ -152,7 +146,7 @@ void BHTreeHousekeeper::setNextCZRecursor()
          }
       }
    }
-}
+};
 };
 
 #endif

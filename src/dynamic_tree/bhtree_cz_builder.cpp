@@ -162,6 +162,7 @@ void BHTreeCZBuilder::operator()()
    //std::cout << __LINE__ << "\n";
 }
 
+// FIXME: move this to tree
 void BHTreeCZBuilder::sumCZcosts()
 {
    ///

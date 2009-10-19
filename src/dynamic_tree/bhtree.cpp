@@ -13,8 +13,11 @@
  #include <omp.h>
 #endif
 
-#include "bhtree_nodes.cpp"
 #include "bhtree.h"
+#include "bhtree_nodes.cpp"
+
+#include "bhtree_housekeeper.cpp"
+#include "bhtree_part_insertmover.cpp"
 
 namespace sphlatch {
 
@@ -64,6 +67,38 @@ BHTree::selfRef BHTree::instance()
       _instance = new BHTree;
    return(*_instance);
 };
+
+void BHTree::insertParts(partVectT& _parts)
+{  
+  const size_t noParts = _parts.size();
+
+  BHTreePartsInsertMover inserter(this);
+
+  for (size_t i = 0; i < noParts; i++)
+  {
+    inserter.insert(_parts[i]);
+  }
+
+};
+
+void BHTree::update()
+{
+  // move particles
+  // (prepare next walk?)
+  BHTreePartsInsertMover mover(this);
+
+  // rebalance trees
+  // push down parts
+
+  // exchange particles
+
+  // push down orphans
+  // clean up tree
+  // prepare walks (next & skip)
+
+  // exchange MP moments
+};
+
 
 };
 #endif
