@@ -29,6 +29,7 @@ public:
 
 public:
    void insert(partT& _part);
+   void moveAll();
 
    //void insert(std::vector<particle>& _parts);
    //void insert(std::vector<ghost>& _ghosts);
@@ -76,6 +77,35 @@ void BHTreePartsInsertMover::insert(partT& _part)
    static_cast<czllPtrT>(rootPtr)->absCost += _part.cost;
 
    pushUpAndToCZsingle(newPartPtr);
+}
+
+///
+///
+///
+void BHTreePartsInsertMover::moveAll()
+{
+   treePtr->CZbottomLoc = treePtr->CZbottom; // quick hack
+   czllPtrListT& CZbottomLoc(treePtr->CZbottomLoc);
+
+   czllPtrListT::iterator       CZItr = CZbottomLoc.begin();
+   czllPtrListT::const_iterator CZEnd = CZbottomLoc.end();
+
+   while (CZItr != CZEnd)
+   {
+      const czllPtrT curCZ = *CZItr;
+
+      nodePtrT curPart = curCZ->chldFrst;
+      while ( curPart != NULL )
+      {
+        if ( curPart->isParticle )
+        {
+          pushUpAndToCZsingle(static_cast<pnodPtrT>(curPart));
+          std::cout << "move!\n";
+        }
+        curPart = curPart->next;
+      }
+      CZItr++;
+   }
 }
 
 ///

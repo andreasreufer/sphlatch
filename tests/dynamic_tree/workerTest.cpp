@@ -125,11 +125,22 @@ int main(int argc, char* argv[])
      //housekeeper.setNextCZ();
    }
 
+   housekeeper.setNext();
+
 
    dumper.dotDump("dump.dot");
 
    /*testWorker.build();
       testWorker.test();*/
+   
+   for (size_t i = 0; i < noParts; i++)
+   {
+      if ( particles[i].pos[0] < 0.5 )
+        particles[i].pos[0] += 0.5;
+
+      particles[i].cost = 1.;
+   }
+   inserter.moveAll();
 
    MPI::Finalize();
    return(0);

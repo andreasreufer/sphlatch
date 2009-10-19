@@ -10,7 +10,9 @@
  */
 
 #include "bhtree_nodes.h"
+
 #include "bhtree.h"
+//class BHTree;
 
 namespace sphlatch {
 class BHTreeWorker {
@@ -18,7 +20,8 @@ public:
    typedef BHTree&                    treeRefT;
    typedef BHTree*                    treePtrT;
 
-   typedef BHTree::czllPtrListT    czllPtrListT;
+   //typedef BHTree::czllPtrListT    czllPtrListT;
+   typedef std::list<czllPtrT> czllPtrListT;
 
    BHTreeWorker(const BHTreeWorker& _worker);
    BHTreeWorker(const treePtrT _treePtr);

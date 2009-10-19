@@ -24,7 +24,6 @@ public:
    ///
    /// set the next & skip pointers
    ///
-
    void setNext(const czllPtrT _czll);
    void setNextCZ();
    void setSkip();
