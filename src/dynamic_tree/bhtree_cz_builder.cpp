@@ -20,6 +20,7 @@ typedef sphlatch::BHTreeDump             dumpT;
 using namespace sphlatch::vectindices;
 
 namespace sphlatch {
+
 class BHTreeCZBuilder : public BHTreeWorker {
 public:
    BHTreeCZBuilder(const treePtrT _treePtr) :
@@ -33,7 +34,7 @@ public:
    ~BHTreeCZBuilder()
    { }
 
-   void operator()();
+   void rebalance();
 
 private:
    commT& CommManager;
@@ -41,11 +42,7 @@ private:
    fvectT CZcosts;
    ivectT CZparts;
 
-   ///
-   ///
-   ///
    void refineCZcell(const czllPtrT _czllPtr);
-
    void gatherCZcell(const czllPtrT _czllPtr);
 
    void sumCZcosts();
@@ -71,7 +68,7 @@ private:
 ///      cell and replace them by normal cells
 ///    while not all CZ cells are balanced
 ///
-void BHTreeCZBuilder::operator()()
+void BHTreeCZBuilder::rebalance()
 {
    std::list<czllPtrT>& CZbottom(treePtr->CZbottom);
 
@@ -120,7 +117,7 @@ void BHTreeCZBuilder::operator()()
             CZbalanced = false;
             const czllPtrT refdCellPtr = *CZlistItr;
             // refine the cell
-            std::cout << "refine " << refdCellPtr << " " << refdCellPtr->absCost << "\n";
+            //std::cout << "refine " << refdCellPtr << " " << refdCellPtr->absCost << "\n";
             refineCZcell(refdCellPtr);
 
             // delete from list and insert new ones
@@ -128,7 +125,7 @@ void BHTreeCZBuilder::operator()()
             {
                //if (refdCellPtr->child[i] != NULL)
                //{
-                  std::cout << " new   " << static_cast<czllPtrT>(refdCellPtr->child[i]) << " " << static_cast<czllPtrT>(refdCellPtr->child[i])->absCost << "\n";
+                  //std::cout << " new   " << static_cast<czllPtrT>(refdCellPtr->child[i]) << " " << static_cast<czllPtrT>(refdCellPtr->child[i])->absCost << "\n";
                   CZbottom.insert(CZlistItr,
                                 static_cast<czllPtrT>(refdCellPtr->child[i]));
                   static_cast<czllPtrT>(refdCellPtr->child[i])->atBottom =
@@ -152,7 +149,6 @@ void BHTreeCZBuilder::operator()()
             if ( gathCellPtr->absCost < costLowMark )
             {
               gatherCZcell(gathCellPtr);
-              std::cout << "gather " << gathCellPtr << " " << gathCellPtr->absCost << "\n";
               CZbalanced = false;
             }
          }
@@ -204,6 +200,7 @@ void BHTreeCZBuilder::sumCZcosts()
    /// make sure the costs of all CZ cells is added up
    ///
    goRoot();
+
    sumCostRecursor();
 }
 
@@ -250,7 +247,6 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
       if (static_cast<gcllPtrT>(curPtr)->child[i] == NULL)
       {
          static_cast<gcllPtrT>(curPtr)->child[i] = new czllT;
-         //std::cout << static_cast<gcllPtrT>(curPtr)->child[i] << "\n";
          goChild(i);
          static_cast<czllPtrT>(curPtr)->clear();
          curPtr->parent = _czllPtr;
@@ -366,6 +362,10 @@ std::cout << __LINE__ << "\n";
    }
 std::cout << __LINE__ << "\n";
 }
+
+
+
+
 };
 
 #endif

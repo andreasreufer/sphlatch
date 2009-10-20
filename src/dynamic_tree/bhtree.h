@@ -24,13 +24,14 @@ public:
    friend class BHTreePartsInsertMover;
    friend class BHTreeWorkerGrav;
 
-   typedef BHTree    selfType;
-   typedef BHTree&   selfRef;
-   typedef BHTree*   selfPtr;
+   typedef BHTree                   selfType;
+   typedef BHTree&                  selfRef;
+   typedef BHTree*                  selfPtr;
 
-   typedef std::list<czllPtrT> czllPtrListT;
+   typedef std::list<czllPtrT>      czllPtrListT;
+   typedef std::vector<czllPtrT>    czllPtrVectT;
 
-   typedef std::vector<treeGhost> partVectT;
+   typedef std::vector<treeGhost>   partVectT;
 
    BHTree();
    ~BHTree();
@@ -43,6 +44,9 @@ public:
    static const size_t maxDepth       = 128;
    static const size_t maxCZBottCells = 16384;
 
+   static const fType costLowMark = 0.1;
+
+
    ///
    /// public functions
    ///
@@ -51,6 +55,9 @@ public:
 
 private:
    static selfPtr _instance;
+
+   czllPtrVectT getCzllPtrVect(czllPtrListT _czllList);
+   void sumUpCosts(), sumUpCostsRec();
 
 protected:
    nodePtrT rootPtr;

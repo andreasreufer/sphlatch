@@ -96,7 +96,9 @@ int main(int argc, char* argv[])
       particles[i].cost = 1.;
 
    }
+   
    Tree.insertParts(particles);
+   Tree.update();
 
 
    //dumper.dotDump("test0.dot");
@@ -109,7 +111,7 @@ int main(int argc, char* argv[])
    dumper.ptrDump("preCZdump.txt");
    dumper.dotDump("preCZdump.dot");
    
-   CZbuilder();
+   //CZbuilder();
    std::cout << "setNextCZ() done!\n";
    
    dumper.ptrDump("postCZdump.txt");
@@ -139,7 +141,7 @@ int main(int argc, char* argv[])
 
       particles[i].cost = 1.;
    }
-   inserter.moveAll();
+   //inserter.moveAll();
 
    MPI::Finalize();
    return(0);

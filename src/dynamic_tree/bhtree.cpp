@@ -18,9 +18,9 @@
 
 #include "bhtree_housekeeper.cpp"
 #include "bhtree_part_insertmover.cpp"
+#include "bhtree_cz_builder.cpp"
 
 namespace sphlatch {
-
 BHTree::BHTree() :
    noCells(0),
    noParts(0),
@@ -36,8 +36,8 @@ BHTree::BHTree() :
    /// cells list
    ///
    rootPtr = new czllT;
-   
-   CZbottom.push_back( static_cast<czllPtrT>(rootPtr) );
+
+   CZbottom.push_back(static_cast<czllPtrT>(rootPtr));
 
    static_cast<czllPtrT>(rootPtr)->clear();
    static_cast<czllPtrT>(rootPtr)->atBottom = true;
@@ -48,17 +48,17 @@ BHTree::BHTree() :
    // just temporary
    static_cast<czllPtrT>(rootPtr)->cen  = 0.5, 0.5, 0.5;
    static_cast<czllPtrT>(rootPtr)->clSz = 1.;
-   
-   static_cast<czllPtrT>(rootPtr)->parent    = NULL;
+
+   static_cast<czllPtrT>(rootPtr)->parent = NULL;
 
    //maxDepth = 100;
 
 /*   std::cout << static_cast<czllPtrT>(rootPtr)->cen << "  "
              << static_cast<czllPtrT>(rootPtr)->clSz << "\n";*/
-};
+}
 
 BHTree::~BHTree()
-{ };
+{ }
 
 BHTree::selfPtr BHTree::_instance = NULL;
 BHTree::selfRef BHTree::instance()
@@ -66,39 +66,88 @@ BHTree::selfRef BHTree::instance()
    if (_instance == NULL)
       _instance = new BHTree;
    return(*_instance);
-};
+}
 
 void BHTree::insertParts(partVectT& _parts)
-{  
-  const size_t noParts = _parts.size();
+{
+   const size_t noParts = _parts.size();
 
-  BHTreePartsInsertMover inserter(this);
+   BHTreePartsInsertMover inserter(this);
 
-  for (size_t i = 0; i < noParts; i++)
-  {
-    inserter.insert(_parts[i]);
-  }
-
-};
+   for (size_t i = 0; i < noParts; i++)
+   {
+      inserter.insert(_parts[i]);
+   }
+}
 
 void BHTree::update()
 {
-  // move particles
-  // (prepare next walk?)
-  BHTreePartsInsertMover mover(this);
+   // move particles
+   // (prepare next walk?)
+   BHTreePartsInsertMover       mover(this);
+   czllPtrListT::iterator       CZItr = CZbottom.begin();
+   czllPtrListT::const_iterator CZEnd = CZbottom.end();
 
-  // rebalance trees
-  // push down parts
+   while (CZItr != CZEnd )
+   {
+     std::cout << *CZItr << "\n";
+     mover.move(*CZItr);
+     CZItr++;
+   } 
 
-  // exchange particles
+   // rebalance trees
+   BHTreeCZBuilder czbuilder(this);
+   czbuilder.rebalance();
 
-  // push down orphans
-  // clean up tree
-  // prepare walks (next & skip)
+   // exchange costzone cells and their particles
 
-  // exchange MP moments
-};
+   // push down orphans
+   while (CZItr != CZEnd )
+   {
+     std::cout << *CZItr << "\n";
+     mover.move(*CZItr);
+     CZItr++;
+   }
 
+   // clean up tree
 
+   // prepare walks (next & skip)
+
+   std::cout << "prepare walks \n";
+   omp_set_num_threads(4);
+
+   czllPtrVectT CZBottomV = getCzllPtrVect(CZbottom);
+   const int noCZBottomCells = CZBottomV.size();
+
+   BHTreeHousekeeper HK(this);
+#pragma omp parallel for firstprivate(HK)
+   for (int i = 0; i < noCZBottomCells; i++)
+   {
+     HK.setNext( CZBottomV[i] );
+     std::cout << i << " " << &HK << " " << omp_get_thread_num() << "\n";
+   }
+   HK.setNextCZ();
+   HK.setSkip();
+
+   // exchange MP moments
+}
+
+BHTree::czllPtrVectT BHTree::getCzllPtrVect(czllPtrListT _czllList)
+{
+  czllPtrVectT vect;
+  vect.resize(_czllList.size());
+
+  czllPtrListT::iterator       CZItr = _czllList.begin();
+  czllPtrListT::const_iterator CZEnd = _czllList.end();
+
+  size_t i = 0;
+  while (CZItr != CZEnd)
+  {
+    vect[i] = *CZItr;
+    CZItr++;
+    i++;
+  }
+  return vect;
+}
 };
 #endif

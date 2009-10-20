@@ -34,6 +34,7 @@ BHTreeHousekeeper::~BHTreeHousekeeper()
 //FIXME: this is untested
 void BHTreeHousekeeper::setNext(const czllPtrT _czll)
 {
+  std::cout << _czll << "\n";
    ///
    /// wire next pointer by doing a preorder tree walk
    ///

@@ -18,7 +18,6 @@ class BHTreePartsInsertMover : public BHTreeWorker {
 public:
 
    typedef BHTreePartsInsertMover   selfT;
-
    typedef treeGhost                partT;
 
    BHTreePartsInsertMover(treePtrT _treePtr)
@@ -29,19 +28,13 @@ public:
 
 public:
    void insert(partT& _part);
-   void moveAll();
-
-   //void insert(std::vector<particle>& _parts);
-   //void insert(std::vector<ghost>& _ghosts);
-   void pushToCZ();
-
-   // temporary
-   void pushDown(const partT& _part);
+   void move(const czllPtrT _czll);
+   void pushDownOrphans(const czllPtrT _czll);
 
 private:
-   void pushUpAndToCZsingle(const pnodPtrT _pnodPtr);
+   void pushUpAndToCZSingle(const pnodPtrT _pnodPtr);
+   
    void pushDownSingle(const pnodPtrT _pnodPtr);
-   void pushDownOrphans(const czllPtrT _czllPtr);
 };
 
 ///
@@ -76,42 +69,40 @@ void BHTreePartsInsertMover::insert(partT& _part)
    static_cast<czllPtrT>(rootPtr)->noParts++;
    static_cast<czllPtrT>(rootPtr)->absCost += _part.cost;
 
-   pushUpAndToCZsingle(newPartPtr);
+   pushUpAndToCZSingle(newPartPtr);
 }
 
-///
-///
-///
-void BHTreePartsInsertMover::moveAll()
+void BHTreePartsInsertMover::move(const czllPtrT _czll)
 {
-   treePtr->CZbottomLoc = treePtr->CZbottom; // quick hack
-   czllPtrListT& CZbottomLoc(treePtr->CZbottomLoc);
+   nodePtrT curPart = _czll->chldFrst;
 
-   czllPtrListT::iterator       CZItr = CZbottomLoc.begin();
-   czllPtrListT::const_iterator CZEnd = CZbottomLoc.end();
-
-   while (CZItr != CZEnd)
+   while (curPart != NULL)
    {
-      const czllPtrT curCZ = *CZItr;
-
-      nodePtrT curPart = curCZ->chldFrst;
-      while ( curPart != NULL )
+      if (curPart->isParticle)
       {
-        if ( curPart->isParticle )
-        {
-          pushUpAndToCZsingle(static_cast<pnodPtrT>(curPart));
-          std::cout << "move!\n";
-        }
-        curPart = curPart->next;
+         pushUpAndToCZSingle(static_cast<pnodPtrT>(curPart));
+         std::cout << "move!\n";
       }
-      CZItr++;
+      curPart = curPart->next;
+   }
+}
+
+void BHTreePartsInsertMover::pushDownOrphans(const czllPtrT _czll)
+{
+   nodePtrT curPart = _czll->orphFrst;
+
+   while (curPart != NULL)
+   {
+      pushDownSingle(static_cast<pnodPtrT>(curPart));
+      std::cout << "push down!\n";
+      curPart = curPart->next;
    }
 }
 
 ///
 /// update particle position and move it to the current CZ bottom
 ///
-void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
+void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
 {
    ///
    /// get particle index, its child number and check whether
@@ -194,15 +185,6 @@ void BHTreePartsInsertMover::pushUpAndToCZsingle(const pnodPtrT _pnodPtr)
    _pnodPtr->parent = curPtr;
 }
 
-///
-/// push down a single particle
-///
-void BHTreePartsInsertMover::pushDown(const partT& _part)
-{
-   pushDownSingle(_part.treeNode);
-}
-
-// needed?
 void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
 {
    curPtr = _pnodPtr->parent;
