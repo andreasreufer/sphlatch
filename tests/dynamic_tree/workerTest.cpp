@@ -101,47 +101,22 @@ int main(int argc, char* argv[])
    Tree.update();
 
 
-   //dumper.dotDump("test0.dot");
-   /*for (size_t i = 0; i < noParts; i++)
-   {
-      //std::cout << "push down particle " << i << "\n";
-      inserter.pushDown(particles[i]);
-   }*/
-   
-   dumper.ptrDump("preCZdump.txt");
-   dumper.dotDump("preCZdump.dot");
-   
-   //CZbuilder();
-   std::cout << "setNextCZ() done!\n";
-   
-   dumper.ptrDump("postCZdump.txt");
-   dumper.dotDump("postCZdump.dot");
+   //dumper.ptrDump("postCZdump.txt");
+   //dumper.dotDump("postCZdump.dot");
 
    testWorker.dispRoot();
 
-//#pragma omp parallel for firstprivate(housekeeper)
-//   for (size_t i = 0; i < 4; i++)
-   {
-     //std::cout << i << "\n";
-     //housekeeper.setNextCZ();
-   }
-
-   //housekeeper.setNext();
-
-
-   dumper.dotDump("dump.dot");
-
-   /*testWorker.build();
-      testWorker.test();*/
+   testWorker.build();
+   testWorker.test();
    
    for (size_t i = 0; i < noParts; i++)
-   {
+   /*{
       if ( particles[i].pos[0] < 0.5 )
         particles[i].pos[0] += 0.5;
 
       particles[i].cost = 1.;
-   }
-   //inserter.moveAll();
+   }*/
+   Tree.update();
 
    MPI::Finalize();
    return(0);

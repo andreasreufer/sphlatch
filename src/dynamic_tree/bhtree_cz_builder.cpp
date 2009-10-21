@@ -117,28 +117,24 @@ void BHTreeCZBuilder::rebalance()
             CZbalanced = false;
             const czllPtrT refdCellPtr = *CZlistItr;
             // refine the cell
-            //std::cout << "refine " << refdCellPtr << " " << refdCellPtr->absCost << "\n";
+            std::cout << "refine " << refdCellPtr << " " << refdCellPtr->absCost << "\n";
             refineCZcell(refdCellPtr);
+            std::cout << "refine done\n";
 
             // delete from list and insert new ones
             for (size_t i = 0; i < 8; i++)
             {
-               //if (refdCellPtr->child[i] != NULL)
-               //{
-                  //std::cout << " new   " << static_cast<czllPtrT>(refdCellPtr->child[i]) << " " << static_cast<czllPtrT>(refdCellPtr->child[i])->absCost << "\n";
+                  std::cout << " new   " << static_cast<czllPtrT>(refdCellPtr->child[i]) << " " << static_cast<czllPtrT>(refdCellPtr->child[i])->absCost << "\n";
                   CZbottom.insert(CZlistItr,
                                 static_cast<czllPtrT>(refdCellPtr->child[i]));
                   static_cast<czllPtrT>(refdCellPtr->child[i])->atBottom =
                      true;
-               //}
             }
 
-            std::cout << " del.  " << refdCellPtr << "\n";
+            //std::cout << " del.  " << refdCellPtr << "\n";
             refdCellPtr->atBottom = false;
             CZbottom.erase(CZlistItr);
          }
-         //else
-         //  std::cout << "       " << (*CZlistItr) << " " << (*CZlistItr)->absCost << "\n";
          else
          if ((*CZlistItr)->parent != NULL)
          {

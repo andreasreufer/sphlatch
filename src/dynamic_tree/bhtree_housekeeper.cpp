@@ -15,26 +15,20 @@
 #include "bhtree_worker.cpp"
 
 namespace sphlatch {
-
 BHTreeHousekeeper::BHTreeHousekeeper(const treePtrT _treePtr) :
-  BHTreeWorker(_treePtr)
-{
-  std::cout << "HK inst.\n";
-};
+   BHTreeWorker(_treePtr)
+{ }
 
 BHTreeHousekeeper::BHTreeHousekeeper(const BHTreeHousekeeper& _hk) :
-  BHTreeWorker(_hk)
-{
-};
+   BHTreeWorker(_hk)
+{ }
 
 BHTreeHousekeeper::~BHTreeHousekeeper()
-{
-};
+{ }
 
 //FIXME: this is untested
 void BHTreeHousekeeper::setNext(const czllPtrT _czll)
 {
-  std::cout << _czll << "\n";
    ///
    /// wire next pointer by doing a preorder tree walk
    ///
@@ -50,7 +44,7 @@ void BHTreeHousekeeper::setNext(const czllPtrT _czll)
    _czll->chldLast = lastPtr;
 
    curPtr = _czll;
-};
+}
 
 void BHTreeHousekeeper::setNextCZ()
 {
@@ -58,7 +52,7 @@ void BHTreeHousekeeper::setNextCZ()
    lastPtr = rootPtr;
    setNextCZRecursor();
    lastPtr->next = rootPtr;
-};
+}
 
 void BHTreeHousekeeper::setSkip()
 {
@@ -101,7 +95,7 @@ void BHTreeHousekeeper::setSkip()
          lastSkipeeAtDepth[depth] = static_cast<gcllPtrT>(curPtr);
       }
    }
-};
+}
 
 void BHTreeHousekeeper::setNextRecursor()
 {
@@ -120,14 +114,14 @@ void BHTreeHousekeeper::setNextRecursor()
          }
       }
    }
-};
+}
 
 void BHTreeHousekeeper::setNextCZRecursor()
 {
    if (not curPtr->isParticle)
    {
       lastPtr->next = curPtr;
-      
+
       if (curPtr->atBottom)
       {
          lastPtr = static_cast<czllPtrT>(curPtr)->chldLast;
@@ -147,7 +141,7 @@ void BHTreeHousekeeper::setNextCZRecursor()
          }
       }
    }
-};
+}
 };
 
 #endif

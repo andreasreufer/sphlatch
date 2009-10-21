@@ -183,6 +183,7 @@ void BHTreeDump::ptrRecursor()
       {
          if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
+           std::cout << __LINE__ << " recurse\n";
             goChild(i);
             ptrRecursor();
             goUp();

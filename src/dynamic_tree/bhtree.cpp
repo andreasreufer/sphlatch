@@ -82,29 +82,37 @@ void BHTree::insertParts(partVectT& _parts)
 
 void BHTree::update()
 {
+   std::cout << "entered Tree.update() ...\n";
+
    // move particles
    // (prepare next walk?)
    BHTreePartsInsertMover       mover(this);
    czllPtrListT::iterator       CZItr = CZbottom.begin();
    czllPtrListT::const_iterator CZEnd = CZbottom.end();
-
+   std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
    while (CZItr != CZEnd )
    {
-     std::cout << *CZItr << "\n";
+     std::cout << "move " << *CZItr << "\n";
      mover.move(*CZItr);
      CZItr++;
    } 
 
    // rebalance trees
+   std::cout << "rebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance();
+   std::cout << "... now have " << CZbottom.size() << " CZ cells\n";
+
+   // compose vector of CZ cell pointers   
+   czllPtrVectT CZBottomV = getCzllPtrVect(CZbottom);
+   const int noCZBottomCells = CZBottomV.size();
 
    // exchange costzone cells and their particles
 
    // push down orphans
+   std::cout << "push down orphans\n";
    while (CZItr != CZEnd )
    {
-     std::cout << *CZItr << "\n";
      mover.move(*CZItr);
      CZItr++;
    }
@@ -112,21 +120,24 @@ void BHTree::update()
    // clean up tree
 
    // prepare walks (next & skip)
-
-   std::cout << "prepare walks \n";
-   omp_set_num_threads(4);
-
-   czllPtrVectT CZBottomV = getCzllPtrVect(CZbottom);
-   const int noCZBottomCells = CZBottomV.size();
+   std::cout << "prepare    next walks \n";
+   //omp_set_num_threads(4);
 
    BHTreeHousekeeper HK(this);
 #pragma omp parallel for firstprivate(HK)
    for (int i = 0; i < noCZBottomCells; i++)
    {
+     // clean up
+
+     // set next pointers
      HK.setNext( CZBottomV[i] );
-     std::cout << i << " " << &HK << " " << omp_get_thread_num() << "\n";
+     
+     // calculate MP moments
    }
+
+   std::cout << "prepare CZ next walk  \n";
    HK.setNextCZ();
+   std::cout << "prepare    skip walk  \n";
    HK.setSkip();
 
    // exchange MP moments

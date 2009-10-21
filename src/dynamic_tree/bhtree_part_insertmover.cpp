@@ -75,13 +75,46 @@ void BHTreePartsInsertMover::insert(partT& _part)
 void BHTreePartsInsertMover::move(const czllPtrT _czll)
 {
    nodePtrT curPart = _czll->chldFrst;
+   if (_czll->chldLast != NULL)
+     _czll->chldLast->next = NULL;
 
+   /*
+   if ( curPart == NULL )
+     return;
+
+   ///
+   /// prepare a next-walk only with particles, as the nodes may
+   //
+   ///
+   if (_czll->chldLast != NULL)
+     _czll->chldLast->next = NULL;
+
+   nodePtrT lastPart = curPart;
+   curPart = curPart->next;
+   while(curPart != NULL)
+   {
+      if (curPart->isParticle)
+      {
+        lastPart->next = curPart;
+        lastPart = curPart;
+      }
+      curPart = curPart->next;
+   }
+   lastPart->next = NULL;*/
+
+   ///
+   /// of there is a last child, set its next pointer to NULL,
+   /// so that the next walk for moving terminates
+   /// 
    while (curPart != NULL)
    {
       if (curPart->isParticle)
       {
          pushUpAndToCZSingle(static_cast<pnodPtrT>(curPart));
-         std::cout << "move!\n";
+      }
+      else
+      {
+        std::cout << "EEEK!!!\n";
       }
       curPart = curPart->next;
    }
@@ -94,7 +127,6 @@ void BHTreePartsInsertMover::pushDownOrphans(const czllPtrT _czll)
    while (curPart != NULL)
    {
       pushDownSingle(static_cast<pnodPtrT>(curPart));
-      std::cout << "push down!\n";
       curPart = curPart->next;
    }
 }
@@ -128,7 +160,6 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
 
    ///
    /// if the particle was a child of the parent cell
-   /// and we already come so far, it doesn't
    ///
    if (oldOct != 8)
       static_cast<gcllPtrT>(curPtr)->child[oldOct] = NULL;
