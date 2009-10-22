@@ -59,6 +59,8 @@ private:
    czllPtrVectT getCzllPtrVect(czllPtrListT _czllList);
    void sumUpCosts(), sumUpCostsRec();
 
+   size_t round;
+
 protected:
    nodePtrT rootPtr;
 

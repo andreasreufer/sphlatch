@@ -43,9 +43,9 @@ protected:
 
    size_t getChildNo(nodePtrT _nodePtr);
 
-   void czllToCell(nodePtrT _nodePtr);
-   void cellToCZll(nodePtrT _nodePtr);
-   void partToCell(nodePtrT _nodePtr, const size_t _oct);
+   qcllPtrT czllToCell(nodePtrT _nodePtr);
+   czllPtrT cellToCZll(nodePtrT _nodePtr);
+   qcllPtrT partToCell(nodePtrT _nodePtr, const size_t _oct);
 
    const size_t   noThreads, myThread;
    const treePtrT treePtr;

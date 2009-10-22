@@ -56,7 +56,11 @@ void BHTreeDump::dotRecursor()
    //if (curPtr->isParticle)
    //   dumpFile << "label=" << curPtr->ident << ",";
    //else
-   dumpFile << "label=\"\",";
+
+   if (curPtr->isCZ)
+     dumpFile << "label=\"" << static_cast<czllPtrT>(curPtr)->absCost << "\",";
+   else
+     dumpFile << "label=\"\",";
 
    /*if (curPtr->isParticle)
      dumpFile << "label=\"\",";
@@ -183,7 +187,6 @@ void BHTreeDump::ptrRecursor()
       {
          if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
-           std::cout << __LINE__ << " recurse\n";
             goChild(i);
             ptrRecursor();
             goUp();

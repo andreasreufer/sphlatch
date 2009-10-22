@@ -20,7 +20,6 @@ typedef sphlatch::BHTreeDump             dumpT;
 using namespace sphlatch::vectindices;
 
 namespace sphlatch {
-
 class BHTreeCZBuilder : public BHTreeWorker {
 public:
    BHTreeCZBuilder(const treePtrT _treePtr) :
@@ -34,7 +33,7 @@ public:
    ~BHTreeCZBuilder()
    { }
 
-   void rebalance();
+   void rebalance(const fType _lowMark, const fType _highMark);
 
 private:
    commT& CommManager;
@@ -68,21 +67,21 @@ private:
 ///      cell and replace them by normal cells
 ///    while not all CZ cells are balanced
 ///
-void BHTreeCZBuilder::rebalance()
+void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
 {
    std::list<czllPtrT>& CZbottom(treePtr->CZbottom);
 
    bool CZbalanced = false;
 
-   const fType costHighMark = 14.;
-   const fType costLowMark  = 2.;
+   const fType costHighMark = _highMark;
+   const fType costLowMark  = _lowMark;
 
    size_t round = 1;
    while (not CZbalanced)
    {
       std::ostringstream roundStr;
       roundStr << round;
-      std::string dumpName = "dump";
+      std::string dumpName = "dumpCZ";
       dumpName.append(roundStr.str());
 
       dumper.dotDump(dumpName + ".dot");
@@ -94,9 +93,20 @@ void BHTreeCZBuilder::rebalance()
       /// sum up CZ cost
       ///
       sumCZcosts();
+      std::cout << "summed up CZ\n\n";
 
       czllPtrListT::iterator       CZlistItr = CZbottom.begin();
       czllPtrListT::const_iterator CZlistEnd = CZbottom.end();
+
+      while (CZlistItr != CZlistEnd)
+      {
+        const czllPtrT curCZ = *CZlistItr;
+        std::cout << curCZ << " " << curCZ->absCost << " " << curCZ->depth << "\n";
+        CZlistItr++;
+      }
+      std::cout << "\n";
+
+      CZlistItr = CZbottom.begin();
 
       while (CZlistItr != CZlistEnd)
       {
@@ -116,39 +126,49 @@ void BHTreeCZBuilder::rebalance()
          {
             CZbalanced = false;
             const czllPtrT refdCellPtr = *CZlistItr;
+            
             // refine the cell
             std::cout << "refine " << refdCellPtr << " " << refdCellPtr->absCost << "\n";
             refineCZcell(refdCellPtr);
-            std::cout << "refine done\n";
 
             // delete from list and insert new ones
-            for (size_t i = 0; i < 8; i++)
+            for (int i = 7; i >= 0; i--)
             {
-                  std::cout << " new   " << static_cast<czllPtrT>(refdCellPtr->child[i]) << " " << static_cast<czllPtrT>(refdCellPtr->child[i])->absCost << "\n";
-                  CZbottom.insert(CZlistItr,
-                                static_cast<czllPtrT>(refdCellPtr->child[i]));
-                  static_cast<czllPtrT>(refdCellPtr->child[i])->atBottom =
-                     true;
+               CZbottom.insert(CZlistItr,
+                               static_cast<czllPtrT>(refdCellPtr->child[i]));
+               static_cast<czllPtrT>(refdCellPtr->child[i])->atBottom = true;
+               std::cout << "add new " << refdCellPtr->child[i] << "\n";
             }
-
-            //std::cout << " del.  " << refdCellPtr << "\n";
             refdCellPtr->atBottom = false;
-            CZbottom.erase(CZlistItr);
+
+            CZlistItr--;
+            CZbottom.remove(refdCellPtr);
+            std::cout << "rem old " << refdCellPtr << "\n";
          }
          else
          if ((*CZlistItr)->parent != NULL)
          {
-            //std::cout << __LINE__ << ":" << curPtr->depth << "\n";
-            //goUp();
-            //std::cout << __LINE__ << ":" << curPtr->depth << "\n";
-            const czllPtrT gathCellPtr = static_cast<czllPtrT>( (*CZlistItr)->parent );
-            if ( gathCellPtr->absCost < costLowMark )
+            const czllPtrT gathCellPtr =
+               static_cast<czllPtrT>((*CZlistItr)->parent);
+            if (gathCellPtr->absCost < costLowMark)
             {
-              gatherCZcell(gathCellPtr);
-              CZbalanced = false;
+               ///
+               /// go back again in the CZ cell list just to make sure,
+               /// that the iterator doesn't point to a CZ cell which was
+               /// deleted by gatherCZcell()
+               ///
+               CZlistItr--;
+               std::cout << "gath call " << gathCellPtr << "\n";
+               gatherCZcell(gathCellPtr);
+
+               gathCellPtr->atBottom = true;
+               CZbottom.insert(CZlistItr, gathCellPtr);
+
+               CZbalanced = false;
             }
          }
          CZlistItr++;
+         //std::cout << __LINE__ << " " << *CZlistItr - *CZlistFrst << "\n";
       }
    }
    //std::cout << __LINE__ << "\n";
@@ -196,34 +216,29 @@ void BHTreeCZBuilder::sumCZcosts()
    /// make sure the costs of all CZ cells is added up
    ///
    goRoot();
-
    sumCostRecursor();
+
+   goRoot();
+   std::cout << static_cast<czllPtrT>(curPtr)->absCost << "\n";
 }
 
-//FIXME: untested
-// what about the orphans?
 void BHTreeCZBuilder::sumCostRecursor()
 {
-   if (static_cast<gcllPtrT>(curPtr)->atBottom)
-   {
-      if (curPtr->parent != NULL)
-      {
-         static_cast<czllPtrT>(curPtr->parent)->absCost +=
-            static_cast<czllPtrT>(curPtr)->absCost;
-         static_cast<czllPtrT>(curPtr->parent)->noParts +=
-            static_cast<czllPtrT>(curPtr)->noParts;
-      }
-   }
-   else
+   if (not curPtr->atBottom)
    {
       static_cast<czllPtrT>(curPtr)->absCost = 0.;
       static_cast<czllPtrT>(curPtr)->noParts = 0;
+
       for (size_t i = 0; i < 8; i++)
       {
          if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
             goChild(i);
             sumCostRecursor();
+            static_cast<czllPtrT>(curPtr->parent)->absCost +=
+               static_cast<czllPtrT>(curPtr)->absCost;
+            static_cast<czllPtrT>(curPtr->parent)->noParts +=
+               static_cast<czllPtrT>(curPtr)->noParts;
             goUp();
          }
       }
@@ -297,7 +312,7 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
 
       goUp();
    }
-    
+
    ///
    /// now also distribute the orphans of the former parent cell to
    /// the new bottom cells
@@ -305,12 +320,12 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
    curPtr = _czllPtr->orphFrst;
    while (curPtr != NULL)
    {
-     const pnodPtrT curPart = static_cast<pnodPtrT>(curPtr);
-     const size_t newOct = getOctant( curPart->pos );
-     static_cast<czllPtrT>(_czllPtr->child[newOct])->adopt(curPart);
-     static_cast<czllPtrT>(_czllPtr->child[newOct])->noParts++;
-     static_cast<czllPtrT>(_czllPtr->child[newOct])->absCost += relCost;
-     goNext();
+      const pnodPtrT curPart = static_cast<pnodPtrT>(curPtr);
+      const size_t   newOct  = getOctant(curPart->pos);
+      static_cast<czllPtrT>(_czllPtr->child[newOct])->adopt(curPart);
+      static_cast<czllPtrT>(_czllPtr->child[newOct])->noParts++;
+      static_cast<czllPtrT>(_czllPtr->child[newOct])->absCost += relCost;
+      goNext();
    }
    curPtr = _czllPtr;
    static_cast<czllPtrT>(curPtr)->orphFrst = NULL;
@@ -337,31 +352,24 @@ void BHTreeCZBuilder::countPartsRecursor()
 
 void BHTreeCZBuilder::gatherCZcell(const czllPtrT _czllPtr)
 {
-std::cout << __LINE__ << "\n";
    for (size_t i = 0; i < 8; i++)
    {
       if (_czllPtr->child[i] != NULL)
       {
          if (_czllPtr->child[i]->atBottom)
          {
-            const qcllPtrT newCell = new qcllT;
             const czllPtrT oldCell = static_cast<czllPtrT>(_czllPtr->child[i]);
-
-            newCell->initFromCZll(*oldCell);
             treePtr->CZbottom.remove(oldCell);
-            delete oldCell;
-std::cout << __LINE__ << "\n";
+            std::cout << "rem old " << oldCell << "\n";
+            _czllPtr->child[i] = czllToCell(oldCell);
          }
          else
+         {
             gatherCZcell(static_cast<czllPtrT>(_czllPtr->child[i]));
+         }
       }
    }
-std::cout << __LINE__ << "\n";
 }
-
-
-
-
 };
 
 #endif

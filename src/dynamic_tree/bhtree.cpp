@@ -20,6 +20,8 @@
 #include "bhtree_part_insertmover.cpp"
 #include "bhtree_cz_builder.cpp"
 
+#include "bhtree_treedump.cpp"
+
 namespace sphlatch {
 BHTree::BHTree() :
    noCells(0),
@@ -50,6 +52,8 @@ BHTree::BHTree() :
    static_cast<czllPtrT>(rootPtr)->clSz = 1.;
 
    static_cast<czllPtrT>(rootPtr)->parent = NULL;
+
+   round = 0;
 
    //maxDepth = 100;
 
@@ -84,6 +88,13 @@ void BHTree::update()
 {
    std::cout << "entered Tree.update() ...\n";
 
+   BHTreeDump dumper(this);
+   std::ostringstream roundStr;
+   roundStr << round;
+   std::string dumpName = "dump";
+   dumpName.append(roundStr.str());
+
+
    // move particles
    // (prepare next walk?)
    BHTreePartsInsertMover       mover(this);
@@ -99,9 +110,22 @@ void BHTree::update()
 
    // rebalance trees
    std::cout << "rebalance CZ ....\n";
+   dumper.dotDump(dumpName + "_0.dot");
+   
    BHTreeCZBuilder czbuilder(this);
-   czbuilder.rebalance();
+   czbuilder.rebalance(13.5,  14.5);
+
    std::cout << "... now have " << CZbottom.size() << " CZ cells\n";
+   dumper.dotDump(dumpName + "_1.dot");
+   dumper.ptrDump(dumpName + "_1.txt");
+
+   std::cout << "rebalance CZ ....\n";
+   czbuilder.rebalance(15.5,  16.5);
+   std::cout << "... now have " << CZbottom.size() << " CZ cells\n";
+   dumper.dotDump(dumpName + "_2.dot");
+   dumper.ptrDump(dumpName + "_2.txt");
+
+   exit(0);
 
    // compose vector of CZ cell pointers   
    czllPtrVectT CZBottomV = getCzllPtrVect(CZbottom);
@@ -134,13 +158,16 @@ void BHTree::update()
      
      // calculate MP moments
    }
-
    std::cout << "prepare CZ next walk  \n";
    HK.setNextCZ();
    std::cout << "prepare    skip walk  \n";
    HK.setSkip();
-
+   
+   
    // exchange MP moments
+
+
+   round++;
 }
 
 BHTree::czllPtrVectT BHTree::getCzllPtrVect(czllPtrListT _czllList)
