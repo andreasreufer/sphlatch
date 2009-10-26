@@ -81,23 +81,33 @@ int main(int argc, char* argv[])
    }
 
    Tree.insertParts(particles);
+   std::cout << "Tree.update() .........\n";
    Tree.update();
+   std::cout << "Tree.update() finished.\n";
 
    //dumper.ptrDump("postCZdump.txt");
    //dumper.dotDump("postCZdump.dot");
 
-   testWorker.dispRoot();
+   /*testWorker.dispRoot();
    testWorker.build();
-   testWorker.test();
+   testWorker.test();*/
 
+   dumper.dotDump("pre__move.dot");
+   dumper.ptrDump("pre__move.txt");
    for (size_t i = 0; i < noParts; i++)
    {
-      if (particles[i].pos[0] < 0.5)
-         particles[i].pos[0] += 0.5;
+      if (particles[i].pos[2] < 0.5)
+         particles[i].pos[2] += 0.5;
 
       particles[i].cost = 1.;
    }
-   //Tree.update();
+   
+   std::cout << "Tree.update() .........\n";
+   Tree.update();
+   std::cout << "Tree.update() finished.\n";
+
+   dumper.dotDump("post_move.dot");
+   dumper.ptrDump("post_move.txt");
 
    MPI::Finalize();
    return(0);

@@ -33,7 +33,7 @@ public:
 
 private:
    void pushUpAndToCZSingle(const pnodPtrT _pnodPtr);
-   
+
    void pushDownSingle(const pnodPtrT _pnodPtr);
 };
 
@@ -75,47 +75,42 @@ void BHTreePartsInsertMover::insert(partT& _part)
 void BHTreePartsInsertMover::move(const czllPtrT _czll)
 {
    nodePtrT curPart = _czll->chldFrst;
+
    if (_czll->chldLast != NULL)
-     _czll->chldLast->next = NULL;
+      _czll->chldLast->next = NULL;
 
    /*
-   if ( curPart == NULL )
-     return;
+      if ( curPart == NULL )
+      return;
 
-   ///
-   /// prepare a next-walk only with particles, as the nodes may
-   //
-   ///
-   if (_czll->chldLast != NULL)
-     _czll->chldLast->next = NULL;
+      ///
+      /// prepare a next-walk only with particles, as the nodes may
+      //
+      ///
+      if (_czll->chldLast != NULL)
+      _czll->chldLast->next = NULL;
 
-   nodePtrT lastPart = curPart;
-   curPart = curPart->next;
-   while(curPart != NULL)
-   {
+      nodePtrT lastPart = curPart;
+      curPart = curPart->next;
+      while(curPart != NULL)
+      {
       if (curPart->isParticle)
       {
         lastPart->next = curPart;
         lastPart = curPart;
       }
       curPart = curPart->next;
-   }
-   lastPart->next = NULL;*/
+      }
+      lastPart->next = NULL;*/
 
    ///
    /// of there is a last child, set its next pointer to NULL,
    /// so that the next walk for moving terminates
-   /// 
+   ///
    while (curPart != NULL)
    {
       if (curPart->isParticle)
-      {
          pushUpAndToCZSingle(static_cast<pnodPtrT>(curPart));
-      }
-      else
-      {
-        std::cout << "EEEK!!!\n";
-      }
       curPart = curPart->next;
    }
 }
@@ -127,8 +122,12 @@ void BHTreePartsInsertMover::pushDownOrphans(const czllPtrT _czll)
    while (curPart != NULL)
    {
       pushDownSingle(static_cast<pnodPtrT>(curPart));
+      std::cout << _czll << " pushDownSingle(" << curPart << ")   " << static_cast<pnodPtrT>(curPart)->ident << "\n";
       curPart = curPart->next;
    }
+
+   _czll->orphFrst = NULL;
+   _czll->orphLast = NULL;
 }
 
 ///
@@ -143,6 +142,7 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
    ///
    curPtr = _pnodPtr->parent;
    const size_t oldOct = getChildNo(_pnodPtr);
+
 
    ///
    /// update particle position and mass
@@ -180,6 +180,10 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
 
    while (not pointInsideCell(pos))
    {
+   
+     if ( _pnodPtr->ident == 10 )
+      std::cout << curPtr << " " << CZencounter << "\n";
+
       if (not CZencounter)
       {
          if (curPtr->isCZ)
@@ -244,8 +248,8 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
       else
       {
          if (static_cast<gcllPtrT>(curPtr)->child[curOct]->isParticle)
-            partToCell(curPtr, curOct);
-
+            static_cast<gcllPtrT>(curPtr)->child[curOct] =
+               partToCell(curPtr, curOct);
          goChild(curOct);
       }
    }

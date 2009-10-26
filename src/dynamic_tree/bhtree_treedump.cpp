@@ -52,20 +52,22 @@ void BHTreeDump::dotRecursor()
 
    dumpFile << curPtr << " [";
    //dumpFile << abs(curPtr->ident) << " [";
-   
+
    //if (curPtr->isParticle)
    //   dumpFile << "label=" << curPtr->ident << ",";
    //else
 
    if (curPtr->isCZ)
-     dumpFile << "label=\"" << static_cast<czllPtrT>(curPtr)->absCost << "\",";
+      dumpFile << "label=\"" << curPtr << " (" << static_cast<czllPtrT>(curPtr)->absCost << ")\",";
+   else if (curPtr->isParticle)
+      dumpFile << "label=\"" << curPtr->ident << "\",";
    else
-     dumpFile << "label=\"\",";
+      dumpFile << "label=\"\",";
 
    /*if (curPtr->isParticle)
-     dumpFile << "label=\"\",";
-   else
-     dumpFile << "label=\" " << curPtr << "\",";*/
+      dumpFile << "label=\"\",";
+      else
+      dumpFile << "label=\" " << curPtr << "\",";*/
 
    if (curPtr->isParticle)
       dumpFile << "shape=circle,color=green";
@@ -148,13 +150,14 @@ void BHTreeDump::ptrRecursor()
    if (not curPtr->isParticle)
    {
       dumpFile << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
-
+      
       if (curPtr->isCZ)
       {
          const nodePtrT orphFrst = static_cast<czllPtrT>(curPtr)->orphFrst;
-
+         
          dumpFile << " of -> " << orphFrst;
-
+         
+         const nodePtrT oldPtr = curPtr;
          if (orphFrst != NULL)
          {
             curPtr = orphFrst;
@@ -166,6 +169,8 @@ void BHTreeDump::ptrRecursor()
             }
             dumpFile << curPtr->next;
          }
+         curPtr = oldPtr;
+
          dumpFile << "\n";
          dumpFile << " ol -> " << static_cast<czllPtrT>(curPtr)->orphLast
                   << "\n";
@@ -180,13 +185,16 @@ void BHTreeDump::ptrRecursor()
       }
 
       for (size_t i = 0; i < 8; i++)
-         dumpFile << " c" << i << " -> " <<
-         static_cast<gcllPtrT>(curPtr)->child[i] << "\n";
-
+      {
+         dumpFile << " c" << i << " -> "
+                  << static_cast<gcllPtrT>(curPtr)->child[i] << "\n";
+      }
+      
       for (size_t i = 0; i < 8; i++)
       {
          if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
+
             goChild(i);
             ptrRecursor();
             goUp();

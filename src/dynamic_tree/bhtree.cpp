@@ -86,6 +86,8 @@ void BHTree::insertParts(partVectT& _parts)
 
 void BHTree::update()
 {
+   const fType costMin = 10., costMax = 12.;
+
    std::cout << "entered Tree.update() ...\n";
 
    BHTreeDump dumper(this);
@@ -103,29 +105,19 @@ void BHTree::update()
    std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
    while (CZItr != CZEnd )
    {
-     std::cout << "move " << *CZItr << "\n";
      mover.move(*CZItr);
      CZItr++;
    } 
 
    // rebalance trees
-   std::cout << "rebalance CZ ....\n";
-   dumper.dotDump(dumpName + "_0.dot");
+   //dumper.dotDump(dumpName + "_0.dot");
    
+   std::cout << "\nrebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
-   czbuilder.rebalance(13.5,  14.5);
+   czbuilder.rebalance(costMin, costMax);
 
-   std::cout << "... now have " << CZbottom.size() << " CZ cells\n";
-   dumper.dotDump(dumpName + "_1.dot");
-   dumper.ptrDump(dumpName + "_1.txt");
-
-   std::cout << "rebalance CZ ....\n";
-   czbuilder.rebalance(15.5,  16.5);
-   std::cout << "... now have " << CZbottom.size() << " CZ cells\n";
-   dumper.dotDump(dumpName + "_2.dot");
-   dumper.ptrDump(dumpName + "_2.txt");
-
-   exit(0);
+   //dumper.dotDump(dumpName + "_1.dot");
+   //dumper.ptrDump(dumpName + "_1.txt");
 
    // compose vector of CZ cell pointers   
    czllPtrVectT CZBottomV = getCzllPtrVect(CZbottom);
@@ -134,10 +126,11 @@ void BHTree::update()
    // exchange costzone cells and their particles
 
    // push down orphans
-   std::cout << "push down orphans\n";
+   std::cout << "\npush down orphans\n";
+   CZItr = CZbottom.begin();
    while (CZItr != CZEnd )
    {
-     mover.move(*CZItr);
+     mover.pushDownOrphans(*CZItr);
      CZItr++;
    }
 
@@ -148,7 +141,7 @@ void BHTree::update()
    //omp_set_num_threads(4);
 
    BHTreeHousekeeper HK(this);
-#pragma omp parallel for firstprivate(HK)
+//#pragma omp parallel for firstprivate(HK)
    for (int i = 0; i < noCZBottomCells; i++)
    {
      // clean up
@@ -165,8 +158,6 @@ void BHTree::update()
    
    
    // exchange MP moments
-
-
    round++;
 }
 
