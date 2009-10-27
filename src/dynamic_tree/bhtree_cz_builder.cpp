@@ -27,6 +27,8 @@ public:
       CommManager(commT::instance()),
       CZcosts(_treePtr->maxCZBottCells),
       CZparts(_treePtr->maxCZBottCells),
+      gathOrphFrst(NULL),
+      gathOrphLast(NULL),
       dumper(_treePtr)
    { }
 
@@ -43,6 +45,8 @@ private:
 
    void refineCZcell(const czllPtrT _czllPtr);
    void gatherCZcell(const czllPtrT _czllPtr);
+
+   nodePtrT gathOrphFrst, gathOrphLast;
 
    void sumCZcosts();
    void sumCostRecursor();
@@ -93,17 +97,16 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
       /// sum up CZ cost
       ///
       sumCZcosts();
-      //std::cout << "summed up CZ\n\n";
 
       czllPtrListT::iterator       CZlistItr = CZbottom.begin();
       czllPtrListT::const_iterator CZlistEnd = CZbottom.end();
 
-      while (CZlistItr != CZlistEnd)
+      /*while (CZlistItr != CZlistEnd)
       {
         const czllPtrT curCZ = *CZlistItr;
-        //std::cout << curCZ << " " << curCZ->absCost << " " << curCZ->depth << "\n";
+        std::cout << curCZ << " " << curCZ->absCost << " " << curCZ->depth << "\n";
         CZlistItr++;
-      }
+      }*/
       //std::cout << "\n";
 
       CZlistItr = CZbottom.begin();
@@ -159,7 +162,13 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
                ///
                CZlistItr--;
                //std::cout << "gath call " << gathCellPtr << "\n";
+               //
+               gathOrphFrst = NULL;
+               gathOrphLast = NULL;
                gatherCZcell(gathCellPtr);
+               
+               gathCellPtr->orphFrst = static_cast<pnodPtrT>(gathOrphFrst);
+               gathCellPtr->orphLast = static_cast<pnodPtrT>(gathOrphLast);
 
                gathCellPtr->atBottom = true;
                CZbottom.insert(CZlistItr, gathCellPtr);
@@ -367,6 +376,17 @@ void BHTreeCZBuilder::gatherCZcell(const czllPtrT _czllPtr)
          if (_czllPtr->child[i]->atBottom)
          {
             const czllPtrT oldCell = static_cast<czllPtrT>(_czllPtr->child[i]);
+
+            if ( gathOrphFrst == NULL )
+            {
+              gathOrphFrst = oldCell->orphFrst;
+              gathOrphLast = oldCell->orphLast;
+            }
+            else
+            {
+              gathOrphLast->next = oldCell->orphFrst;
+              gathOrphLast = oldCell->orphLast;
+            }
 
             //std::cout << "rem. oldCell " << oldCell->orphFrst << " " << oldCell->orphLast << "\n";
 
