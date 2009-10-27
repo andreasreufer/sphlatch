@@ -11,6 +11,8 @@
 
 #include "bhtree_worker.h"
 
+// FIXME: use function template for MAC
+
 namespace sphlatch {
 class BHTreeWorkerGrav : public BHTreeWorkerRO {
 public:

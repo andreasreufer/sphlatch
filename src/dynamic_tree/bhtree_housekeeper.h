@@ -28,6 +28,12 @@ public:
    void setNextCZ();
    void setSkip();
 
+   ///
+   /// minimize the suuubtree of a CZ cell
+   ///
+   void minTree(const czllPtrT _czll);
+
+
 private:
    void setNextRecursor();
    void setNextCZRecursor();

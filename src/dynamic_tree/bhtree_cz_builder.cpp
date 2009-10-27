@@ -80,19 +80,8 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
    const fType costHighMark = _highMark;
    const fType costLowMark  = _lowMark;
 
-   size_t round = 1;
    while (not CZbalanced)
    {
-      std::ostringstream roundStr;
-      roundStr << round;
-      std::string dumpName = "dumpCZ";
-      dumpName.append(roundStr.str());
-
-      dumper.dotDump(dumpName + ".dot");
-      dumper.ptrDump(dumpName + ".txt");
-      //std::cout << "ROUND " << round << "\n";
-      round++;
-
       ///
       /// sum up CZ cost
       ///
@@ -101,14 +90,6 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
       czllPtrListT::iterator       CZlistItr = CZbottom.begin();
       czllPtrListT::const_iterator CZlistEnd = CZbottom.end();
 
-      /*while (CZlistItr != CZlistEnd)
-         {
-         const czllPtrT curCZ = *CZlistItr;
-         std::cout << curCZ << " " << curCZ->absCost << " " << curCZ->depth << "\n";
-         CZlistItr++;
-         }
-         //std::cout << "\n";
-         CZlistItr = CZbottom.begin();*/
 
       while (CZlistItr != CZlistEnd)
       {
@@ -130,7 +111,6 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
             const czllPtrT refdCellPtr = *CZlistItr;
 
             // refine the cell
-            //std::cout << "refine " << refdCellPtr << " " << refdCellPtr->absCost << "\n";
             refineCZcell(refdCellPtr);
 
             // delete from list and insert new ones
@@ -139,13 +119,11 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
                CZbottom.insert(CZlistItr,
                                static_cast<czllPtrT>(refdCellPtr->child[i]));
                static_cast<czllPtrT>(refdCellPtr->child[i])->atBottom = true;
-               //std::cout << "add new " << refdCellPtr->child[i] << "\n";
             }
             refdCellPtr->atBottom = false;
 
             CZlistItr--;
             CZbottom.remove(refdCellPtr);
-            //std::cout << "rem old " << refdCellPtr << "\n";
          }
          else
          if ((*CZlistItr)->parent != NULL)
@@ -174,10 +152,8 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
             }
          }
          CZlistItr++;
-         //std::cout << __LINE__ << " " << *CZlistItr - *CZlistFrst << "\n";
       }
    }
-   //std::cout << __LINE__ << "\n";
 }
 
 // FIXME: move this to tree

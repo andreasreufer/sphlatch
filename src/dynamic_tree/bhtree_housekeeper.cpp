@@ -26,7 +26,6 @@ BHTreeHousekeeper::BHTreeHousekeeper(const BHTreeHousekeeper& _hk) :
 BHTreeHousekeeper::~BHTreeHousekeeper()
 { }
 
-//FIXME: this is untested
 void BHTreeHousekeeper::setNext(const czllPtrT _czll)
 {
    ///
@@ -142,6 +141,18 @@ void BHTreeHousekeeper::setNextCZRecursor()
       }
    }
 }
+
+void BHTreeHousekeeper::minTree(const czllPtrT _czll)
+{
+  curPtr = _czll->chldFrst;
+  const nodePtrT chldLast = _czll->chldFrst;
+
+  while ( curPtr != chldLast )
+  {
+    curPtr = curPtr->next;
+  }
+}
+
 };
 
 #endif

@@ -120,22 +120,9 @@ void BHTree::update()
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(costMin, costMax);
 
-   dumper.dotDump(dumpName + "_2a.dot");
-   dumper.ptrDump(dumpName + "_2a.txt");
+   dumper.dotDump(dumpName + "_2.dot");
+   dumper.ptrDump(dumpName + "_2.txt");
    
-   std::cout << "\nrebalance CZ ....\n";
-   czbuilder.rebalance(4.,5.);
-
-   dumper.dotDump(dumpName + "_2b.dot");
-   dumper.ptrDump(dumpName + "_2b.txt");
-
-   std::cout << "\nrebalance CZ ....\n";
-   //czbuilder.rebalance(25., 30.);
-   czbuilder.rebalance(costMin, costMax);
-
-   dumper.dotDump(dumpName + "_2c.dot");
-   dumper.ptrDump(dumpName + "_2c.txt");
-
    // compose vector of CZ cell pointers   
    czllPtrVectT CZBottomV = getCzllPtrVect(CZbottom);
    const int noCZBottomCells = CZBottomV.size();
@@ -157,18 +144,18 @@ void BHTree::update()
    // clean up tree
 
    // prepare walks (next & skip)
-   std::cout << "prepare    next walks \n";
-   //omp_set_num_threads(4);
+   std::cout << "housekeeping          \n";
 
    BHTreeHousekeeper HK(this);
 //#pragma omp parallel for firstprivate(HK)
    for (int i = 0; i < noCZBottomCells; i++)
    {
-     // clean up
-
      // set next pointers
      HK.setNext( CZBottomV[i] );
      
+     // clean up
+     HK.minTree( CZBottomV[i] );
+
      // calculate MP moments
    }
    std::cout << "prepare CZ next walk  \n";

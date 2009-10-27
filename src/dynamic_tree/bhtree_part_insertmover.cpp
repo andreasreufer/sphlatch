@@ -118,9 +118,6 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
    curPtr = _pnodPtr->parent;
    const size_t oldOct = getChildNo(_pnodPtr);
 
-     if ( _pnodPtr->ident == 10 )
-      std::cout << curPtr <<"\n";
-
    ///
    /// update particle position and mass
    ///
@@ -157,42 +154,15 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
 
    while (not pointInsideCell(pos))
    {
-   
-     /*if ( _pnodPtr->ident == 10 )
-      std::cout << curPtr << " " << CZencounter << "\n";
-
-      if (not CZencounter)
-      {
-         if (curPtr->isCZ)
-            CZencounter = true;
-      }
-      else
-      {
-         static_cast<czllPtrT>(curPtr)->absCost -= partCost;
-         static_cast<czllPtrT>(curPtr)->noParts--;
-     
-         if ( _pnodPtr->ident == 10 )
-           std::cout << "remove cost from " << curPtr << "\n";
-      }*/
-
       CZencounter |= curPtr->isCZ;
 
       if ( CZencounter )
       {
          static_cast<czllPtrT>(curPtr)->absCost -= partCost;
          static_cast<czllPtrT>(curPtr)->noParts--;
-     
-         if ( _pnodPtr->ident == 10 )
-           std::cout << "remove cost from " << curPtr << "\n";
       }
-
       goUp();
-     
-      if ( _pnodPtr->ident == 10 )
-        std::cout << curPtr << " " << CZencounter << "\n";
    }
-  if ( _pnodPtr->ident == 10 )
-    std::cout << " now at " << curPtr << "\n";
 
    ///
    /// in case are now in the CZ tree, try to go down again to
@@ -207,13 +177,9 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
          static_cast<czllPtrT>(curPtr)->noParts++;
       }
       static_cast<czllPtrT>(curPtr)->adopt(_pnodPtr);
-  if ( _pnodPtr->ident == 10 )
-    std::cout << " adopt at " << curPtr << "\n";
    }
    else
-   {
       pushDownSingle(_pnodPtr);
-   }
 
    _pnodPtr->parent = curPtr;
 }
