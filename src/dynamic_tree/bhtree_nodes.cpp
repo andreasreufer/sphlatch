@@ -20,7 +20,7 @@ namespace sphlatch {
 nodePtrT genericNode::operator*()
 {
    return(this);
-};
+}
 
 ///
 /// clear methods for the various cell node types
@@ -42,7 +42,7 @@ void genericNode::clear()
 
    isSettled   = false;
    needsUpdate = true;
-};
+}
 
 void genericCellNode::clear()
 {
@@ -56,7 +56,7 @@ void genericCellNode::clear()
 
    cen  = 0., 0., 0.;
    clSz = 0.;
-};
+}
 
 void monopoleCellNode::clear()
 {
@@ -64,7 +64,7 @@ void monopoleCellNode::clear()
 
    com  = 0., 0., 0.;
    mass = 0.;
-};
+}
 
 void quadrupoleCellNode::clear()
 {
@@ -76,7 +76,7 @@ void quadrupoleCellNode::clear()
    q12 = 0.;
    q13 = 0.;
    q23 = 0.;
-};
+}
 
 void costzoneCellNode::clear()
 {
@@ -97,7 +97,7 @@ void costzoneCellNode::clear()
    chldLast = NULL;
 
    isCZ = true;
-};
+}
 
 void particleNode::clear()
 {
@@ -108,7 +108,7 @@ void particleNode::clear()
    partPtr = NULL;
    pos     = 0., 0., 0.;
    m       = 0.;
-};
+}
 
 ///
 /// generic cell methods
@@ -126,7 +126,7 @@ void genericCellNode::inheritCellPos(size_t _n)
    cen[2] += ((_n >> 2) % 2) ? hcSize : -hcSize;
 
    depth = parent->depth + 1;
-};
+}
 
 bool genericCellNode::pointInsideCell(const vect3dT& _pos)
 {
@@ -136,7 +136,7 @@ bool genericCellNode::pointInsideCell(const vect3dT& _pos)
    return(cen[0] - hclSz < _pos[0] && cen[0] + hclSz > _pos[0] &&
           cen[1] - hclSz < _pos[1] && cen[1] + hclSz > _pos[1] &&
           cen[2] - hclSz < _pos[2] && cen[2] + hclSz > _pos[2]);
-};
+}
 
 size_t genericCellNode::getOctant(const vect3dT& _pos)
 {
@@ -146,27 +146,33 @@ size_t genericCellNode::getOctant(const vect3dT& _pos)
    targetOctant += _pos[1] < cen[1] ? 0 : 2;
    targetOctant += _pos[2] < cen[2] ? 0 : 4;
    return(targetOctant);
-};
+}
 
 ///
 /// methods to init a costzone from a quadrupole cell and vice versa
 ///
 void quadrupoleCellNode::initFromCZll(czllT& _czll)
 {
-   *this = static_cast<qcllT>(_czll);
-   isCZ  = false;
+   *this    = static_cast<qcllT>(_czll);
+   isCZ     = false;
    atBottom = false;
    neighSet = false;
 
    for (size_t i = 0; i < 8; i++)
    {
-     if ( child[i] != NULL )
-        child[i]->parent = this;
+      if (child[i] != NULL)
+         child[i]->parent = this;
    }
 
    isSettled   = false;
    needsUpdate = true;
-};
+}
+
+///
+/// calculate the quadrupole moments of a cell
+///
+void quadrupoleCellNode::calcMultipole()
+{ }
 
 void costzoneCellNode::initFromCell(qcllT& _cell)
 {
@@ -175,8 +181,8 @@ void costzoneCellNode::initFromCell(qcllT& _cell)
 
    for (size_t i = 0; i < 8; i++)
    {
-     if ( child[i] != NULL )
-        child[i]->parent = this;
+      if (child[i] != NULL)
+         child[i]->parent = this;
    }
 
    for (size_t i = 0; i < 27; i++)
@@ -189,7 +195,7 @@ void costzoneCellNode::initFromCell(qcllT& _cell)
    neighSet = false;
 
    absCost = 0.;
-};
+}
 
 ///
 /// push down the neighbours to the childs
@@ -341,7 +347,7 @@ void costzoneCellNode::pushdownNeighbours()
    /// childs neighbours are set in this cell
    ///
    neighSet = true;
-};
+}
 
 ///
 /// adopt a particle
@@ -355,7 +361,7 @@ void costzoneCellNode::adopt(pnodPtrT _pnod)
 
    _pnod->next = NULL;
    orphLast    = _pnod;
-};
+}
 
 ///
 /// update a particles position
@@ -364,7 +370,7 @@ void particleNode::update()
 {
    pos = partPtr->pos;
    m   = partPtr->m;
-};
+}
 
 ///
 /// deletes a CZ cells subtree
@@ -372,21 +378,21 @@ void particleNode::update()
 ///
 void costzoneCellNode::delSubtree()
 {
-  nodePtrT curChld = chldFrst, nxtChld = NULL;
-  chldLast->next = NULL;
+   nodePtrT curChld = chldFrst, nxtChld = NULL;
 
-  while (curChld != NULL)
-  {
-    nxtChld = curChld->next;
-    if ( curChld->isParticle )
-      delete static_cast<pnodPtrT>(curChld);
-    else if ( curChld->isCZ )
-      delete static_cast<czllPtrT>(curChld);
-    else
-      delete static_cast<qcllPtrT>(curChld);
-    curChld = nxtChld;
-  }
-};
+   chldLast->next = NULL;
 
+   while (curChld != NULL)
+   {
+      nxtChld = curChld->next;
+      if (curChld->isParticle)
+         delete static_cast<pnodPtrT>(curChld);
+      else if (curChld->isCZ)
+         delete static_cast<czllPtrT>(curChld);
+      else
+         delete static_cast<qcllPtrT>(curChld);
+      curChld = nxtChld;
+   }
+}
 };
 #endif

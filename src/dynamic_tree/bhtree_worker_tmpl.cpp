@@ -4,8 +4,8 @@
 /*
  *  bhtree_worker_.cpp
  *
- *  Created by Andreas Reufer on 14.12.08.
- *  Copyright 2007 University of Berne. All rights reserved.
+ *  Created by Andreas Reufer on 14.12.08
+ *  Copyright 2009 University of Berne. All rights reserved.
  *
  */
 

@@ -136,6 +136,8 @@ public:
    void clear();
    void initFromCZll(czllT& _czll);
 
+   void calcMultipole();
+
 private:
 #ifdef SPHLATCH_PADD64
    char pad[46];
