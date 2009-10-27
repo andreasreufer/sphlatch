@@ -116,8 +116,8 @@ void BHTree::update()
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(costMin, costMax);
 
-   //dumper.dotDump(dumpName + "_1.dot");
-   //dumper.ptrDump(dumpName + "_1.txt");
+   dumper.dotDump(dumpName + "_1.dot");
+   dumper.ptrDump(dumpName + "_1.txt");
 
    // compose vector of CZ cell pointers   
    czllPtrVectT CZBottomV = getCzllPtrVect(CZbottom);
@@ -133,6 +133,9 @@ void BHTree::update()
      mover.pushDownOrphans(*CZItr);
      CZItr++;
    }
+   
+   dumper.dotDump(dumpName + "_2.dot");
+   dumper.ptrDump(dumpName + "_2.txt");
 
    // clean up tree
 

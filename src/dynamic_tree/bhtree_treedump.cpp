@@ -151,43 +151,46 @@ void BHTreeDump::ptrRecursor()
    {
       dumpFile << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
       
+      for (size_t i = 0; i < 8; i++)
+      {
+         dumpFile << " c" << i << " -> "
+                  << static_cast<gcllPtrT>(curPtr)->child[i] << "\n";
+      }
+      
       if (curPtr->isCZ)
       {
-         const nodePtrT orphFrst = static_cast<czllPtrT>(curPtr)->orphFrst;
-         
-         dumpFile << " of -> " << orphFrst;
-         
-         const nodePtrT oldPtr = curPtr;
-         if (orphFrst != NULL)
-         {
-            curPtr = orphFrst;
-            dumpFile << orphFrst << " -> ";
-            while (curPtr->next != NULL)
-            {
-               goNext();
-               dumpFile << curPtr << " -> ";
-            }
-            dumpFile << curPtr->next;
-         }
-         curPtr = oldPtr;
-
-         dumpFile << "\n";
+         dumpFile << " noParts:" << static_cast<czllPtrT>(curPtr)->noParts
+                  << "\n";
+         dumpFile << " absCost:" << static_cast<czllPtrT>(curPtr)->absCost
+                  << "\n";
          dumpFile << " ol -> " << static_cast<czllPtrT>(curPtr)->orphLast
                   << "\n";
          dumpFile << " cf -> " << static_cast<czllPtrT>(curPtr)->chldFrst
                   << "\n";
          dumpFile << " cl -> " << static_cast<czllPtrT>(curPtr)->chldLast
                   << "\n";
-         dumpFile << " noParts:" << static_cast<czllPtrT>(curPtr)->noParts
-                  << "\n";
-         dumpFile << " absCost:" << static_cast<czllPtrT>(curPtr)->absCost
-                  << "\n";
-      }
+         dumpFile << " of -> ";
 
-      for (size_t i = 0; i < 8; i++)
-      {
-         dumpFile << " c" << i << " -> "
-                  << static_cast<gcllPtrT>(curPtr)->child[i] << "\n";
+         nodePtrT curOrph = static_cast<czllPtrT>(curPtr)->orphFrst;
+         if ( curOrph == NULL )
+           dumpFile << "0";
+         while (curOrph != NULL)
+         {
+           dumpFile << curOrph << " -> ";
+           curOrph = curOrph->next;
+         }
+         dumpFile << "\n";
+
+         const nodePtrT oldPtr = curPtr;
+         curOrph = static_cast<czllPtrT>(curPtr)->orphFrst;
+         while (curOrph != NULL)
+         {
+           curPtr = curOrph;
+           ptrRecursor();
+           curOrph = curOrph->next;
+         }
+         curPtr = oldPtr;
+
       }
       
       for (size_t i = 0; i < 8; i++)

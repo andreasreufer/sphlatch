@@ -316,38 +316,25 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
    /// now also distribute the orphans of the former parent cell to
    /// the new bottom cells
    ///
-   
-   //std::cout << "refine " << _czllPtr << "   " << _czllPtr->orphFrst << " " << _czllPtr->orphLast << " " << _czllPtr->orphFrst << "\n";
-
-   //curPtr = _czllPtr->orphFrst;
-
-   pnodPtrT curOrph = _czllPtr->orphFrst;
+   nodePtrT curOrph = _czllPtr->orphFrst;
+   nodePtrT nxtOrph = NULL;
    curPtr = _czllPtr;
+  
    while (curOrph != NULL)
    {
-     const size_t newOct = getOctant(curOrph->pos);
+     // next ptr will be overwritten in adopt(), so we need a temporary
+     // storage for the next orphan
+     nxtOrph = curOrph->next;
 
-     static_cast<czllPtrT>(_czllPtr->child[newOct])->adopt(curOrph);
+     const size_t newOct = getOctant(static_cast<pnodPtrT>(curOrph)->pos);
+     static_cast<czllPtrT>(_czllPtr->child[newOct])->adopt(
+         static_cast<pnodPtrT>(curOrph));
       static_cast<czllPtrT>(_czllPtr->child[newOct])->noParts++;
       static_cast<czllPtrT>(_czllPtr->child[newOct])->absCost += relCost;
 
-     std::cout << "next orphan " << static_cast<pnodPtrT>(curOrph->next);
-     curOrph = static_cast<pnodPtrT>(curOrph->next);
+     curOrph = nxtOrph;
    }
 
-   /*while (curPtr != NULL)
-   {
-      const pnodPtrT curPart = static_cast<pnodPtrT>(curPtr);
-      const size_t   newOct  = getOctant(curPart->pos);
-      std::cout << curPtr << " (" << curPtr->ident << ") move to " 
-                << static_cast<czllPtrT>(_czllPtr->child[newOct])
-                << "\n";
-      static_cast<czllPtrT>(_czllPtr->child[newOct])->adopt(curPart);
-      static_cast<czllPtrT>(_czllPtr->child[newOct])->noParts++;
-      static_cast<czllPtrT>(_czllPtr->child[newOct])->absCost += relCost;
-      goNext();
-   }
-   curPtr = _czllPtr;*/
    static_cast<czllPtrT>(curPtr)->orphFrst = NULL;
    static_cast<czllPtrT>(curPtr)->orphLast = NULL;
 }
@@ -381,7 +368,7 @@ void BHTreeCZBuilder::gatherCZcell(const czllPtrT _czllPtr)
          {
             const czllPtrT oldCell = static_cast<czllPtrT>(_czllPtr->child[i]);
 
-            std::cout << "rem. oldCell " << oldCell->orphFrst << " " << oldCell->orphLast << "\n";
+            //std::cout << "rem. oldCell " << oldCell->orphFrst << " " << oldCell->orphLast << "\n";
 
             treePtr->CZbottom.remove(oldCell);
             _czllPtr->child[i] = czllToCell(oldCell);
