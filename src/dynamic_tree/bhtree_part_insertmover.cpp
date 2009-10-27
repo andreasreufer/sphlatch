@@ -156,7 +156,7 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
    {
       CZencounter |= curPtr->isCZ;
 
-      if ( CZencounter )
+      if (CZencounter)
       {
          static_cast<czllPtrT>(curPtr)->absCost -= partCost;
          static_cast<czllPtrT>(curPtr)->noParts--;

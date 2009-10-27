@@ -359,8 +359,9 @@ void costzoneCellNode::adopt(pnodPtrT _pnod)
    else
       orphLast->next = _pnod;
 
-   _pnod->next = NULL;
-   orphLast    = _pnod;
+   _pnod->next      = NULL;
+   _pnod->isSettled = false;
+   orphLast         = _pnod;
 }
 
 ///

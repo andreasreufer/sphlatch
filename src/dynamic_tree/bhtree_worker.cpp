@@ -32,7 +32,7 @@ BHTreeWorker::BHTreeWorker(const BHTreeWorker& _worker) :
 #endif
    treePtr(_worker.treePtr),
    rootPtr(_worker.rootPtr) //,
-{};
+{ }
 
 ///
 /// the standard constructor for a Tree worker
@@ -48,45 +48,45 @@ BHTreeWorker::BHTreeWorker(const treePtrT _treePtr) :
 #endif
    treePtr(_treePtr),
    rootPtr(_treePtr->rootPtr)
-{ };
+{ }
 
 BHTreeWorker::~BHTreeWorker()
-{ };
+{ }
 
 void BHTreeWorker::goRoot()
 {
    curPtr = rootPtr;
-};
+}
 
 void BHTreeWorker::goUp()
 {
    curPtr = curPtr->parent;
    assert(curPtr != NULL);
-};
+}
 
 void BHTreeWorker::goNext()
 {
    assert(curPtr != NULL);
    curPtr = curPtr->next;
-};
+}
 
 void BHTreeWorker::goSkip()
 {
    assert(curPtr != NULL);
    curPtr = static_cast<gcllPtrT>(curPtr)->skip;
-};
+}
 
 void BHTreeWorker::goChild(const size_t _n)
 {
    assert(curPtr != NULL);
    curPtr = static_cast<gcllPtrT>(curPtr)->child[_n];
-};
+}
 
 void BHTreeWorker::goNeighbour(const size_t _n)
 {
    assert(curPtr != NULL);
    curPtr = static_cast<czllPtrT>(curPtr)->neighbour[_n];
-};
+}
 
 bool BHTreeWorker::pointInsideCell(const vect3dT& _pos)
 {
@@ -95,7 +95,7 @@ bool BHTreeWorker::pointInsideCell(const vect3dT& _pos)
 
    return(all(static_cast<gcllPtrT>(curPtr)->cen - _pos < hclSz) &&
           all(static_cast<gcllPtrT>(curPtr)->cen - _pos > -hclSz));
-};
+}
 
 bool BHTreeWorker::pointInsideCell(const vect3dT& _pos, nodePtrT _nodePtr)
 {
@@ -104,7 +104,7 @@ bool BHTreeWorker::pointInsideCell(const vect3dT& _pos, nodePtrT _nodePtr)
 
    return(all(static_cast<gcllPtrT>(_nodePtr)->cen - _pos < hclSz) &&
           all(static_cast<gcllPtrT>(_nodePtr)->cen - _pos > -hclSz));
-};
+}
 
 ///
 /// get the cell octant for a position, no checks are performed whether
@@ -119,7 +119,7 @@ size_t BHTreeWorker::getOctant(const vect3dT& _pos)
    targetOctant += _pos[1] < static_cast<gcllPtrT>(curPtr)->cen[1] ? 0 : 2;
    targetOctant += _pos[2] < static_cast<gcllPtrT>(curPtr)->cen[2] ? 0 : 4;
    return(targetOctant);
-};
+}
 
 ///
 /// get the cell octant for a position, no checks are performed whether
@@ -134,7 +134,7 @@ size_t BHTreeWorker::getOctant(const vect3dT& _pos, const nodePtrT _nodePtr)
    targetOctant += _pos[1] < static_cast<gcllPtrT>(_nodePtr)->cen[1] ? 0 : 2;
    targetOctant += _pos[2] < static_cast<gcllPtrT>(_nodePtr)->cen[2] ? 0 : 4;
    return(targetOctant);
-};
+}
 
 ///
 /// get the child index for a node ptr
@@ -147,7 +147,7 @@ size_t BHTreeWorker::getChildNo(nodePtrT _nodePtr)
          return(i);
    }
    return(8);
-};
+}
 
 ///
 /// transforms a CZ cell into a quadrupole
@@ -158,8 +158,8 @@ qcllPtrT BHTreeWorker::czllToCell(nodePtrT _nodePtr)
 
    newCellPtr->initFromCZll(static_cast<czllT&>(*_nodePtr));
    delete static_cast<czllPtrT>(_nodePtr);
-   return newCellPtr;
-};
+   return(newCellPtr);
+}
 
 ///
 /// transforms a quadrupole cell into a CZ cell
@@ -170,8 +170,8 @@ czllPtrT BHTreeWorker::cellToCZll(nodePtrT _nodePtr)
 
    newCZllPtr->initFromCell(static_cast<qcllT&>(*_nodePtr));
    delete static_cast<qcllPtrT>(_nodePtr);
-   return newCZllPtr;
-};
+   return(newCZllPtr);
+}
 
 qcllPtrT BHTreeWorker::partToCell(nodePtrT _cellPtr, const size_t _oct)
 {
@@ -199,8 +199,7 @@ qcllPtrT BHTreeWorker::partToCell(nodePtrT _cellPtr, const size_t _oct)
    newCellPtr->child[newOct] = resPartPtr;
    resPartPtr->parent        = newCellPtr;
 
-   return newCellPtr;
-};
-
+   return(newCellPtr);
+}
 };
 #endif

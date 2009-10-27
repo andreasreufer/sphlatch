@@ -13,7 +13,6 @@
 #include "typedefs.h"
 
 namespace sphlatch {
-
 class treeGhost;
 class genericNode;
 class genericCellNode;
@@ -69,8 +68,8 @@ public:
    bool isSettled    : 1;
    bool needsUpdate  : 1;
 
-   genericNode() { };
-   ~genericNode() { };
+   genericNode() { }
+   ~genericNode() { }
 
    void clear();
    nodePtrT operator*();
@@ -92,8 +91,8 @@ public:
    // what for should this be good?
    //countsType noParts;
 
-   genericCellNode() { };
-   ~genericCellNode() { };
+   genericCellNode() { }
+   ~genericCellNode() { }
 
    void clear();
    void inheritCellPos(size_t _n);
@@ -111,8 +110,8 @@ public:
    vect3dT com;
    fType   mass;
 
-   monopoleCellNode() { };
-   ~monopoleCellNode() { };
+   monopoleCellNode() { }
+   ~monopoleCellNode() { }
 
    void clear();
 
@@ -126,12 +125,12 @@ public:
 ///
 class quadrupoleCellNode : public monopoleCellNode {
 public:
-   
-   fType q11, q22, q33, q12, q13, q23;
+
+   fType      q11, q22, q33, q12, q13, q23;
    countsType noParts;
 
-   quadrupoleCellNode() { };
-   ~quadrupoleCellNode() { };
+   quadrupoleCellNode() { }
+   ~quadrupoleCellNode() { }
 
    void clear();
    void initFromCZll(czllT& _czll);
@@ -153,8 +152,8 @@ public:
    nodePtrT neighbour[27];
    idType   domain;
 
-   fType      absCost;
-   
+   fType absCost;
+
    ///
    /// adopted orphans
    ///
@@ -166,8 +165,8 @@ public:
    ///
    nodePtrT chldFrst, chldLast;
 
-   costzoneCellNode() { };
-   ~costzoneCellNode() { };
+   costzoneCellNode() { }
+   ~costzoneCellNode() { }
 
    void clear();
    void initFromCell(qcllT& _qcll);
@@ -190,8 +189,8 @@ public:
    vect3dT     pos;
    fType       m;
 
-   particleNode() { };
-   ~particleNode() { };
+   particleNode() { }
+   ~particleNode() { }
 
    void clear();
    void update();
@@ -201,7 +200,5 @@ private:
    char pad[0];
 #endif
 };
-
-
 };
 #endif

@@ -29,9 +29,7 @@ private:
 };
 
 void BHTreeMPWorker::calcMultipoles(const czllPtrT _czllPtr)
-{
-  
-}
+{ }
 
 void MPRec()
 { }

@@ -30,27 +30,27 @@ public:
    friend class BHTreePartsInsertMover;
    friend class BHTreeWorkerGrav;
 
-   typedef BHTree                         selfType;
-   typedef BHTree&                        selfRef;
-   typedef BHTree*                        selfPtr;
+   typedef BHTree                selfType;
+   typedef BHTree&               selfRef;
+   typedef BHTree*               selfPtr;
 
-   typedef genericNode*                   nodePtrT;
-   typedef const genericNode*             nodePtrCT;
+   typedef genericNode*          nodePtrT;
+   typedef const genericNode*    nodePtrCT;
 
-   typedef treeGhost                      partT;
-   typedef treeGhost*                     partPtrT;
+   typedef treeGhost             partT;
+   typedef treeGhost*            partPtrT;
 
-   typedef particleNode                   pnodT;
-   typedef particleNode*                  pnodPtrT;
+   typedef particleNode          pnodT;
+   typedef particleNode*         pnodPtrT;
 
-   typedef genericCellNode                gcllT;
-   typedef genericCellNode*               gcllPtrT;
+   typedef genericCellNode       gcllT;
+   typedef genericCellNode*      gcllPtrT;
 
-   typedef quadrupoleCellNode             cellT;
-   typedef quadrupoleCellNode*            cellPtrT;
+   typedef quadrupoleCellNode    cellT;
+   typedef quadrupoleCellNode*   cellPtrT;
 
-   typedef costzoneCellNode               czllT;
-   typedef costzoneCellNode*              czllPtrT;
+   typedef costzoneCellNode      czllT;
+   typedef costzoneCellNode*     czllPtrT;
 
    BHTree();
    ~BHTree();
@@ -85,9 +85,9 @@ BHTree::BHTree() :
    /// cells list
    ///
    rootPtr = new czllT;
-   
-   btStart = static_cast<czllPtrT>(rootPtr);
-   btEnd   = static_cast<czllPtrT>(rootPtr);
+
+   btStart  = static_cast<czllPtrT>(rootPtr);
+   btEnd    = static_cast<czllPtrT>(rootPtr);
    lbtStart = NULL;
    lbtEnd   = NULL;
 

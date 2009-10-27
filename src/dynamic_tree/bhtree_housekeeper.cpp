@@ -144,15 +144,14 @@ void BHTreeHousekeeper::setNextCZRecursor()
 
 void BHTreeHousekeeper::minTree(const czllPtrT _czll)
 {
-  curPtr = _czll->chldFrst;
-  const nodePtrT chldLast = _czll->chldFrst;
+   curPtr = _czll->chldFrst;
+   const nodePtrT chldLast = _czll->chldFrst;
 
-  while ( curPtr != chldLast )
-  {
-    curPtr = curPtr->next;
-  }
+   while (curPtr != chldLast)
+   {
+      curPtr = curPtr->next;
+   }
 }
-
 };
 
 #endif

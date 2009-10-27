@@ -59,16 +59,16 @@ void BHTreeDump::dotRecursor()
 
    /*if (curPtr->isCZ)
       dumpFile << "label=\"" << curPtr << " (" << static_cast<czllPtrT>(curPtr)->absCost << ")\",";
-   else if (curPtr->isParticle)
+      else if (curPtr->isParticle)
       dumpFile << "label=\"" << curPtr->ident << "\",";
-   else
+      else
       dumpFile << "label=\"\",";*/
 
    /*if (curPtr->isParticle)
       dumpFile << "label=\"\",";
       else
       dumpFile << "label=\" " << curPtr << "\",";*/
-      
+
    dumpFile << "label=\"\",";
 
    if (curPtr->isParticle)
@@ -152,13 +152,13 @@ void BHTreeDump::ptrRecursor()
    if (not curPtr->isParticle)
    {
       dumpFile << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
-      
+
       for (size_t i = 0; i < 8; i++)
       {
          dumpFile << " c" << i << " -> "
                   << static_cast<gcllPtrT>(curPtr)->child[i] << "\n";
       }
-      
+
       if (curPtr->isCZ)
       {
          dumpFile << " noParts:" << static_cast<czllPtrT>(curPtr)->noParts
@@ -174,12 +174,12 @@ void BHTreeDump::ptrRecursor()
          dumpFile << " of -> ";
 
          nodePtrT curOrph = static_cast<czllPtrT>(curPtr)->orphFrst;
-         if ( curOrph == NULL )
-           dumpFile << "0";
+         if (curOrph == NULL)
+            dumpFile << "0";
          while (curOrph != NULL)
          {
-           dumpFile << curOrph << " -> ";
-           curOrph = curOrph->next;
+            dumpFile << curOrph << " -> ";
+            curOrph = curOrph->next;
          }
          dumpFile << "\n";
 
@@ -187,19 +187,17 @@ void BHTreeDump::ptrRecursor()
          curOrph = static_cast<czllPtrT>(curPtr)->orphFrst;
          while (curOrph != NULL)
          {
-           curPtr = curOrph;
-           ptrRecursor();
-           curOrph = curOrph->next;
+            curPtr = curOrph;
+            ptrRecursor();
+            curOrph = curOrph->next;
          }
          curPtr = oldPtr;
-
       }
-      
+
       for (size_t i = 0; i < 8; i++)
       {
          if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
-
             goChild(i);
             ptrRecursor();
             goUp();

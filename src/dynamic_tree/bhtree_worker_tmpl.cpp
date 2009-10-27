@@ -15,14 +15,10 @@ namespace sphlatch {
 class BHTreeMyWorker : public BHTreeWorker {
 public:
 
-BHTreeMyWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) {};
-BHTreeMyWorker(const BHTree &_) : BHTreeWorker(_) {};
-~BHTreeMyWorker() {};
-
+   BHTreeMyWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
+   BHTreeMyWorker(const BHTree& _) : BHTreeWorker(_) { }
+   ~BHTreeMyWorker() { }
 };
-
-
 };
 
 #endif
-

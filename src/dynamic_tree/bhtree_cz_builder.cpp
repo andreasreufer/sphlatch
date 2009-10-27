@@ -138,7 +138,7 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
                /// deleted by gatherCZcell()
                ///
                CZlistItr--;
-               
+
                gathOrphFrst = NULL;
                gathOrphLast = NULL;
                gatherCZcell(gathCellPtr);

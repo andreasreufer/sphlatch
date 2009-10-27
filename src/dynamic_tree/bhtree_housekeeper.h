@@ -1,5 +1,5 @@
-#ifndef BHTREE_HOUSEKEEPER_H  
-#define BHTREE_HOUSEKEEPER_H  
+#ifndef BHTREE_HOUSEKEEPER_H
+#define BHTREE_HOUSEKEEPER_H
 
 /*
  *  bhtree_housekeeper.h
@@ -42,7 +42,6 @@ private:
 
    std::vector<gcllPtrT> lastSkipeeAtDepth;
 };
-
 };
 
 #endif

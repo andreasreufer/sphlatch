@@ -14,7 +14,6 @@
 #include "typedefs.h"
 
 namespace sphlatch {
-
 class particleNode;
 ///
 /// basic tree particle class
@@ -37,24 +36,21 @@ private:
 
 ///
 /// dummy resident class
-/// 
-class treePart : public treeGhost {
-
-};
+///
+class treePart : public treeGhost { };
 
 ///
 /// moving ghost particle class
 ///
 class movingGhost {
-  vect3dT vel;
+   vect3dT vel;
 };
 
 ///
 /// moving resident particle class
 ///
 class movingPart : public movingGhost {
-  vect3dT acc;
+   vect3dT acc;
 };
-
 };
 #endif

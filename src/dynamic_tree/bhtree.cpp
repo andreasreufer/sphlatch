@@ -90,7 +90,7 @@ void BHTree::update()
 
    std::cout << "entered Tree.update() ... round " << round << "\n";
 
-   BHTreeDump dumper(this);
+   BHTreeDump         dumper(this);
    std::ostringstream roundStr;
    roundStr << round;
    std::string dumpName = "dump";
@@ -106,38 +106,38 @@ void BHTree::update()
    czllPtrListT::iterator       CZItr = CZbottom.begin();
    czllPtrListT::const_iterator CZEnd = CZbottom.end();
    std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
-   while (CZItr != CZEnd )
+   while (CZItr != CZEnd)
    {
-     mover.move(*CZItr);
-     CZItr++;
-   } 
+      mover.move(*CZItr);
+      CZItr++;
+   }
 
    // rebalance trees
    dumper.dotDump(dumpName + "_1.dot");
    dumper.ptrDump(dumpName + "_1.ptr");
-   
+
    std::cout << "\nrebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(costMin, costMax);
 
    dumper.dotDump(dumpName + "_2.dot");
    dumper.ptrDump(dumpName + "_2.txt");
-   
-   // compose vector of CZ cell pointers   
-   czllPtrVectT CZBottomV = getCzllPtrVect(CZbottom);
-   const int noCZBottomCells = CZBottomV.size();
+
+   // compose vector of CZ cell pointers
+   czllPtrVectT CZBottomV       = getCzllPtrVect(CZbottom);
+   const int    noCZBottomCells = CZBottomV.size();
 
    // exchange costzone cells and their particles
 
    // push down orphans
    std::cout << "\npush down orphans\n";
    CZItr = CZbottom.begin();
-   while (CZItr != CZEnd )
+   while (CZItr != CZEnd)
    {
-     mover.pushDownOrphans(*CZItr);
-     CZItr++;
+      mover.pushDownOrphans(*CZItr);
+      CZItr++;
    }
-   
+
    dumper.dotDump(dumpName + "_3.dot");
    dumper.ptrDump(dumpName + "_3.txt");
 
@@ -150,42 +150,43 @@ void BHTree::update()
 //#pragma omp parallel for firstprivate(HK)
    for (int i = 0; i < noCZBottomCells; i++)
    {
-     // set next pointers
-     HK.setNext( CZBottomV[i] );
-     
-     // clean up
-     HK.minTree( CZBottomV[i] );
+      // set next pointers
+      HK.setNext(CZBottomV[i]);
 
-     // calculate MP moments
+      // clean up
+      HK.minTree(CZBottomV[i]);
+
+      // calculate MP moments
    }
    std::cout << "prepare CZ next walk  \n";
    HK.setNextCZ();
    std::cout << "prepare    skip walk  \n";
    HK.setSkip();
-   
+
    dumper.dotDump(dumpName + "_4.dot");
    dumper.ptrDump(dumpName + "_4.txt");
-   
+
    // exchange MP moments
    round++;
 }
 
 BHTree::czllPtrVectT BHTree::getCzllPtrVect(czllPtrListT _czllList)
 {
-  czllPtrVectT vect;
-  vect.resize(_czllList.size());
+   czllPtrVectT vect;
 
-  czllPtrListT::iterator       CZItr = _czllList.begin();
-  czllPtrListT::const_iterator CZEnd = _czllList.end();
+   vect.resize(_czllList.size());
 
-  size_t i = 0;
-  while (CZItr != CZEnd)
-  {
-    vect[i] = *CZItr;
-    CZItr++;
-    i++;
-  }
-  return vect;
+   czllPtrListT::iterator       CZItr = _czllList.begin();
+   czllPtrListT::const_iterator CZEnd = _czllList.end();
+
+   size_t i = 0;
+   while (CZItr != CZEnd)
+   {
+      vect[i] = *CZItr;
+      CZItr++;
+      i++;
+   }
+   return(vect);
 }
 };
 #endif
