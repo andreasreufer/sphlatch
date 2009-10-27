@@ -79,30 +79,6 @@ void BHTreePartsInsertMover::move(const czllPtrT _czll)
    if (_czll->chldLast != NULL)
       _czll->chldLast->next = NULL;
 
-   /*
-      if ( curPart == NULL )
-      return;
-
-      ///
-      /// prepare a next-walk only with particles, as the nodes may
-      //
-      ///
-      if (_czll->chldLast != NULL)
-      _czll->chldLast->next = NULL;
-
-      nodePtrT lastPart = curPart;
-      curPart = curPart->next;
-      while(curPart != NULL)
-      {
-      if (curPart->isParticle)
-      {
-        lastPart->next = curPart;
-        lastPart = curPart;
-      }
-      curPart = curPart->next;
-      }
-      lastPart->next = NULL;*/
-
    ///
    /// of there is a last child, set its next pointer to NULL,
    /// so that the next walk for moving terminates
@@ -122,7 +98,6 @@ void BHTreePartsInsertMover::pushDownOrphans(const czllPtrT _czll)
    while (curPart != NULL)
    {
       pushDownSingle(static_cast<pnodPtrT>(curPart));
-      std::cout << _czll << " pushDownSingle(" << curPart << ")   " << static_cast<pnodPtrT>(curPart)->ident << "\n";
       curPart = curPart->next;
    }
 

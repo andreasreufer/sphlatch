@@ -106,10 +106,9 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
         const czllPtrT curCZ = *CZlistItr;
         std::cout << curCZ << " " << curCZ->absCost << " " << curCZ->depth << "\n";
         CZlistItr++;
-      }*/
+      }
       //std::cout << "\n";
-
-      CZlistItr = CZbottom.begin();
+      CZlistItr = CZbottom.begin();*/
 
       while (CZlistItr != CZlistEnd)
       {
@@ -161,7 +160,7 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
                /// deleted by gatherCZcell()
                ///
                CZlistItr--;
-               //std::cout << "gath call " << gathCellPtr << "\n";
+               std::cout << "gath call " << gathCellPtr << "\n";
                //
                gathOrphFrst = NULL;
                gathOrphLast = NULL;

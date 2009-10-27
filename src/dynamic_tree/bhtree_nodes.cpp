@@ -193,6 +193,7 @@ void costzoneCellNode::initFromCell(qcllT& _cell)
 
 ///
 /// push down the neighbours to the childs
+//FIXME: this is heavily untested!
 ///
 void costzoneCellNode::pushdownNeighbours()
 {
@@ -364,5 +365,28 @@ void particleNode::update()
    pos = partPtr->pos;
    m   = partPtr->m;
 };
+
+///
+/// deletes a CZ cells subtree
+/// (the childs walk has to be set!)
+///
+void costzoneCellNode::delSubtree()
+{
+  nodePtrT curChld = chldFrst, nxtChld = NULL;
+  chldLast->next = NULL;
+
+  while (curChld != NULL)
+  {
+    nxtChld = curChld->next;
+    if ( curChld->isParticle )
+      delete static_cast<pnodPtrT>(curChld);
+    else if ( curChld->isCZ )
+      delete static_cast<czllPtrT>(curChld);
+    else
+      delete static_cast<qcllPtrT>(curChld);
+    curChld = nxtChld;
+  }
+};
+
 };
 #endif
