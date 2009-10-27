@@ -88,7 +88,7 @@ void BHTree::update()
 {
    const fType costMin = 10., costMax = 12.;
 
-   std::cout << "entered Tree.update() ...\n";
+   std::cout << "entered Tree.update() ... round " << round << "\n";
 
    BHTreeDump dumper(this);
    std::ostringstream roundStr;
@@ -96,6 +96,9 @@ void BHTree::update()
    std::string dumpName = "dump";
    dumpName.append(roundStr.str());
 
+   // rebalance trees
+   dumper.dotDump(dumpName + "_0.dot");
+   dumper.ptrDump(dumpName + "_0.ptr");
 
    // move particles
    // (prepare next walk?)
@@ -110,14 +113,28 @@ void BHTree::update()
    } 
 
    // rebalance trees
-   //dumper.dotDump(dumpName + "_0.dot");
+   dumper.dotDump(dumpName + "_1.dot");
+   dumper.ptrDump(dumpName + "_1.ptr");
    
    std::cout << "\nrebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(costMin, costMax);
 
-   dumper.dotDump(dumpName + "_1.dot");
-   dumper.ptrDump(dumpName + "_1.txt");
+   dumper.dotDump(dumpName + "_2a.dot");
+   dumper.ptrDump(dumpName + "_2a.txt");
+   
+   std::cout << "\nrebalance CZ ....\n";
+   czbuilder.rebalance(4.,5.);
+
+   dumper.dotDump(dumpName + "_2b.dot");
+   dumper.ptrDump(dumpName + "_2b.txt");
+
+   std::cout << "\nrebalance CZ ....\n";
+   //czbuilder.rebalance(25., 30.);
+   czbuilder.rebalance(costMin, costMax);
+
+   dumper.dotDump(dumpName + "_2c.dot");
+   dumper.ptrDump(dumpName + "_2c.txt");
 
    // compose vector of CZ cell pointers   
    czllPtrVectT CZBottomV = getCzllPtrVect(CZbottom);
@@ -134,8 +151,8 @@ void BHTree::update()
      CZItr++;
    }
    
-   dumper.dotDump(dumpName + "_2.dot");
-   dumper.ptrDump(dumpName + "_2.txt");
+   dumper.dotDump(dumpName + "_3.dot");
+   dumper.ptrDump(dumpName + "_3.txt");
 
    // clean up tree
 
@@ -159,6 +176,8 @@ void BHTree::update()
    std::cout << "prepare    skip walk  \n";
    HK.setSkip();
    
+   dumper.dotDump(dumpName + "_4.dot");
+   dumper.ptrDump(dumpName + "_4.txt");
    
    // exchange MP moments
    round++;

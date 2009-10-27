@@ -169,12 +169,8 @@ public:
 
    void clear();
    void initFromCell(qcllT& _qcll);
-
    void adopt(pnodPtrT _pnod);
-
    void pushdownNeighbours();
-
-   //FIXME: yeah, write that function
    void delSubtree();
 
 private:

@@ -102,13 +102,13 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
       czllPtrListT::const_iterator CZlistEnd = CZbottom.end();
 
       /*while (CZlistItr != CZlistEnd)
-      {
-        const czllPtrT curCZ = *CZlistItr;
-        std::cout << curCZ << " " << curCZ->absCost << " " << curCZ->depth << "\n";
-        CZlistItr++;
-      }
-      //std::cout << "\n";
-      CZlistItr = CZbottom.begin();*/
+         {
+         const czllPtrT curCZ = *CZlistItr;
+         std::cout << curCZ << " " << curCZ->absCost << " " << curCZ->depth << "\n";
+         CZlistItr++;
+         }
+         //std::cout << "\n";
+         CZlistItr = CZbottom.begin();*/
 
       while (CZlistItr != CZlistEnd)
       {
@@ -128,7 +128,7 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
          {
             CZbalanced = false;
             const czllPtrT refdCellPtr = *CZlistItr;
-            
+
             // refine the cell
             //std::cout << "refine " << refdCellPtr << " " << refdCellPtr->absCost << "\n";
             refineCZcell(refdCellPtr);
@@ -160,12 +160,10 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
                /// deleted by gatherCZcell()
                ///
                CZlistItr--;
-               std::cout << "gath call " << gathCellPtr << "\n";
-               //
+               
                gathOrphFrst = NULL;
                gathOrphLast = NULL;
                gatherCZcell(gathCellPtr);
-               
                gathCellPtr->orphFrst = static_cast<pnodPtrT>(gathOrphFrst);
                gathCellPtr->orphLast = static_cast<pnodPtrT>(gathOrphLast);
 
@@ -327,20 +325,20 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
    nodePtrT curOrph = _czllPtr->orphFrst;
    nodePtrT nxtOrph = NULL;
    curPtr = _czllPtr;
-  
+
    while (curOrph != NULL)
    {
-     // next ptr will be overwritten in adopt(), so we need a temporary
-     // storage for the next orphan
-     nxtOrph = curOrph->next;
+      // next ptr will be overwritten in adopt(), so we need a temporary
+      // storage for the next orphan
+      nxtOrph = curOrph->next;
 
-     const size_t newOct = getOctant(static_cast<pnodPtrT>(curOrph)->pos);
-     static_cast<czllPtrT>(_czllPtr->child[newOct])->adopt(
+      const size_t newOct = getOctant(static_cast<pnodPtrT>(curOrph)->pos);
+      static_cast<czllPtrT>(_czllPtr->child[newOct])->adopt(
          static_cast<pnodPtrT>(curOrph));
       static_cast<czllPtrT>(_czllPtr->child[newOct])->noParts++;
       static_cast<czllPtrT>(_czllPtr->child[newOct])->absCost += relCost;
 
-     curOrph = nxtOrph;
+      curOrph = nxtOrph;
    }
 
    static_cast<czllPtrT>(curPtr)->orphFrst = NULL;
@@ -376,18 +374,20 @@ void BHTreeCZBuilder::gatherCZcell(const czllPtrT _czllPtr)
          {
             const czllPtrT oldCell = static_cast<czllPtrT>(_czllPtr->child[i]);
 
-            if ( gathOrphFrst == NULL )
+            if (oldCell->orphFrst != NULL)
             {
-              gathOrphFrst = oldCell->orphFrst;
-              gathOrphLast = oldCell->orphLast;
-            }
-            else
-            {
-              gathOrphLast->next = oldCell->orphFrst;
-              gathOrphLast = oldCell->orphLast;
+               if (gathOrphFrst == NULL)
+               {
+                  gathOrphFrst = oldCell->orphFrst;
+                  gathOrphLast = oldCell->orphLast;
+               }
+               else
+               {
+                  gathOrphLast->next = oldCell->orphFrst;
+                  gathOrphLast       = oldCell->orphLast;
+               }
             }
 
-            //std::cout << "rem. oldCell " << oldCell->orphFrst << " " << oldCell->orphLast << "\n";
 
             treePtr->CZbottom.remove(oldCell);
             _czllPtr->child[i] = czllToCell(oldCell);
