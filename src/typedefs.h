@@ -35,30 +35,33 @@ namespace sphlatch {
 /// fType: should be a float
 ///
 #ifdef SPHLATCH_SINGLEPREC
-typedef float    fType;
+typedef float                         fType;
 #else
-typedef double   fType;
+typedef double                        fType;
 #endif
-typedef fType*   fPtrType;
-typedef fType&   fRefType;
+typedef fType*                        fPtrType;
+typedef fType&                        fRefType;
 
-typedef blitz::TinyVector<fType,3> vect3dT;
+typedef blitz::TinyVector<fType, 3>   vect3dT;
+enum dims3 {
+   X, Y, Z
+};
 
 ///
 /// type for particle or tree node IDs
 ///
-typedef int                               idType;
+typedef int                     idType;
 
 ///
 /// a vector of (particle) indices
 ///
-typedef std::vector<size_t>               partsIndexVectType;
-typedef std::vector<size_t>&              partsIndexVectRefType;
-typedef std::vector<size_t> *             partsIndexVectPtrType;
+typedef std::vector<size_t>     partsIndexVectType;
+typedef std::vector<size_t>&    partsIndexVectRefType;
+typedef std::vector<size_t> *   partsIndexVectPtrType;
 
-typedef std::list<size_t>                 partsIndexListT;
-typedef std::list<size_t>&                partsIndexListRefT;
-typedef std::list<size_t> *               partsIndexListPtrT;
+typedef std::list<size_t>       partsIndexListT;
+typedef std::list<size_t>&      partsIndexListRefT;
+typedef std::list<size_t> *     partsIndexListPtrT;
 
 ///
 /// a vector of counts
@@ -73,7 +76,7 @@ typedef std::vector<countsType> *   countsVectPtrType;
 
 typedef std::vector<countsType>     ivectT;
 typedef std::vector<countsType>&    ivectRefT;
-typedef std::vector<countsType>*    ivectPtrT;
+typedef std::vector<countsType> *   ivectPtrT;
 
 ///
 /// a vector of particle indices vectors
@@ -105,33 +108,31 @@ typedef attrMapType*                              attrMapPtrType;
 ///
 /// a vector of strings
 ///
-typedef std::vector<std::string>   stringVectType;
+typedef std::vector<std::string>                  stringVectType;
 
 ///
 /// a vector of strings
 ///
-typedef std::set<std::string>      stringSetType;
+typedef std::set<std::string>                     stringSetType;
 
 ///
 /// a list of strings
 ///
-typedef std::list<std::string>     stringListType;
-
+typedef std::list<std::string>                    stringListType;
 };
 
 #define LEGACY
 #ifdef LEGACY
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/matrix_expression.hpp>
-#include <boost/numeric/ublas/matrix_proxy.hpp>
-#include <boost/numeric/ublas/vector.hpp>
-#include <boost/numeric/ublas/vector_expression.hpp>
-#include <boost/numeric/ublas/vector_proxy.hpp>
-#include <boost/numeric/ublas/io.hpp>
+ #include <boost/numeric/ublas/matrix.hpp>
+ #include <boost/numeric/ublas/matrix_expression.hpp>
+ #include <boost/numeric/ublas/matrix_proxy.hpp>
+ #include <boost/numeric/ublas/vector.hpp>
+ #include <boost/numeric/ublas/vector_expression.hpp>
+ #include <boost/numeric/ublas/vector_proxy.hpp>
+ #include <boost/numeric/ublas/io.hpp>
 
 namespace sphlatch {
-
-  namespace blas = boost::numeric::ublas;
+namespace blas = boost::numeric::ublas;
 
 typedef blas::matrix<fType>                     matrixType;
 typedef matrixType&                             matrixRefType;
@@ -154,40 +155,40 @@ typedef blas::matrix_vector_slice<matrixType>   matrixVectorSliceType;
 typedef blas::matrix_vector_slice<const matrixType>
 constMatrixVectorSliceType;
 
-typedef matrixRowType                     particleRowType;
-typedef matrixRowType&                    particleRowRefType;
-typedef matrixRowType*                    particleRowPtrType;
+typedef matrixRowType                           particleRowType;
+typedef matrixRowType&                          particleRowRefType;
+typedef matrixRowType*                          particleRowPtrType;
 
-typedef matrixColumnType                  quantColumnType;
-typedef matrixColumnType&                 quantColumnRefType;
-typedef matrixColumnType*                 quantColumnPtrType;
+typedef matrixColumnType                        quantColumnType;
+typedef matrixColumnType&                       quantColumnRefType;
+typedef matrixColumnType*                       quantColumnPtrType;
 
-typedef blas::vector<fType>               valvectType;
-typedef blas::vector<fType>&              valvectRefType;
-typedef blas::vector<fType> *             valvectPtrType;
+typedef blas::vector<fType>                     valvectType;
+typedef blas::vector<fType>&                    valvectRefType;
+typedef blas::vector<fType> *                   valvectPtrType;
 
-typedef blas::vector<fType>               fvectT;
-typedef blas::vector<fType>&              fvectRefT;
-typedef blas::vector<fType>*              fvectPtrT;
+typedef blas::vector<fType>                     fvectT;
+typedef blas::vector<fType>&                    fvectRefT;
+typedef blas::vector<fType> *                   fvectPtrT;
 
-typedef blas::zero_vector<fType>          zerovalvectType;
+typedef blas::zero_vector<fType>                zerovalvectType;
 
-typedef blas::vector_range<valvectType>   valvectRangeType;
+typedef blas::vector_range<valvectType>         valvectRangeType;
 
-typedef idType identType;
-typedef blas::vector<identType>           idvectType;
-typedef blas::vector<identType>&          idvectRefType;
-typedef blas::vector<identType> *         idvectPtrType;
+typedef idType                                  identType;
+typedef blas::vector<identType>                 idvectType;
+typedef blas::vector<identType>&                idvectRefType;
+typedef blas::vector<identType> *               idvectPtrType;
 
-typedef blas::vector_range<idvectType>    idvectRangeType;
+typedef blas::vector_range<idvectType>          idvectRangeType;
 
-typedef std::set<matrixPtrType>                   matrixPtrSetType;
-typedef std::set<valvectPtrType>                  valvectPtrSetType;
-typedef std::set<idvectPtrType>                   idvectPtrSetType;
+typedef std::set<matrixPtrType>                 matrixPtrSetType;
+typedef std::set<valvectPtrType>                valvectPtrSetType;
+typedef std::set<idvectPtrType>                 idvectPtrSetType;
 
-typedef std::map<std::string, matrixPtrType>      matrixPtrMapType;
-typedef std::map<std::string, valvectPtrType>     valvectPtrMapType;
-typedef std::map<std::string, idvectPtrType>      idvectPtrMapType;
+typedef std::map<std::string, matrixPtrType>    matrixPtrMapType;
+typedef std::map<std::string, valvectPtrType>   valvectPtrMapType;
+typedef std::map<std::string, idvectPtrType>    idvectPtrMapType;
 
 struct quantsType
 {
@@ -202,4 +203,3 @@ typedef quantsType*   quantPtrType;
 
 #endif
 #endif
-

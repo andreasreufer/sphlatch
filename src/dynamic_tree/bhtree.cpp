@@ -19,6 +19,7 @@
 #include "bhtree_housekeeper.cpp"
 #include "bhtree_part_insertmover.cpp"
 #include "bhtree_cz_builder.cpp"
+#include "bhtree_worker_mp.cpp"
 
 #include "bhtree_treedump.cpp"
 
@@ -147,6 +148,7 @@ void BHTree::update()
    std::cout << "housekeeping          \n";
 
    BHTreeHousekeeper HK(this);
+   BHTreeMPWorker    MP(this);
 //#pragma omp parallel for firstprivate(HK)
    for (int i = 0; i < noCZBottomCells; i++)
    {
@@ -157,11 +159,14 @@ void BHTree::update()
       HK.minTree(CZBottomV[i]);
 
       // calculate MP moments
+      MP.calcMultipoles(CZBottomV[i]);
    }
    std::cout << "prepare CZ next walk  \n";
    HK.setNextCZ();
    std::cout << "prepare    skip walk  \n";
    HK.setSkip();
+   std::cout << "calculate MP moments  \n";
+   MP.calcMultipolesCZ();
 
    dumper.dotDump(dumpName + "_4.dot");
    dumper.ptrDump(dumpName + "_4.txt");

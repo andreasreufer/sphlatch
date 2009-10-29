@@ -15,8 +15,8 @@ namespace sphlatch {
 class BHTreeMPWorker : public BHTreeWorker {
 public:
 
-   BHTreeMPWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
-   BHTreeMPWorker(const BHTree& _mp) : BHTreeWorker(_mp) { }
+   BHTreeMPWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { };
+   BHTreeMPWorker(const BHTreeMPWorker& _mp) : BHTreeWorker(_mp) { };
    ~BHTreeMPWorker() { }
 
    void calcMultipoles(const czllPtrT _czllPtr);
@@ -29,16 +29,51 @@ private:
 };
 
 void BHTreeMPWorker::calcMultipoles(const czllPtrT _czllPtr)
-{ }
+{
+   curPtr = _czllPtr;
+}
 
-void MPRec()
-{ }
+void BHTreeMPWorker::MPRec()
+{
+   for (size_t i = 0; i < 8; i++)
+   {
+      if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
+      {
+         if (not static_cast<gcllPtrT>(curPtr)->child[i]->isParticle)
+         {
+            goChild(i);
+            MPRec();
+            static_cast<qcllPtrT>(curPtr)->calcMultipole();
+            goUp();
+         }
+      }
+   }
+}
 
 void BHTreeMPWorker::calcMultipolesCZ()
-{ }
+{
+   goRoot();
+}
 
-void MPRecCZ()
-{ }
+void BHTreeMPWorker::MPRecCZ()
+{
+   for (size_t i = 0; i < 8; i++)
+   {
+      if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
+      {
+         // omit the particle check, as there should be no particles
+         // in the CZ part of the tree
+         if (not static_cast<gcllPtrT>(curPtr)->child[i]->atBottom)
+         {
+            goChild(i);
+            MPRecCZ();
+            static_cast<qcllPtrT>(curPtr)->calcMultipole();
+            goUp();
+         }
+      }
+   }
+}
+
 };
 
 #endif

@@ -62,8 +62,8 @@ void monopoleCellNode::clear()
 {
    genericCellNode::clear();
 
-   com  = 0., 0., 0.;
-   mass = 0.;
+   com = 0., 0., 0.;
+   m   = 0.;
 }
 
 void quadrupoleCellNode::clear()
@@ -172,7 +172,79 @@ void quadrupoleCellNode::initFromCZll(czllT& _czll)
 /// calculate the quadrupole moments of a cell
 ///
 void quadrupoleCellNode::calcMultipole()
-{ }
+{
+   // calculate the center of mass
+   m   = 0.;
+   com = 0, 0, 0;
+   for (size_t i = 0; i < 8; i++)
+   {
+      if (child[i] != NULL)
+      {
+         if (child[i]->isParticle)
+         {
+            const fType chldMass = static_cast<pnodPtrT>(child[i])->m;
+            m   += chldMass;
+            com += chldMass * static_cast<pnodPtrT>(child[i])->pos;
+         }
+         else
+         {
+            const fType chldMass = static_cast<qcllPtrT>(child[i])->m;
+            m   += chldMass;
+            com += chldMass * static_cast<qcllPtrT>(child[i])->com;
+         }
+      }
+   }
+   if (m > 0.)
+      com /= m;
+   else
+      com = 0, 0, 0;
+
+   // calculate the quadrupole contributions
+   for (size_t i = 0; i < 8; i++)
+   {
+      if (child[i] != NULL)
+      {
+         if (child[i]->isParticle)
+         {
+           const pnodPtrT part = static_cast<pnodPtrT>(child[i]);
+          
+           const fType rx = part->pos[X] - com[X];
+           const fType ry = part->pos[Y] - com[Y];
+           const fType rz = part->pos[Z] - com[Z];
+           
+           const fType rxrx = rx*rx;
+           const fType ryry = ry*ry;
+           const fType rzrz = rz*rz;
+
+           const fType rr = rxrx + ryry + rzrz;
+           const fType pm = part->m;
+
+           q11 += ( 3. * rxrx - rr )*pm;
+           q22 += ( 3. * ryry - rr )*pm;
+           q33 += ( 3. * rzrz - rr )*pm;
+         }
+         else
+         {
+           const qcllPtrT cell = static_cast<qcllPtrT>(child[i]);
+           
+           const fType rx = cell->com[X] - com[X];
+           const fType ry = cell->com[Y] - com[Y];
+           const fType rz = cell->com[Z] - com[Z];
+           
+           const fType rxrx = rx*rx;
+           const fType ryry = ry*ry;
+           const fType rzrz = rz*rz;
+
+           const fType rr = rxrx + ryry + rzrz;
+           const fType cm = cell->m;
+
+           q11 += ( 3. * rxrx - rr )*cm + cell->q11;
+           q22 += ( 3. * ryry - rr )*cm + cell->q22;
+           q33 += ( 3. * rzrz - rr )*cm + cell->q33;
+         }
+      }
+   }
+}
 
 void costzoneCellNode::initFromCell(qcllT& _cell)
 {

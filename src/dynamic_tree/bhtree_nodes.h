@@ -108,7 +108,7 @@ private:
 class monopoleCellNode : public genericCellNode {
 public:
    vect3dT com;
-   fType   mass;
+   fType   m;
 
    monopoleCellNode() { }
    ~monopoleCellNode() { }
