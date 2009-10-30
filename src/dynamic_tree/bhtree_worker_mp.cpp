@@ -15,8 +15,8 @@ namespace sphlatch {
 class BHTreeMPWorker : public BHTreeWorker {
 public:
 
-   BHTreeMPWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { };
-   BHTreeMPWorker(const BHTreeMPWorker& _mp) : BHTreeWorker(_mp) { };
+   BHTreeMPWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
+   BHTreeMPWorker(const BHTreeMPWorker& _mp) : BHTreeWorker(_mp) { }
    ~BHTreeMPWorker() { }
 
    void calcMultipoles(const czllPtrT _czllPtr);
@@ -31,49 +31,56 @@ private:
 void BHTreeMPWorker::calcMultipoles(const czllPtrT _czllPtr)
 {
    curPtr = _czllPtr;
+   MPRec();
 }
 
 void BHTreeMPWorker::MPRec()
 {
-   for (size_t i = 0; i < 8; i++)
+   if (not curPtr->isParticle)
    {
-      if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
+      for (size_t i = 0; i < 8; i++)
       {
-         if (not static_cast<gcllPtrT>(curPtr)->child[i]->isParticle)
+         if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
-            goChild(i);
-            MPRec();
-            static_cast<qcllPtrT>(curPtr)->calcMultipole();
-            goUp();
+            if (not static_cast<gcllPtrT>(curPtr)->child[i]->isParticle)
+            {
+               goChild(i);
+               MPRec();
+               goUp();
+            }
          }
       }
+      static_cast<qcllPtrT>(curPtr)->calcMultipole();
    }
 }
 
 void BHTreeMPWorker::calcMultipolesCZ()
 {
    goRoot();
+   MPRecCZ();
 }
 
 void BHTreeMPWorker::MPRecCZ()
 {
-   for (size_t i = 0; i < 8; i++)
+   if (not curPtr->isParticle)
    {
-      if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
+      for (size_t i = 0; i < 8; i++)
       {
+         if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
+         {
          // omit the particle check, as there should be no particles
          // in the CZ part of the tree
-         if (not static_cast<gcllPtrT>(curPtr)->child[i]->atBottom)
-         {
-            goChild(i);
-            MPRecCZ();
-            static_cast<qcllPtrT>(curPtr)->calcMultipole();
-            goUp();
+            if (not static_cast<gcllPtrT>(curPtr)->child[i]->atBottom)
+            {
+               goChild(i);
+               MPRecCZ();
+               goUp();
+            }
          }
       }
+      static_cast<qcllPtrT>(curPtr)->calcMultipole();
    }
 }
-
 };
 
 #endif

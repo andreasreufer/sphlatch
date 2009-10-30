@@ -87,7 +87,7 @@ void BHTree::insertParts(partVectT& _parts)
 
 void BHTree::update()
 {
-   const fType costMin = 10., costMax = 12.;
+   const fType costMin = 10., costMax = 15.;
 
    std::cout << "entered Tree.update() ... round " << round << "\n";
 
@@ -149,7 +149,7 @@ void BHTree::update()
 
    BHTreeHousekeeper HK(this);
    BHTreeMPWorker    MP(this);
-//#pragma omp parallel for firstprivate(HK)
+#pragma omp parallel for firstprivate(HK, MP)
    for (int i = 0; i < noCZBottomCells; i++)
    {
       // set next pointers

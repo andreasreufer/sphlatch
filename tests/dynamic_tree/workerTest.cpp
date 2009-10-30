@@ -76,6 +76,8 @@ int main(int argc, char* argv[])
       particles[i].pos[1] = static_cast<fType>(rand()) / RAND_MAX;
       particles[i].pos[2] = static_cast<fType>(rand()) / RAND_MAX;
 
+      particles[i].m = 1.;
+
       particles[i].id   = i;
       particles[i].cost = 1.;
    }
