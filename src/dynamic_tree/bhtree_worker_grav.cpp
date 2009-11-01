@@ -9,41 +9,38 @@
  *
  */
 
-#include "bhtree_worker.h"
+#include "bhtree_worker.cpp"
+#include "bhtree_particle.h"
+#include "bhtree.h"
 
 // FIXME: use function template for MAC
 
 namespace sphlatch {
-class BHTreeWorkerGrav : public BHTreeWorkerRO {
+template<typename _MAC>
+class GravityWorker : public BHTreeWorkerRO {
 public:
-   BHTreeWorkerGrav(treePtrT _treePtr) : BHTreeWorkerRO(_treePtr)
-   {
-      //const size_t tid = omp_get_thread_num();
-      //std::cout << tid << ":tpc:" << curPtr << ":" << this << "\n";
-   }
+   GravityWorker(const treePtrT _treePtr) : BHTreeWorkerRO(_treePtr) { }
+   GravityWorker(const GravityWorker& _gw) : BHTreeWorkerRO(_gw) { }
+   ~GravityWorker() { }
 
-   BHTreeWorkerGrav(const BHTreeWorkerGrav& _gravwork)
-      : BHTreeWorkerRO(_gravwork)
-   {
-      //const size_t tid = omp_get_thread_num();
-      //std::cout << tid << ":cpc:" << curPtr << ":" << this << "\n";
-   }
-
-   ~BHTreeWorkerGrav() { }
+   void calcGravity(const czllPtrT _czll);
 
 private:
-   void calcGravParticle(const size_t _i);
+   _MAC mac;
+
+   void calcGravPart(const pnodPtrT _part);
+
+   void interactPartCell();
+   void interactPartPart();
+
+
+
 };
 
-
-void BHTreeWorkerGrav::calcGravParticle(const size_t _i)
+template<typename _MAC>
+void GravityWorker<_MAC>::calcGravPart(const pnodPtrT _part)
 {
-   /*const fType posX = pos(_i, X);
-      const fType posY = pos(_i, Y);
-      const fType posZ = pos(_i, Z);*/
-
-   //nodePtrT const curPartPtr = treePtr->partProxies[_i];
-   nodePtrT const curPartPtr = NULL;
+   nodePtrT const curPartPtr = _part;
 
    fType accX = 0., accY = 0., accZ = 0.;
 
@@ -55,9 +52,9 @@ void BHTreeWorkerGrav::calcGravParticle(const size_t _i)
    {
       if (not curPtr->isParticle)
       {
-         if (true) // MAC()
+         if (mac(static_cast<gcllPtrT>(curPtr), curPartPtr))
          {
-            //calcGravMP
+            //calcGravMP()
             goSkip();
          }
          else
@@ -66,17 +63,32 @@ void BHTreeWorkerGrav::calcGravParticle(const size_t _i)
       else
       {
          if (curPtr != curPartPtr)
-         {
-            //calcGravPart
-         }
+          //calcGravPart()
          goNext();
       }
    } while (curPtr != NULL);
-
-   /*acc(_i, X) += accX;
-      acc(_i, Y) += accY;
-      acc(_i, Z) += accZ;*/
 }
+
+
+class fixThetaMAC {
+   typedef monopoleCellNode*     mcllPtrT;
+   typedef quadrupoleCellNode*   qcllPtrT;
+   typedef particleNode*         pnodPtrT;
+public:
+   bool operator()(const qcllPtrT _cell, const pnodPtrT _part)
+   {
+      const fType theta = 0.6;
+
+      const fType rx     = _cell->com[0] - _part->pos[0];
+      const fType ry     = _cell->com[1] - _part->pos[1];
+      const fType rz     = _cell->com[2] - _part->pos[2];
+      const fType rr     = rx * rx + ry * ry + rz * rz;
+      const fType clsz   = _cell->clSz;
+      const fType theta2 = theta*theta;
+
+      return((clsz * clsz / rr) < theta2);
+   }
+};
 };
 
 #endif

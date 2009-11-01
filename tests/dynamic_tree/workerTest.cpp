@@ -5,28 +5,35 @@
 #define SPHLATCH_OPENMP
 
 #include "typedefs.h"
-typedef sphlatch::fType        fType;
+typedef sphlatch::fType                 fType;
 
 #include "bhtree.cpp"
-typedef sphlatch::BHTree       treeT;
+typedef sphlatch::BHTree                treeT;
 
-typedef sphlatch::pnodT        pnodT;
-typedef sphlatch::pnodPtrT     pnodPtrT;
+typedef sphlatch::pnodT                 pnodT;
+typedef sphlatch::pnodPtrT              pnodPtrT;
 
-typedef sphlatch::nodeT        nodeT;
-typedef sphlatch::nodePtrT     nodePtrT;
+typedef sphlatch::nodeT                 nodeT;
+typedef sphlatch::nodePtrT              nodePtrT;
 
-typedef sphlatch::gcllT        gcllT;
-typedef sphlatch::gcllPtrT     gcllPtrT;
+typedef sphlatch::gcllT                 gcllT;
+typedef sphlatch::gcllPtrT              gcllPtrT;
 
-typedef sphlatch::czllT        czllT;
-typedef sphlatch::czllPtrT     czllPtrT;
+typedef sphlatch::czllT                 czllT;
+typedef sphlatch::czllPtrT              czllPtrT;
 
 #include "bhtree_treedump.cpp"
-typedef sphlatch::BHTreeDump   dumpT;
+typedef sphlatch::BHTreeDump            dumpT;
+
+#include "bhtree_worker_grav.cpp"
+typedef sphlatch::fixThetaMAC           macT;
+typedef sphlatch::GravityWorker<macT>   gravT;
+
+//#include "bhtree_worker_sphsum.cpp"
+//typedef SPHsumWorker<
 
 #include "bhtree_particle.h"
-typedef sphlatch::treeGhost    partT;
+typedef sphlatch::treeGhost   partT;
 
 struct densFunc
 {
@@ -91,8 +98,8 @@ int main(int argc, char* argv[])
    //dumper.dotDump("postCZdump.dot");
 
    /*testWorker.dispRoot();
-   testWorker.build();
-   testWorker.test();*/
+      testWorker.build();
+      testWorker.test();*/
 
    dumper.dotDump("pre__move.dot");
    dumper.ptrDump("pre__move.txt");
@@ -103,13 +110,15 @@ int main(int argc, char* argv[])
 
       particles[i].cost = 1.;
    }
-   
+
    std::cout << "Tree.update() .........\n";
    Tree.update();
    std::cout << "Tree.update() finished.\n";
 
    dumper.dotDump("post_move.dot");
    dumper.ptrDump("post_move.txt");
+
+   gravT gravWorker(&Tree);
 
    MPI::Finalize();
    return(0);

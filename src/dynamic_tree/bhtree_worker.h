@@ -58,16 +58,16 @@ protected:
 /// specialization for a read-only BHTree worker (eg. gravity walk)
 ///
 
-/*class BHTreeWorkerRO : public BHTreeWorker {
-   public:
+class BHTreeWorkerRO : public BHTreeWorker {
+public:
    BHTreeWorkerRO(treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
    BHTreeWorkerRO(const BHTreeWorkerRO& _workerRO) : BHTreeWorker(_workerRO) { }
 
-   protected:
+protected:
    ///
    /// overwrite curPtr by a faster read-only version
    ///
-   nodePtrT curPtr, rootPtr;
-   };*/
+   //nodePtrT const curPtr, rootPtr;
+};
 };
 #endif

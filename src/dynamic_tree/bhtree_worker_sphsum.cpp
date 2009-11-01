@@ -16,9 +16,8 @@ namespace sphlatch {
 template<typename Summand>
 class SPHsumWorker : public BHTreeWorker {
 public:
-
    SPHsumWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
-   SPHsumWorker(const BHTree& _) : BHTreeWorker(_) { }
+   SPHsumWorker(const SPHsumWorker& _SPHwork) : BHTreeWorker(_SPHwork) { }
    ~SPHsumWorker() { }
 
    Summand S;

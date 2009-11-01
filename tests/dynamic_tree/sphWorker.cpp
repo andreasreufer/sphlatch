@@ -22,13 +22,11 @@ public:
 
    F sumFunc;
 
-   //void operator()(treeGhost* _i, const treeGhost* _j)
    void operator()()
    {
       sphlatch::treeGhost p1, p2;
 
       sumFunc(&p1, &p2);
-      //F(&p1, &p2);
    }
 };
 };

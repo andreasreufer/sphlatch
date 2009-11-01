@@ -88,9 +88,6 @@ public:
    vect3dT cen;
    fType   clSz;
 
-   // what for should this be good?
-   //countsType noParts;
-
    genericCellNode() { }
    ~genericCellNode() { }
 
