@@ -36,7 +36,9 @@ private:
 ///
 /// basic SPH fluid resident particle class
 ///
-class SPHfluidPart : public SPHfluidGhost {
+class SPHfluidPart : public SPHfluidGhost
+{
+  public:
    countsType noneigh;
 };
 
@@ -47,6 +49,7 @@ class energyGhost { };
 
 class energyPart : public energyGhost
 {
+  public:
    fType u, dudt;
 };
 
@@ -57,6 +60,7 @@ class varHGhost { };
 
 class varHPart : public varHGhost
 {
+  public:
    fType dhdt, divv;
 };
 };

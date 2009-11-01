@@ -116,8 +116,8 @@ void BHTree::update()
    dumper.ptrDump(dumpName + "_2.txt");
 
    // compose vector of CZ cell pointers
-   czllPtrVectT CZBottomV       = getCzllPtrVect(CZbottom);
-   const int    noCZBottomCells = CZBottomV.size();
+   czllPtrVectT CZbottomV       = getCzllPtrVect(CZbottom);
+   const int    noCZBottomCells = CZbottomV.size();
 
    // exchange costzone cells and their particles
 
@@ -144,13 +144,13 @@ void BHTree::update()
    for (int i = 0; i < noCZBottomCells; i++)
    {
       // set next pointers
-      HK.setNext(CZBottomV[i]);
+      HK.setNext(CZbottomV[i]);
 
       // clean up
-      HK.minTree(CZBottomV[i]);
+      HK.minTree(CZbottomV[i]);
 
       // calculate MP moments
-      MP.calcMultipoles(CZBottomV[i]);
+      MP.calcMultipoles(CZbottomV[i]);
    }
    std::cout << "prepare CZ next walk  \n";
    HK.setNextCZ();
@@ -164,6 +164,15 @@ void BHTree::update()
 
    // exchange MP moments
    round++;
+
+   //
+   CZbottomLoc = CZbottom;
+}
+
+BHTree::czllPtrVectT BHTree::getCZbottomLoc()
+{
+  return getCzllPtrVect(CZbottomLoc);
+  //return getCzllPtrVect(CZbottom);
 }
 
 BHTree::czllPtrVectT BHTree::getCzllPtrVect(czllPtrListT _czllList)

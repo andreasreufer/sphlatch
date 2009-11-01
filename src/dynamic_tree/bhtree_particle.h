@@ -43,6 +43,7 @@ class treePart : public treeGhost { };
 /// moving ghost particle class
 ///
 class movingGhost {
+  public:
    vect3dT vel;
 };
 
@@ -50,6 +51,7 @@ class movingGhost {
 /// moving resident particle class
 ///
 class movingPart : public movingGhost {
+  public:
    vect3dT acc;
 };
 };

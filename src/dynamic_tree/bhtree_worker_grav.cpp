@@ -14,10 +14,10 @@
 
 namespace sphlatch {
 template<typename _MAC, typename _partT>
-class GravityWorker : public BHTreeWorkerRO {
+class GravityWorker : public BHTreeWorker {
 public:
-   GravityWorker(const treePtrT _treePtr) : BHTreeWorkerRO(_treePtr) { }
-   GravityWorker(const GravityWorker& _gw) : BHTreeWorkerRO(_gw) { }
+   GravityWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
+   GravityWorker(const GravityWorker& _gw) : BHTreeWorker(_gw) { }
    ~GravityWorker() { }
 
    void calcGravity(const czllPtrT _czll);
@@ -39,9 +39,14 @@ void GravityWorker<_MAC, _partT>::calcGravity(const czllPtrT _czll)
   nodePtrT curPart = _czll->chldFrst;
   const nodePtrT stopChld = _czll->chldLast->next;
 
+  // an empty CZ cell may have an chldFrst pointing to NULL
+  if (curPart == NULL)
+    return;
+
   while ( curPart != stopChld )
   {
-    calcGravPart(curPart);
+    if (curPart->isParticle)
+      calcGravPart(static_cast<pnodPtrT>(curPart));
     curPart = curPart->next;
   }
 };
@@ -62,13 +67,16 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
    {
       if (not curPtr->isParticle)
       {
-         if (mac(static_cast<gcllPtrT>(curPtr), curPartPtr))
+         if (mac(static_cast<qcllPtrT>(curPtr), 
+                 static_cast<pnodPtrT>(curPartPtr)))
          {
             interactPartCell();
             goSkip();
          }
          else
+         {
             goNext();
+         }
       }
       else
       {
@@ -160,6 +168,7 @@ public:
       ry = _cell->com[1] - _part->pos[1];
       rz = _cell->com[2] - _part->pos[2];
       rr = rx * rx + ry * ry + rz * rz;
+
 
       return((clsz * clsz / rr) < theta2);
    }

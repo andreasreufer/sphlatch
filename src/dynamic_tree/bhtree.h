@@ -51,6 +51,7 @@ public:
    ///
    void insertPart(treeGhost& _part);
    void update();
+   czllPtrVectT getCZbottomLoc();
 
 private:
    static selfPtr _instance;

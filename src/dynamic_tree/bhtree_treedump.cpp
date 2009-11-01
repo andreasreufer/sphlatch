@@ -69,7 +69,7 @@ void BHTreeDump::dotRecursor()
       else
       dumpFile << "label=\" " << curPtr << "\",";*/
 
-   dumpFile << "label=\"\",";
+   dumpFile << "label=\"" << curPtr << "\",";
 
    if (curPtr->isParticle)
       dumpFile << "shape=circle,color=green";

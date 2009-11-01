@@ -149,6 +149,21 @@ int main(int argc, char* argv[])
 
    gravT gravWorker(&Tree);
 
+   std::cout << "gravity ...\n";
+   treeT::czllPtrVectT CZbottomLoc = Tree.getCZbottomLoc();
+   const int noCZbottomLoc = CZbottomLoc.size();
+
+//#pragma omp parallel for firstprivate(gravWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+   {
+     //std::cout << "  grav: " << CZbottomLoc[i] << "\n";
+     gravWorker.calcGravity(CZbottomLoc[i]);
+   }
+   std::cout << "gravity finished \n";
+   
+   for (size_t i = 0; i < noParts; i++)
+     std::cout << particles[i].acc << "\n";
+
    MPI::Finalize();
    return(0);
 }

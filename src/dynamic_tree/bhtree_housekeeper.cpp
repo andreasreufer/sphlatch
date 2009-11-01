@@ -50,7 +50,7 @@ void BHTreeHousekeeper::setNextCZ()
    curPtr  = rootPtr;
    lastPtr = rootPtr;
    setNextCZRecursor();
-   lastPtr->next = rootPtr;
+   lastPtr->next = NULL;
 }
 
 void BHTreeHousekeeper::setSkip()
@@ -78,9 +78,10 @@ void BHTreeHousekeeper::setSkip()
    ///
    /// do the next-walk
    ///
-   while (curPtr != rootPtr)
+   goRoot();
+   goNext();
+   while (curPtr != NULL)
    {
-      goNext();
       const size_t depth = curPtr->depth;
       if (not curPtr->isParticle)
       {
@@ -93,6 +94,7 @@ void BHTreeHousekeeper::setSkip()
          }
          lastSkipeeAtDepth[depth] = static_cast<gcllPtrT>(curPtr);
       }
+      goNext();
    }
 }
 

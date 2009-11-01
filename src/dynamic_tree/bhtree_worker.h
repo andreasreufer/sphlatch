@@ -58,7 +58,7 @@ protected:
 ///
 /// specialization for a read-only BHTree worker (eg. gravity walk)
 ///
-
+//FIXME: doesn't work somehow
 class BHTreeWorkerRO : public BHTreeWorker {
 public:
    BHTreeWorkerRO(treePtrT _treePtr) : BHTreeWorker(_treePtr), curPtr(NULL) { }
