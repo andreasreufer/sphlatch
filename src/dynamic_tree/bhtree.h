@@ -15,8 +15,10 @@
 
 #include "bhtree_nodes.h"
 #include "bhtree_housekeeper.h"
+#include "bhtree_part_insertmover.h"
 
 namespace sphlatch {
+
 class BHTree {
 public:
    friend class BHTreeWorker;
@@ -31,8 +33,6 @@ public:
    typedef std::list<czllPtrT>      czllPtrListT;
    typedef std::vector<czllPtrT>    czllPtrVectT;
 
-   typedef std::vector<treeGhost>   partVectT;
-
    BHTree();
    ~BHTree();
 
@@ -46,11 +46,10 @@ public:
 
    static const fType costLowMark = 0.1;
 
-
    ///
    /// public functions
    ///
-   void insertParts(partVectT& _parts);
+   void insertPart(treeGhost& _part);
    void update();
 
 private:
@@ -72,6 +71,9 @@ protected:
    size_t noCells, noParts;
 
    const size_t noThreads;
+
+private:
+   BHTreePartsInsertMover insertmover;
 };
 };
 #endif

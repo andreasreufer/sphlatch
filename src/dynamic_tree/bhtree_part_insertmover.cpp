@@ -9,34 +9,10 @@
  *
  */
 
+#include "bhtree_part_insertmover.h"
 #include "bhtree_worker.cpp"
-//#include "bhtree_errhandler_tmp.h"
-#include "bhtree_particle.h"
 
 namespace sphlatch {
-class BHTreePartsInsertMover : public BHTreeWorker {
-public:
-
-   typedef BHTreePartsInsertMover   selfT;
-   typedef treeGhost                partT;
-
-   BHTreePartsInsertMover(treePtrT _treePtr)
-      : BHTreeWorker(_treePtr) { }
-   BHTreePartsInsertMover(const selfT& _inserter)
-      : BHTreeWorker(_inserter) { }
-   ~BHTreePartsInsertMover() { }
-
-public:
-   void insert(partT& _part);
-   void move(const czllPtrT _czll);
-   void pushDownOrphans(const czllPtrT _czll);
-
-private:
-   void pushUpAndToCZSingle(const pnodPtrT _pnodPtr);
-
-   void pushDownSingle(const pnodPtrT _pnodPtr);
-};
-
 ///
 /// entry function to insert particle:
 /// - check whether particle lies inside root cell

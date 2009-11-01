@@ -50,7 +50,8 @@ protected:
    const size_t   noThreads, myThread;
    const treePtrT treePtr;
 
-   nodePtrT curPtr, rootPtr;
+   nodePtrT       curPtr;
+   nodePtrT const rootPtr;
 };
 
 
@@ -60,14 +61,15 @@ protected:
 
 class BHTreeWorkerRO : public BHTreeWorker {
 public:
-   BHTreeWorkerRO(treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
-   BHTreeWorkerRO(const BHTreeWorkerRO& _workerRO) : BHTreeWorker(_workerRO) { }
+   BHTreeWorkerRO(treePtrT _treePtr) : BHTreeWorker(_treePtr), curPtr(NULL) { }
+   BHTreeWorkerRO(const BHTreeWorkerRO& _workerRO) : BHTreeWorker(_workerRO),
+                                                     curPtr(NULL) { }
 
 protected:
    ///
-   /// overwrite curPtr by a faster read-only version
+   /// overwrite curPtr by a faster (?) read-only version
    ///
-   //nodePtrT const curPtr, rootPtr;
+   const nodePtrT curPtr;
 };
 };
 #endif

@@ -25,28 +25,27 @@
 
 namespace sphlatch {
 BHTree::BHTree() :
-   noCells(0),
+   rootPtr(new czllT),
+   noCells(1),
    noParts(0),
 #ifdef SPHLATCH_OPENMP
-   noThreads(omp_get_num_threads())
+   noThreads(omp_get_num_threads()),
 #else
-   noThreads(1)
+   noThreads(1),
 #endif
+   insertmover(this)
 {
    ///
    /// allocate root cell and set cell
    /// size, add root cell to CZbottom
    /// cells list
    ///
-   rootPtr = new czllT;
-
    CZbottom.push_back(static_cast<czllPtrT>(rootPtr));
 
    static_cast<czllPtrT>(rootPtr)->clear();
    static_cast<czllPtrT>(rootPtr)->atBottom = true;
    static_cast<czllPtrT>(rootPtr)->depth    = 0;
    static_cast<czllPtrT>(rootPtr)->ident    = 0;
-   noCells++;
 
    // just temporary
    static_cast<czllPtrT>(rootPtr)->cen  = 0.5, 0.5, 0.5;
@@ -73,16 +72,9 @@ BHTree::selfRef BHTree::instance()
    return(*_instance);
 }
 
-void BHTree::insertParts(partVectT& _parts)
+void BHTree::insertPart(treeGhost& _part)
 {
-   const size_t noParts = _parts.size();
-
-   BHTreePartsInsertMover inserter(this);
-
-   for (size_t i = 0; i < noParts; i++)
-   {
-      inserter.insert(_parts[i]);
-   }
+  insertmover.insert( _part );
 }
 
 void BHTree::update()
@@ -103,13 +95,12 @@ void BHTree::update()
 
    // move particles
    // (prepare next walk?)
-   BHTreePartsInsertMover       mover(this);
    czllPtrListT::iterator       CZItr = CZbottom.begin();
    czllPtrListT::const_iterator CZEnd = CZbottom.end();
    std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
    while (CZItr != CZEnd)
    {
-      mover.move(*CZItr);
+      insertmover.move(*CZItr);
       CZItr++;
    }
 
@@ -135,7 +126,7 @@ void BHTree::update()
    CZItr = CZbottom.begin();
    while (CZItr != CZEnd)
    {
-      mover.pushDownOrphans(*CZItr);
+      insertmover.pushDownOrphans(*CZItr);
       CZItr++;
    }
 

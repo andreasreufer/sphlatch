@@ -18,7 +18,7 @@ typedef sphlatch::SPHfluidPart           sphPartT;
 #include "communication_manager.h"
 typedef sphlatch::CommunicationManager   commT;
 
-#include "bhtree_node_particle.h"
+#include "bhtree_nodes.h"
 
 class ghostT : public treeGhostT, public sphGhostT
 {
