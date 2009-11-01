@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
    dumpT        dumper(&Tree);
    BHTreeTester testWorker(&Tree);
 
-   const size_t       noParts = 100;
+   const size_t       noParts = 1000000;
    std::vector<partT> particles(noParts);
    for (size_t i = 0; i < noParts; i++)
    {
@@ -117,8 +117,8 @@ int main(int argc, char* argv[])
       testWorker.build();
       testWorker.test();*/
 
-   dumper.dotDump("pre__move.dot");
-   dumper.ptrDump("pre__move.txt");
+   //dumper.dotDump("pre__move.dot");
+   //dumper.ptrDump("pre__move.txt");
    for (size_t i = 0; i < noParts; i++)
    {
       if (particles[i].pos[2] < 0.5)
@@ -127,25 +127,14 @@ int main(int argc, char* argv[])
       particles[i].cost = 1.;
    }
 
-   sphlatch::treeGhost* ghoPtr = NULL;
-
-   ghoPtr = &particles[0];
-   partT* partPtr = &particles[0];
-
-   std::cout << ghoPtr->pos << "\n";
-   std::cout << partPtr->pos << "\n";
-
-   std::cout << particles[0].pos << "\n";
-   std::cout << static_cast<sphlatch::treeGhost>(particles[0]).pos << "\n";
-
    std::cout << "Tree.update() .........\n";
    Tree.update();
    std::cout << "Tree.update() finished.\n";
 
    //std::cout << (static_cast<std::vector<sphlatch::treeGhost> >(particles))[0].pos << "\n";
 
-   dumper.dotDump("post_move.dot");
-   dumper.ptrDump("post_move.txt");
+   //dumper.dotDump("post_move.dot");
+   //dumper.ptrDump("post_move.txt");
 
    gravT gravWorker(&Tree);
 
@@ -153,6 +142,7 @@ int main(int argc, char* argv[])
    treeT::czllPtrVectT CZbottomLoc = Tree.getCZbottomLoc();
    const int noCZbottomLoc = CZbottomLoc.size();
 
+   omp_set_num_threads(2);
 //#pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
    {
@@ -161,8 +151,8 @@ int main(int argc, char* argv[])
    }
    std::cout << "gravity finished \n";
    
-   for (size_t i = 0; i < noParts; i++)
-     std::cout << particles[i].acc << "\n";
+   //for (size_t i = 0; i < noParts; i++)
+     //std::cout << particles[i].acc << "\n";
 
    MPI::Finalize();
    return(0);

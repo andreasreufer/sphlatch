@@ -79,7 +79,7 @@ void BHTree::insertPart(treeGhost& _part)
 
 void BHTree::update()
 {
-   const fType costMin = 10., costMax = 15.;
+   const fType costMin = 10000., costMax = 15000.;
 
    std::cout << "entered Tree.update() ... round " << round << "\n";
 
@@ -90,8 +90,8 @@ void BHTree::update()
    dumpName.append(roundStr.str());
 
    // rebalance trees
-   dumper.dotDump(dumpName + "_0.dot");
-   dumper.ptrDump(dumpName + "_0.ptr");
+   //dumper.dotDump(dumpName + "_0.dot");
+   //dumper.ptrDump(dumpName + "_0.ptr");
 
    // move particles
    // (prepare next walk?)
@@ -105,15 +105,15 @@ void BHTree::update()
    }
 
    // rebalance trees
-   dumper.dotDump(dumpName + "_1.dot");
-   dumper.ptrDump(dumpName + "_1.ptr");
+   //dumper.dotDump(dumpName + "_1.dot");
+   //dumper.ptrDump(dumpName + "_1.ptr");
 
    std::cout << "\nrebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(costMin, costMax);
 
-   dumper.dotDump(dumpName + "_2.dot");
-   dumper.ptrDump(dumpName + "_2.txt");
+   //dumper.dotDump(dumpName + "_2.dot");
+   //dumper.ptrDump(dumpName + "_2.txt");
 
    // compose vector of CZ cell pointers
    czllPtrVectT CZbottomV       = getCzllPtrVect(CZbottom);
@@ -130,8 +130,8 @@ void BHTree::update()
       CZItr++;
    }
 
-   dumper.dotDump(dumpName + "_3.dot");
-   dumper.ptrDump(dumpName + "_3.txt");
+   //dumper.dotDump(dumpName + "_3.dot");
+   //dumper.ptrDump(dumpName + "_3.txt");
 
    // clean up tree
 
@@ -159,8 +159,8 @@ void BHTree::update()
    std::cout << "calculate MP moments  \n";
    MP.calcMultipolesCZ();
 
-   dumper.dotDump(dumpName + "_4.dot");
-   dumper.ptrDump(dumpName + "_4.txt");
+   //dumper.dotDump(dumpName + "_4.dot");
+   //dumper.ptrDump(dumpName + "_4.txt");
 
    // exchange MP moments
    round++;
@@ -172,7 +172,6 @@ void BHTree::update()
 BHTree::czllPtrVectT BHTree::getCZbottomLoc()
 {
   return getCzllPtrVect(CZbottomLoc);
-  //return getCzllPtrVect(CZbottom);
 }
 
 BHTree::czllPtrVectT BHTree::getCzllPtrVect(czllPtrListT _czllList)
