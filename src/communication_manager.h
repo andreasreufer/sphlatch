@@ -5,43 +5,21 @@
 #include <list>
 #include <mpi.h>
 
-#include <boost/assign/std/vector.hpp>
-
-#include "particle_manager.h"
+//#include <boost/assign/std/vector.hpp>
 
 namespace sphlatch
 {
 class CommunicationManager
 {
 public:
-   typedef CommunicationManager        self_type;
-   typedef CommunicationManager&       self_reference;
-   typedef CommunicationManager*       self_pointer;
-
-   typedef sphlatch::ParticleManager   PartManagerType;
+   typedef CommunicationManager    self_type;
+   typedef CommunicationManager&   self_reference;
+   typedef CommunicationManager*   self_pointer;
 
    static self_reference instance(void);
 
-   PartManagerType& PartManager;
-
-///
-/// this is the central exchange part
-///
-   void exchange(domainPartsIndexRefType _partsIndices, size_t _noGhosts);
-
-   quantsType exchangeQuants;
-
-   void sendGhostsPrepare(domainPartsIndexRefType _ghostsIndices);
-
-   void sendGhosts(idvectRefType _idVect);
-   void sendGhosts(valvectRefType _valVect);
-   void sendGhosts(matrixRefType _matrix);
-
-   void sendGhosts(quantsRefType _quantities);
-
-   void regExchQuant(idvectRefType _idVect);
-   void regExchQuant(valvectRefType _valVect);
-   void regExchQuant(matrixRefType _matrix);
+   typedef MPI::Datatype           dataType;
+   class DataTypeCreator;
 
 private:
    void calcOffsets(domainPartsIndexRefType _indices,
@@ -53,33 +31,30 @@ private:
 
    domainPartsIndexType ghostIndices;
    countsVectType       gSendOffsets, gRecvOffsets, gPartsFrom, gPartsTo;
-   size_t       identSize, floatSize, newNoParts, noSendGhosts;
-   MPI_Datatype mpiFloatType, mpiCountType;
+
+   size_t identSize, floatSize, newNoParts, noSendGhosts;
 
 ///
 /// various little helper functions
 ///
 ///
 public:
-   void sendMatrix(matrixRefType _matrix, size_t _recvDomain);
-   void recvMatrix(matrixRefType _matrix, size_t _sendDomain);
 
    void sendBitset(bitsetRefType _bitset, size_t _recvDomain);
    void recvBitset(bitsetRefType _bitset, size_t _sendDomain);
 
    template<class T> void sendVector(std::vector<T>& _vector,
-                                     size_t _recvDomain);
+                                     size_t          _recvDomain);
 
    template<class T> void recvVector(std::vector<T>& _vector,
-                                     size_t _sendDomain);
+                                     size_t          _sendDomain);
 
    void sumUpCounts(countsVectRefType _indexVect);
 
    void max(fRefType _val);
    void min(fRefType _val);
    void sum(fRefType _val);
-   void sum(valvectRefType _vect);
-   void sum(matrixRefType _mat);
+   void sum(vect3dT& _vect);
    void sum(countsRefType _cnt);
 
    size_t getMyDomain();
@@ -102,6 +77,8 @@ private:
 
    std::vector<size_t> domainToRank;
    std::vector<size_t> rankToDomain;
+
+   MPI_Datatype mpiFloatType, mpiCountType;
 };
 
 CommunicationManager::self_pointer CommunicationManager::_instance = NULL;
@@ -118,13 +95,17 @@ CommunicationManager::self_reference CommunicationManager::instance(void)
 }
 
 CommunicationManager::CommunicationManager(void) :
-   PartManager(PartManagerType::instance())
+   noDomains(MPI::COMM_WORLD.Get_size()),
+   noRanks(noDomains),
+   domainToRank(noDomains),
+   rankToDomain(noDomains),
+#ifdef SPHLATCH_SINGLEPREC
+   mpiFloatType(MPI::FLOAT),
+#else
+   mpiFloatType(MPI::DOUBLE),
+#endif
+   mpiCountType(MPI::INT)
 {
-   noDomains = MPI::COMM_WORLD.Get_size();
-   noRanks   = noDomains;
-   domainToRank.resize(noDomains);
-   rankToDomain.resize(noDomains);
-
    ///
    /// insert mapping here
    ///
@@ -144,15 +125,8 @@ CommunicationManager::CommunicationManager(void) :
    gPartsFrom.resize(noDomains);
    gPartsTo.resize(noDomains);
 
-   identSize = sizeof(identType);
-   floatSize = sizeof(fType);
-
-#ifdef SPHLATCH_SINGLEPREC
-   mpiFloatType = MPI::FLOAT;
-#else
-   mpiFloatType = MPI::DOUBLE;
-#endif
-   mpiCountType = MPI::INT;
+   //identSize = sizeof(idType);
+   //floatSize = sizeof(fType);
 }
 
 CommunicationManager::~CommunicationManager(void)
@@ -164,439 +138,6 @@ CommunicationManager::~CommunicationManager(void)
 size_t CommunicationManager::commBuffSize = 131072;   //  128 kByte
 //size_t CommunicationManager::commBuffSize = 1048576;    // 1024 kByte
 //size_t CommunicationManager::commBuffSize = 8388608;  // 8096 kByte
-
-void CommunicationManager::exchange(domainPartsIndexRefType _partsIndices,
-                                    size_t                  _noGhosts)
-{
-   ///
-   /// prepare particle queue and number of particles
-   ///
-   countsVectType sendOffset, recvOffset, partsTo, partsFrom;
-
-   sendOffset.resize(noDomains);
-   partsTo.resize(noDomains);
-   recvOffset.resize(noDomains);
-   partsFrom.resize(noDomains);
-
-   calcOffsets(_partsIndices, 0, sendOffset, partsTo, recvOffset, partsFrom);
-
-   newNoParts = 0;
-   size_t noSendParts = 0;
-   for (size_t i = 0; i < noRanks; i++)
-   {
-      newNoParts  += partsFrom[i];
-      noSendParts += partsTo[i];
-   }
-
-   ///
-   /// current number of particles
-   ///
-   //const fType noParts = PartManager.getNoLocalParts();
-
-   ///
-   /// set new number of particles (noGhosts needs to be known)
-   ///
-   PartManager.setNoParts(newNoParts, _noGhosts);
-
-   ///
-   /// iterators for the particle index vectors
-   ///
-   partsIndexVectType::const_iterator idxItr, idxEnd;
-
-   ///
-   /// vectors for byte counts and offsets
-   ///
-   countsVectType sendByteOffset, recvByteOffset, bytesTo, bytesFrom;
-   sendByteOffset.resize(noDomains);
-   recvByteOffset.resize(noDomains);
-   bytesTo.resize(noDomains);
-   bytesFrom.resize(noDomains);
-
-   ///
-   /// exchange integer quantities
-   ///
-   idvectType idSendBuff(noSendParts);
-
-   idvectPtrSetType::const_iterator intsItr = exchangeQuants.ints.begin();
-   idvectPtrSetType::const_iterator intsEnd = exchangeQuants.ints.end();
-   while (intsItr != intsEnd)
-   {
-      idvectRefType curInts(** intsItr);
-
-      ///
-      /// fill send buffer and prepare byte count vectors
-      ///
-      for (size_t i = 0; i < noDomains; i++)
-      {
-         const size_t curRank = domainToRank[i];
-         size_t       buffIdx = sendOffset[curRank];
-
-         idxItr = _partsIndices[i].begin();
-         idxEnd = _partsIndices[i].end();
-
-         while (idxItr != idxEnd)
-         {
-            idSendBuff(buffIdx) = curInts(*idxItr);
-            buffIdx++;
-            idxItr++;
-         }
-
-         sendByteOffset[i] = identSize * sendOffset[i];
-         recvByteOffset[i] = identSize * recvOffset[i];
-         bytesTo[i]        = identSize * partsTo[i];
-         bytesFrom[i]      = identSize * partsFrom[i];
-      }
-
-      ///
-      /// resize the quantitiy
-      ///
-      PartManager.resize(**intsItr, false);
-
-      ///
-      /// exchange data
-      ///
-      barrier();
-      MPI::COMM_WORLD.Alltoallv(&idSendBuff(0), &bytesTo[0],
-                                &sendByteOffset[0], MPI::BYTE,
-                                &curInts(0), &bytesFrom[0],
-                                &recvByteOffset[0], MPI::BYTE);
-      intsItr++;
-   }
-   idSendBuff.resize(0, false);
-
-   ///
-   /// exchange scalar quantities
-   ///
-   valvectType scalSendBuff(noSendParts);
-
-   valvectPtrSetType::const_iterator scalItr = exchangeQuants.scalars.begin();
-   valvectPtrSetType::const_iterator scalEnd = exchangeQuants.scalars.end();
-   while (scalItr != scalEnd)
-   {
-      valvectRefType curScal(** scalItr);
-
-      ///
-      /// fill send buffer and prepare byte count vectors
-      ///
-      for (size_t i = 0; i < noDomains; i++)
-      {
-         const size_t curRank = domainToRank[i];
-         size_t       buffIdx = sendOffset[curRank];
-
-         idxItr = _partsIndices[i].begin();
-         idxEnd = _partsIndices[i].end();
-
-         while (idxItr != idxEnd)
-         {
-            scalSendBuff(buffIdx) = curScal(*idxItr);
-            buffIdx++;
-            idxItr++;
-         }
-
-         sendByteOffset[i] = floatSize * sendOffset[i];
-         recvByteOffset[i] = floatSize * recvOffset[i];
-         bytesTo[i]        = floatSize * partsTo[i];
-         bytesFrom[i]      = floatSize * partsFrom[i];
-      }
-
-      ///
-      /// resize the quantitiy
-      ///
-      PartManager.resize(**scalItr, false);
-
-      ///
-      /// exchange data
-      ///
-      barrier();
-      MPI::COMM_WORLD.Alltoallv(&scalSendBuff(0), &bytesTo[0],
-                                &sendByteOffset[0], MPI::BYTE,
-                                &curScal(0), &bytesFrom[0],
-                                &recvByteOffset[0], MPI::BYTE);
-      scalItr++;
-   }
-   scalSendBuff.resize(0, false);
-
-   ///
-   /// exchange vectorial quantities
-   ///
-   matrixType vectSendBuff(noSendParts, 0);
-
-   matrixPtrSetType::const_iterator vectItr = exchangeQuants.vects.begin();
-   matrixPtrSetType::const_iterator vectEnd = exchangeQuants.vects.end();
-   while (vectItr != vectEnd)
-   {
-      matrixRefType curVect(** vectItr);
-
-      const size_t matrSize2 = curVect.size2();
-
-      ///
-      /// resize 2nd dimension of buffers if necessary
-      ///
-      if (matrSize2 != vectSendBuff.size2())
-         vectSendBuff.resize(vectSendBuff.size1(), matrSize2, false);
-
-      ///
-      /// fill send buffer and prepare byte count vectors
-      ///
-      for (size_t i = 0; i < noDomains; i++)
-      {
-         const size_t curRank = domainToRank[i];
-         size_t       buffIdx = sendOffset[curRank];
-
-         idxItr = _partsIndices[i].begin();
-         idxEnd = _partsIndices[i].end();
-
-         while (idxItr != idxEnd)
-         {
-            particleRowType(vectSendBuff, buffIdx) =
-               particleRowType(curVect, *idxItr);
-            buffIdx++;
-            idxItr++;
-         }
-
-         sendByteOffset[i] = floatSize * matrSize2 * sendOffset[i];
-         recvByteOffset[i] = floatSize * matrSize2 * recvOffset[i];
-         bytesTo[i]        = floatSize * matrSize2 * partsTo[i];
-         bytesFrom[i]      = floatSize * matrSize2 * partsFrom[i];
-      }
-
-      ///
-      /// resize the quantitiy
-      ///
-      PartManager.resize(**vectItr, false);
-
-      ///
-      /// exchange data
-      ///
-      barrier();
-      MPI::COMM_WORLD.Alltoallv(&vectSendBuff(0, 0), &bytesTo[0],
-                                &sendByteOffset[0], MPI::BYTE,
-                                &curVect(0, 0), &bytesFrom[0],
-                                &recvByteOffset[0], MPI::BYTE);
-      vectItr++;
-   }
-   vectSendBuff.resize(0, 0, false);
-
-   // resize the rest of the variables
-   PartManager.resizeAll();
-}
-
-void CommunicationManager::sendGhostsPrepare(
-   domainPartsIndexRefType _ghostsIndices)
-{
-   ghostIndices = _ghostsIndices;
-   calcOffsets(ghostIndices, newNoParts,
-               gSendOffsets, gPartsTo,
-               gRecvOffsets, gPartsFrom);
-
-   noSendGhosts = 0;
-   for (size_t i = 0; i < noRanks; i++)
-   {
-      noSendGhosts += gPartsTo[i];
-   }
-}
-
-void CommunicationManager::sendGhosts(idvectRefType _idVect)
-{
-   idvectType idSendBuff(noSendGhosts);
-
-   countsVectType sendByteOffset(noDomains);
-   countsVectType recvByteOffset(noDomains);
-   countsVectType bytesTo(noDomains);
-   countsVectType bytesFrom(noDomains);
-
-   ///
-   /// fill send buffer and prepare byte count vectors
-   ///
-   for (size_t i = 0; i < noDomains; i++)
-   {
-      const size_t curRank = domainToRank[i];
-      size_t       buffIdx = gSendOffsets[curRank];
-
-      partsIndexVectType::const_iterator idxItr = ghostIndices[i].begin();
-      partsIndexVectType::const_iterator idxEnd = ghostIndices[i].end();
-
-      while (idxItr != idxEnd)
-      {
-         idSendBuff(buffIdx) = _idVect(*idxItr);
-         buffIdx++;
-         idxItr++;
-      }
-
-      sendByteOffset[i] = identSize * gSendOffsets[i];
-      recvByteOffset[i] = identSize * gRecvOffsets[i];
-      bytesTo[i]        = identSize * gPartsTo[i];
-      bytesFrom[i]      = identSize * gPartsFrom[i];
-   }
-
-   ///
-   /// exchange data
-   ///
-   barrier();
-   MPI::COMM_WORLD.Alltoallv(&idSendBuff(0), &bytesTo[0],
-                             &sendByteOffset[0], MPI::BYTE,
-                             &_idVect(0), &bytesFrom[0],
-                             &recvByteOffset[0], MPI::BYTE);
-   barrier();
-}
-
-void CommunicationManager::sendGhosts(valvectRefType _valVect)
-{
-   valvectType valSendBuff;
-
-   valSendBuff.resize(noSendGhosts);
-
-   countsVectType sendByteOffset(noDomains);
-   countsVectType recvByteOffset(noDomains);
-   countsVectType bytesTo(noDomains);
-   countsVectType bytesFrom(noDomains);
-
-   ///
-   /// fill send buffer and prepare byte count vectors
-   ///
-   for (size_t i = 0; i < noDomains; i++)
-   {
-      const size_t curRank = domainToRank[i];
-      size_t       buffIdx = gSendOffsets[curRank];
-
-      partsIndexVectType::const_iterator idxItr = ghostIndices[i].begin();
-      partsIndexVectType::const_iterator idxEnd = ghostIndices[i].end();
-
-      while (idxItr != idxEnd)
-      {
-         valSendBuff(buffIdx) = _valVect(*idxItr);
-         buffIdx++;
-         idxItr++;
-      }
-
-      sendByteOffset[i] = floatSize * gSendOffsets[i];
-      recvByteOffset[i] = floatSize * gRecvOffsets[i];
-      bytesTo[i]        = floatSize * gPartsTo[i];
-      bytesFrom[i]      = floatSize * gPartsFrom[i];
-   }
-
-   ///
-   /// exchange data
-   ///
-   barrier();
-   MPI::COMM_WORLD.Alltoallv(&valSendBuff(0), &bytesTo[0],
-                             &sendByteOffset[0], MPI::BYTE,
-                             &_valVect(0), &bytesFrom[0],
-                             &recvByteOffset[0], MPI::BYTE);
-   barrier();
-}
-
-void CommunicationManager::sendGhosts(matrixRefType _matrix)
-{
-   const size_t matrSize2 = _matrix.size2();
-
-   matrixType vectSendBuff(noSendGhosts, matrSize2);
-
-   countsVectType sendByteOffset(noDomains);
-   countsVectType recvByteOffset(noDomains);
-   countsVectType bytesTo(noDomains);
-   countsVectType bytesFrom(noDomains);
-
-   ///
-   /// fill send buffer and prepare byte count vectors
-   ///
-   for (size_t i = 0; i < noDomains; i++)
-   {
-      const size_t curRank = domainToRank[i];
-      size_t       buffIdx = gSendOffsets[curRank];
-
-      partsIndexVectType::const_iterator idxItr = ghostIndices[i].begin();
-      partsIndexVectType::const_iterator idxEnd = ghostIndices[i].end();
-
-      while (idxItr != idxEnd)
-      {
-         particleRowType(vectSendBuff, buffIdx) =
-            particleRowType(_matrix, *idxItr);
-         buffIdx++;
-         idxItr++;
-      }
-
-      sendByteOffset[i] = floatSize * matrSize2 * gSendOffsets[i];
-      recvByteOffset[i] = floatSize * matrSize2 * gRecvOffsets[i];
-      bytesTo[i]        = floatSize * matrSize2 * gPartsTo[i];
-      bytesFrom[i]      = floatSize * matrSize2 * gPartsFrom[i];
-   }
-
-   ///
-   /// exchange data
-   ///
-   barrier();
-   MPI::COMM_WORLD.Alltoallv(&vectSendBuff(0, 0), &bytesTo[0],
-                             &sendByteOffset[0], MPI::BYTE,
-                             &_matrix(0, 0), &bytesFrom[0],
-                             &recvByteOffset[0], MPI::BYTE);
-   barrier();
-}
-
-void CommunicationManager::sendGhosts(quantsRefType _quantities)
-{
-   matrixPtrSetType::const_iterator vectItr = _quantities.vects.begin();
-   matrixPtrSetType::const_iterator vectEnd = _quantities.vects.end();
-
-   while (vectItr != vectEnd)
-   {
-      sendGhosts(**vectItr);
-      vectItr++;
-   }
-
-   idvectPtrSetType::const_iterator intsItr = _quantities.ints.begin();
-   idvectPtrSetType::const_iterator intsEnd = _quantities.ints.end();
-   while (intsItr != intsEnd)
-   {
-      sendGhosts(**intsItr);
-      intsItr++;
-   }
-
-
-   valvectPtrSetType::const_iterator scalItr = _quantities.scalars.begin();
-   valvectPtrSetType::const_iterator scalEnd = _quantities.scalars.end();
-   while (scalItr != scalEnd)
-   {
-      sendGhosts(**scalItr);
-      scalItr++;
-   }
-}
-
-///
-/// register a quantity for exchange (only when ptr is not already
-/// registered)
-///
-void CommunicationManager::regExchQuant(idvectRefType _idVect)
-{
-   idvectPtrSetType::iterator searchItr = exchangeQuants.ints.find(&_idVect);
-
-   if (searchItr == exchangeQuants.ints.end())
-   {
-      exchangeQuants.ints.insert(&_idVect);
-   }
-}
-
-void CommunicationManager::regExchQuant(valvectRefType _valVect)
-{
-   valvectPtrSetType::iterator searchItr =
-      exchangeQuants.scalars.find(&_valVect);
-
-   if (searchItr == exchangeQuants.scalars.end())
-   {
-      exchangeQuants.scalars.insert(&_valVect);
-   }
-}
-
-void CommunicationManager::regExchQuant(matrixRefType _matrix)
-{
-   matrixPtrSetType::iterator searchItr =
-      exchangeQuants.vects.find(&_matrix);
-
-   if (searchItr == exchangeQuants.vects.end())
-   {
-      exchangeQuants.vects.insert(&_matrix);
-   }
-}
 
 ///
 /// calculate from a particle index vector and a total offset constant the resulting
@@ -643,68 +184,6 @@ void CommunicationManager::calcOffsets(domainPartsIndexRefType _indices,
    }
 }
 
-void CommunicationManager::sendMatrix(matrixRefType _matrix, size_t _recvDomain)
-{
-   static size_t noRemElems, noCurElems, noCurBytes, round;
-   const size_t  noBuffElems = commBuffSize / sizeof(fType);
-
-   const size_t recvRank = domainToRank[_recvDomain];
-
-   ///
-   /// no checks are performed whether the matrix
-   /// on the receiving side actually matches the amount
-   /// of incoming data!
-   ///
-   noRemElems = _matrix.size1() * _matrix.size2();
-   round      = 0;
-
-   while (noRemElems > 0)
-   {
-      noCurElems = std::min(noRemElems, noBuffElems);
-      noCurBytes = noCurElems * sizeof(fType);
-
-      ///
-      /// this pointer arithmetics stuff assumes continous
-      /// storage for matrixType
-      ///
-      MPI::COMM_WORLD.Send((&_matrix(0, 0) + round * noBuffElems),
-                           noCurBytes, MPI_BYTE, recvRank, myRank + round);
-      noRemElems -= noCurElems;
-      round++;
-   }
-}
-
-void CommunicationManager::recvMatrix(matrixRefType _matrix, size_t _sendDomain)
-{
-   static size_t noRemElems, noCurElems, noCurBytes, round;
-   const size_t  noBuffElems = commBuffSize / sizeof(fType);
-
-   const size_t sendRank = domainToRank[_sendDomain];
-
-   ///
-   /// no checks are performed whether the matrix
-   /// on the receiving side actually matches the amount
-   /// of incoming data!
-   ///
-   noRemElems = _matrix.size1() * _matrix.size2();
-   round      = 0;
-
-   while (noRemElems > 0)
-   {
-      noCurElems = std::min(noRemElems, noBuffElems);
-      noCurBytes = noCurElems * sizeof(fType);
-
-      ///
-      /// this pointer arithmetics stuff assumes continous
-      /// storage for matrixType
-      ///
-      MPI::COMM_WORLD.Recv((&_matrix(0, 0) + round * noBuffElems),
-                           noCurBytes, MPI_BYTE, sendRank, sendRank + round);
-      noRemElems -= noCurElems;
-      round++;
-   }
-}
-
 void CommunicationManager::sendBitset(bitsetRefType _bitset, size_t _recvRank)
 {
    /// noBlock = no. of bits / no. of bits per bitsetBlockType
@@ -716,7 +195,6 @@ void CommunicationManager::sendBitset(bitsetRefType _bitset, size_t _recvRank)
    /// allocate buffer and fill it
    ///
    std::vector<bitsetBlockType> sendBuff(noBlocks);
-
    boost::to_block_range(_bitset, sendBuff.begin());
 
    ///
@@ -847,35 +325,18 @@ void CommunicationManager::sum(fRefType _val)
    _val = static_cast<fType>(doubleBuff);
 }
 
-void CommunicationManager::sum(valvectRefType _vect)
+void CommunicationManager::sum(vect3dT& _vect)
 {
-   const size_t vectLength = _vect.size();
+   const size_t vectLength = 3;
 
 #ifdef MPI_IN_PLACE
    MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE, &_vect(0), vectLength,
                              mpiFloatType, MPI::SUM);
 #else
-   valvectType recvBuff(_vect);
-
+   vect3dT recvBuff(_vect);
    MPI::COMM_WORLD.Allreduce(&_vect(0), &recvBuff(0), vectLength,
                              mpiFloatType, MPI::SUM);
    _vect = recvBuff;
-#endif
-}
-
-void CommunicationManager::sum(matrixRefType _mat)
-{
-   const size_t matLength = _mat.size1() * _mat.size2();
-
-#ifdef MPI_IN_PLACE
-   MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE, &_mat(0, 0), matLength,
-                             mpiFloatType, MPI::SUM);
-#else
-   matrixType recvBuff(_mat);
-
-   MPI::COMM_WORLD.Allreduce(&_mat(0), &recvBuff(0, 0), matLength,
-                             mpiFloatType, MPI::SUM);
-   _mat = recvBuff;
 #endif
 }
 
@@ -885,7 +346,7 @@ void CommunicationManager::sum(countsRefType _cnt)
    MPI::COMM_WORLD.Allreduce(MPI_IN_PLACE, &_cnt, 1,
                              mpiCountType, MPI::SUM);
 #else
-   identType countBuff;
+   idType countBuff;
    MPI::COMM_WORLD.Allreduce(&_cnt, &countBuff, 1,
                              mpiCountType, MPI::SUM);
    _cnt = countBuff;
@@ -993,6 +454,117 @@ size_t CommunicationManager::MPIrankToDomain(size_t _rank)
 {
    return(rankToDomain[_rank]);
 }
+
+class CommunicationManager::DataTypeCreator {
+public:
+
+   DataTypeCreator(void* _basePtr) :
+      baseAddr(MPI::Get_address(_basePtr)),
+#ifdef SPHLATCH_SINGLEPREC
+      MPIfType(MPI::FLOAT)
+#else
+      MPIfType(MPI::DOUBLE)
+#endif
+   { };
+   DataTypeCreator() { };
+   ~DataTypeCreator() { };
+   void operator+=(vect3dT* _vectPtr)
+   {
+      elems.push_back(quart(MPI::Get_address(_vectPtr) - baseAddr,
+                            MPIfType, 3, sizeof(vect3dT)));
+   }
+
+   void operator+=(fType* _fPtr)
+   {
+      elems.push_back(quart(MPI::Get_address(_fPtr) - baseAddr,
+                            MPIfType, 1, sizeof(fType)));
+   }
+
+   void operator+=(countsType* _cPtr)
+   {
+      elems.push_back(quart(MPI::Get_address(_cPtr) - baseAddr,
+                            MPI::INT, 1, sizeof(countsType)));
+   }
+
+   void operator()(void* _basePtr)
+   {
+      elems.clear();
+      baseAddr = MPI::Get_address(_basePtr);
+   }
+
+   MPI::Datatype finalize()
+   {
+      // sort elements after displacement
+      elems.sort();
+      const size_t noElems = elems.size() + 2;
+
+      int           blength[noElems];
+      MPI::Aint     displac[noElems];
+      MPI::Datatype dtypes[noElems];
+
+      elemsListT::iterator       elemItr = elems.begin();
+      elemsListT::const_iterator elemEnd = elems.end();
+
+      displac[0] = 0;
+      dtypes[0]  = MPI::LB;
+      blength[0] = 1;
+
+      size_t count = 1;
+      while (elemItr != elemEnd)
+      {
+         blength[count] = elemItr->blength;
+         displac[count] = elemItr->displ;
+         dtypes[count]  = elemItr->dtype;
+         count++;
+         elemItr++;
+      }
+
+      if (count > 1)
+         displac[count] = displac[count - 1] + (elemItr--)->size;
+      else
+         displac[count] = 0;
+      dtypes[count]  = MPI::UB;
+      blength[count] = 1;
+
+      MPI::Datatype retDatatype =
+         MPI::Datatype::Create_struct(noElems, blength, displac, dtypes);
+      retDatatype.Commit();
+      return(retDatatype);
+   }
+
+private:
+   class quart {
+public:
+      quart(
+         MPI::Aint     _displ,
+         MPI::Datatype _dtype,
+         int           _blength,
+         size_t        _size
+         ) :
+         displ(_displ),
+         dtype(_dtype),
+         blength(_blength),
+         size(_size)
+      { }
+      ~quart() { }
+
+      bool operator<(const quart& _rhs)
+      {
+         return(displ < _rhs.displ);
+      }
+
+      MPI::Aint     displ;
+      MPI::Datatype dtype;
+      int           blength;
+      size_t        size;
+   };
+
+private:
+   MPI::Aint baseAddr;
+   typedef std::list<quart>   elemsListT;
+   elemsListT    elems;
+   MPI::Datatype MPIfType;
+};
 };
 
 #endif
