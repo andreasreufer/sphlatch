@@ -11,20 +11,23 @@
 
 #include "typedefs.h"
 #include "bhtree_worker.cpp"
+
+#ifdef SPHLATCH_MPI
 #include "communication_manager.h"
 typedef sphlatch::CommunicationManager   commT;
+#endif
 
 #include "bhtree_treedump.cpp"
 typedef sphlatch::BHTreeDump             dumpT;
-
-using namespace sphlatch::vectindices;
 
 namespace sphlatch {
 class BHTreeCZBuilder : public BHTreeWorker {
 public:
    BHTreeCZBuilder(const treePtrT _treePtr) :
       BHTreeWorker(_treePtr),
+#ifdef SPHLATCH_MPI
       CommManager(commT::instance()),
+#endif
       CZcosts(_treePtr->maxCZBottCells),
       CZparts(_treePtr->maxCZBottCells),
       gathOrphFrst(NULL),
@@ -38,7 +41,9 @@ public:
    void rebalance(const fType _lowMark, const fType _highMark);
 
 private:
+#ifdef SPHLATCH_MPI
    commT& CommManager;
+#endif
 
    fvectT CZcosts;
    ivectT CZparts;
@@ -159,6 +164,7 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
 // FIXME: move this to tree
 void BHTreeCZBuilder::sumCZcosts()
 {
+#ifdef SPHLATCH_MPI
    ///
    /// CZ cell list -> vector
    ///
@@ -193,7 +199,7 @@ void BHTreeCZBuilder::sumCZcosts()
       i++;
       CZlistItr++;
    }
-
+#endif
    ///
    /// make sure the costs of all CZ cells is added up
    ///

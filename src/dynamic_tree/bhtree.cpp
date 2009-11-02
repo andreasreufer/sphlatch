@@ -81,13 +81,13 @@ void BHTree::update()
 {
    const fType costMin = 10000., costMax = 15000.;
 
-   std::cout << "entered Tree.update() ... round " << round << "\n";
+   /*std::cout << "entered Tree.update() ... round " << round << "\n";
 
    BHTreeDump         dumper(this);
    std::ostringstream roundStr;
    roundStr << round;
    std::string dumpName = "dump";
-   dumpName.append(roundStr.str());
+   dumpName.append(roundStr.str());*/
 
    // rebalance trees
    //dumper.dotDump(dumpName + "_0.dot");
@@ -97,7 +97,7 @@ void BHTree::update()
    // (prepare next walk?)
    czllPtrListT::iterator       CZItr = CZbottom.begin();
    czllPtrListT::const_iterator CZEnd = CZbottom.end();
-   std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
+   //std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
    while (CZItr != CZEnd)
    {
       insertmover.move(*CZItr);
@@ -108,7 +108,7 @@ void BHTree::update()
    //dumper.dotDump(dumpName + "_1.dot");
    //dumper.ptrDump(dumpName + "_1.ptr");
 
-   std::cout << "\nrebalance CZ ....\n";
+   //std::cout << "\nrebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(costMin, costMax);
 
@@ -122,7 +122,7 @@ void BHTree::update()
    // exchange costzone cells and their particles
 
    // push down orphans
-   std::cout << "\npush down orphans\n";
+   //std::cout << "\npush down orphans\n";
    CZItr = CZbottom.begin();
    while (CZItr != CZEnd)
    {
@@ -136,7 +136,7 @@ void BHTree::update()
    // clean up tree
 
    // prepare walks (next & skip)
-   std::cout << "housekeeping          \n";
+   //std::cout << "housekeeping          \n";
 
    BHTreeHousekeeper HK(this);
    BHTreeMPWorker    MP(this);
@@ -152,18 +152,18 @@ void BHTree::update()
       // calculate MP moments
       MP.calcMultipoles(CZbottomV[i]);
    }
-   std::cout << "prepare CZ next walk  \n";
+   //std::cout << "prepare CZ next walk  \n";
    HK.setNextCZ();
-   std::cout << "prepare    skip walk  \n";
+   //std::cout << "prepare    skip walk  \n";
    HK.setSkip();
-   std::cout << "calculate MP moments  \n";
+   //std::cout << "calculate MP moments  \n";
    MP.calcMultipolesCZ();
 
    //dumper.dotDump(dumpName + "_4.dot");
    //dumper.ptrDump(dumpName + "_4.txt");
 
    // exchange MP moments
-   round++;
+   //round++;
 
    //
    CZbottomLoc = CZbottom;

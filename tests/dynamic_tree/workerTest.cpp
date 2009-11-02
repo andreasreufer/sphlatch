@@ -85,16 +85,13 @@ public:
 
 int main(int argc, char* argv[])
 {
-   sleep(1);
+#ifdef SPHLATCH_MPI
    MPI::Init(argc, argv);
-
+#endif
    treeT& Tree(treeT::instance());
    dumpT  dumper(&Tree);
-   //logT         logger(logT::instance());
 
    BHTreeTester testWorker(&Tree);
-
-   //logger << "everything instantiated\n";
 
    const size_t       noParts = 200000;
    std::vector<partT> particles(noParts);
@@ -108,14 +105,22 @@ int main(int argc, char* argv[])
 
       particles[i].id   = i;
       particles[i].cost = 1.;
-
+   }
+   
+   double start;
+   start = omp_get_wtime();
+   for (size_t i = 0; i < noParts; i++)
+   {
       Tree.insertPart(particles[i]);
    }
+   std::cout << "particles insert " << omp_get_wtime() - start << "s\n";
+   
 
    //Tree.insertParts(particles);
    std::cout << "Tree.update() .........\n";
+   start = omp_get_wtime();
    Tree.update();
-   std::cout << "Tree.update() finished.\n";
+   std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
 
    //logger << "Tree ready\n";
 
@@ -137,8 +142,9 @@ int main(int argc, char* argv[])
    }
 
    std::cout << "Tree.update() .........\n";
+   start = omp_get_wtime();
    Tree.update();
-   std::cout << "Tree.update() finished.\n";
+   std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
    //logger << "Tree ready\n";
 
    //std::cout << (static_cast<std::vector<sphlatch::treeGhost> >(particles))[0].pos << "\n";
@@ -152,18 +158,18 @@ int main(int argc, char* argv[])
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
 
+   start = omp_get_wtime();
 #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
-   {
-      //std::cout << "  grav: " << CZbottomLoc[i] << "\n";
       gravWorker.calcGravity(CZbottomLoc[i]);
-   }
-   std::cout << "gravity finished \n";
-   //logger << "gravity\n";
+   
+   std::cout << "gravity finished " << omp_get_wtime() - start << "s\n";
 
    //for (size_t i = 0; i < noParts; i++)
    //std::cout << particles[i].acc << "\n";
 
+#ifdef SPHLATCH_MPI
    MPI::Finalize();
+#endif
    return(0);
 }
