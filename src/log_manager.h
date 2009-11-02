@@ -38,7 +38,8 @@ typedef sphlatch::CommunicationManager CommManagerType;
 CommManagerType& CommManager;
 #endif
 
-protected:
+public:
+//protected:
 LogManager(void);
 ~LogManager(void);
 std::fstream locLog;

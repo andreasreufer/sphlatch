@@ -26,15 +26,15 @@ typedef sphlatch::czllPtrT   czllPtrT;
 #include "bhtree_particle.h"
 #include "sph_fluid_particle.h"
 
-class particle : 
-  public sphlatch::treePart, 
-  public sphlatch::movingPart, 
-  public sphlatch::SPHfluidPart {};
+class particle :
+   public sphlatch::treePart,
+   public sphlatch::movingPart,
+   public sphlatch::SPHfluidPart { };
 
-class ghost : 
-  public sphlatch::treeGhost,  
-  public sphlatch::movingGhost, 
-  public sphlatch::SPHfluidGhost {};
+class ghost :
+   public sphlatch::treeGhost,
+   public sphlatch::movingGhost,
+   public sphlatch::SPHfluidGhost { };
 
 typedef particle                               partT;
 typedef ghost                                  ghstT;
@@ -46,6 +46,9 @@ typedef sphlatch::BHTreeDump                   dumpT;
 #include "bhtree_worker_grav.cpp"
 typedef sphlatch::fixThetaMAC                  macT;
 typedef sphlatch::GravityWorker<macT, partT>   gravT;
+
+//#include "log_manager.h"
+//typedef sphlatch::LogManager                   logT;
 
 //#include "bhtree_worker_sphsum.cpp"
 
@@ -85,11 +88,15 @@ int main(int argc, char* argv[])
    sleep(1);
    MPI::Init(argc, argv);
 
-   treeT&       Tree(treeT::instance());
-   dumpT        dumper(&Tree);
+   treeT& Tree(treeT::instance());
+   dumpT  dumper(&Tree);
+   //logT         logger(logT::instance());
+
    BHTreeTester testWorker(&Tree);
 
-   const size_t       noParts = 1000000;
+   //logger << "everything instantiated\n";
+
+   const size_t       noParts = 200000;
    std::vector<partT> particles(noParts);
    for (size_t i = 0; i < noParts; i++)
    {
@@ -102,13 +109,15 @@ int main(int argc, char* argv[])
       particles[i].id   = i;
       particles[i].cost = 1.;
 
-      Tree.insertPart( particles[i] );
+      Tree.insertPart(particles[i]);
    }
 
    //Tree.insertParts(particles);
    std::cout << "Tree.update() .........\n";
    Tree.update();
    std::cout << "Tree.update() finished.\n";
+
+   //logger << "Tree ready\n";
 
    //dumper.ptrDump("postCZdump.txt");
    //dumper.dotDump("postCZdump.dot");
@@ -130,6 +139,7 @@ int main(int argc, char* argv[])
    std::cout << "Tree.update() .........\n";
    Tree.update();
    std::cout << "Tree.update() finished.\n";
+   //logger << "Tree ready\n";
 
    //std::cout << (static_cast<std::vector<sphlatch::treeGhost> >(particles))[0].pos << "\n";
 
@@ -139,20 +149,20 @@ int main(int argc, char* argv[])
    gravT gravWorker(&Tree);
 
    std::cout << "gravity ...\n";
-   treeT::czllPtrVectT CZbottomLoc = Tree.getCZbottomLoc();
-   const int noCZbottomLoc = CZbottomLoc.size();
+   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
+   const int           noCZbottomLoc = CZbottomLoc.size();
 
-   omp_set_num_threads(2);
-//#pragma omp parallel for firstprivate(gravWorker)
+#pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
    {
-     //std::cout << "  grav: " << CZbottomLoc[i] << "\n";
-     gravWorker.calcGravity(CZbottomLoc[i]);
+      //std::cout << "  grav: " << CZbottomLoc[i] << "\n";
+      gravWorker.calcGravity(CZbottomLoc[i]);
    }
    std::cout << "gravity finished \n";
-   
+   //logger << "gravity\n";
+
    //for (size_t i = 0; i < noParts; i++)
-     //std::cout << particles[i].acc << "\n";
+   //std::cout << particles[i].acc << "\n";
 
    MPI::Finalize();
    return(0);
