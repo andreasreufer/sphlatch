@@ -136,7 +136,7 @@ public:
 
 private:
 #ifdef SPHLATCH_PADD64
-   char pad[46];
+   char pad[38];
 #endif
 };
 
@@ -173,7 +173,7 @@ public:
 
 private:
 #ifdef SPHLATCH_PADD64
-   char pad[40];
+   char pad[56];
 #endif
 };
 

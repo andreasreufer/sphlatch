@@ -148,9 +148,40 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
 {
    curPtr = _czll->chldFrst;
    const nodePtrT chldLast = _czll->chldFrst;
+   nodePtrT lastOk, nextOk, nextChld;
 
    while (curPtr != chldLast)
    {
+      nextChld = curPtr->next;
+      if ( not nextChld->isParticle && not nextChld->isCZ)
+      {
+        size_t noChilds = 0;
+        for (size_t i = 0; i < 8; i++)
+        {
+          if ( static_cast<gcllPtrT>(nextChld)->child[i] != NULL )
+            noChilds++;
+          if ( noChilds > 1 )
+            break;
+        }
+          
+
+        /*switch (noChilds)
+        {
+          case 0:
+
+
+
+          case 1:
+
+          default:
+        }*/
+        
+
+        // has the cell childs?
+
+      }
+
+      // check if next child is ok
       curPtr = curPtr->next;
    }
 }

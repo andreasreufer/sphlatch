@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
 
    BHTreeTester testWorker(&Tree);
 
-   const size_t       noParts = 200000;
+   const size_t       noParts = 500000;
    std::vector<partT> particles(noParts);
    for (size_t i = 0; i < noParts; i++)
    {
@@ -115,14 +115,10 @@ int main(int argc, char* argv[])
    }
    std::cout << "particles insert " << omp_get_wtime() - start << "s\n";
    
-
-   //Tree.insertParts(particles);
    std::cout << "Tree.update() .........\n";
    start = omp_get_wtime();
    Tree.update();
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
-
-   //logger << "Tree ready\n";
 
    //dumper.ptrDump("postCZdump.txt");
    //dumper.dotDump("postCZdump.dot");
@@ -131,8 +127,6 @@ int main(int argc, char* argv[])
       testWorker.build();
       testWorker.test();*/
 
-   //dumper.dotDump("pre__move.dot");
-   //dumper.ptrDump("pre__move.txt");
    for (size_t i = 0; i < noParts; i++)
    {
       if (particles[i].pos[2] < 0.5)
@@ -145,9 +139,6 @@ int main(int argc, char* argv[])
    start = omp_get_wtime();
    Tree.update();
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
-   //logger << "Tree ready\n";
-
-   //std::cout << (static_cast<std::vector<sphlatch::treeGhost> >(particles))[0].pos << "\n";
 
    //dumper.dotDump("post_move.dot");
    //dumper.ptrDump("post_move.txt");
