@@ -58,6 +58,15 @@ void genericCellNode::clear()
    clSz = 0.;
 }
 
+size_t genericCellNode::getNoChld()
+{
+  size_t noChildren = 0;
+  for (size_t i = 0; i < 8; i++)
+    if ( child[i] != NULL )
+      noChildren++;
+  return noChildren;
+}
+
 void monopoleCellNode::clear()
 {
    genericCellNode::clear();

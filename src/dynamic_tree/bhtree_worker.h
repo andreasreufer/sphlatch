@@ -42,6 +42,7 @@ protected:
    size_t getOctant(const vect3dT& _pos, const nodePtrT _nodePtr);
 
    size_t getChildNo(nodePtrT _nodePtr);
+   size_t getChildNo(nodePtrT _nodePtr, nodePtrT _parPtr);
 
    qcllPtrT czllToCell(nodePtrT _nodePtr);
    czllPtrT cellToCZll(nodePtrT _nodePtr);

@@ -149,6 +149,17 @@ size_t BHTreeWorker::getChildNo(nodePtrT _nodePtr)
    return(8);
 }
 
+size_t BHTreeWorker::getChildNo(nodePtrT _nodePtr, nodePtrT _parPtr)
+{
+   for (size_t i = 0; i < 8; i++)
+   {
+      if (static_cast<gcllPtrT>(_parPtr)->child[i] == _nodePtr)
+         return(i);
+   }
+   return(8);
+}
+
+
 ///
 /// transforms a CZ cell into a quadrupole
 ///

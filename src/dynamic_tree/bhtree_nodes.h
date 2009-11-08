@@ -95,6 +95,7 @@ public:
    void inheritCellPos(size_t _n);
    bool pointInsideCell(const vect3dT& _pos);
    size_t getOctant(const vect3dT& _pos);
+   size_t getNoChld();
 
 private:
 };

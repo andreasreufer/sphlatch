@@ -79,15 +79,16 @@ void BHTree::insertPart(treeGhost& _part)
 
 void BHTree::update()
 {
-   const fType costMin = 10000., costMax = 15000.;
+   //const fType costMin = 10000., costMax = 15000.;
+   const fType costMin = 10., costMax = 15.;
 
-   /*std::cout << "entered Tree.update() ... round " << round << "\n";
+   std::cout << "entered Tree.update() ... round " << round << "\n";
 
    BHTreeDump         dumper(this);
    std::ostringstream roundStr;
    roundStr << round;
    std::string dumpName = "dump";
-   dumpName.append(roundStr.str());*/
+   dumpName.append(roundStr.str());
 
    // rebalance trees
    //dumper.dotDump(dumpName + "_0.dot");
@@ -130,8 +131,8 @@ void BHTree::update()
       CZItr++;
    }
 
-   //dumper.dotDump(dumpName + "_3.dot");
-   //dumper.ptrDump(dumpName + "_3.txt");
+   dumper.dotDump(dumpName + "_3.dot");
+   dumper.ptrDump(dumpName + "_3.txt");
 
    // clean up tree
 
@@ -140,7 +141,7 @@ void BHTree::update()
 
    BHTreeHousekeeper HK(this);
    BHTreeMPWorker    MP(this);
-#pragma omp parallel for firstprivate(HK, MP)
+//#pragma omp parallel for firstprivate(HK, MP)
    for (int i = 0; i < noCZBottomCells; i++)
    {
       // set next pointers
@@ -159,11 +160,11 @@ void BHTree::update()
    //std::cout << "calculate MP moments  \n";
    MP.calcMultipolesCZ();
 
-   //dumper.dotDump(dumpName + "_4.dot");
-   //dumper.ptrDump(dumpName + "_4.txt");
+   dumper.dotDump(dumpName + "_4.dot");
+   dumper.ptrDump(dumpName + "_4.txt");
 
    // exchange MP moments
-   //round++;
+   round++;
 
    //
    CZbottomLoc = CZbottom;

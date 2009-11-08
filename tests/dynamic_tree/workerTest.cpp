@@ -93,7 +93,10 @@ int main(int argc, char* argv[])
 
    BHTreeTester testWorker(&Tree);
 
-   const size_t       noParts = 500000;
+   //const size_t       noParts = 500000;
+   //const size_t noParts = 30000;
+   const size_t noParts = 100;
+
    std::vector<partT> particles(noParts);
    for (size_t i = 0; i < noParts; i++)
    {
@@ -106,7 +109,7 @@ int main(int argc, char* argv[])
       particles[i].id   = i;
       particles[i].cost = 1.;
    }
-   
+
    double start;
    start = omp_get_wtime();
    for (size_t i = 0; i < noParts; i++)
@@ -114,7 +117,7 @@ int main(int argc, char* argv[])
       Tree.insertPart(particles[i]);
    }
    std::cout << "particles insert " << omp_get_wtime() - start << "s\n";
-   
+
    std::cout << "Tree.update() .........\n";
    start = omp_get_wtime();
    Tree.update();
@@ -153,7 +156,7 @@ int main(int argc, char* argv[])
 #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
-   
+
    std::cout << "gravity finished " << omp_get_wtime() - start << "s\n";
 
    //for (size_t i = 0; i < noParts; i++)

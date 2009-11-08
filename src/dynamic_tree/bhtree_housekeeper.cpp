@@ -146,44 +146,122 @@ void BHTreeHousekeeper::setNextCZRecursor()
 
 void BHTreeHousekeeper::minTree(const czllPtrT _czll)
 {
+   if ( _czll->chldFrst == NULL )
+     return;
+   std::cout << "minimize czll " << _czll << "\n";
    curPtr = _czll->chldFrst;
-   const nodePtrT chldLast = _czll->chldFrst;
-   nodePtrT lastOk, nextOk, nextChld;
+   const nodePtrT chldLast = _czll->chldLast;
+   nodePtrT       lastOk = NULL, nextOk = NULL, nextChld;
+
+
+   std::cout << __LINE__ << "\n";
 
    while (curPtr != chldLast)
    {
+   std::cout << __LINE__ << " " << curPtr << " " << "\n";
       nextChld = curPtr->next;
-      if ( not nextChld->isParticle && not nextChld->isCZ)
+
+      if (nextChld->isParticle || nextChld->isCZ)
       {
-        size_t noChilds = 0;
-        for (size_t i = 0; i < 8; i++)
-        {
-          if ( static_cast<gcllPtrT>(nextChld)->child[i] != NULL )
-            noChilds++;
-          if ( noChilds > 1 )
-            break;
-        }
-          
+         goNext();
+         continue;
+      }
 
-        /*switch (noChilds)
-        {
-          case 0:
+      const size_t noChld = static_cast<gcllPtrT>(nextChld)->getNoChld();
+      std::cout << __LINE__ << " " << curPtr << " " << noChld << "\n";
+      
+      switch (noChld)
+      {
+      case 0:
+      {
+   std::cout << __LINE__ << "\n";
+         nextOk       = nextChld->next;
 
+         const size_t wasChild = getChildNo(nextChld, nextChld->parent);
 
+         static_cast<gcllPtrT>(nextChld->parent)->child[wasChild] = NULL;
+         std::cout << __LINE__ << " delete " << nextChld << "\n";
+         delete static_cast<qcllPtrT>(nextChld);
 
-          case 1:
+         curPtr->next = nextOk;
+         
+   std::cout << __LINE__ << "\n";
+         goNext();
+   std::cout << __LINE__ << "\n";
+         break;
+      }
 
-          default:
-        }*/
-        
+      case 1:
+      {
+   std::cout << __LINE__ << "\n";
+         nextOk = nextChld->next;
 
-        // has the cell childs?
+         // follow the chain
+         while (not nextOk->isParticle &&
+                not nextOk->isCZ &&
+                static_cast<gcllPtrT>(nextOk)->getNoChld() < 2)
+         {
+            nextOk = nextChld->next;
+         }
+         lastOk = curPtr;
+
+         std::cout << __LINE__ << " " << lastOk << " " << nextOk << "\n";
+
+         curPtr = lastOk->next;
+         while (curPtr != nextOk)
+         {
+            const size_t wasChild = getChildNo(nextChld, nextChld->parent);
+            static_cast<gcllPtrT>(nextChld->parent)->child[wasChild] = NULL;
+         std::cout << __LINE__ << " delete " << nextChld << "\n";
+            delete static_cast<qcllPtrT>(nextChld);
+            curPtr = curPtr->next;
+         }
+
+         lastOk->next = nextOk;
+
+         break;
+      }
+      
+      default:
+      {
+   std::cout << __LINE__ << "\n";
+         goNext();
+         break;
+      }
 
       }
 
-      // check if next child is ok
-      curPtr = curPtr->next;
+      /*nextChld = curPtr->next;
+         if ( not nextChld->isParticle && not nextChld->isCZ)
+         {
+         const size_t noChld = static_cast<gcllPtrT>(nextChld)->getNoChld();
+
+         switch (noChld)
+         {
+          case 0:
+            nextOk = nextChld->next;
+            curPtr->next = nextOk;
+
+            getChildNo(nextChld, nextChld->parent);
+            delete static_cast<qcllPtrT>(nextChld);
+
+          case 1:
+            do {
+              nextChld = nextChld->next;
+            } while {  }
+
+          //default:
+
+         }
+         // has the cell childs?
+
+         }
+
+         // check if next child is ok
+         curPtr = curPtr->next;*/
    }
+
+   std::cout << __LINE__ << " finished\n";
 }
 };
 
