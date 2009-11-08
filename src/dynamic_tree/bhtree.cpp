@@ -80,7 +80,7 @@ void BHTree::insertPart(treeGhost& _part)
 void BHTree::update()
 {
    //const fType costMin = 10000., costMax = 15000.;
-   const fType costMin = 10., costMax = 15.;
+   const fType costMin = 15., costMax = 20.;
 
    std::cout << "entered Tree.update() ... round " << round << "\n";
 
@@ -91,14 +91,14 @@ void BHTree::update()
    dumpName.append(roundStr.str());
 
    // rebalance trees
-   //dumper.dotDump(dumpName + "_0.dot");
-   //dumper.ptrDump(dumpName + "_0.ptr");
+   dumper.dotDump(dumpName + "_0.dot");
+   dumper.ptrDump(dumpName + "_0.ptr");
 
    // move particles
    // (prepare next walk?)
    czllPtrListT::iterator       CZItr = CZbottom.begin();
    czllPtrListT::const_iterator CZEnd = CZbottom.end();
-   //std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
+   std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
    while (CZItr != CZEnd)
    {
       insertmover.move(*CZItr);
@@ -148,7 +148,8 @@ void BHTree::update()
       HK.setNext(CZbottomV[i]);
 
       // clean up
-      HK.minTree(CZbottomV[i]);
+      /*if (round == 1)
+        HK.minTree(CZbottomV[i]);*/
 
       // calculate MP moments
       MP.calcMultipoles(CZbottomV[i]);

@@ -66,7 +66,7 @@ void BHTreeDump::dotRecursor()
 
    if (curPtr->isParticle)
       dumpFile << "label=\"\",";
-      else
+   else
       dumpFile << "label=\" " << curPtr << "\",";
 
    //dumpFile << "label=\"" << curPtr << "\",";
@@ -151,6 +151,8 @@ void BHTreeDump::ptrRecursor()
 
    if (not curPtr->isParticle)
    {
+      dumpFile << "  pos: " << static_cast<gcllPtrT>(curPtr)->cen  << "\n";
+      dumpFile << "  size " << static_cast<gcllPtrT>(curPtr)->clSz << "\n";
       dumpFile << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
 
       for (size_t i = 0; i < 8; i++)
@@ -203,6 +205,10 @@ void BHTreeDump::ptrRecursor()
             goUp();
          }
       }
+   }
+   else
+   {
+      dumpFile << "  pos: " << static_cast<pnodPtrT>(curPtr)->pos  << "\n";
    }
 }
 };

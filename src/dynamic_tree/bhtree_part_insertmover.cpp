@@ -61,9 +61,10 @@ void BHTreePartsInsertMover::move(const czllPtrT _czll)
    ///
    while (curPart != NULL)
    {
+      const nodePtrT nextPart = curPart->next;
       if (curPart->isParticle)
-         pushUpAndToCZSingle(static_cast<pnodPtrT>(curPart));
-      curPart = curPart->next;
+        pushUpAndToCZSingle(static_cast<pnodPtrT>(curPart));
+      curPart = nextPart;
    }
 }
 
