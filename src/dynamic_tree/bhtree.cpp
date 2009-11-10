@@ -157,7 +157,7 @@ void BHTree::update()
       }
       
       // calculate MP moments
-      //MP.calcMultipoles(CZbottomV[i]);
+      MP.calcMultipoles(CZbottomV[i]);
         std::cout << __LINE__ << "\n";
    }
    dumper.dotDump(dumpName + "_4.dot");

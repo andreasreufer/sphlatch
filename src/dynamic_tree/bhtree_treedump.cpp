@@ -56,7 +56,8 @@ void BHTreeDump::dotRecursor()
       static_cast<czllPtrT>(curPtr)->absCost << ")\",";
    else if (curPtr->isParticle)
       //dumpFile << "label=\"" << curPtr->ident << "\",";
-      dumpFile << "label=\"\",";
+      //dumpFile << "label=\"\",";
+      dumpFile << "label=\"" << curPtr << "\",";
    else
       //dumpFile << "label=\"\",";
       dumpFile << "label=\"" << curPtr << "\",";
@@ -69,7 +70,8 @@ void BHTreeDump::dotRecursor()
    //dumpFile << "label=\"" << curPtr << "\",";
 
    if (curPtr->isParticle)
-      dumpFile << "shape=circle,color=green";
+      //dumpFile << "shape=circle,color=green";
+      dumpFile << "shape=box,color=green";
    else if (curPtr->isCZ)
    {
       dumpFile << "shape=diamond,";

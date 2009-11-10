@@ -146,10 +146,12 @@ void BHTreeHousekeeper::setNextCZRecursor()
 
 void BHTreeHousekeeper::minTree(const czllPtrT _czll)
 {
-   std::cout << "minimize czll " << _czll << "\n";
-   curPtr = _czll->chldFrst;
-   if (curPtr == NULL)
+   std::cout << "\n\n\nminimize czll " << _czll << "\n";
+   
+   if (_czll->chldFrst == NULL)
       return;
+   //curPtr = _czll->chldFrst;
+   curPtr = _czll;
    
    const nodePtrT chldLastNext = _czll->chldLast->next;
    const nodePtrT chldLast = _czll->chldLast;
@@ -167,10 +169,12 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
    while (curPtr != chldLastDummy)
    {
       nextChld = curPtr->next;
+      std::cout << __LINE__ << " beg  " << curPtr << " " << nextChld << "\n";
 
       if (nextChld->isParticle || nextChld->isCZ)
       {
-         std::cout << __LINE__ << " " << nextChld << " " << nextChld->isParticle << " " << nextChld->isCZ << "\n";
+         std::cout << __LINE__ << " skip " << nextChld << " " << nextChld->isParticle << " " << nextChld->isCZ << "\n";
+         lastOk = curPtr;
          goNext();
          continue;
       }
@@ -181,20 +185,26 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
       {
       case 0:
       {
-         goNext();
-         break;
-         
-         /*nextOk = nextChld->next;
+
+         nextOk = nextChld->next;
          const size_t wasChild = getChildNo(nextChld, nextChld->parent);
+         //std::cout << __LINE__ << " del  " << nextChld << "\n";
+         //std::cout << __LINE__ << "      " << nextChld->parent << ":" << wasChild << " -> NULL \n";
+         //std::cout << __LINE__ << " rew  " << curPtr << " -> " << nextOk << "\n";
+
          static_cast<gcllPtrT>(nextChld->parent)->child[wasChild] = NULL;
          delete static_cast<qcllPtrT>(nextChld);
 
          curPtr->next = nextOk;
-         break;*/
+         break;
       }
 
       case 1:
       {
+         //
+         // only delete chains not leading anywhere
+         //
+         std::cout << __LINE__ << " chai " << nextChld << " " << "\n";
          goNext();
          break;
          /*nextOk = nextChld->next;
@@ -230,19 +240,23 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
 
       default:
       {
+         std::cout << __LINE__ << " cell " << nextChld << " " << nextChld->isParticle << " " << nextChld->isCZ << " " << noChld << "\n";
          goNext();
          break;
       }
       }
 
-      std::cout << __LINE__ << " loop end " << curPtr << "\n";
+      std::cout << __LINE__ << " lend " << curPtr << "\n";
    }
-   
-   delete chldLastDummy;
 
-   //_czll->chldLast->next = chldLastNext;
-   _czll->chldLast->next = NULL;
-   std::cout << __LINE__ << " finished\n";
+   std::cout << __LINE__ << " lastOk " << lastOk << " " << chldLastDummy << "\n";
+
+   delete chldLastDummy;
+   lastOk->next = chldLastNext;
+   _czll->chldLast = lastOk;
+   
+   std::cout << __LINE__ << " chldLast " << chldLast << " " << curPtr << "\n";
+   std::cout << __LINE__ << " finished\n\n\n";
 }
 };
 
