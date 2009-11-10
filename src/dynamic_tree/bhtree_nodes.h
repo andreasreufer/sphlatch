@@ -187,7 +187,7 @@ public:
    vect3dT     pos;
    fType       m;
 
-   particleNode() { }
+   particleNode() { isParticle = true; }
    ~particleNode() { }
 
    void clear();

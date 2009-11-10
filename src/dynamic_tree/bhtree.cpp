@@ -80,7 +80,7 @@ void BHTree::insertPart(treeGhost& _part)
 void BHTree::update()
 {
    //const fType costMin = 10000., costMax = 15000.;
-   const fType costMin = 15., costMax = 20.;
+   const fType costMin = 10., costMax = 15.;
 
    std::cout << "entered Tree.update() ... round " << round << "\n";
 
@@ -91,8 +91,8 @@ void BHTree::update()
    dumpName.append(roundStr.str());
 
    // rebalance trees
-   dumper.dotDump(dumpName + "_0.dot");
-   dumper.ptrDump(dumpName + "_0.ptr");
+   //dumper.dotDump(dumpName + "_0.dot");
+   //dumper.ptrDump(dumpName + "_0.ptr");
 
    // move particles
    // (prepare next walk?)
@@ -144,16 +144,27 @@ void BHTree::update()
 //#pragma omp parallel for firstprivate(HK, MP)
    for (int i = 0; i < noCZBottomCells; i++)
    {
+        std::cout << __LINE__ << "\n";
       // set next pointers
       HK.setNext(CZbottomV[i]);
 
       // clean up
-      /*if (round == 1)
-        HK.minTree(CZbottomV[i]);*/
-
+      if (round == 1)
+      {
+        std::cout << __LINE__ << "\n";
+        HK.minTree(CZbottomV[i]);
+        std::cout << __LINE__ << "\n";
+      }
+      
       // calculate MP moments
-      MP.calcMultipoles(CZbottomV[i]);
+      //MP.calcMultipoles(CZbottomV[i]);
+        std::cout << __LINE__ << "\n";
    }
+   dumper.dotDump(dumpName + "_4.dot");
+   dumper.ptrDump(dumpName + "_4.txt");
+        
+   std::cout << __LINE__ << "\n";
+   
    //std::cout << "prepare CZ next walk  \n";
    HK.setNextCZ();
    //std::cout << "prepare    skip walk  \n";
@@ -161,8 +172,8 @@ void BHTree::update()
    //std::cout << "calculate MP moments  \n";
    MP.calcMultipolesCZ();
 
-   dumper.dotDump(dumpName + "_4.dot");
-   dumper.ptrDump(dumpName + "_4.txt");
+   dumper.dotDump(dumpName + "_5.dot");
+   dumper.ptrDump(dumpName + "_5.txt");
 
    // exchange MP moments
    round++;

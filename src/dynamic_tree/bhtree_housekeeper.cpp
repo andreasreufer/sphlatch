@@ -146,110 +146,102 @@ void BHTreeHousekeeper::setNextCZRecursor()
 
 void BHTreeHousekeeper::minTree(const czllPtrT _czll)
 {
-   if ( _czll->chldFrst == NULL )
-     return;
    std::cout << "minimize czll " << _czll << "\n";
    curPtr = _czll->chldFrst;
+   if (curPtr == NULL)
+      return;
+   
+   const nodePtrT chldLastNext = _czll->chldLast->next;
    const nodePtrT chldLast = _czll->chldLast;
-   nodePtrT       lastOk = NULL, nextOk = NULL, nextChld;
+
+   std::cout << "chldLast: " << chldLast << " " << chldLast->next << "\n";
+
+   nodePtrT lastOk = NULL, nextOk = NULL, nextChld;
+
+   // maybe the last node is deleted during housekeeping, so
+   // we introduce a dummy cell won't be deleted
+   const nodePtrT chldLastDummy = new pnodT;
+   _czll->chldLast->next = chldLastDummy;
 
 
-   while (curPtr != chldLast)
+   while (curPtr != chldLastDummy)
    {
       nextChld = curPtr->next;
 
       if (nextChld->isParticle || nextChld->isCZ)
       {
+         std::cout << __LINE__ << " " << nextChld << " " << nextChld->isParticle << " " << nextChld->isCZ << "\n";
          goNext();
          continue;
       }
 
       const size_t noChld = static_cast<gcllPtrT>(nextChld)->getNoChld();
-      std::cout << __LINE__ << " " << curPtr << " " << noChld << "\n";
-      
+
       switch (noChld)
       {
       case 0:
       {
-         nextOk       = nextChld->next;
+         goNext();
+         break;
+         
+         /*nextOk = nextChld->next;
          const size_t wasChild = getChildNo(nextChld, nextChld->parent);
          static_cast<gcllPtrT>(nextChld->parent)->child[wasChild] = NULL;
-         std::cout << __LINE__ << " delete " << nextChld << "\n";
          delete static_cast<qcllPtrT>(nextChld);
 
          curPtr->next = nextOk;
-         goNext();
-         break;
+         break;*/
       }
 
       case 1:
       {
-         nextOk = nextChld->next;
+         goNext();
+         break;
+         /*nextOk = nextChld->next;
 
          // follow the chain
          while (not nextOk->isParticle &&
                 not nextOk->isCZ &&
                 static_cast<gcllPtrT>(nextOk)->getNoChld() < 2)
          {
-            nextOk = nextChld->next;
+            nextOk = nextOk->next;
+            std::cout << __LINE__ << " " << nextOk << "\n";
          }
          lastOk = curPtr;
 
-         //std::cout << __LINE__ << " " << lastOk << " " << nextOk << "\n";
+         std::cout << __LINE__ << "\n";
 
          curPtr = lastOk->next;
          while (curPtr != nextOk)
          {
             const size_t wasChild = getChildNo(nextChld, nextChld->parent);
             static_cast<gcllPtrT>(nextChld->parent)->child[wasChild] = NULL;
-         //std::cout << __LINE__ << " Xdelete " << nextChld << "\n";
+            //std::cout << __LINE__ << " Xdelete " << nextChld << "\n";
             delete static_cast<qcllPtrT>(nextChld);
-            curPtr = curPtr->next;
+            //curPtr = curPtr->next;
+            goNext();
          }
+         std::cout << __LINE__ << "\n";
 
          lastOk->next = nextOk;
 
-         break;
+         break;*/
       }
-      
+
       default:
       {
          goNext();
          break;
       }
-
       }
 
-      /*nextChld = curPtr->next;
-         if ( not nextChld->isParticle && not nextChld->isCZ)
-         {
-         const size_t noChld = static_cast<gcllPtrT>(nextChld)->getNoChld();
-
-         switch (noChld)
-         {
-          case 0:
-            nextOk = nextChld->next;
-            curPtr->next = nextOk;
-
-            getChildNo(nextChld, nextChld->parent);
-            delete static_cast<qcllPtrT>(nextChld);
-
-          case 1:
-            do {
-              nextChld = nextChld->next;
-            } while {  }
-
-          //default:
-
-         }
-         // has the cell childs?
-
-         }
-
-         // check if next child is ok
-         curPtr = curPtr->next;*/
+      std::cout << __LINE__ << " loop end " << curPtr << "\n";
    }
+   
+   delete chldLastDummy;
 
+   //_czll->chldLast->next = chldLastNext;
+   _czll->chldLast->next = NULL;
    std::cout << __LINE__ << " finished\n";
 }
 };

@@ -45,29 +45,26 @@ void BHTreeDump::dotDump(std::string _dotFilename)
 
 void BHTreeDump::dotRecursor()
 {
-   if (curPtr->isParticle)
-      dumpFile << "P";
-   else
-      dumpFile << "C";
-
-   dumpFile << curPtr << " [";
-   //dumpFile << abs(curPtr->ident) << " [";
+   dumpFile << "N" << curPtr << " [";
 
    //if (curPtr->isParticle)
    //   dumpFile << "label=" << curPtr->ident << ",";
    //else
 
-   /*if (curPtr->isCZ)
-      dumpFile << "label=\"" << curPtr << " (" << static_cast<czllPtrT>(curPtr)->absCost << ")\",";
-      else if (curPtr->isParticle)
-      dumpFile << "label=\"" << curPtr->ident << "\",";
-      else
-      dumpFile << "label=\"\",";*/
-
-   if (curPtr->isParticle)
+   if (curPtr->isCZ)
+      dumpFile << "label=\"" << curPtr << " (" <<
+      static_cast<czllPtrT>(curPtr)->absCost << ")\",";
+   else if (curPtr->isParticle)
+      //dumpFile << "label=\"" << curPtr->ident << "\",";
       dumpFile << "label=\"\",";
    else
-      dumpFile << "label=\" " << curPtr << "\",";
+      //dumpFile << "label=\"\",";
+      dumpFile << "label=\"" << curPtr << "\",";
+
+   /*if (curPtr->isParticle)
+      dumpFile << "label=\"\",";
+      else
+      dumpFile << "label=\" " << curPtr << "\",";*/
 
    //dumpFile << "label=\"" << curPtr << "\",";
 
@@ -101,23 +98,17 @@ void BHTreeDump::dotRecursor()
       {
          if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
          {
-            //dumpFile << "C" << abs(curPtr->ident)
-            dumpFile << "C" << curPtr
-                     << " -> ";
-            if (static_cast<gcllPtrT>(curPtr)->child[i]->isParticle)
-               dumpFile << "P";
-            else
-               dumpFile << "C";
-
-            //dumpFile << abs(static_cast<gcllPtrT>(curPtr)->child[i]->ident)
-            dumpFile << static_cast<gcllPtrT>(curPtr)->child[i]
-                     << " \n";
+            dumpFile << "N" << curPtr << " -> N"
+                     << static_cast<gcllPtrT>(curPtr)->child[i] << ";\n";
             goChild(i);
             dotRecursor();
             goUp();
          }
       }
    }
+
+   //if (curPtr->next != NULL)
+   //  dumpFile << "N" << curPtr << " -> N" << curPtr->next << " [style=dotted,weight=0];\n";
 }
 
 void BHTreeDump::ptrDump(std::string _filename)
@@ -151,7 +142,7 @@ void BHTreeDump::ptrRecursor()
 
    if (not curPtr->isParticle)
    {
-      dumpFile << "  pos: " << static_cast<gcllPtrT>(curPtr)->cen  << "\n";
+      dumpFile << "  pos: " << static_cast<gcllPtrT>(curPtr)->cen << "\n";
       dumpFile << "  size " << static_cast<gcllPtrT>(curPtr)->clSz << "\n";
       dumpFile << "  s -> " << static_cast<gcllPtrT>(curPtr)->skip << "\n";
 
@@ -208,7 +199,7 @@ void BHTreeDump::ptrRecursor()
    }
    else
    {
-      dumpFile << "  pos: " << static_cast<pnodPtrT>(curPtr)->pos  << "\n";
+      dumpFile << "  pos: " << static_cast<pnodPtrT>(curPtr)->pos << "\n";
    }
 }
 };
