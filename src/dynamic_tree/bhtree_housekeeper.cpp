@@ -146,17 +146,11 @@ void BHTreeHousekeeper::setNextCZRecursor()
 
 void BHTreeHousekeeper::minTree(const czllPtrT _czll)
 {
-   std::cout << "\n\n\nminimize czll " << _czll << "\n";
-   
    if (_czll->chldFrst == NULL)
       return;
-   //curPtr = _czll->chldFrst;
    curPtr = _czll;
    
    const nodePtrT chldLastNext = _czll->chldLast->next;
-   const nodePtrT chldLast = _czll->chldLast;
-
-   std::cout << "chldLast: " << chldLast << " " << chldLast->next << "\n";
 
    nodePtrT lastOk = NULL, nextOk = NULL, nextChld;
 
@@ -165,15 +159,12 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
    const nodePtrT chldLastDummy = new pnodT;
    _czll->chldLast->next = chldLastDummy;
 
-
    while (curPtr != chldLastDummy)
    {
       nextChld = curPtr->next;
-      std::cout << __LINE__ << " beg  " << curPtr << " " << nextChld << "\n";
 
       if (nextChld->isParticle || nextChld->isCZ)
       {
-         std::cout << __LINE__ << " skip " << nextChld << " " << nextChld->isParticle << " " << nextChld->isCZ << "\n";
          lastOk = curPtr;
          goNext();
          continue;
@@ -185,13 +176,9 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
       {
       case 0:
       {
-
+         // the cell has no child, so delete it directly
          nextOk = nextChld->next;
          const size_t wasChild = getChildNo(nextChld, nextChld->parent);
-         //std::cout << __LINE__ << " del  " << nextChld << "\n";
-         //std::cout << __LINE__ << "      " << nextChld->parent << ":" << wasChild << " -> NULL \n";
-         //std::cout << __LINE__ << " rew  " << curPtr << " -> " << nextOk << "\n";
-
          static_cast<gcllPtrT>(nextChld->parent)->child[wasChild] = NULL;
          delete static_cast<qcllPtrT>(nextChld);
 
@@ -201,62 +188,53 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
 
       case 1:
       {
-         //
          // only delete chains not leading anywhere
-         //
-         std::cout << __LINE__ << " chai " << nextChld << " " << "\n";
-         goNext();
+         nodePtrT chainee = nextChld;
+
+         while ( not chainee->isParticle &&
+                 not chainee->isCZ &&
+                 static_cast<gcllPtrT>(chainee)->getNoChld() == 1 )
+           chainee = chainee->next;
+
+         if ( chainee->isParticle || chainee->isCZ || 
+              not static_cast<gcllPtrT>(chainee)->getNoChld() == 0)
+         {
+           curPtr = chainee;
+           break;
+         }
+
+         const size_t wasChild = getChildNo(nextChld, nextChld->parent);
+         static_cast<gcllPtrT>(nextChld->parent)->child[wasChild] = NULL;
+
+         // delete the chainees, until we reach the last chainee
+         while ( nextChld != chainee )
+         {
+           nextOk = nextChld->next;
+           delete nextChld;
+           nextChld = nextOk;
+         }
+         
+         // set next ptr of the current node to the next ptr of the last
+         // chainee
+         curPtr->next = nextChld->next;
+         delete chainee;
+
          break;
-         /*nextOk = nextChld->next;
-
-         // follow the chain
-         while (not nextOk->isParticle &&
-                not nextOk->isCZ &&
-                static_cast<gcllPtrT>(nextOk)->getNoChld() < 2)
-         {
-            nextOk = nextOk->next;
-            std::cout << __LINE__ << " " << nextOk << "\n";
-         }
-         lastOk = curPtr;
-
-         std::cout << __LINE__ << "\n";
-
-         curPtr = lastOk->next;
-         while (curPtr != nextOk)
-         {
-            const size_t wasChild = getChildNo(nextChld, nextChld->parent);
-            static_cast<gcllPtrT>(nextChld->parent)->child[wasChild] = NULL;
-            //std::cout << __LINE__ << " Xdelete " << nextChld << "\n";
-            delete static_cast<qcllPtrT>(nextChld);
-            //curPtr = curPtr->next;
-            goNext();
-         }
-         std::cout << __LINE__ << "\n";
-
-         lastOk->next = nextOk;
-
-         break;*/
       }
 
       default:
       {
-         std::cout << __LINE__ << " cell " << nextChld << " " << nextChld->isParticle << " " << nextChld->isCZ << " " << noChld << "\n";
          goNext();
          break;
       }
       }
 
-      std::cout << __LINE__ << " lend " << curPtr << "\n";
    }
 
-   std::cout << __LINE__ << " lastOk " << lastOk << " " << chldLastDummy << "\n";
 
    delete chldLastDummy;
    lastOk->next = chldLastNext;
    _czll->chldLast = lastOk;
-   
-   std::cout << __LINE__ << " chldLast " << chldLast << " " << curPtr << "\n";
-   std::cout << __LINE__ << " finished\n\n\n";
 }
 };
 

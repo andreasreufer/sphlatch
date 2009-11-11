@@ -74,14 +74,11 @@ BHTree::selfRef BHTree::instance()
 
 void BHTree::insertPart(treeGhost& _part)
 {
-  insertmover.insert( _part );
+   insertmover.insert(_part);
 }
 
-void BHTree::update()
+void BHTree::update(const fType _costMin, const fType _costMax)
 {
-   //const fType costMin = 10000., costMax = 15000.;
-   const fType costMin = 10., costMax = 15.;
-
    std::cout << "entered Tree.update() ... round " << round << "\n";
 
    BHTreeDump         dumper(this);
@@ -111,7 +108,7 @@ void BHTree::update()
 
    //std::cout << "\nrebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
-   czbuilder.rebalance(costMin, costMax);
+   czbuilder.rebalance(_costMin, _costMax);
 
    //dumper.dotDump(dumpName + "_2.dot");
    //dumper.ptrDump(dumpName + "_2.txt");
@@ -131,8 +128,8 @@ void BHTree::update()
       CZItr++;
    }
 
-   dumper.dotDump(dumpName + "_3.dot");
-   dumper.ptrDump(dumpName + "_3.txt");
+   //dumper.dotDump(dumpName + "_3.dot");
+   //dumper.ptrDump(dumpName + "_3.txt");
 
    // clean up tree
 
@@ -141,30 +138,21 @@ void BHTree::update()
 
    BHTreeHousekeeper HK(this);
    BHTreeMPWorker    MP(this);
-//#pragma omp parallel for firstprivate(HK, MP)
+#pragma omp parallel for firstprivate(HK, MP)
    for (int i = 0; i < noCZBottomCells; i++)
    {
-        std::cout << __LINE__ << "\n";
       // set next pointers
       HK.setNext(CZbottomV[i]);
 
       // clean up
-      if (round == 1)
-      {
-        std::cout << __LINE__ << "\n";
-        HK.minTree(CZbottomV[i]);
-        std::cout << __LINE__ << "\n";
-      }
-      
+      HK.minTree(CZbottomV[i]);
+
       // calculate MP moments
       MP.calcMultipoles(CZbottomV[i]);
-        std::cout << __LINE__ << "\n";
    }
-   dumper.dotDump(dumpName + "_4.dot");
-   dumper.ptrDump(dumpName + "_4.txt");
-        
-   std::cout << __LINE__ << "\n";
-   
+   //dumper.dotDump(dumpName + "_4.dot");
+   //dumper.ptrDump(dumpName + "_4.txt");
+
    //std::cout << "prepare CZ next walk  \n";
    HK.setNextCZ();
    //std::cout << "prepare    skip walk  \n";
@@ -172,8 +160,8 @@ void BHTree::update()
    //std::cout << "calculate MP moments  \n";
    MP.calcMultipolesCZ();
 
-   dumper.dotDump(dumpName + "_5.dot");
-   dumper.ptrDump(dumpName + "_5.txt");
+   //dumper.dotDump(dumpName + "_5.dot");
+   //dumper.ptrDump(dumpName + "_5.txt");
 
    // exchange MP moments
    round++;
@@ -184,7 +172,7 @@ void BHTree::update()
 
 BHTree::czllPtrVectT BHTree::getCZbottomLoc()
 {
-  return getCzllPtrVect(CZbottomLoc);
+   return(getCzllPtrVect(CZbottomLoc));
 }
 
 BHTree::czllPtrVectT BHTree::getCzllPtrVect(czllPtrListT _czllList)

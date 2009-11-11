@@ -50,7 +50,7 @@ public:
    /// public functions
    ///
    void insertPart(treeGhost& _part);
-   void update();
+   void update(const fType _cmin, const fType _cmax);
    czllPtrVectT getCZbottomLoc();
 
 private:

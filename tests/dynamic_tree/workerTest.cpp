@@ -93,9 +93,12 @@ int main(int argc, char* argv[])
 
    BHTreeTester testWorker(&Tree);
 
-   //const size_t       noParts = 500000;
-   //const size_t noParts = 30000;
-   const size_t noParts = 100;
+   const fType costMin = 1.0e4, costMax = 1.5e4;
+   const size_t       noParts = 500000;
+   //const size_t noParts = 300000;
+
+   //const fType costMin = 10., costMax = 15.;
+   //const size_t noParts = 100;
 
    std::vector<partT> particles(noParts);
    for (size_t i = 0; i < noParts; i++)
@@ -120,7 +123,7 @@ int main(int argc, char* argv[])
 
    std::cout << "Tree.update() .........\n";
    start = omp_get_wtime();
-   Tree.update();
+   Tree.update(costMin, costMax);
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
 
    //dumper.ptrDump("postCZdump.txt");
@@ -141,11 +144,9 @@ int main(int argc, char* argv[])
 
    std::cout << "Tree.update() .........\n";
    start = omp_get_wtime();
-   Tree.update();
+   Tree.update(costMin, costMax);
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
    
-   return(0);
-
    //dumper.dotDump("post_move.dot");
    //dumper.ptrDump("post_move.txt");
 
