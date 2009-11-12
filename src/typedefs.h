@@ -51,6 +51,7 @@ enum dims3 {
 /// type for particle or tree node IDs
 ///
 typedef int                     idType;
+typedef int                     iType;
 
 ///
 /// a vector of (particle) indices
