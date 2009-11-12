@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
    BHTreeTester testWorker(&Tree);
 
    const fType costMin = 1.0e4, costMax = 1.5e4;
-   const size_t       noParts = 500000;
+   const size_t       noParts = 1000000;
    //const size_t noParts = 300000;
 
    //const fType costMin = 10., costMax = 15.;
@@ -133,14 +133,14 @@ int main(int argc, char* argv[])
       testWorker.build();
       testWorker.test();*/
 
-   for (size_t i = 0; i < noParts; i++)
+   /*for (size_t i = 0; i < noParts; i++)
    {
       if (particles[i].pos[2] < 0.5)
          particles[i].pos[2] += 0.25;
 
       particles[i].cost = 1.;
 
-   }
+   }*/
 
    std::cout << "Tree.update() .........\n";
    start = omp_get_wtime();

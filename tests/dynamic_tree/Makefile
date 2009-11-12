@@ -69,6 +69,14 @@ sphworker:
 		  -fopenmp \
 		  -o sphWorker sphWorker.cpp
 
+particleset:
+	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+		  -I../../src -I../../src/dynamic_tree \
+		  -lhdf5 -lz \
+		  -fopenmp \
+		  -o particleSet particleSet.cpp
+
+
 includefun:
 	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
 		  -I../../src -I../../src/dynamic_tree \
