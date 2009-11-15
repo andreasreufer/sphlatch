@@ -3,8 +3,8 @@
 
 #include <omp.h>
 #define SPHLATCH_OPENMP
-#include <mpi.h>
-#define SPHLATCH_MPI
+//#include <mpi.h>
+//#define SPHLATCH_MPI
 
 #include "typedefs.h"
 typedef sphlatch::fType   fType;
@@ -28,13 +28,6 @@ typedef sphlatch::fType   fType;
 #include "bhtree_particle.h"
 #include "sph_fluid_particle.h"
 #include "io_particle.h"
-
-/*class ioVar {
-   public:
-   ioVar(const size_t _off, const size_t _wdt) { offset = _off; width = _wdt;};
-   size_t offset;
-   size_t width;
-   };*/
 
 class particle :
    public sphlatch::treePart,
@@ -79,6 +72,7 @@ class ghost :
 typedef particle                       partT;
 typedef ghost                          ghstT;
 
+#define SPHLATCH_HDF5
 #include "particle_set.cpp"
 typedef sphlatch::ParticleSet<partT>   partSetT;
 
@@ -113,17 +107,10 @@ int main(int argc, char* argv[])
    partSetT particles;
    particles.resize(noParts);
 
-   partT thousandParts[1000];
+   particles.loadDump("test.hdf5");
 
-   std::cout << sizeof(partT) << "\n";
-   std::cout << sizeof(thousandParts) << "\n";
+   std::cout << particles.step << "\n";
 
-   partT myPart;
-
-   myPart.getLoadVars();
-   //std::cout << myPart.varNames << "\n";
-
-   //std::vector<partT> particles(noParts);
    for (size_t i = 0; i < noParts; i++)
    {
       particles[i].pos[0] = static_cast<fType>(rand()) / RAND_MAX;

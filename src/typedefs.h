@@ -69,6 +69,7 @@ typedef std::list<size_t> *     partsIndexListPtrT;
 /// countsType has to be compatible with MPI_INT
 ///
 typedef int                         countsType;
+typedef int                         cType;
 typedef countsType&                 countsRefType;
 typedef countsType*                 countsPtrType;
 typedef std::vector<countsType>     countsVectType;
