@@ -17,43 +17,40 @@
 namespace sphlatch {
 class IOPart {
 public:
-   enum storageType { FTYPE, ITYPE };
+   enum storetypT { FTYPE, ITYPE };
 
    class ioVar {
 public:
-      ioVar(std::string _name,
-          const size_t _off, 
-          const size_t _wdt, 
-          storageType _type)
+      ioVar(std::string  _name,
+            const size_t _off,
+            const size_t _wdt,
+            storetypT    _type)
       {
-         name = _name;
+         name   = _name;
          offset = _off;
          width  = _wdt;
          type   = _type;
       }
 
-      /*ol operator==(const list&, 
-                          const list&)*/
-
       bool operator==(const ioVar& _rhs)
       {
-        return ( _rhs.name == name &&
-            _rhs.type == type &&
-            _rhs.width == width );
-      };
+         return(_rhs.name == name &&
+                _rhs.type == type &&
+                _rhs.width == width);
+      }
 
       ioVar& operator=(const ioVar& _rhs)
       {
-        name = _rhs.name;
-        offset = _rhs.offset;
-        width = _rhs.width;
-        type = _rhs.type;
-        return *this;
+         name   = _rhs.name;
+         offset = _rhs.offset;
+         width  = _rhs.width;
+         type   = _rhs.type;
+         return(*this);
       }
 
       std::string name;
       size_t      offset, width;
-      storageType type;
+      storetypT   type;
    };
 
    typedef std::list<ioVar>   ioVarLT;

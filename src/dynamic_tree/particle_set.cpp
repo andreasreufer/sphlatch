@@ -80,34 +80,94 @@ void ParticleSet<_partT>::loadDump(std::string _filename)
    H5Pset_dxpl_mpio(accpl, H5FD_MPIO_COLLECTIVE);
  #endif
 
+   bool   nopdet = false;
+   size_t notp;
+
    ioVarT iovDm("_null", 0, 0, IOPart::ITYPE);
    for (strLT::const_iterator dsetItr = dsetsInFile.begin();
         dsetItr != dsetsInFile.end();
         dsetItr++)
    {
-      hid_t       dset, dtype, mspace, fspace;
-      H5T_class_t dtypeClass;
-
-      const std::string dsetName = dsetItr->c_str();
-      std::cout << dsetName << "\n";
-
-      ioVarT iovMatch = iovDm;
-      ioVarLT::const_iterator varsItr = loadVars.begin();
-
+      // is the dataset name known?
+      const std::string       dsetName = dsetItr->c_str();
+      ioVarT                  iovMatch = iovDm;
+      ioVarLT::const_iterator varsItr  = loadVars.begin();
       while (varsItr != loadVars.end())
       {
          if (varsItr->name == dsetName)
          {
-            iovMtch = *varsItr;
+            iovMatch = *varsItr;
             break;
          }
-
          varsItr++;
       }
-
       if (iovMatch == iovDm)
          continue;
 
+      // known, now continue
+      hid_t       dset, dtype, mspace, fspace;
+      H5T_class_t dtypeClass;
+
+      dset = H5Dopen(cgp, dsetName.c_str(), H5P_DEFAULT);
+
+      fspace = H5Dget_space(dset);
+      hsize_t dimsfile[2];
+      H5Sget_simple_extent_dims(fspace, dimsfile, NULL);
+
+      if (not nopdet)
+      {
+         notp = dimsfile[0];
+         const size_t nopck = lrint(ceil(static_cast<double>(notp) /
+                                         static_cast<double>(noDo)));
+         const size_t nolp = std::min(nopck, notp - (nopck * myDo));
+         parts.resize(nolp);
+         nopdet = true;
+      }
+
+      dtype      = H5Dget_type(dset);
+      dtypeClass = H5Tget_class(dtype);
+
+      // check type ...
+
+      IOPartT::storetypT mtype;
+      switch (dtypeClass)
+      {
+      case H5T_INTEGER:
+         mtype = IOPart::ITYPE;
+         break;
+
+      case H5T_FLOAT:
+         mtype = IOPart::FTYPE;
+         break;
+
+      default:
+         continue;
+      }
+
+      if (mtype != iovMatch.type)
+      {
+         std::cerr << "type mismatch!\n";
+         continue;
+      }
+
+      // and 2nd dimension if there is any
+      if ((H5Sget_simple_extent_ndims(fspace) > 1) &&
+          (dimsfile[1] != iovMatch.width))
+      {
+         std::cerr << "dims mismatch!\n";
+         continue;
+      }
+
+
+      const void* dptr = &parts[0];
+
+      std::cout << dptr << " " << &(parts[0].pos[1]) << "\n";
+
+      H5Dclose(dset);
+
+      /*H5Tclose(dataType);
+         H5Sclose(fileSpace);
+         H5Dclose(curDataset);*/
    }
 
 
@@ -126,21 +186,9 @@ void ParticleSet<_partT>::loadDump(std::string _filename)
 #endif
 
 
+
+
 /*
-   size_t noTotParts, noResParts = 0;
-   bool noPartsDet = false;
-   hsize_t dimsMem[2], dimsFile[2], offset[2];
-
-   /// make whiny compiler happy
-   offset[0] = 0;
-   offset[1] = 0;
-
-   hid_t accessPropList = H5Pcreate(H5P_DATASET_XFER);
- #ifdef SPHLATCH_PARALLEL
-   H5Pset_dxpl_mpio(accessPropList, H5FD_MPIO_COLLECTIVE);
- #endif
-
-   stringListType::const_iterator listItr = datasetsInFile.begin();
    while (listItr != datasetsInFile.end())
     {
       hid_t curDataset;
@@ -222,66 +270,6 @@ void ParticleSet<_partT>::loadDump(std::string _filename)
             }
         }
       else if (dataTypeClass == H5T_FLOAT)
-        {
-          if (H5Sget_simple_extent_ndims(fileSpace) > 1)
-            {
-              /// load vectorial quantity
-              matrixPtrType matrPtr =
-                PartManager.getVectRef((*listItr).c_str());
-              if (matrPtr != NULL)
-                {
-                  matrixRefType matr(*matrPtr);
-
-                  assert(matr.size1() == dimsMem[0]);
-                  dimsMem[1] = matr.size2();
-                  memSpace = H5Screate_simple(2, dimsMem, NULL);
-
-                  H5Sselect_hyperslab(fileSpace, H5S_SELECT_SET,
-                                      offset, NULL, dimsMem, NULL);
-
-                  H5Dread(curDataset, H5floatMemType, memSpace,
-                          fileSpace, accessPropList, &matr(noResParts, 0));
-
-                  H5Sclose(memSpace);
-                }
-              else
-                {
-                  //std::cout << (*listItr).c_str() << " not known!\n";
-                }
-            }
-          else
-            {
-              /// load scalar quantity
-              valvectPtrType vectPtr =
-                PartManager.getScalarRef((*listItr).c_str());
-              if (vectPtr != NULL)
-                {
-                  valvectRefType vect(*vectPtr);
-
-                  assert(vect.size() == dimsMem[0]);
-                  dimsMem[1] = 1;
-                  memSpace = H5Screate_simple(1, dimsMem, NULL);
-
-                  H5Sselect_hyperslab(fileSpace, H5S_SELECT_SET,
-                                      offset, NULL, dimsMem, NULL);
-
-                  H5Dread(curDataset, H5floatMemType, memSpace,
-                          fileSpace, accessPropList, &vect(noResParts));
-
-                  H5Sclose(memSpace);
-                }
-              else
-                {
-                  //std::cout << (*listItr).c_str() << " not known!\n";
-                }
-            }
-        }
-
-      H5Tclose(dataType);
-      H5Sclose(fileSpace);
-      H5Dclose(curDataset);
-
-      listItr++;
     }
 
    ///
@@ -308,20 +296,6 @@ void ParticleSet<_partT>::loadDump(std::string _filename)
    H5Pclose(accessPropList);
    H5Gclose(curGroup);
 
-   ///
-   /// so which step /current points to?
-   ///
-   char curPointeeBuff[1024];
-   H5Lget_val(fileHandle, "/current", curPointeeBuff, 1024, H5P_DEFAULT);
-
-   ///
-   /// pass the step number to PartManager
-   ///
-   std::string curPointee(curPointeeBuff);
-   std::istringstream stepString(curPointee.substr(6, 8)); /// chars #6-14
-   stepString >> PartManager.step;
-
-   H5Fclose(fileHandle);
  */
 
 template<typename _partT>

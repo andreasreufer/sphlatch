@@ -14,6 +14,7 @@
 #endif
 
 #include "typedefs.h"
+#include "io_particle.h"
 
 namespace sphlatch {
 template<typename _partT>
@@ -36,6 +37,7 @@ public:
    typedef std::list<std::string> strLT;
    typedef partT::ioVar ioVarT;
    typedef partT::ioVarLT ioVarLT;
+   typedef IOPart IOPartT;
 
    ioVarLT loadVars, saveVars;
 
