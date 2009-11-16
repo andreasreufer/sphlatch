@@ -33,6 +33,7 @@ impact_GHUa_K: libaneos
 				      -DSPHLATCH_TIMEDEP_SMOOTHING \
 				      -DSPHLATCH_TIMEDEP_ENERGY \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -DSPHLATCH_ANEOS_TABLE \
 				      -DSPHLATCH_GRAVSPLINESMOOTH \
 				      -DSPHLATCH_NONEGPRESS \
 				      -o impact_GHUa_K impact.cpp

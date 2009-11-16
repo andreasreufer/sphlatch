@@ -2,9 +2,9 @@
 *------------------------------------------------------------------------ 
 * The following lines must be present in the correct order
 *materials=3     : number of different material types in file
+*type=2          : material number to initialize
 *type=4          : material number to initialize
 *type=5          : material number to initialize
-*type=2          : material number to initialize
 *------------------------------------------------------------------------
 *ANEOS 'Dunite ANEOS without molecules'
 *
@@ -67,7 +67,6 @@ ANEOS5      26.      1.
 *ANEOS4      0.0    0.0     0.0     0.0     0.0     0.0  2.471E9   0.955
 *          Z(I)     F(I)
 *ANEOS5      26.      1.
-*****   END of input for ANEOS *****************
 *************************************************************************
 ANEOS1 -2  'test for ice' THUG=-1   RHUG=-1  LONG
 *      nel  neos  rhoref    tref   pref   Bref    Grun.     Tdebye
@@ -84,3 +83,4 @@ ANEOS6   1              0.        0.        0.E-8    3.2     0.     1.   1.8
 *       Zi      fi
 ANEOS7   1      2./3.
 ANEOS8   8      1./3.
+*****   END of input for ANEOS *****************

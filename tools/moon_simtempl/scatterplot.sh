@@ -7,9 +7,11 @@ cat >$1 << EOT
 
 from pylab import *
 filename = sys.argv[1]
-timestring = "t = " + filename[15:26] + "s"
+timesec = float(filename[15:26])
+timestring = '$\\mathrm{ t = ' + '%6.2f' % ( timesec/3600 ) + ' h }$'
 
 rc('grid', color='grey')
+rc('text', usetex=True)
 
 slice = load(filename)
 
@@ -21,8 +23,8 @@ color = 1-(((slice[:,2]-0.5)/(slice[:,3]+1))+1)
 
 scatter( slice[:,0], slice[:,1], 1, color, linewidth=0)
 grid(True)
-xlabel("x [cm]")
-ylabel("y [cm]")
+xlabel('$\\mathrm{x [cm]}$')
+ylabel('$\\mathrm{y [cm]}$')
 title(timestring)
 
 axis("scaled")

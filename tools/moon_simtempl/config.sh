@@ -1,17 +1,17 @@
 # the simulations name and directory
-SIMNAME="can030"
+SIMNAME="ice001"
 SIMDIR=~/moon_impact/sim_${SIMNAME} 
-NOCPU=4
+NOCPU=16
 
 # sources
 SRCDIR=~/repos/sphlatch/apps/impact
-MAKETARG="impact_GHUA__"
-BINARY="impact_GHUA__"
+MAKETARG="impact_GHUa_K"
+BINARY="impact_GHUa_K"
 EXTRAFILES="aneos.input"
 
 # bodies
-TARGFILE=~/moon_impact/bodies_03rlx/body_A_0.965me_T2000K_0.3iron_0.7dun_018k.h5part
-IMPCFILE=~/moon_impact/bodies_03rlx/body_A_0.144me_T2000K_0.3iron_0.7dun_002k.h5part
+TARGFILE=~/moon_impact/bodies_03rlx/body_A_0.965me_T2000K_0.3iron_0.7dun_1.74M.h5part
+IMPCFILE=~/moon_impact/bodies_03rlx/body_A_0.144me_T0200K_0.3iron_0.7ice_026k.h5part
 
 # initial condition parameters
 MTAR=0.965

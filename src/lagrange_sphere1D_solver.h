@@ -251,6 +251,9 @@ void LagrangeSphere1DSolver::integrate(fType _dtMax)
 #endif
       assert(!isnan(p(i)));
       assert(!isnan(cs(i)));
+
+      if (p(i) < 0.)
+        p(i) = 0.;
     }
   p(noCells-1) = 0.; /// vacuum boundary condition
 
@@ -274,14 +277,21 @@ fType LagrangeSphere1DSolver::detTimestep()
       const fType absDv = fabs(dv);
 
       const fType dtCFLi = dr / (cs(i) + absDv);
+      if ( dtCFLi < 1.e-3 )
+        std::cerr << i << ": dtCFLi " << dtCFLi  << " csi " << cs(i) << "  absDv " << absDv << "  dr " << dr << "\n";
       dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
 
       const fType dtVsci = 1. / (4. * avBeta * fabs(v(i) + v(i + 1)) / dr);
+      if ( dtVsc < 1.e-3 )
+        std::cerr << i << ": dtVsc " << dtVsc << " vi " << v(i) << "  vi+1 " <<  v(i + 1) << "  dr " << dr << "\n";
       dtVsc = dtVsci < dtVsc ? dtVsci : dtVsc;
 
       if (pow(i) < 0.)
         {
           const fType dtPowi = -u(i) / pow(i);
+          if ( dtPowi < 1.e-3 )
+            std::cerr << i << ": dtPowi " << dtPowi << "  u(i) " << u(i) << "  powi " << pow(i) << "\n";
+            
           dtPow = dtPowi < dtPow ? dtPowi : dtPow;
         }
     }

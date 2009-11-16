@@ -145,6 +145,7 @@ simple_sph_GHUA_F: libaneos
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
 				      -DSPHLATCH_ANEOS_TABLE \
 				      -DSPHLATCH_FRICTION \
+				      -DSPHLATCH_NONEGPRESS \
 				      -o simple_sph_GHUA_F simple_sph.cpp
 
 libaneos:

@@ -12,7 +12,7 @@
 //#define SPHLATCH_RANKSPACESERIALIZE
 
 // enable checking of bounds for the neighbour lists
-#define SPHLATCH_CHECKNONEIGHBOURS
+//#define SPHLATCH_CHECKNONEIGHBOURS
 
 #include <cstdlib>
 #include <iostream>
@@ -231,6 +231,7 @@ int main(int argc, char* argv[])
   size_t noSurfParts = 0, noBaseParts = 0;
   for (size_t k = 0; k < noParts; k++)
     {
+      //if (pos(k, Z) < -surfThickness)
       if (pos(k, Z) < -surfThickness)
         {
           ///
@@ -238,7 +239,6 @@ int main(int argc, char* argv[])
           ///
           m(k) *= baseRho;
           rho(k) = baseRho;
-
           u(k) = baseU;
           mat(k) = baseId;
 
