@@ -32,15 +32,15 @@ typedef sphlatch::fType   fType;
 class posPart {
   public:
     sphlatch::vect3dT      pos;
-    size_t count[7];
-    sphlatch::vect3dT           vel;
+    //size_t count[7];
+    //sphlatch::vect3dT           vel;
 };
 
 class particle :
-   //public posPart,
-   public sphlatch::treePart,
+   public posPart,
+   /*public sphlatch::treePart,
    public sphlatch::movingPart,
-   public sphlatch::SPHfluidPart,
+   public sphlatch::SPHfluidPart,*/
    public sphlatch::IOPart
 {
 public:
@@ -50,11 +50,11 @@ public:
       ioVarLT vars;
 
       vars.push_back(storeVar(pos, "pos"));
-      vars.push_back(storeVar(vel, "vel"));
+      /*vars.push_back(storeVar(vel, "vel"));
       vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(id, "id"));
       
-      vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(h, "h"));*/
 
       return(vars);
    }
@@ -67,7 +67,8 @@ public:
       vars.push_back(storeVar(pos, "pos"));
       /*vars.push_back(storeVar(vel, "vel"));
       vars.push_back(storeVar(m, "m"));
-      vars.push_back(storeVar(h, "h"));*/
+      vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(id, "id"));*/
 
       return(vars);
    }
@@ -121,19 +122,24 @@ int main(int argc, char* argv[])
    for (size_t i = 0; i < noParts; i++)
    {
      particles[i].pos = 0,0,0;
-     particles[i].vel = 0,0,0;
+     //particles[i].vel = 0,0,0;
    }
 
    particles.loadHDF5("twophase.h5part");
 
+   particles.resize(100);
    for (size_t i = 0; i < 20; i++)
    {
      std::cout << particles[i].pos << " " << &(particles[i].pos[0]) << "\n";
-     std::cout << particles[i].vel << " " << &(particles[i].vel[0]) << "\n";
-     std::cout <<  particles[i].id << "   " <<  particles[i].h << "   " <<  particles[i].m << "\n";
+     //std::cout << particles[i].vel << " " << &(particles[i].vel[0]) << "\n";
+     //std::cout <<  particles[i].id << "   " <<  particles[i].h << "   " <<  particles[i].m << "\n";
    }
      
-   std::cout << particles[100103].pos << "\n";
+   //std::cout << particles[100103].pos << "\n\n\n";
+
+
+   particles.saveHDF5("out.h5part");
+
 
    /*std::cout << particles.step << "\n";
 

@@ -2,7 +2,9 @@
 #define SPHLATCH_PARTICLE_SET_CPP
 
 #include <sys/stat.h>
+#include <boost/lexical_cast.hpp>
 #include "particle_set.h"
+
 
 namespace sphlatch {
 template<typename _partT>
@@ -125,6 +127,7 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
 
       H5Sget_simple_extent_dims(fspace, fcounts, NULL);
 
+      // is the number of particles already determined?
       if (not nopdet)
       {
          notp  = fcounts[0];
@@ -135,10 +138,9 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
          nopdet = true;
       }
 
+      // check type ...
       dtype      = H5Dget_type(dset);
       dtypeClass = H5Tget_class(dtype);
-
-      // check type ...
       IOPartT::storetypT mtype;
       hid_t h5mtype;
       switch (dtypeClass)
@@ -214,7 +216,6 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
    }
 
    H5Pclose(accpl);
-   H5Gclose(cgp);
 
    /// so which step /current points to?
    char curptbuff[1024];
@@ -223,122 +224,223 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
    std::istringstream stepstr(curpt.substr(6, 8)); // chars #6-14
    stepstr >> step;
 
+   strLT::const_iterator aItr = attrsInFile.begin();
+   while (aItr != attrsInFile.end())
+   {
+      hid_t attr;
+      fType buff;
+      attr = H5Aopen(cgp, (*aItr).c_str(), H5P_DEFAULT);
+      H5Aread(attr, h5mFTYPE, &buff);
+      H5Aclose(attr);
+      attributes[*aItr] = buff;
+      aItr++;
+   }
+
+   H5Gclose(cgp);
    H5Fclose(fh);
 }
-#endif
 
+template<typename _partT>
+void ParticleSet<_partT>::saveHDF5(std::string _filename)
+{
+   const size_t myDo  = 0;
+   const size_t noDo  = 1;
+   const size_t psize = sizeof(partT);
 
+   /*struct stat statBuff;
 
+      if (stat(_filename.c_str(), &statBuff) == -1)
+      {
+      std::cerr << "file " << _filename << " not found!\n";
+      return;
+      }*/
 
-/*
-   while (listItr != datasetsInFile.end())
-    {
-      hid_t curDataset;
-      hid_t dataType, memSpace, fileSpace;
+   cVType nopG(noDo);
+   size_t loff = 0;
+   size_t notp = 0, nolp = parts.size();
 
-      H5T_class_t dataTypeClass;
+   nopG[myDo] = nolp;
+   // FIXME: sum up nopG
 
-      curDataset = H5Dopen(curGroup, (*listItr).c_str(), H5P_DEFAULT);
+   for (size_t cDo = 0; cDo < noDo; cDo++)
+   {
+      if (cDo == myDo)
+         loff = notp;
+      notp += nopG[cDo];
+   }
 
-      fileSpace = H5Dget_space(curDataset);
-      H5Sget_simple_extent_dims(fileSpace, dimsFile, NULL);
+   hid_t fh, fpl;
 
-      ///
-      /// the first dataset determines the total number of particles
-      ///
-      if (not noPartsDet)
-        {
-          noTotParts = dimsFile[0];
-          const size_t noPartsChunk
-          = lrint(ceil(static_cast<double>(noTotParts) /
-                       static_cast<double>(noDomains)));
-          const size_t locOffset = noPartsChunk * myDomain;
-          const size_t noLocParts =
-            std::min(noPartsChunk, noTotParts - locOffset);
+   fpl = H5Pcreate(H5P_FILE_ACCESS);
+ #ifdef SPHLATCH_MPI
+   H5Pset_fapl_mpio(fpl, MPI::COMM_WORLD, MPI::INFO_NULL);
+ #endif
 
-          ///
-          /// append the particles to be loaded to the existing one
-          /// note: the resizeAll call may be quite slow, as it resizes
-          ///       all containers
-          ///
-          noResParts = PartManager.getNoLocalParts();
-          PartManager.setNoParts(noLocParts + noResParts);
-          PartManager.resizeAll(true);
+   ///
+   /// if the file already exists, open it. otherwise, create a new one
+   /// use the stat() syscall, because the parallel HDF5 produces some
+   /// nasty output, when the outputfile doesn't exist
+   ///
+   if (myDo == 0)
+   {
+      struct stat statbuff;
+      if (stat(_filename.c_str(), &statbuff) == -1)
+      {
+         hid_t fpll = H5Pcreate(H5P_FILE_ACCESS);
+         fh = H5Fcreate(_filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fpll);
+         H5Fclose(fh);
+         H5Pclose(fpll);
+         sleep(1);
+      }
+   }
+   // FIXME: put a global barrier here
 
-          dimsMem[0] = noLocParts;
-          offset[0] = locOffset;
+   fh = H5Fopen(_filename.c_str(), H5F_ACC_RDWR, fpl);
+   H5Pclose(fpl);
+   std::string stepstr = boost::lexical_cast<std::string>(step);
+   std::string stepnam = "/Step#";
+   stepnam.append(stepstr);
 
-          noPartsDet = true;
-        }
+   hid_t rg = H5Gopen(fh, "/", H5P_DEFAULT);
+
+   hid_t sg;
+   if (objExist(fh, stepnam))
+      sg = H5Gopen(fh, stepnam.c_str(), H5P_DEFAULT);
+   else
+      sg = H5Gcreate(fh, stepnam.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+   hid_t accpl = H5Pcreate(H5P_DATASET_XFER);
+
+   // FIXME: make sure ind. is used, when some processes don't have parts
+   H5Pset_dxpl_mpio(accpl, H5FD_MPIO_COLLECTIVE);
+   //H5Pset_dxpl_mpio(accpl, H5FD_MPIO_INDEPENDENT);
+
+   // write data
+   for (ioVarLT::const_iterator vItr = saveVars.begin();
+        vItr != saveVars.end();
+        vItr++)
+   {
+      const std::string       dsetnam = vItr->name;
+      const size_t            offset  = vItr->offset;
+      const size_t            width   = vItr->width;
+      const IOPart::storetypT stype   = vItr->type;
+
+      hid_t mtype, ftype;
+
+      switch (stype)
+      {
+      case IOPart::ITYPE:
+         mtype = h5mITYPE;
+         ftype = h5fITYPE;
+         break;
+
+      case IOPart::FTYPE:
+         mtype = h5mFTYPE;
+         ftype = h5fFTYPE;
+         break;
+
+      default:
+         continue;
+      }
+
+      const size_t msize  = H5Tget_size(mtype);
+      void         * dptr =
+         reinterpret_cast<void*>(reinterpret_cast<char*>(&parts[0]) + offset);
+
+      hsize_t fcounts[2];
+      fcounts[0] = notp;
+      fcounts[1] = width;
+
+      hsize_t foffset[2];
+      foffset[0] = loff;
+      foffset[1] = 0;
+
+      hsize_t moffset[2];
+      moffset[0] = 0;
+      moffset[1] = 0;
+
+      hsize_t mstride[2];
+      mstride[0] = psize / msize;
+      mstride[1] = 1;
+
+      hsize_t mwcounts[2];
+      mwcounts[0] = nolp * (psize / msize);
+      mwcounts[1] = 1;
+
+      hsize_t mcounts[2];
+      mcounts[0] = nolp;
+      mcounts[1] = 1;
+
+      // create dataspaces
+      hid_t mspace = H5Screate_simple(2, mwcounts, NULL);
+      hid_t fspace = H5Screate_simple(2, fcounts, NULL);
+
+      // create or open dataset
+      hid_t dset;
+      if (objExist(sg, dsetnam))
+         dset = H5Dopen(sg, dsetnam.c_str(), H5P_DEFAULT);
       else
-        {
-          if (noTotParts != dimsFile[0])
-            {
-              /// something's fishy
-              /// throw(something);
-            }
-        }
+         dset = H5Dcreate(sg, dsetnam.c_str(), ftype,
+                          fspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-      dataType = H5Dget_type(curDataset);
-      dataTypeClass = H5Tget_class(dataType);
 
-      if (dataTypeClass == H5T_INTEGER)
-        {
-          if (H5Sget_simple_extent_ndims(fileSpace) == 1)
-            {
-              /// load integer quantity
-              idvectPtrType idPtr =
-                PartManager.getIdRef((*listItr).c_str());
-              if (idPtr != NULL)
-                {
-                  idvectRefType id(*idPtr);
+      for (size_t i = 0; i < width; i++)
+      {
+         H5Sselect_hyperslab(fspace, H5S_SELECT_SET,
+                             foffset, NULL, fcounts, NULL);
+         H5Sselect_hyperslab(mspace, H5S_SELECT_SET,
+                             moffset, mstride, mcounts, NULL);
+         H5Dwrite(dset, mtype, mspace, fspace, accpl, dptr);
+         moffset[0] += 1;
+         foffset[1] += 1;
+      
+         std::cout << dsetnam << "\n";
+      }
 
-                  assert(id.size() == dimsMem[0]);
-                  dimsMem[1] = 1;
-                  memSpace = H5Screate_simple(1, dimsMem, NULL);
+      H5Dclose(dset);
+      H5Sclose(mspace);
+      H5Sclose(fspace);
 
-                  H5Sselect_hyperslab(fileSpace, H5S_SELECT_SET,
-                                      offset, NULL, dimsMem, NULL);
+   }
+   H5Pclose(accpl);
+   
+   attrMT::const_iterator aItr = attributes.begin();
+   while (aItr != attributes.end())
+   {
+      const std::string aname = aItr->first;
+      const fType       aval  = aItr->second;
 
-                  H5Dread(curDataset, H5idMemType, memSpace,
-                          fileSpace, accessPropList, &id(noResParts));
+      hid_t   attr;
+      hsize_t mcount[2];
 
-                  H5Sclose(memSpace);
-                }
-              else
-                {
-                  //std::cout << (*listItr).c_str() << " not known!\n";
-                }
-            }
-        }
-      else if (dataTypeClass == H5T_FLOAT)
-    }
+      mcount[0] = 1;
+      mcount[1] = 1;
 
-   ///
-   /// read attributes
-   ///
-   attrMapRefType attributes(PartManager.attributes);
+      hid_t mspace = H5Screate_simple(1, mcount, NULL);
 
-   stringListType::const_iterator attrItr = attributesInFile.begin();
-   while (attrItr != attributesInFile.end())
-    {
-      hid_t curAttr;
-      dimsMem[0] = 1;
-      fType attrBuff;
+      if (H5Aexists(sg, aname.c_str()))
+         H5Adelete(sg, aname.c_str());
 
-      curAttr = H5Aopen(curGroup, (*attrItr).c_str(), H5P_DEFAULT);
-      H5Aread(curAttr, H5floatMemType, &attrBuff);
-      H5Aclose(curAttr);
+      attr = H5Acreate_by_name(sg, ".", aname.c_str(), h5mFTYPE, mspace,
+                               H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      H5Awrite(attr, h5mFTYPE, &aval);
+      H5Aclose(attr);
+      H5Sclose(mspace);
 
-      attributes[ *attrItr ] = attrBuff;
+      aItr++;
+   }
 
-      attrItr++;
-    }
+   H5Gclose(sg);
 
-   H5Pclose(accessPropList);
-   H5Gclose(curGroup);
+   if (H5Lexists(rg, "/current", H5P_DEFAULT))
+      H5Ldelete(rg, "/current", H5P_DEFAULT);
 
- */
+   H5Lcreate_soft(stepnam.c_str(), rg, "/current",
+                  H5P_DEFAULT, H5P_DEFAULT);
+
+   H5Gclose(rg);
+   H5Fclose(fh);
+}
 
 template<typename _partT>
 herr_t ParticleSet<_partT>::getObsCB(hid_t _fh, const char* _name,
@@ -363,9 +465,24 @@ herr_t ParticleSet<_partT>::getAttrsCB(hid_t _loc, const char* _name,
    herr_t err = 0;
    return(err);
 }
+
+template<typename _partT>
+bool ParticleSet<_partT>::objExist(hid_t _fh, std::string _op)
+{
+   H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+
+   H5O_info_t oi;
+   herr_t     stat;
+
+   stat = H5Oget_info_by_name(_fh, _op.c_str(), &oi, H5P_DEFAULT);
+   if (stat != 0)
+      return(false);
+   else
+      return(true);
+}
+#endif
+
 };
-
-
 #endif
 
 /*

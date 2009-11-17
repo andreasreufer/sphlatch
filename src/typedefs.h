@@ -73,6 +73,7 @@ typedef int                         cType;
 typedef countsType&                 countsRefType;
 typedef countsType*                 countsPtrType;
 typedef std::vector<countsType>     countsVectType;
+typedef std::vector<countsType>     cVType;
 typedef std::vector<countsType>&    countsVectRefType;
 typedef std::vector<countsType> *   countsVectPtrType;
 
@@ -104,8 +105,10 @@ typedef boost::dynamic_bitset<bitsetBlockType>&   bitsetRefType;
 /// attribute map
 ///
 typedef std::map<std::string, fType>              attrMapType;
+typedef std::map<std::string, fType>              attrMT;
 typedef attrMapType&                              attrMapRefType;
 typedef attrMapType*                              attrMapPtrType;
+
 
 ///
 /// a vector of strings

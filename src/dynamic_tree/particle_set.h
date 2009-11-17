@@ -10,6 +10,7 @@
 #endif
 
 #ifdef SPHLATCH_HDF5
+#define H5_NO_DEPRECATED_SYMBOLS
 #include <hdf5.h>
 #endif
 
@@ -41,6 +42,8 @@ public:
 
    ioVarLT loadVars, saveVars;
 
+   attrMT attributes;
+
 private:
    std::vector<_partT> parts;
 
@@ -48,6 +51,7 @@ private:
 #ifdef SPHLATCH_HDF5
    hid_t getLocFhRW(std::string _file);
    hid_t getLocFhRO(std::string _file);
+   bool objExist(hid_t _fh, std::string _op);
 
    static herr_t getObsCB(hid_t _fh, const char* _name,
                           const H5L_info_t* info, void* opData);
