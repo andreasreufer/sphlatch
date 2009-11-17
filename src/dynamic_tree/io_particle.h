@@ -26,6 +26,7 @@ public:
             const size_t _wdt,
             storetypT    _type)
       {
+         std::cout << "new ioVar " << _name << " " << _wdt << "\n";
          name   = _name;
          offset = _off;
          width  = _wdt;

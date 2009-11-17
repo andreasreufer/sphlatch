@@ -12,6 +12,16 @@ ParticleSet<_partT>::ParticleSet()
 
    loadVars = proto.getLoadVars();
    saveVars = proto.getSaveVars();
+
+   if (sizeof(fType) == 8)
+      h5mFTYPE = H5T_NATIVE_DOUBLE;
+   else
+      h5mFTYPE = H5T_NATIVE_FLOAT;
+
+   h5mITYPE = H5T_NATIVE_INT;
+
+   h5fFTYPE = H5T_IEEE_F32LE;
+   h5fITYPE = H5T_STD_I32LE;
 }
 
 template<typename _partT>
@@ -38,7 +48,7 @@ void ParticleSet<_partT>::resize(const size_t _i)
 
 #ifdef SPHLATCH_HDF5
 template<typename _partT>
-void ParticleSet<_partT>::loadDump(std::string _filename)
+void ParticleSet<_partT>::loadHDF5(std::string _filename)
 {
    const size_t myDo = 0;
    const size_t noDo = 1;
@@ -81,7 +91,7 @@ void ParticleSet<_partT>::loadDump(std::string _filename)
  #endif
 
    bool   nopdet = false;
-   size_t notp;
+   size_t notp, nolp, nopck;
 
    ioVarT iovDm("_null", 0, 0, IOPart::ITYPE);
    for (strLT::const_iterator dsetItr = dsetsInFile.begin();
@@ -111,15 +121,16 @@ void ParticleSet<_partT>::loadDump(std::string _filename)
       dset = H5Dopen(cgp, dsetName.c_str(), H5P_DEFAULT);
 
       fspace = H5Dget_space(dset);
-      hsize_t dimsfile[2];
-      H5Sget_simple_extent_dims(fspace, dimsfile, NULL);
+      hsize_t fcounts[2], mcounts[2];
+
+      H5Sget_simple_extent_dims(fspace, fcounts, NULL);
 
       if (not nopdet)
       {
-         notp = dimsfile[0];
-         const size_t nopck = lrint(ceil(static_cast<double>(notp) /
-                                         static_cast<double>(noDo)));
-         const size_t nolp = std::min(nopck, notp - (nopck * myDo));
+         notp  = fcounts[0];
+         nopck = lrint(ceil(static_cast<double>(notp) /
+                            static_cast<double>(noDo)));
+         nolp = std::min(nopck, notp - (nopck * myDo));
          parts.resize(nolp);
          nopdet = true;
       }
@@ -128,16 +139,18 @@ void ParticleSet<_partT>::loadDump(std::string _filename)
       dtypeClass = H5Tget_class(dtype);
 
       // check type ...
-
       IOPartT::storetypT mtype;
+      hid_t h5mtype;
       switch (dtypeClass)
       {
       case H5T_INTEGER:
-         mtype = IOPart::ITYPE;
+         mtype   = IOPart::ITYPE;
+         h5mtype = h5mITYPE;
          break;
 
       case H5T_FLOAT:
-         mtype = IOPart::FTYPE;
+         mtype   = IOPart::FTYPE;
+         h5mtype = h5mFTYPE;
          break;
 
       default:
@@ -145,31 +158,60 @@ void ParticleSet<_partT>::loadDump(std::string _filename)
       }
 
       if (mtype != iovMatch.type)
-      {
-         std::cerr << "type mismatch!\n";
          continue;
-      }
 
       // and 2nd dimension if there is any
-      if ((H5Sget_simple_extent_ndims(fspace) > 1) &&
-          (dimsfile[1] != iovMatch.width))
+      if (H5Sget_simple_extent_ndims(fspace) > 1)
       {
-         std::cerr << "dims mismatch!\n";
-         continue;
+         if (fcounts[1] != iovMatch.width)
+            continue;
       }
+      else
+         fcounts[1] = 1;
 
+      const size_t msize  = H5Tget_size(h5mtype);
+      const size_t psize  = sizeof(partT);
+      void         * dptr =
+         reinterpret_cast<void*>(reinterpret_cast<char*>(&parts[0]) +
+                                 iovMatch.offset);
 
-      const void* dptr = &parts[0];
+      hsize_t foffset[2];
+      hsize_t moffset[2], mstride[2], mwcounts[2];
 
-      std::cout << dptr << " " << &(parts[0].pos[1]) << "\n";
+      moffset[0] = 0;
+      moffset[1] = 0;
 
+      foffset[0] = nopck * myDo;
+      foffset[1] = 0;
+
+      mstride[0] = psize / msize;
+      mstride[1] = 1;
+
+      mwcounts[0] = nolp * (psize / msize);
+      mwcounts[1] = 1;
+
+      mcounts[0] = nolp;
+      mcounts[1] = 1;
+
+      const size_t fseccounts = fcounts[1];
+      fcounts[1] = 1;
+
+      // let the particle look like one huge 1D array
+      mspace = H5Screate_simple(2, mwcounts, NULL);
+
+      for (size_t i = 0; i < fseccounts; i++)
+      {
+         H5Sselect_hyperslab(fspace, H5S_SELECT_SET,
+                             foffset, NULL, fcounts, NULL);
+         H5Sselect_hyperslab(mspace, H5S_SELECT_SET,
+                             moffset, mstride, mcounts, NULL);
+         H5Dread(dset, h5mtype, mspace, fspace, accpl, dptr);
+         moffset[0] += 1;
+         foffset[1] += 1;
+      }
+      H5Sclose(mspace);
       H5Dclose(dset);
-
-      /*H5Tclose(dataType);
-         H5Sclose(fileSpace);
-         H5Dclose(curDataset);*/
    }
-
 
    H5Pclose(accpl);
    H5Gclose(cgp);

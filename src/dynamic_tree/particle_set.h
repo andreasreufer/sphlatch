@@ -27,8 +27,8 @@ public:
    _partT& operator[](const size_t _i);
 
 #ifdef SPHLATCH_HDF5
-   void saveDump(std::string _file);
-   void loadDump(std::string _file);
+   void saveHDF5(std::string _file);
+   void loadHDF5(std::string _file);
 #endif
 
    void resize(const size_t _i);
@@ -55,6 +55,7 @@ private:
                             const H5A_info_t* info, void* opData);
 
    static strLT dsetsInFile, attrsInFile;
+   hid_t h5mITYPE, h5mFTYPE, h5fITYPE, h5fFTYPE;
 #endif
 };
 };
