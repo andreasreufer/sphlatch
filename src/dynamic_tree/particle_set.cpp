@@ -1,10 +1,9 @@
 #ifndef SPHLATCH_PARTICLE_SET_CPP
- #define SPHLATCH_PARTICLE_SET_CPP
+#define SPHLATCH_PARTICLE_SET_CPP
 
- #include <sys/stat.h>
- #include <boost/lexical_cast.hpp>
- #include "particle_set.h"
-
+#include <sys/stat.h>
+#include <boost/lexical_cast.hpp>
+#include "particle_set.h"
 
 namespace sphlatch {
 template<typename _partT>
@@ -15,6 +14,7 @@ ParticleSet<_partT>::ParticleSet()
    loadVars = proto.getLoadVars();
    saveVars = proto.getSaveVars();
 
+#ifdef SPHLATCH_HDF5
    if (sizeof(fType) == 8)
       h5mFTYPE = H5T_NATIVE_DOUBLE;
    else
@@ -24,6 +24,7 @@ ParticleSet<_partT>::ParticleSet()
 
    h5fFTYPE = H5T_IEEE_F32LE;
    h5fITYPE = H5T_STD_I32LE;
+#endif
 }
 
 template<typename _partT>
@@ -475,7 +476,7 @@ bool ParticleSet<_partT>::objExist(hid_t _fh, std::string _op)
    else
       return(true);
 }
- #endif
+#endif
 
 };
 #endif

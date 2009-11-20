@@ -6,6 +6,8 @@
 //#include <mpi.h>
 //#define SPHLATCH_MPI
 
+#define SPHLATCH_HDF5
+
 #include "typedefs.h"
 typedef sphlatch::fType   fType;
 
@@ -75,7 +77,6 @@ class ghost :
 typedef particle                       partT;
 typedef ghost                          ghstT;
 
-#define SPHLATCH_HDF5
 #include "particle_set.cpp"
 typedef sphlatch::ParticleSet<partT>   partSetT;
 

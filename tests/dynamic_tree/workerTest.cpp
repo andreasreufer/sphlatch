@@ -39,7 +39,6 @@ class ghost :
 typedef particle                               partT;
 typedef ghost                                  ghstT;
 
-
 #include "bhtree_treedump.cpp"
 typedef sphlatch::BHTreeDump                   dumpT;
 
