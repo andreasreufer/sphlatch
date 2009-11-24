@@ -79,7 +79,7 @@ void BHTree::insertPart(treeGhost& _part)
 
 void BHTree::update(const fType _costMin, const fType _costMax)
 {
-   std::cout << "entered Tree.update() ... round " << round << "\n";
+   //std::cout << "entered Tree.update() ... round " << round << "\n";
 
    BHTreeDump         dumper(this);
    std::ostringstream roundStr;
@@ -106,7 +106,7 @@ void BHTree::update(const fType _costMin, const fType _costMax)
    //dumper.dotDump(dumpName + "_1.dot");
    //dumper.ptrDump(dumpName + "_1.ptr");
 
-   //std::cout << "\nrebalance CZ ....\n";
+   std::cout << "\nrebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(_costMin, _costMax);
 
@@ -160,8 +160,8 @@ void BHTree::update(const fType _costMin, const fType _costMax)
    //std::cout << "calculate MP moments  \n";
    MP.calcMultipolesCZ();
 
-   //dumper.dotDump(dumpName + "_5.dot");
-   //dumper.ptrDump(dumpName + "_5.txt");
+   dumper.dotDump(dumpName + "_5.dot");
+   dumper.ptrDump(dumpName + "_5.txt");
 
    // exchange MP moments
    round++;

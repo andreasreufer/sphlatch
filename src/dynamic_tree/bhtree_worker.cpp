@@ -209,6 +209,7 @@ qcllPtrT BHTreeWorker::partToCell(nodePtrT _cellPtr, const size_t _oct)
 
    newCellPtr->child[newOct] = resPartPtr;
    resPartPtr->parent        = newCellPtr;
+   resPartPtr->depth         = newCellPtr->depth+1;
 
    return(newCellPtr);
 }

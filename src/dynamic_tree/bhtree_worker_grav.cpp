@@ -21,35 +21,40 @@ public:
    ~GravityWorker() { }
 
    void calcGravity(const czllPtrT _czll);
+   void calcGravPart(const pnodPtrT _part);
 
-private:
+//private:
    _MAC mac;
 
-   void calcGravPart(const pnodPtrT _part);
+
+   void calcGravPartAlt(const pnodPtrT _part);
+   void calcGravRec();
 
    void interactPartCell();
    void interactPartPart();
 
-   vect3dT acc, ppos;
+   vect3dT  acc, ppos;
+   nodePtrT recCurPartPtr;
 };
 
 template<typename _MAC, typename _partT>
 void GravityWorker<_MAC, _partT>::calcGravity(const czllPtrT _czll)
 {
-  nodePtrT curPart = _czll->chldFrst;
-  const nodePtrT stopChld = _czll->chldLast->next;
+   nodePtrT       curPart  = _czll->chldFrst;
+   const nodePtrT stopChld = _czll->chldLast->next;
 
-  // an empty CZ cell may have an chldFrst pointing to NULL
-  if (curPart == NULL)
-    return;
+   // an empty CZ cell may have an chldFrst pointing to NULL
+   if (curPart == NULL)
+      return;
 
-  while ( curPart != stopChld )
-  {
-    if (curPart->isParticle)
-      calcGravPart(static_cast<pnodPtrT>(curPart));
-    curPart = curPart->next;
-  }
-};
+   while (curPart != stopChld)
+   {
+      if (curPart->isParticle)
+         calcGravPart(static_cast<pnodPtrT>(curPart));
+      curPart = curPart->next;
+   }
+}
+
 
 template<typename _MAC, typename _partT>
 void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
@@ -67,15 +72,17 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
    {
       if (not curPtr->isParticle)
       {
-         if (mac(static_cast<qcllPtrT>(curPtr), 
+         if (mac(static_cast<qcllPtrT>(curPtr),
                  static_cast<pnodPtrT>(curPartPtr)))
          {
             interactPartCell();
             goSkip();
+         std::cout << "s ";
          }
          else
          {
             goNext();
+         std::cout << "n ";
          }
       }
       else
@@ -84,11 +91,57 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
          {
             interactPartPart();
          }
+         std::cout << "n ";
          goNext();
       }
    } while (curPtr != NULL);
 
    static_cast<_partT*>(_part->partPtr)->acc += acc;
+}
+
+template<typename _MAC, typename _partT>
+void GravityWorker<_MAC, _partT>::calcGravPartAlt(const pnodPtrT _part)
+{
+   ppos = _part->pos;
+   acc  = 0, 0, 0;
+   recCurPartPtr = _part;
+   ///
+   /// the complete tree walk
+   ///
+   goRoot();
+   calcGravRec();
+
+   static_cast<_partT*>(_part->partPtr)->acc += acc;
+}
+
+template<typename _MAC, typename _partT>
+void GravityWorker<_MAC, _partT>::calcGravRec()
+{
+   if (curPtr->isParticle)
+   {
+      if (curPtr != recCurPartPtr)
+         interactPartPart();
+   }
+   else
+   {
+      if (mac(static_cast<qcllPtrT>(curPtr),
+              static_cast<pnodPtrT>(recCurPartPtr)))
+      {
+         interactPartCell();
+      }
+      else
+      {
+         for (size_t i = 0; i < 8; i++)
+         {
+            if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
+            {
+               goChild(i);
+               calcGravRec();
+               goUp();
+            }
+         }
+      }
+   }
 }
 
 template<typename _MAC, typename _partT>
@@ -108,6 +161,8 @@ void GravityWorker<_MAC, _partT>::interactPartPart()
    acc[0] -= mOr3 * rx;
    acc[1] -= mOr3 * ry;
    acc[2] -= mOr3 * rz;
+
+   std::cout << "P" << curPtr << " ";
 }
 
 template<typename _MAC, typename _partT>
@@ -150,6 +205,7 @@ void GravityWorker<_MAC, _partT>::interactPartCell()
    acc[0] += (Or5) * (q1jrj) - (Or7) * (2.5 * qijrirj * rx);
    acc[1] += (Or5) * (q2jrj) - (Or7) * (2.5 * qijrirj * ry);
    acc[2] += (Or5) * (q3jrj) - (Or7) * (2.5 * qijrirj * rz);
+   std::cout << "C" << curPtr << " ";
 }
 
 class fixThetaMAC {
@@ -160,7 +216,7 @@ public:
    fType rx, ry, rz, rr;
    bool operator()(const qcllPtrT _cell, const pnodPtrT _part)
    {
-      const fType theta  = 0.6;
+      const fType theta  = 0.60;
       const fType clsz   = _cell->clSz;
       const fType theta2 = theta * theta;
 

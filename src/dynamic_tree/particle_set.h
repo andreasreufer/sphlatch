@@ -33,6 +33,7 @@ public:
 #endif
 
    void resize(const size_t _i);
+   size_t getNop();
 
    cType step;
    typedef std::list<std::string> strLT;

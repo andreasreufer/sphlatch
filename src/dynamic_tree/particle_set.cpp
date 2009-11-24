@@ -49,6 +49,13 @@ void ParticleSet<_partT>::resize(const size_t _i)
    parts.resize(_i);
 }
 
+template<typename _partT>
+size_t ParticleSet<_partT>::getNop()
+{
+   return parts.size();
+}
+
+
  #ifdef SPHLATCH_HDF5
 template<typename _partT>
 void ParticleSet<_partT>::loadHDF5(std::string _filename)

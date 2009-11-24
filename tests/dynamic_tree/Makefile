@@ -83,6 +83,11 @@ includefun:
 		  -lhdf5 -lz \
 		  -fopenmp \
 		  -o includeFun include.cpp
-
-
+		
+nBody:
+	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+		  -I../../src -I../../src/dynamic_tree \
+		  -lhdf5 -lz \
+		  -fopenmp \
+		  -o NBody nbody.cpp
 

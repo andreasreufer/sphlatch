@@ -83,17 +83,17 @@ void BHTreeHousekeeper::setSkip()
    while (curPtr != NULL)
    {
       const size_t depth = curPtr->depth;
-      if (not curPtr->isParticle)
+
+      size_t i = depth;
+      while (lastSkipeeAtDepth[i] != NULL)
       {
-         size_t i = depth;
-         while (lastSkipeeAtDepth[i] != NULL)
-         {
-            lastSkipeeAtDepth[i]->skip = static_cast<gcllPtrT>(curPtr);
-            lastSkipeeAtDepth[i]       = NULL;
-            i++;
-         }
-         lastSkipeeAtDepth[depth] = static_cast<gcllPtrT>(curPtr);
+         lastSkipeeAtDepth[i]->skip = static_cast<gcllPtrT>(curPtr);
+         lastSkipeeAtDepth[i]       = NULL;
+         i++;
       }
+      if (not curPtr->isParticle)
+         lastSkipeeAtDepth[depth] = static_cast<gcllPtrT>(curPtr);
+
       goNext();
    }
 }
@@ -148,8 +148,9 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
 {
    if (_czll->chldFrst == NULL)
       return;
+
    curPtr = _czll;
-   
+
    const nodePtrT chldLastNext = _czll->chldLast->next;
 
    nodePtrT lastOk = NULL, nextOk = NULL, nextChld;
@@ -191,29 +192,29 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
          // only delete chains not leading anywhere
          nodePtrT chainee = nextChld;
 
-         while ( not chainee->isParticle &&
-                 not chainee->isCZ &&
-                 static_cast<gcllPtrT>(chainee)->getNoChld() == 1 )
-           chainee = chainee->next;
+         while (not chainee->isParticle &&
+                not chainee->isCZ &&
+                static_cast<gcllPtrT>(chainee)->getNoChld() == 1)
+            chainee = chainee->next;
 
-         if ( chainee->isParticle || chainee->isCZ || 
-              not static_cast<gcllPtrT>(chainee)->getNoChld() == 0)
+         if (chainee->isParticle || chainee->isCZ ||
+             (not static_cast<gcllPtrT>(chainee)->getNoChld() == 0))
          {
-           curPtr = chainee;
-           break;
+            curPtr = chainee;
+            break;
          }
 
          const size_t wasChild = getChildNo(nextChld, nextChld->parent);
          static_cast<gcllPtrT>(nextChld->parent)->child[wasChild] = NULL;
 
          // delete the chainees, until we reach the last chainee
-         while ( nextChld != chainee )
+         while (nextChld != chainee)
          {
-           nextOk = nextChld->next;
-           delete nextChld;
-           nextChld = nextOk;
+            nextOk = nextChld->next;
+            delete nextChld;
+            nextChld = nextOk;
          }
-         
+
          // set next ptr of the current node to the next ptr of the last
          // chainee
          curPtr->next = nextChld->next;
@@ -228,12 +229,11 @@ void BHTreeHousekeeper::minTree(const czllPtrT _czll)
          break;
       }
       }
-
    }
 
 
    delete chldLastDummy;
-   lastOk->next = chldLastNext;
+   lastOk->next    = chldLastNext;
    _czll->chldLast = lastOk;
 }
 };
