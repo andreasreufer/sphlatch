@@ -11,10 +11,10 @@ namespace sphlatch
 {
 namespace vectindices
 {
-enum VectIndices
+/*enum VectIndices
 {
    X, Y, Z
-};
+};*/
 enum TensorIndices
 {
    XX, XY, XZ, YY, YZ

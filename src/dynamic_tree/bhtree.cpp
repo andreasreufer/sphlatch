@@ -168,6 +168,16 @@ void BHTree::update(const fType _costMin, const fType _costMax)
 
    //
    CZbottomLoc = CZbottom;
+
+   std::cout << static_cast<qcllPtrT>(rootPtr)->com << "   "
+             << static_cast<qcllPtrT>(rootPtr)->m << "   "
+             << static_cast<qcllPtrT>(rootPtr)->q11 << " "
+             << static_cast<qcllPtrT>(rootPtr)->q22 << " "
+             << static_cast<qcllPtrT>(rootPtr)->q33 << " "
+             << static_cast<qcllPtrT>(rootPtr)->q12 << " "
+             << static_cast<qcllPtrT>(rootPtr)->q13 << " "
+             << static_cast<qcllPtrT>(rootPtr)->q23 << " "
+             << "\n";
 }
 
 BHTree::czllPtrVectT BHTree::getCZbottomLoc()

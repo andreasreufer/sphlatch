@@ -1,5 +1,5 @@
-#ifndef BHTREE_H
-#define BHTREE_H
+#ifndef BHTREE_OLD_H
+#define BHTREE_OLD_H
 
 /*
  *  bhtree.h

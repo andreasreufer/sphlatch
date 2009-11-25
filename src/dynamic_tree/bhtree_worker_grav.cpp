@@ -26,7 +26,6 @@ public:
 //private:
    _MAC mac;
 
-
    void calcGravPartAlt(const pnodPtrT _part);
    void calcGravRec();
 
@@ -40,6 +39,7 @@ public:
 template<typename _MAC, typename _partT>
 void GravityWorker<_MAC, _partT>::calcGravity(const czllPtrT _czll)
 {
+   std::cout << _czll << "\n";
    nodePtrT       curPart  = _czll->chldFrst;
    const nodePtrT stopChld = _czll->chldLast->next;
 
@@ -77,12 +77,12 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
          {
             interactPartCell();
             goSkip();
-         std::cout << "s ";
+         //std::cout << "s ";
          }
          else
          {
             goNext();
-         std::cout << "n ";
+         //std::cout << "n ";
          }
       }
       else
@@ -91,7 +91,7 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
          {
             interactPartPart();
          }
-         std::cout << "n ";
+         //std::cout << "n ";
          goNext();
       }
    } while (curPtr != NULL);
@@ -102,6 +102,8 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
 template<typename _MAC, typename _partT>
 void GravityWorker<_MAC, _partT>::calcGravPartAlt(const pnodPtrT _part)
 {
+   std::cout << _part << "\n";
+   
    ppos = _part->pos;
    acc  = 0, 0, 0;
    recCurPartPtr = _part;
@@ -162,15 +164,17 @@ void GravityWorker<_MAC, _partT>::interactPartPart()
    acc[1] -= mOr3 * ry;
    acc[2] -= mOr3 * rz;
 
-   std::cout << "P" << curPtr << " ";
+   //std::cout << "P" << curPtr << " ";
 }
 
 template<typename _MAC, typename _partT>
 void GravityWorker<_MAC, _partT>::interactPartCell()
 {
+   //FIXME: check if fetching those values again is less costly
    const fType rx = mac.rx;
    const fType ry = mac.ry;
    const fType rz = mac.rz;
+   
    const fType rr = mac.rr;
    const fType r  = sqrt(rr);
 
@@ -205,7 +209,6 @@ void GravityWorker<_MAC, _partT>::interactPartCell()
    acc[0] += (Or5) * (q1jrj) - (Or7) * (2.5 * qijrirj * rx);
    acc[1] += (Or5) * (q2jrj) - (Or7) * (2.5 * qijrirj * ry);
    acc[2] += (Or5) * (q3jrj) - (Or7) * (2.5 * qijrirj * rz);
-   std::cout << "C" << curPtr << " ";
 }
 
 class fixThetaMAC {
@@ -216,15 +219,14 @@ public:
    fType rx, ry, rz, rr;
    bool operator()(const qcllPtrT _cell, const pnodPtrT _part)
    {
-      const fType theta  = 0.60;
+      const fType theta  = 0.70;
       const fType clsz   = _cell->clSz;
       const fType theta2 = theta * theta;
 
-      rx = _cell->com[0] - _part->pos[0];
-      ry = _cell->com[1] - _part->pos[1];
-      rz = _cell->com[2] - _part->pos[2];
+      rx = _part->pos[0] - _cell->com[0];
+      ry = _part->pos[1] - _cell->com[1];
+      rz = _part->pos[2] - _cell->com[2];
       rr = rx * rx + ry * ry + rz * rz;
-
 
       return((clsz * clsz / rr) < theta2);
    }

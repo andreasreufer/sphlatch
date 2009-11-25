@@ -60,11 +60,12 @@ void genericCellNode::clear()
 
 size_t genericCellNode::getNoChld()
 {
-  size_t noChildren = 0;
-  for (size_t i = 0; i < 8; i++)
-    if ( child[i] != NULL )
-      noChildren++;
-  return noChildren;
+   size_t noChildren = 0;
+
+   for (size_t i = 0; i < 8; i++)
+      if (child[i] != NULL)
+         noChildren++;
+   return(noChildren);
 }
 
 void monopoleCellNode::clear()
@@ -215,41 +216,49 @@ void quadrupoleCellNode::calcMultipole()
       {
          if (child[i]->isParticle)
          {
-           const pnodPtrT part = static_cast<pnodPtrT>(child[i]);
-          
-           const fType rx = part->pos[X] - com[X];
-           const fType ry = part->pos[Y] - com[Y];
-           const fType rz = part->pos[Z] - com[Z];
-           
-           const fType rxrx = rx*rx;
-           const fType ryry = ry*ry;
-           const fType rzrz = rz*rz;
+            const pnodPtrT part = static_cast<pnodPtrT>(child[i]);
 
-           const fType rr = rxrx + ryry + rzrz;
-           const fType pm = part->m;
+            const fType rx = part->pos[X] - com[X];
+            const fType ry = part->pos[Y] - com[Y];
+            const fType rz = part->pos[Z] - com[Z];
 
-           q11 += ( 3. * rxrx - rr )*pm;
-           q22 += ( 3. * ryry - rr )*pm;
-           q33 += ( 3. * rzrz - rr )*pm;
+            const fType rxrx = rx * rx;
+            const fType ryry = ry * ry;
+            const fType rzrz = rz * rz;
+
+            const fType rr = rxrx + ryry + rzrz;
+            const fType pm = part->m;
+
+            q11 += (3. * rxrx - rr) * pm;
+            q22 += (3. * ryry - rr) * pm;
+            q33 += (3. * rzrz - rr) * pm;
+
+            q12 += (3. * rx * ry * pm);
+            q13 += (3. * rx * rz * pm);
+            q23 += (3. * ry * rz * pm);
          }
          else
          {
-           const qcllPtrT cell = static_cast<qcllPtrT>(child[i]);
-           
-           const fType rx = cell->com[X] - com[X];
-           const fType ry = cell->com[Y] - com[Y];
-           const fType rz = cell->com[Z] - com[Z];
-           
-           const fType rxrx = rx*rx;
-           const fType ryry = ry*ry;
-           const fType rzrz = rz*rz;
+            const qcllPtrT cell = static_cast<qcllPtrT>(child[i]);
 
-           const fType rr = rxrx + ryry + rzrz;
-           const fType cm = cell->m;
+            const fType rx = cell->com[X] - com[X];
+            const fType ry = cell->com[Y] - com[Y];
+            const fType rz = cell->com[Z] - com[Z];
 
-           q11 += ( 3. * rxrx - rr )*cm + cell->q11;
-           q22 += ( 3. * ryry - rr )*cm + cell->q22;
-           q33 += ( 3. * rzrz - rr )*cm + cell->q33;
+            const fType rxrx = rx * rx;
+            const fType ryry = ry * ry;
+            const fType rzrz = rz * rz;
+
+            const fType rr = rxrx + ryry + rzrz;
+            const fType cm = cell->m;
+
+            q11 += (3. * rxrx - rr) * cm + cell->q11;
+            q22 += (3. * ryry - rr) * cm + cell->q22;
+            q33 += (3. * rzrz - rr) * cm + cell->q33;
+
+            q12 += (3. * rx * ry * cm) + cell->q12;
+            q13 += (3. * rx * rz * cm) + cell->q13;
+            q23 += (3. * ry * rz * cm) + cell->q23;
          }
       }
    }
