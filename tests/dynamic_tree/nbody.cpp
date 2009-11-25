@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
    start = omp_get_wtime();
    for (size_t i = 0; i < nop; i++)
    {
-     particles[i].cost = 1.;
+     particles[i].cost = 0.;
      Tree.insertPart(particles[i]);
    }
    std::cout << "particles insert " << omp_get_wtime() - start << "s\n";

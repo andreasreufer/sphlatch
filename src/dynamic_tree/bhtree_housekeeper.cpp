@@ -47,6 +47,9 @@ void BHTreeHousekeeper::setNext(const czllPtrT _czll)
 
 void BHTreeHousekeeper::setNextCZ()
 {
+   if ( rootPtr->atBottom )
+     return;
+
    curPtr  = rootPtr;
    lastPtr = rootPtr;
    setNextCZRecursor();
