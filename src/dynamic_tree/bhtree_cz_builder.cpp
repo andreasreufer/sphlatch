@@ -95,7 +95,6 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
       czllPtrListT::iterator       CZlistItr = CZbottom.begin();
       czllPtrListT::const_iterator CZlistEnd = CZbottom.end();
 
-
       while (CZlistItr != CZlistEnd)
       {
          ///

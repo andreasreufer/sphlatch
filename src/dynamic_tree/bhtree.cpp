@@ -160,24 +160,14 @@ void BHTree::update(const fType _costMin, const fType _costMax)
    //std::cout << "calculate MP moments  \n";
    MP.calcMultipolesCZ();
 
-   dumper.dotDump(dumpName + "_5.dot");
-   dumper.ptrDump(dumpName + "_5.txt");
+   //dumper.dotDump(dumpName + "_5.dot");
+   //dumper.ptrDump(dumpName + "_5.txt");
 
    // exchange MP moments
    round++;
 
-   //
+   //FIXME: change this in parallel version
    CZbottomLoc = CZbottom;
-
-   std::cout << static_cast<qcllPtrT>(rootPtr)->com << "   "
-             << static_cast<qcllPtrT>(rootPtr)->m << "   "
-             << static_cast<qcllPtrT>(rootPtr)->q11 << " "
-             << static_cast<qcllPtrT>(rootPtr)->q22 << " "
-             << static_cast<qcllPtrT>(rootPtr)->q33 << " "
-             << static_cast<qcllPtrT>(rootPtr)->q12 << " "
-             << static_cast<qcllPtrT>(rootPtr)->q13 << " "
-             << static_cast<qcllPtrT>(rootPtr)->q23 << " "
-             << "\n";
 }
 
 BHTree::czllPtrVectT BHTree::getCZbottomLoc()

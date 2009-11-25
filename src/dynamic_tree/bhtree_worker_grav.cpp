@@ -39,7 +39,6 @@ public:
 template<typename _MAC, typename _partT>
 void GravityWorker<_MAC, _partT>::calcGravity(const czllPtrT _czll)
 {
-   std::cout << _czll << "\n";
    nodePtrT       curPart  = _czll->chldFrst;
    const nodePtrT stopChld = _czll->chldLast->next;
 
@@ -77,12 +76,10 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
          {
             interactPartCell();
             goSkip();
-         //std::cout << "s ";
          }
          else
          {
             goNext();
-         //std::cout << "n ";
          }
       }
       else
@@ -91,7 +88,6 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
          {
             interactPartPart();
          }
-         //std::cout << "n ";
          goNext();
       }
    } while (curPtr != NULL);
@@ -102,8 +98,6 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
 template<typename _MAC, typename _partT>
 void GravityWorker<_MAC, _partT>::calcGravPartAlt(const pnodPtrT _part)
 {
-   std::cout << _part << "\n";
-   
    ppos = _part->pos;
    acc  = 0, 0, 0;
    recCurPartPtr = _part;

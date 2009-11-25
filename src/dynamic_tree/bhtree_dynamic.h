@@ -97,12 +97,9 @@ BHTree::BHTree() :
    static_cast<czllPtrT>(rootPtr)->ident    = 0;
    noCells++;
 
-   // just temporary
+   //FIXME: just temporary
    static_cast<czllPtrT>(rootPtr)->cen  = 0.5, 0.5, 0.5;
    static_cast<czllPtrT>(rootPtr)->clSz = 1.;
-
-   std::cout << static_cast<czllPtrT>(rootPtr)->cen << "  "
-             << static_cast<czllPtrT>(rootPtr)->clSz << "\n";
 }
 
 BHTree::~BHTree()
