@@ -106,6 +106,24 @@ bool BHTreeWorker::pointInsideCell(const vect3dT& _pos, nodePtrT _nodePtr)
           all(static_cast<gcllPtrT>(_nodePtr)->cen - _pos > -hclSz));
 }
 
+bool BHTreeWorker::sphereTotInCell(const vect3dT& _pos, const fType& _r)
+{
+   assert(curPtr != NULL);
+   const fType RCellMRSph = 0.5 * static_cast<gcllPtrT>(curPtr)->clSz - _r;
+   return(all(static_cast<gcllPtrT>(curPtr)->cen - _pos < RCellMRSph) &&
+          all(static_cast<gcllPtrT>(curPtr)->cen - _pos > -RCellMRSph ));
+};
+
+bool BHTreeWorker::sphereTotOutCell(const vect3dT& _pos, const fType& _r)
+{
+   assert(curPtr != NULL);
+   const fType RCellPRSph = 0.5 * static_cast<gcllPtrT>(curPtr)->clSz + _r;
+   return(all(static_cast<gcllPtrT>(curPtr)->cen - _pos > RCellPRSph) &&
+          all(static_cast<gcllPtrT>(curPtr)->cen - _pos < -RCellPRSph ));
+  return true;
+};
+
+
 ///
 /// get the cell octant for a position, no checks are performed whether
 /// the position is actually in the cell

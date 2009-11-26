@@ -37,6 +37,9 @@ protected:
 
    bool pointInsideCell(const vect3dT& _pos);
    bool pointInsideCell(const vect3dT& _pos, const nodePtrT _nodePtr);
+   
+   bool sphereTotInCell(const vect3dT& _pos, const fType& _r);
+   bool sphereTotOutCell(const vect3dT& _pos, const fType& _r);
 
    size_t getOctant(const vect3dT& _pos);
    size_t getOctant(const vect3dT& _pos, const nodePtrT _nodePtr);

@@ -13,11 +13,13 @@ typedef sphlatch::vect3dT  vect3dT;
 typedef sphlatch::BHTree   treeT;
 
 #include "bhtree_particle.h"
+#include "sph_fluid_particle.h"
 #include "io_particle.h"
 
 class particle :
    public sphlatch::treePart,
    public sphlatch::movingPart,
+   public sphlatch::SPHfluidPart,
    public sphlatch::IOPart
 {
 public:
@@ -62,6 +64,16 @@ typedef sphlatch::ParticleSet<partT>           partSetT;
 typedef sphlatch::fixThetaMAC                  macT;
 typedef sphlatch::GravityWorker<macT, partT>   gravT;
 
+
+#include "sph_algorithms.cpp"
+typedef sphlatch::densSum densT;
+#include "bhtree_worker_sphsum.cpp"
+typedef sphlatch::SPHsumWorker<densT, partT>  densSumT;
+
+
+
+
+
 int main(int argc, char* argv[])
 {
 #ifdef SPHLATCH_MPI
@@ -101,6 +113,16 @@ int main(int argc, char* argv[])
    
    std::cout << "calcGravity()    " << omp_get_wtime() - start << "s\n";
 
+
+   densSumT densWorker(&Tree);
+   
+   /*start = omp_get_wtime();
+#pragma omp parallel for firstprivate(gravWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      densWorker(CZbottomLoc[i]);
+   
+   std::cout << "calcGravity()    " << omp_get_wtime() - start << "s\n";*/
+
    particles.saveHDF5("out_tree.h5part");
 
    partSetT partsBF;
@@ -132,11 +154,6 @@ int main(int argc, char* argv[])
    std::cout << "brute force: " << partsBF[9].acc << "\n";
    std::cout << "tree       : " << particles[9].acc << "\n";
   
-   /*particles[9].acc = 0,0,0;
-   gravWorker.calcGravPartAlt(particles[9].treeNode);
-   std::cout << "\n";
-   std::cout << particles[9].acc << "\n\n";*/
-
 #ifdef SPHLATCH_MPI
    MPI::Finalize();
 #endif

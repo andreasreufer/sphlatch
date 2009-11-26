@@ -110,9 +110,6 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    const fType costMin = normCellCost * _cmarkLow;
    const fType costMax = normCellCost * _cmarkHigh;
 
-   std::cout << normCellCost << " " << costMin << " " << costMax << "\n";
-
-   std::cout << "\nrebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(costMin, costMax);
 
