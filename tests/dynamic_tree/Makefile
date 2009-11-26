@@ -1,13 +1,5 @@
 all: treefun nodesize buildcz nodesfun workertest
 
-#treefun:
-#	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
-#	  -I../../src -I../../src/dynamic_tree \
-#	  -lhdf5 -lz \
-#	  -fopenmp \
-#	  -DSPHLATCH_GRAVITY \
-#	  -o treeFun treeFun.cpp
-
 nodesfun:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
 	  -I../../src -I../../src/dynamic_tree \
@@ -37,15 +29,6 @@ clean:
 	rm treeFun nodesFun 2>&1 >/dev/null; true
 
 
-Objects = bhtree.o
-
-.SUFFIXES: .cpp
-
-.cpp.o:
-	        $(CXX) $(CXXFLAGS) -c \
-		  -I../../src -I../../src/dynamic_tree \
-		  $<
-
 bhtree:
 	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
 		  -I../../src -I../../src/dynamic_tree \
@@ -53,15 +36,6 @@ bhtree:
 		  -fopenmp \
 		  -o treeFun treeFun.cpp
 
-#treefun:
-#	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
-#	  -I../../src -I../../src/dynamic_tree \
-#	  -lhdf5 -lz \
-#	  -fopenmp \
-#	  -DSPHLATCH_GRAVITY \
-#	  -o treeFun treeFun.cpp
-
-		
 sphworker:
 	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
 		  -I../../src -I../../src/dynamic_tree \

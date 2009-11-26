@@ -72,22 +72,21 @@ int main(int argc, char* argv[])
    partSetT particles;
    particles.loadHDF5("in.h5part");
    const size_t nop = particles.getNop();
-   std::cout << nop << "\n";
+   const fType cppart = 1. / nop;
+   std::cout << nop << " " << cppart << "\n";
    
    double start;
 
    start = omp_get_wtime();
    for (size_t i = 0; i < nop; i++)
    {
-     particles[i].cost = 0.;
+     particles[i].cost = cppart;
      Tree.insertPart(particles[i]);
    }
    std::cout << "particles insert " << omp_get_wtime() - start << "s\n";
 
-   const fType costMin = 1.0e1, costMax = 1.5e1;
-   
    start = omp_get_wtime();
-   Tree.update(costMin, costMax);
+   Tree.update(0.8, 1.2);
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
    
    gravT gravWorker(&Tree);

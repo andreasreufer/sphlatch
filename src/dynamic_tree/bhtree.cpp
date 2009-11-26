@@ -77,7 +77,7 @@ void BHTree::insertPart(treeGhost& _part)
    insertmover.insert(_part);
 }
 
-void BHTree::update(const fType _costMin, const fType _costMax)
+void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
 {
    //std::cout << "entered Tree.update() ... round " << round << "\n";
 
@@ -106,9 +106,15 @@ void BHTree::update(const fType _costMin, const fType _costMax)
    //dumper.dotDump(dumpName + "_1.dot");
    //dumper.ptrDump(dumpName + "_1.ptr");
 
+   const fType normCellCost = 1. / ( noThreads * cellsPerThread );
+   const fType costMin = normCellCost * _cmarkLow;
+   const fType costMax = normCellCost * _cmarkHigh;
+
+   std::cout << normCellCost << " " << costMin << " " << costMax << "\n";
+
    std::cout << "\nrebalance CZ ....\n";
    BHTreeCZBuilder czbuilder(this);
-   czbuilder.rebalance(_costMin, _costMax);
+   czbuilder.rebalance(costMin, costMax);
 
    //dumper.dotDump(dumpName + "_2.dot");
    //dumper.ptrDump(dumpName + "_2.txt");
