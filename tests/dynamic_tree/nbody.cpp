@@ -66,12 +66,9 @@ typedef sphlatch::GravityWorker<macT, partT>   gravT;
 
 
 #include "sph_algorithms.cpp"
-typedef sphlatch::densSum densT;
+typedef sphlatch::densSum<partT> densT;
 #include "bhtree_worker_sphsum.cpp"
 typedef sphlatch::SPHsumWorker<densT, partT>  densSumT;
-
-
-
 
 
 int main(int argc, char* argv[])
@@ -113,8 +110,9 @@ int main(int argc, char* argv[])
    
    std::cout << "calcGravity()    " << omp_get_wtime() - start << "s\n";
 
-
    densSumT densWorker(&Tree);
+   particles[0].h = 1.00;
+   densWorker.sumNeighbours( particles[0].treeNode );
    
    /*start = omp_get_wtime();
 #pragma omp parallel for firstprivate(gravWorker)

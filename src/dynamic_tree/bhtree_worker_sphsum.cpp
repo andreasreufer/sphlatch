@@ -20,11 +20,10 @@ public:
    SPHsumWorker(const SPHsumWorker& _SPHwork) : BHTreeWorker(_SPHwork) { }
    ~SPHsumWorker() { }
 
-
    _sumT Sum;
    void operator()(const czllPtrT _czll);
 
-private:
+//private:
    void sumNeighbours(const pnodPtrT _part);
 
    //treeGhost p1, p2;
@@ -62,7 +61,7 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
 
    // go to the particle and load its data
    curPtr = _part;
-   const _partT* ipartPtr = static_cast<_partT*>(_part->partPtr);
+   _partT* const ipartPtr = static_cast<_partT*>(_part->partPtr);
    const vect3dT ppos  = _part->pos;
    
    //FIXME: this factor should be set more generically

@@ -51,13 +51,13 @@ typedef sphlatch::GravityWorker<macT, partT>   gravT;
 
 //#include "bhtree_worker_sphsum.cpp"
 
-struct densFunc
+/*struct densFunc
 {
    void operator()(partT* _i, const partT* _j)
    {
       _i->pos = _j->pos;
    }
-};
+};*/
 
 #include "bhtree_worker_sphsum.cpp"
 typedef sphlatch::SPHsumWorker<densFunc>   densSumT;
