@@ -69,7 +69,8 @@ typedef sphlatch::GravityWorker<macT, partT>   gravT;
 
 
 #include "sph_algorithms.cpp"
-typedef sphlatch::densSum<partT>               densT;
+typedef sphlatch::CubicSpline3D krnlT;
+typedef sphlatch::densSum<partT, krnlT>               densT;
 #include "bhtree_worker_sphsum.cpp"
 typedef sphlatch::SPHsumWorker<densT, partT>   densSumT;
 
