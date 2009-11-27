@@ -9,20 +9,18 @@ struct densSum
 {
    void zero(_partT* const _i)
    {
-      std::cout << "zero!\n";
-
       _i->rho = 0.;
    }
 
-   void operator()(const _partT* _i, const _partT* const _j)
+   void operator()(_partT* const _i, const _partT* const _j)
    {
       const vect3dT rvec = _i->pos - _j->pos;
       const fType   rr   = rvec[0] * rvec[0] +
                            rvec[1] * rvec[1] +
                            rvec[2] * rvec[2];
 
-      std::cout << sqrt(rr) << "\n";
-      //_i->rho += 42.*(_j->m);
+      ///std::cout << sqrt(rr) << "\n";
+      _i->rho += 42.*(_j->m)*rr;
    }
 };
 

@@ -111,18 +111,17 @@ bool BHTreeWorker::sphereTotInCell(const vect3dT& _pos, const fType& _r)
    assert(curPtr != NULL);
    const fType RCellMRSph = 0.5 * static_cast<gcllPtrT>(curPtr)->clSz - _r;
    return(all(static_cast<gcllPtrT>(curPtr)->cen - _pos < RCellMRSph) &&
-          all(static_cast<gcllPtrT>(curPtr)->cen - _pos > -RCellMRSph ));
-};
+          all(static_cast<gcllPtrT>(curPtr)->cen - _pos > -RCellMRSph));
+}
 
 bool BHTreeWorker::sphereTotOutCell(const vect3dT& _pos, const fType& _r)
 {
    assert(curPtr != NULL);
    const fType RCellPRSph = 0.5 * static_cast<gcllPtrT>(curPtr)->clSz + _r;
-   return(all(static_cast<gcllPtrT>(curPtr)->cen - _pos > RCellPRSph) &&
-          all(static_cast<gcllPtrT>(curPtr)->cen - _pos < -RCellPRSph ));
-  return true;
-};
 
+   return(any(static_cast<gcllPtrT>(curPtr)->cen - _pos > RCellPRSph) ||
+          any(static_cast<gcllPtrT>(curPtr)->cen - _pos < -RCellPRSph ));
+}
 
 ///
 /// get the cell octant for a position, no checks are performed whether
@@ -177,7 +176,6 @@ size_t BHTreeWorker::getChildNo(nodePtrT _nodePtr, nodePtrT _parPtr)
    return(8);
 }
 
-
 ///
 /// transforms a CZ cell into a quadrupole
 ///
@@ -227,7 +225,7 @@ qcllPtrT BHTreeWorker::partToCell(nodePtrT _cellPtr, const size_t _oct)
 
    newCellPtr->child[newOct] = resPartPtr;
    resPartPtr->parent        = newCellPtr;
-   resPartPtr->depth         = newCellPtr->depth+1;
+   resPartPtr->depth         = newCellPtr->depth + 1;
 
    return(newCellPtr);
 }

@@ -44,6 +44,17 @@ _partT & ParticleSet<_partT>::operator[](const size_t _i)
 }
 
 template<typename _partT>
+void ParticleSet<_partT>::operator=(const ParticleSet& _rhs)
+{
+   step       = _rhs.step;
+   loadVars   = _rhs.loadVars;
+   saveVars   = _rhs.saveVars;
+   attributes = _rhs.attributes;
+   parts      = _rhs.parts;
+   return(*this);
+}
+
+template<typename _partT>
 void ParticleSet<_partT>::resize(const size_t _i)
 {
    parts.resize(_i);
@@ -52,11 +63,10 @@ void ParticleSet<_partT>::resize(const size_t _i)
 template<typename _partT>
 size_t ParticleSet<_partT>::getNop()
 {
-   return parts.size();
+   return(parts.size());
 }
 
-
- #ifdef SPHLATCH_HDF5
+#ifdef SPHLATCH_HDF5
 template<typename _partT>
 void ParticleSet<_partT>::loadHDF5(std::string _filename)
 {
@@ -75,9 +85,9 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
 
    fpl = H5Pcreate(H5P_FILE_ACCESS);
 
-  #ifdef SPHLATCH_MPI
+ #ifdef SPHLATCH_MPI
    H5Pset_fapl_mpio(fpl, MPI::COMM_WORLD, MPI::INFO_NULL);
-  #endif
+ #endif
    fh = H5Fopen(_filename.c_str(), H5F_ACC_RDONLY, fpl);
    H5Pclose(fpl);
 
@@ -96,9 +106,9 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
 
 
    hid_t accpl = H5Pcreate(H5P_DATASET_XFER);
-  #ifdef SPHLATCH_MPI
+ #ifdef SPHLATCH_MPI
    H5Pset_dxpl_mpio(accpl, H5FD_MPIO_COLLECTIVE);
-  #endif
+ #endif
 
    bool   nopdet = false;
    size_t notp, nolp = 0, nopck;
@@ -272,9 +282,9 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
    hid_t fh, fpl;
 
    fpl = H5Pcreate(H5P_FILE_ACCESS);
-  #ifdef SPHLATCH_MPI
+ #ifdef SPHLATCH_MPI
    H5Pset_fapl_mpio(fpl, MPI::COMM_WORLD, MPI::INFO_NULL);
-  #endif
+ #endif
 
    ///
    /// if the file already exists, open it. otherwise, create a new one
@@ -311,11 +321,11 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
 
    hid_t accpl = H5Pcreate(H5P_DATASET_XFER);
 
-  #ifdef SPHLATCH_MPI
+ #ifdef SPHLATCH_MPI
    // FIXME: make sure ind. is used, when some processes don't have parts
    H5Pset_dxpl_mpio(accpl, H5FD_MPIO_COLLECTIVE);
    //H5Pset_dxpl_mpio(accpl, H5FD_MPIO_INDEPENDENT);
-  #endif
+ #endif
 
    // write data
    for (ioVarLT::const_iterator vItr = saveVars.begin();
@@ -489,57 +499,56 @@ bool ParticleSet<_partT>::objExist(hid_t _fh, std::string _op)
 #endif
 
 /*
-void IOManager::savePrimitive(matrixRefType _matr,
+   void IOManager::savePrimitive(matrixRefType _matr,
                               std::string   _name,
                               std::string   _outputFile)
-{ }
+   { }
 
-void IOManager::savePrimitive(valvectRefType _valvect,
+   void IOManager::savePrimitive(valvectRefType _valvect,
                               std::string    _name,
                               std::string    _outputFile)
-{ }
+   { }
 
-void IOManager::savePrimitive(idvectRefType _idvect,
+   void IOManager::savePrimitive(idvectRefType _idvect,
                               std::string   _name,
                               std::string   _outputFile)
-{ }
+   { }
 
-void IOManager::loadPrimitive(valvectRefType _vect,
+   void IOManager::loadPrimitive(valvectRefType _vect,
                               std::string    _name,
                               std::string    _inputFile)
-{ }
+   { }
 
-fType IOManager::loadAttribute(std::string _name, std::string _inputFile)
-{ }
+   fType IOManager::loadAttribute(std::string _name, std::string _inputFile)
+   { }
 
-void IOManager::saveAttribute(fType _attr, std::string _name,
+   void IOManager::saveAttribute(fType _attr, std::string _name,
                               std::string _inputFile)
-{ }
+   { }
 
-IOManager::stringListType
-IOManager::discoverVars(std::string _inputFile,
+   IOManager::stringListType
+   IOManager::discoverVars(std::string _inputFile,
                         std::string _stepName)
-{ }
+   { }
 
-IOManager::stringListType
-IOManager::discoverVars(std::string _inputFile)
-{ }
+   IOManager::stringListType
+   IOManager::discoverVars(std::string _inputFile)
+   { }
 
-quantsType IOManager::getQuants(std::string _inputFile, std::string _stepName)
-{ }
+   quantsType IOManager::getQuants(std::string _inputFile, std::string _stepName)
+   { }
 
-quantsType IOManager::getQuants(std::string _inputFile)
-{ }
+   quantsType IOManager::getQuants(std::string _inputFile)
+   { }
 
-void IOManager::setSinglePrecOut(void)
-{ }
+   void IOManager::setSinglePrecOut(void)
+   { }
 
-void IOManager::setDoublePrecOut(void)
-{ }
+   void IOManager::setDoublePrecOut(void)
+   { }
 
-hid_t IOManager::getLocFilehandleRW(std::string _outputFile)
-{ }
+   hid_t IOManager::getLocFilehandleRW(std::string _outputFile)
+   { }
 
-hid_t IOManager::getLocFilehandleRO(std::string _inputFile)
-{ }*/
-
+   hid_t IOManager::getLocFilehandleRO(std::string _inputFile)
+   { }*/

@@ -23,12 +23,8 @@ public:
    _sumT Sum;
    void operator()(const czllPtrT _czll);
 
-//private:
+private:
    void sumNeighbours(const pnodPtrT _part);
-
-   //treeGhost p1, p2;
-
-   //S(&p1, &p2);
 };
 
 template<typename _sumT, typename _partT>
@@ -52,23 +48,16 @@ void SPHsumWorker<_sumT, _partT>::operator()(const czllPtrT _czll)
 template<typename _sumT, typename _partT>
 void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
 {
-/// - call the neighbour search recursor
-/// - sort out cells which do not touch 2h sphere
-/// - add particles to list
-/// - brute force sort out non-neighbours
-/// - return neighbours
-///
-
    // go to the particle and load its data
    curPtr = _part;
    _partT* const ipartPtr = static_cast<_partT*>(_part->partPtr);
-   const vect3dT ppos  = _part->pos;
-   
-   //FIXME: this factor should be set more generically
-   const fType   srad  = 2. * static_cast<_partT*>(_part->partPtr)->h;
-   const fType   srad2 = srad * srad;
+   const vect3dT ppos     = _part->pos;
 
-#ifdef SPHLATCH_NONEIGH   
+   //FIXME: this factor should be set more generically
+   const fType srad  = 2. * static_cast<_partT*>(_part->partPtr)->h;
+   const fType srad2 = srad * srad;
+
+#ifdef SPHLATCH_NONEIGH
    size_t non = 0;
 #endif
 
@@ -76,10 +65,8 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
    goUp();
 
    // go up, until the search sphere is completely in the current cell
-   while (sphereTotInCell(ppos, srad) && curPtr->parent != NULL)
-   {
+   while (not sphereTotInCell(ppos, srad) && curPtr->parent != NULL)
       goUp();
-   }
 
    Sum.zero(ipartPtr);
 
@@ -93,12 +80,12 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
          const fType rz = ppos[2] - static_cast<pnodPtrT>(curPtr)->pos[2];
          const fType rr = rx * rx + ry * ry + rz * rz;
 
-         if ( rr < srad2 )
+         if (rr < srad2)
          {
-           Sum(ipartPtr, 
-               static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr) );
-#ifdef SPHLATCH_NONEIGH   
-           non++;
+            Sum(ipartPtr,
+                static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr));
+#ifdef SPHLATCH_NONEIGH
+            non++;
 #endif
          }
 
@@ -117,7 +104,7 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
             goNext();
       }
    }
-#ifdef SPHLATCH_NONEIGH   
+#ifdef SPHLATCH_NONEIGH
    static_cast<_partT*>(_part->partPtr)->noneigh = non;
 #endif
 }

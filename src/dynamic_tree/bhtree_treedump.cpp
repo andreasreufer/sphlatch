@@ -21,6 +21,7 @@ public:
 
 public:
    void dotDump(std::string _dotFilename);
+   void dotDump(std::string _dotFilename, const nodePtrT _node);
 
    void ptrDump(const std::string _filename);
    void ptrDump(const std::string _filename, const nodePtrT _node);
@@ -42,6 +43,18 @@ void BHTreeDump::dotDump(std::string _dotFilename)
    dumpFile << "}\n";
    dumpFile.close();
 }
+
+void BHTreeDump::dotDump(std::string _dotFilename, const nodePtrT _node)
+{
+   dumpFile.open(_dotFilename.c_str(), std::ios::out);
+
+   curPtr = _node;
+   dumpFile << "digraph graphname { \n";
+   dotRecursor();
+   dumpFile << "}\n";
+   dumpFile.close();
+}
+
 
 void BHTreeDump::dotRecursor()
 {

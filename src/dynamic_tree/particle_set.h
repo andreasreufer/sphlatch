@@ -21,11 +21,16 @@ namespace sphlatch {
 template<typename _partT>
 class ParticleSet {
 public:
-   
    ParticleSet();
    ~ParticleSet();
+   
+   typedef std::list<std::string> strLT;
+   typedef partT::ioVar ioVarT;
+   typedef partT::ioVarLT ioVarLT;
+   typedef IOPart IOPartT;
 
    _partT& operator[](const size_t _i);
+   void operator=(const ParticleSet& _ps);
 
 #ifdef SPHLATCH_HDF5
    void saveHDF5(std::string _file);
@@ -36,16 +41,10 @@ public:
    size_t getNop();
 
    cType step;
-   typedef std::list<std::string> strLT;
-   typedef partT::ioVar ioVarT;
-   typedef partT::ioVarLT ioVarLT;
-   typedef IOPart IOPartT;
-
    ioVarLT loadVars, saveVars;
-
    attrMT attributes;
 
-private:
+protected:
    std::vector<_partT> parts;
 
 

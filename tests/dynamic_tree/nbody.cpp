@@ -4,13 +4,14 @@
 #include <omp.h>
 #define SPHLATCH_OPENMP
 #define SPHLATCH_HDF5
+#define SPHLATCH_NONEIGH
 
 #include "typedefs.h"
-typedef sphlatch::fType    fType;
-typedef sphlatch::vect3dT  vect3dT;
+typedef sphlatch::fType     fType;
+typedef sphlatch::vect3dT   vect3dT;
 
 #include "bhtree.cpp"
-typedef sphlatch::BHTree   treeT;
+typedef sphlatch::BHTree    treeT;
 
 #include "bhtree_particle.h"
 #include "sph_fluid_particle.h"
@@ -41,8 +42,10 @@ public:
 
       vars.push_back(storeVar(pos, "pos"));
       vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(vel, "acc"));
       vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(id, "id"));
+      vars.push_back(storeVar(noneigh, "noneigh"));
 
       return(vars);
    }
@@ -66,9 +69,9 @@ typedef sphlatch::GravityWorker<macT, partT>   gravT;
 
 
 #include "sph_algorithms.cpp"
-typedef sphlatch::densSum<partT> densT;
+typedef sphlatch::densSum<partT>               densT;
 #include "bhtree_worker_sphsum.cpp"
-typedef sphlatch::SPHsumWorker<densT, partT>  densSumT;
+typedef sphlatch::SPHsumWorker<densT, partT>   densSumT;
 
 
 int main(int argc, char* argv[])
@@ -78,26 +81,29 @@ int main(int argc, char* argv[])
 #endif
    treeT& Tree(treeT::instance());
 
-   partSetT particles;
-   particles.loadHDF5("in.h5part");
-   const size_t nop = particles.getNop();
-   const fType cppart = 1. / nop;
+   partSetT partsTree;
+   partsTree.loadHDF5("in.h5part");
+   const size_t nop    = partsTree.getNop();
+   const fType  cppart = 1. / nop;
    std::cout << nop << " " << cppart << "\n";
-   
+
    double start;
 
    start = omp_get_wtime();
    for (size_t i = 0; i < nop; i++)
    {
-     particles[i].cost = cppart;
-     Tree.insertPart(particles[i]);
+      partsTree[i].cost = cppart;
+      partsTree[i].h    = 0.1;
+      Tree.insertPart(partsTree[i]);
    }
-   std::cout << "particles insert " << omp_get_wtime() - start << "s\n";
+   std::cout << "partsTree insert " << omp_get_wtime() - start << "s\n";
+
+   partSetT partsBF = partsTree;
 
    start = omp_get_wtime();
    Tree.update(0.8, 1.2);
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
-   
+
    gravT gravWorker(&Tree);
    std::cout << "gravity ...\n";
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
@@ -107,30 +113,29 @@ int main(int argc, char* argv[])
 #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
-   
+
    std::cout << "calcGravity()    " << omp_get_wtime() - start << "s\n";
 
    densSumT densWorker(&Tree);
-   particles[0].h = 1.00;
-   densWorker.sumNeighbours( particles[0].treeNode );
-   
-   /*start = omp_get_wtime();
-#pragma omp parallel for firstprivate(gravWorker)
+   start = omp_get_wtime();
+#pragma omp parallel for firstprivate(densWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       densWorker(CZbottomLoc[i]);
-   
-   std::cout << "calcGravity()    " << omp_get_wtime() - start << "s\n";*/
 
-   particles.saveHDF5("out_tree.h5part");
+   std::cout << "densWorker()     " << omp_get_wtime() - start << "s\n";
 
-   partSetT partsBF;
-   partsBF.loadHDF5("in.h5part");
+   partsTree.saveHDF5("out_tree.h5part");
 
    vect3dT cacc;
+   size_t  non;
    start = omp_get_wtime();
    for (size_t i = 0; i < nop; i++)
    {
       cacc = 0, 0, 0;
+      non  = 1;
+
+      const fType srad = 2. * partsBF[i].h;
+
       for (size_t j = 0; j < nop; j++)
       {
          if (i != j)
@@ -142,16 +147,26 @@ int main(int argc, char* argv[])
             const fType mOr3 = partsBF[j].m / (r * r * r);
 
             cacc -= mOr3 * rvec;
+
+            if (r < srad)
+               non++;
          }
       }
-      partsBF[i].acc = cacc;
+      partsBF[i].acc     = cacc;
+      partsBF[i].noneigh = non;
    }
    std::cout << "calcGravity() BF " << omp_get_wtime() - start << "s\n";
    partsBF.saveHDF5("out_bf.h5part");
 
    std::cout << "brute force: " << partsBF[9].acc << "\n";
-   std::cout << "tree       : " << particles[9].acc << "\n";
-  
+   std::cout << "tree       : " << partsTree[9].acc << "\n";
+
+   size_t nonDiffSum = 0;
+   for (size_t i = 0; i < nop; i++)
+      nonDiffSum += abs(partsTree[i].noneigh - partsBF[i].noneigh);
+
+   std::cout << " sum of difference in neighbours " << nonDiffSum << "\n";
+
 #ifdef SPHLATCH_MPI
    MPI::Finalize();
 #endif
