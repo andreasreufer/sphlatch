@@ -9,6 +9,7 @@
 #include "typedefs.h"
 typedef sphlatch::fType     fType;
 typedef sphlatch::vect3dT   vect3dT;
+typedef sphlatch::box3dT   box3dT;
 
 #include "bhtree.cpp"
 typedef sphlatch::BHTree    treeT;
@@ -81,6 +82,12 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
    treeT& Tree(treeT::instance());
+   
+   box3dT treeBox;
+   treeBox.cen = 0.5, 0.5, 0.5;
+   treeBox.size = 1.;
+
+   Tree.setExtent(treeBox);
 
    partSetT partsTree;
    partsTree.loadHDF5("in.h5part");

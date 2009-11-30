@@ -54,7 +54,7 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
    const vect3dT ppos     = _part->pos;
 
    //FIXME: this factor should be set more generically
-   const fType hi    = static_cast<_partT*>(_part->partPtr)->h;
+   const fType hi = static_cast<_partT*>(_part->partPtr)->h;
    const fType srad  = 2. * hi;
    const fType srad2 = srad * srad;
 
@@ -77,7 +77,7 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
       if (curPtr->isParticle)
       {
          const vect3dT rvec = ppos - static_cast<pnodPtrT>(curPtr)->pos;
-         const fType   rr   = dot(rvec, rvec);
+         const fType rr = dot( rvec, rvec );
 
          if (rr < srad2)
          {
@@ -107,8 +107,9 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
 #ifdef SPHLATCH_NONEIGH
    static_cast<_partT*>(_part->partPtr)->noneigh = non;
 #endif
-
+   
    Sum.postSum(ipartPtr);
+
 }
 };
 

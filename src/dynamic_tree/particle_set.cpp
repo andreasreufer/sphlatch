@@ -66,6 +66,50 @@ size_t ParticleSet<_partT>::getNop()
    return(parts.size());
 }
 
+template<typename _partT>
+vect3dT ParticleSet<_partT>::getCom()
+{
+   vect3dT com;
+
+   com = 0., 0., 0.;
+   fType m = 0.;
+
+   const size_t nop = parts.size();
+   for (size_t i = 0; i < nop; i++)
+   {
+      com += parts[i].pos * parts[i].m;
+      m   += parts[i].m;
+   }
+
+   //FIXME: globally sum up
+   com /= m;
+   return(com);
+}
+
+template<typename _partT>
+box3dT ParticleSet<_partT>::getBox()
+{
+   fType xmin = fTypeInf, ymin = fTypeInf, zmin = fTypeInf;
+   fType xmax = -fTypeInf, ymax = -fTypeInf, zmax = -fTypeInf;
+
+   const size_t nop = parts.size();
+   for (size_t i = 1; i < nop; i++)
+   {
+      xmin = xmin < parts[i].pos[0] ? xmin : parts[i].pos[0];
+      ymin = ymin < parts[i].pos[1] ? ymin : parts[i].pos[1];
+      zmin = zmin < parts[i].pos[2] ? zmin : parts[i].pos[2];
+
+      xmax = xmax > parts[i].pos[0] ? xmax : parts[i].pos[0];
+      ymax = ymax > parts[i].pos[1] ? ymax : parts[i].pos[1];
+      zmax = zmax > parts[i].pos[2] ? zmax : parts[i].pos[2];
+   }
+
+   box3dT box;
+   box.cen  = 0.5 * (xmax + xmin), 0.5 * (ymax + ymin), 0.5 * (zmax + zmin);
+   box.size = std::max(xmax - xmin, std::max(ymax - ymin, zmax - zmin));
+   return(box);
+}
+
 #ifdef SPHLATCH_HDF5
 template<typename _partT>
 void ParticleSet<_partT>::loadHDF5(std::string _filename)

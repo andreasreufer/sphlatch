@@ -10,8 +10,8 @@
 #endif
 
 #ifdef SPHLATCH_HDF5
-#define H5_NO_DEPRECATED_SYMBOLS
-#include <hdf5.h>
+ #define H5_NO_DEPRECATED_SYMBOLS
+ #include <hdf5.h>
 #endif
 
 #include "typedefs.h"
@@ -23,11 +23,11 @@ class ParticleSet {
 public:
    ParticleSet();
    ~ParticleSet();
-   
-   typedef std::list<std::string> strLT;
-   typedef partT::ioVar ioVarT;
-   typedef partT::ioVarLT ioVarLT;
-   typedef IOPart IOPartT;
+
+   typedef std::list<std::string>   strLT;
+   typedef partT::ioVar             ioVarT;
+   typedef partT::ioVarLT           ioVarLT;
+   typedef IOPart                   IOPartT;
 
    _partT& operator[](const size_t _i);
    void operator=(const ParticleSet& _ps);
@@ -37,12 +37,16 @@ public:
    void loadHDF5(std::string _file);
 #endif
 
+
    void resize(const size_t _i);
    size_t getNop();
 
-   cType step;
+   vect3dT getCom();
+   box3dT  getBox();
+
+   cType   step;
    ioVarLT loadVars, saveVars;
-   attrMT attributes;
+   attrMT  attributes;
 
 protected:
    std::vector<_partT> parts;
@@ -59,7 +63,7 @@ protected:
                             const H5A_info_t* info, void* opData);
 
    static strLT dsetsInFile, attrsInFile;
-   hid_t h5mITYPE, h5mFTYPE, h5fITYPE, h5fFTYPE;
+   hid_t        h5mITYPE, h5mFTYPE, h5fITYPE, h5fFTYPE;
 #endif
 };
 };

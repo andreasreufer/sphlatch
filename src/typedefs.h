@@ -42,10 +42,20 @@ typedef double                        fType;
 typedef fType*                        fPtrType;
 typedef fType&                        fRefType;
 
+const fType fTypeInf = std::numeric_limits<fType>::infinity();
+
 typedef blitz::TinyVector<fType, 3>   vect3dT;
-enum dims3 {
+enum dims3
+{
    X, Y, Z
 };
+
+struct box3dT
+{
+   vect3dT cen;
+   fType   size;
+};
+
 
 ///
 /// type for particle or tree node IDs
@@ -113,17 +123,17 @@ typedef attrMapType*                              attrMapPtrType;
 ///
 /// a vector of strings
 ///
-typedef std::vector<std::string>                  stringVectType;
+typedef std::vector<std::string>   stringVectType;
 
 ///
 /// a vector of strings
 ///
-typedef std::set<std::string>                     stringSetType;
+typedef std::set<std::string>      stringSetType;
 
 ///
 /// a list of strings
 ///
-typedef std::list<std::string>                    stringListType;
+typedef std::list<std::string>     stringListType;
 };
 
 #define LEGACY

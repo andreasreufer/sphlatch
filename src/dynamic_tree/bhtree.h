@@ -49,6 +49,7 @@ public:
    ///
    /// public functions
    ///
+   void setExtent(const box3dT _box);
    void insertPart(treeGhost& _part);
    void update(const fType _cmin, const fType _cmax);
    czllPtrVectT getCZbottomLoc();
@@ -58,7 +59,6 @@ private:
 
    czllPtrVectT getCzllPtrVect(czllPtrListT _czllList);
    void sumUpCosts(), sumUpCostsRec();
-
    size_t round;
 
 protected:

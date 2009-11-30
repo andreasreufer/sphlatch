@@ -25,6 +25,7 @@
 
 namespace sphlatch {
 BHTree::BHTree() :
+   round(0),
    rootPtr(new czllT),
    noCells(1),
    noParts(0),
@@ -46,19 +47,11 @@ BHTree::BHTree() :
    static_cast<czllPtrT>(rootPtr)->atBottom = true;
    static_cast<czllPtrT>(rootPtr)->depth    = 0;
    static_cast<czllPtrT>(rootPtr)->ident    = 0;
-
-   // just temporary
-   static_cast<czllPtrT>(rootPtr)->cen  = 0.5, 0.5, 0.5;
-   static_cast<czllPtrT>(rootPtr)->clSz = 1.;
-
+   
    static_cast<czllPtrT>(rootPtr)->parent = NULL;
 
-   round = 0;
-
-   //maxDepth = 100;
-
-/*   std::cout << static_cast<czllPtrT>(rootPtr)->cen << "  "
-             << static_cast<czllPtrT>(rootPtr)->clSz << "\n";*/
+   static_cast<czllPtrT>(rootPtr)->cen  = 0.5, 0.5, 0.5;
+   static_cast<czllPtrT>(rootPtr)->clSz = 1.;
 }
 
 BHTree::~BHTree()
@@ -70,6 +63,12 @@ BHTree::selfRef BHTree::instance()
    if (_instance == NULL)
       _instance = new BHTree;
    return(*_instance);
+}
+
+void BHTree::setExtent(const box3dT _box)
+{
+   static_cast<czllPtrT>(rootPtr)->cen  = _box.cen;
+   static_cast<czllPtrT>(rootPtr)->clSz = _box.size;
 }
 
 void BHTree::insertPart(treeGhost& _part)
