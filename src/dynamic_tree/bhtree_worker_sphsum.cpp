@@ -54,7 +54,8 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
    const vect3dT ppos     = _part->pos;
 
    //FIXME: this factor should be set more generically
-   const fType srad  = 2. * static_cast<_partT*>(_part->partPtr)->h;
+   const fType hi    = static_cast<_partT*>(_part->partPtr)->h;
+   const fType srad  = 2. * hi;
    const fType srad2 = srad * srad;
 
 #ifdef SPHLATCH_NONEIGH
@@ -68,22 +69,21 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
    while (not sphereTotInCell(ppos, srad) && curPtr->parent != NULL)
       goUp();
 
-   Sum.zero(ipartPtr);
+   Sum.preSum(ipartPtr);
 
    const nodePtrT lastNode = static_cast<gcllPtrT>(curPtr)->skip;
    while (curPtr != lastNode)
    {
       if (curPtr->isParticle)
       {
-         const fType rx = ppos[0] - static_cast<pnodPtrT>(curPtr)->pos[0];
-         const fType ry = ppos[1] - static_cast<pnodPtrT>(curPtr)->pos[1];
-         const fType rz = ppos[2] - static_cast<pnodPtrT>(curPtr)->pos[2];
-         const fType rr = rx * rx + ry * ry + rz * rz;
+         const vect3dT rvec = ppos - static_cast<pnodPtrT>(curPtr)->pos;
+         const fType   rr   = dot(rvec, rvec);
 
          if (rr < srad2)
          {
             Sum(ipartPtr,
-                static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr));
+                static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr),
+                rvec, rr, hi);
 #ifdef SPHLATCH_NONEIGH
             non++;
 #endif
@@ -107,6 +107,8 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
 #ifdef SPHLATCH_NONEIGH
    static_cast<_partT*>(_part->partPtr)->noneigh = non;
 #endif
+
+   Sum.postSum(ipartPtr);
 }
 };
 

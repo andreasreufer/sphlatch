@@ -9,21 +9,24 @@ struct densSum
 {
    _krnlT K;
 
-   void zero(_partT* const _i)
+   void   preSum(_partT* const _i)
    {
       _i->rho = 0.;
    }
 
-   void operator()(_partT* const _i, const _partT* const _j)
+   void postSum(_partT* const _i)
+   { }
+
+   void operator()(_partT* const _i,
+                   const _partT* const _j,
+                   const vect3dT& _rvec,
+                   const fType _rr,
+                   const fType _hi)
    {
-      const vect3dT rvec = _i->pos - _j->pos;
-      const fType   rr   = rvec[0] * rvec[0] +
-                           rvec[1] * rvec[1] +
-                           rvec[2] * rvec[2];
+      const fType r   = sqrt(_rr);
+      const fType hij = 0.5 * (_hi + _j->h);
 
-      const fType r = sqrt(rr);
-
-      _i->rho += 42. * (_j->m) * K(r, 1.0);
+      _i->rho += (_j->m) * K.value(r, hij);
    }
 };
 
@@ -61,8 +64,8 @@ public:
       // when q = 0, the kernel also has to be (0,0,0)
       if ((q > 2.) || (q == 0.))
       {
-        deriv = 0.,0.,0.;
-        return;
+         deriv = 0., 0., 0.;
+         return;
       }
       else
       {
@@ -85,8 +88,6 @@ public:
 
    vect3dT deriv;
 };
-
-
 };
 
 #endif
