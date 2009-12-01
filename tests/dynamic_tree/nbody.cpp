@@ -9,7 +9,7 @@
 #include "typedefs.h"
 typedef sphlatch::fType     fType;
 typedef sphlatch::vect3dT   vect3dT;
-typedef sphlatch::box3dT   box3dT;
+typedef sphlatch::box3dT    box3dT;
 
 #include "bhtree.cpp"
 typedef sphlatch::BHTree    treeT;
@@ -22,6 +22,7 @@ class particle :
    public sphlatch::treePart,
    public sphlatch::movingPart,
    public sphlatch::SPHfluidPart,
+   public sphlatch::energyPart,
    public sphlatch::IOPart
 {
 public:
@@ -32,7 +33,10 @@ public:
       vars.push_back(storeVar(pos, "pos"));
       vars.push_back(storeVar(vel, "vel"));
       vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
       vars.push_back(storeVar(id, "id"));
+      
+      vars.push_back(storeVar(u, "u"));
 
       return(vars);
    }
@@ -43,9 +47,11 @@ public:
 
       vars.push_back(storeVar(pos, "pos"));
       vars.push_back(storeVar(vel, "vel"));
-      vars.push_back(storeVar(vel, "acc"));
+      vars.push_back(storeVar(acc, "acc"));
       vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
       vars.push_back(storeVar(id, "id"));
+      vars.push_back(storeVar(rho, "rho"));
       vars.push_back(storeVar(noneigh, "noneigh"));
 
       return(vars);
@@ -59,21 +65,25 @@ class ghost :
    public sphlatch::movingGhost
 { };
 
-typedef ghost                                  ghstT;
+typedef ghost                                    ghstT;
 
 #include "particle_set.cpp"
-typedef sphlatch::ParticleSet<partT>           partSetT;
+typedef sphlatch::ParticleSet<partT>             partSetT;
 
 #include "bhtree_worker_grav.cpp"
-typedef sphlatch::fixThetaMAC                  macT;
-typedef sphlatch::GravityWorker<macT, partT>   gravT;
-
+typedef sphlatch::fixThetaMAC                    macT;
+typedef sphlatch::GravityWorker<macT, partT>     gravT;
 
 #include "sph_algorithms.cpp"
-typedef sphlatch::CubicSpline3D krnlT;
-typedef sphlatch::densSum<partT, krnlT>               densT;
 #include "bhtree_worker_sphsum.cpp"
-typedef sphlatch::SPHsumWorker<densT, partT>   densSumT;
+
+typedef sphlatch::CubicSpline3D                  krnlT;
+
+typedef sphlatch::densSum<partT, krnlT>          densT;
+typedef sphlatch::SPHsumWorker<densT, partT>     densSumT;
+
+typedef sphlatch::accPowSum<partT, krnlT>        accPowT;
+typedef sphlatch::SPHsumWorker<accPowT, partT>   accPowSumT;
 
 
 int main(int argc, char* argv[])
@@ -82,22 +92,22 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
    treeT& Tree(treeT::instance());
-   
+
    partSetT partsTree;
    partsTree.loadHDF5("in.h5part");
 
    const size_t nop    = partsTree.getNop();
    const fType  cppart = 1. / nop;
+   
    std::cout << nop << " " << cppart << "\n";
 
-   Tree.setExtent( partsTree.getBox() * 1.5 );
+   Tree.setExtent(partsTree.getBox() * 1.5);
 
    double start;
    start = omp_get_wtime();
    for (size_t i = 0; i < nop; i++)
    {
       partsTree[i].cost = cppart;
-      partsTree[i].h    = 0.1;
       Tree.insertPart(partsTree[i]);
    }
    std::cout << "partsTree insert " << omp_get_wtime() - start << "s\n";
@@ -109,7 +119,6 @@ int main(int argc, char* argv[])
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
 
    gravT gravWorker(&Tree);
-   std::cout << "gravity ...\n";
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
 
@@ -127,8 +136,23 @@ int main(int argc, char* argv[])
       densWorker(CZbottomLoc[i]);
 
    std::cout << "densWorker()     " << omp_get_wtime() - start << "s\n";
+   
+   
+   accPowSumT accPowWorker(&Tree);
+   start = omp_get_wtime();
+#pragma omp parallel for firstprivate(accPowWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      accPowWorker(CZbottomLoc[i]);
+
+   std::cout << "accPowWorker()   " << omp_get_wtime() - start << "s\n";
+
 
    partsTree.saveHDF5("out_tree.h5part");
+
+#ifdef SPHLATCH_MPI
+   MPI::Finalize();
+#endif
+   return(0);
 
    vect3dT cacc;
    size_t  non;

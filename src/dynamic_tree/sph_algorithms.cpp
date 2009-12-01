@@ -9,9 +9,50 @@ struct densSum
 {
    _krnlT K;
 
+   fType rhoi;
+
    void   preSum(_partT* const _i)
    {
-      _i->rho = 0.;
+      rhoi = 0.;
+      //_i->rho = 0.;
+   }
+
+   void operator()(_partT* const _i,
+                   const _partT* const _j,
+                   const vect3dT& _rvec,
+                   const fType _rr,
+                   const fType _hi)
+   {
+      const fType r   = sqrt(_rr);
+      const fType hij = 0.5 * (_hi + _j->h);
+      const fType mj = _j->m;
+
+      rhoi += mj * K.value(r, hij);
+   }
+   
+   void postSum(_partT* const _i)
+   { 
+     _i->rho = rhoi;
+   }
+
+};
+
+template<typename _partT, typename _krnlT>
+struct accPowSum
+{
+   _krnlT K;
+
+   void   preSum(_partT* const _i)
+   {
+      _i->acc = 0., 0., 0.;
+      _i->dudt = 0.;
+
+      vi = _i->vel;
+      rhoi = _i->rho;
+      pi = _i->p;
+      ci = _i->cs;
+
+      piOrhoirhoi = pi / (rhoi * rhoi);
    }
 
    void postSum(_partT* const _i)
@@ -23,11 +64,46 @@ struct densSum
                    const fType _rr,
                    const fType _hi)
    {
+      const fType alpha = 1.;
+      const fType beta = 2.;
+
       const fType r   = sqrt(_rr);
       const fType hij = 0.5 * (_hi + _j->h);
 
-      _i->rho += (_j->m) * K.value(r, hij);
+      const fType pj = _j->p;
+      const fType rhoj = _j->rho;
+      const fType cj = _j->cs;
+      
+      const vect3dT vij = vi - _j->vel;
+
+      const fType vijrij = dot( _rvec, vij );
+
+      fType av = 0.;
+      if ( vijrij < 0. )
+      {
+        const fType rijrij = dot( _rvec, _rvec );
+        const fType rhoij = 0.5*( rhoi + rhoj );
+        const fType cij = 0.5*( ci + cj);
+
+        const fType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
+
+        av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
+      }
+
+      const fType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
+      const fType mj = _j->m;
+
+      K.derive(r, hij, _rvec);
+
+      acci -= mj * accTerm * K.deriv;
+
+      //const vect3dT vij = 
+
+      /*_i->rho += (_j->m) * K.value(r, hij);*/
    }
+
+   vect3dT vi, acci;
+   fType rhoi, pi, ci, piOrhoirhoi;
 };
 
 
