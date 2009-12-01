@@ -37,12 +37,16 @@ void SPHsumWorker<_sumT, _partT>::operator()(const czllPtrT _czll)
    if (curPart == NULL)
       return;
 
+   double time = omp_get_wtime();
+
    while (curPart != stopChld)
    {
       if (curPart->isParticle)
          sumNeighbours(static_cast<pnodPtrT>(curPart));
       curPart = curPart->next;
    }
+
+   std::cout << this << ":" << _czll << ":" << myThread << "   " << omp_get_wtime() - time << "\n";
 }
 
 template<typename _sumT, typename _partT>
@@ -71,6 +75,7 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
 
    Sum.preSum(ipartPtr);
 
+   // now start to search the subtree for potential neighbours
    const nodePtrT lastNode = static_cast<gcllPtrT>(curPtr)->skip;
    while (curPtr != lastNode)
    {
@@ -93,6 +98,7 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
       }
       else
       {
+         // if search sphere completely outside of the current cell, skip it
          if (sphereTotOutCell(ppos, srad))
          {
             if (static_cast<gcllPtrT>(curPtr)->skip == NULL)

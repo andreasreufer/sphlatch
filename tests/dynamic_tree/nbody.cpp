@@ -142,10 +142,14 @@ int main(int argc, char* argv[])
    start = omp_get_wtime();
 #pragma omp parallel for firstprivate(accPowWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
+   {
+      std::cout << i << ":" << omp_get_thread_num() << "\n";
       accPowWorker(CZbottomLoc[i]);
+   }
 
    std::cout << "accPowWorker()   " << omp_get_wtime() - start << "s\n";
 
+   std::cout << "number of CZ cells was " << noCZbottomLoc << "\n";
 
    partsTree.saveHDF5("out_tree.h5part");
 
