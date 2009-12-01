@@ -54,6 +54,19 @@ struct box3dT
 {
    vect3dT cen;
    fType   size;
+
+   box3dT& operator=(const box3dT& _rhs)
+   {
+     cen = _rhs.cen; size = _rhs.size;
+     return *this;
+   }
+
+   box3dT operator*(const fType mul)
+   {
+     box3dT tmp;
+     tmp = *this; tmp.size *= mul;
+     return tmp;
+   }
 };
 
 

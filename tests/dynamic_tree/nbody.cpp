@@ -83,20 +83,16 @@ int main(int argc, char* argv[])
 #endif
    treeT& Tree(treeT::instance());
    
-   box3dT treeBox;
-   treeBox.cen = 0.5, 0.5, 0.5;
-   treeBox.size = 1.;
-
-   Tree.setExtent(treeBox);
-
    partSetT partsTree;
    partsTree.loadHDF5("in.h5part");
+
    const size_t nop    = partsTree.getNop();
    const fType  cppart = 1. / nop;
    std::cout << nop << " " << cppart << "\n";
 
-   double start;
+   Tree.setExtent( partsTree.getBox() * 1.5 );
 
+   double start;
    start = omp_get_wtime();
    for (size_t i = 0; i < nop; i++)
    {
