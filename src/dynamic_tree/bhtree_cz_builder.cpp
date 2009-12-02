@@ -158,6 +158,9 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
          CZlistItr++;
       }
    }
+  
+
+   // delete empty cells
 }
 
 // FIXME: move this to tree
@@ -368,8 +371,6 @@ void BHTreeCZBuilder::gatherCZcell(const czllPtrT _czllPtr)
                   gathOrphLast       = oldCell->orphLast;
                }
             }
-
-
             treePtr->CZbottom.remove(oldCell);
             _czllPtr->child[i] = czllToCell(oldCell);
          }

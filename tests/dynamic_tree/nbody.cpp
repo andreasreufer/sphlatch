@@ -119,14 +119,19 @@ int main(int argc, char* argv[])
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
 
 
+
    gravT gravWorker(&Tree);
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
 
-   /*for (int i = 0; i < noCZbottomLoc; i++)
+   for (int i = 0; i < noCZbottomLoc; i++)
      if ( CZbottomLoc[i]->chldFrst != NULL )
-      std::cout << i << " " << CZbottomLoc[i]->absCost << "\n";*/
+      std::cout << i << " " << CZbottomLoc[i]->absCost << "\n";
 
+/*#ifdef SPHLATCH_MPI
+   MPI::Finalize();
+#endif
+   return(0);*/
 
    start = omp_get_wtime();
 #pragma omp parallel for firstprivate(gravWorker)

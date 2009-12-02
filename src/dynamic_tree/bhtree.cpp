@@ -171,7 +171,22 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    round++;
 
    //FIXME: change this in parallel version
-   CZbottomLoc = CZbottom;
+
+   CZbottomLoc.clear();
+   for (czllPtrListT::iterator itr = CZbottom.begin();
+        itr != CZbottom.end(); itr++)
+   {
+     for (size_t i = 0; i < 8; i++)
+       if ( (*itr)->child[i] != NULL )
+       {
+         //std::cout << (*itr)->absCost << "\n";
+         CZbottomLoc.push_back( *itr );
+         //continue;
+         break;
+       }
+   }
+
+   //CZbottomLoc = CZbottom;
 }
 
 BHTree::czllPtrVectT BHTree::getCZbottomLoc()
