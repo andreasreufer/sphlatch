@@ -66,7 +66,7 @@ void BHTreeDump::dotRecursor()
 
    if (curPtr->isCZ)
       dumpFile << "label=\"" << curPtr << " (" <<
-      static_cast<czllPtrT>(curPtr)->absCost << ")\",";
+      static_cast<czllPtrT>(curPtr)->relCost << ")\",";
    else if (curPtr->isParticle)
       //dumpFile << "label=\"" << curPtr->ident << "\",";
       //dumpFile << "label=\"\",";
@@ -171,7 +171,7 @@ void BHTreeDump::ptrRecursor()
       {
          dumpFile << " noParts:" << static_cast<czllPtrT>(curPtr)->noParts
                   << "\n";
-         dumpFile << " absCost:" << static_cast<czllPtrT>(curPtr)->absCost
+         dumpFile << " relCost:" << static_cast<czllPtrT>(curPtr)->relCost
                   << "\n";
          dumpFile << " ol -> " << static_cast<czllPtrT>(curPtr)->orphLast
                   << "\n";

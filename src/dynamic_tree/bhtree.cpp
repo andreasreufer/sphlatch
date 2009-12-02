@@ -94,7 +94,7 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    // (prepare next walk?)
    czllPtrListT::iterator       CZItr = CZbottom.begin();
    czllPtrListT::const_iterator CZEnd = CZbottom.end();
-   std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
+   //std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
    while (CZItr != CZEnd)
    {
       insertmover.move(*CZItr);
@@ -109,11 +109,8 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    const fType costMin = normCellCost * _cmarkLow;
    const fType costMax = normCellCost * _cmarkHigh;
 
-   std::cout << costMin << "-" << costMax << "\n";
-
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(costMin, costMax);
-
    //dumper.dotDump(dumpName + "_2.dot");
    //dumper.ptrDump(dumpName + "_2.txt");
 
@@ -171,7 +168,6 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    round++;
 
    //FIXME: change this in parallel version
-
    CZbottomLoc.clear();
    for (czllPtrListT::iterator itr = CZbottom.begin();
         itr != CZbottom.end(); itr++)
@@ -179,14 +175,10 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
      for (size_t i = 0; i < 8; i++)
        if ( (*itr)->child[i] != NULL )
        {
-         //std::cout << (*itr)->absCost << "\n";
          CZbottomLoc.push_back( *itr );
-         //continue;
          break;
        }
    }
-
-   //CZbottomLoc = CZbottom;
 }
 
 BHTree::czllPtrVectT BHTree::getCZbottomLoc()

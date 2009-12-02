@@ -46,12 +46,15 @@ void GravityWorker<_MAC, _partT>::calcGravity(const czllPtrT _czll)
    if (curPart == NULL)
       return;
 
+   const double startTime = omp_get_wtime();
    while (curPart != stopChld)
    {
       if (curPart->isParticle)
          calcGravPart(static_cast<pnodPtrT>(curPart));
       curPart = curPart->next;
    }
+   const double compTime = omp_get_wtime() - startTime;
+   _czll->compTime += static_cast<fType>(compTime);
 }
 
 

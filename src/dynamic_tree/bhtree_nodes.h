@@ -146,22 +146,26 @@ private:
 ///
 class costzoneCellNode : public quadrupoleCellNode {
 public:
-
-   nodePtrT neighbour[27];
-   idType   domain;
-
-   fType absCost;
-
-   ///
-   /// adopted orphans
-   ///
-   pnodPtrT orphFrst, orphLast;
-
+   
    ///
    /// first and last nodes of CZ cell subtree
    /// (chldFrst is always the same as next)
    ///
    nodePtrT chldFrst, chldLast;
+
+   nodePtrT neighbour[27];
+   idType   domain;
+
+   fType relCost;
+   fType compTime;
+
+   typedef blitz::TinyVector<fType, 6> costHistT;
+   costHistT relCostOld;
+
+   ///
+   /// adopted orphans
+   ///
+   pnodPtrT orphFrst, orphLast;
 
    costzoneCellNode() { }
    ~costzoneCellNode() { }
@@ -174,7 +178,7 @@ public:
 
 private:
 #ifdef SPHLATCH_PADD64
-   char pad[56];
+   char pad[0];
 #endif
 };
 

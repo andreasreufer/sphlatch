@@ -37,16 +37,15 @@ void SPHsumWorker<_sumT, _partT>::operator()(const czllPtrT _czll)
    if (curPart == NULL)
       return;
 
-   //double time = omp_get_wtime();
-
+   const double startTime = omp_get_wtime();
    while (curPart != stopChld)
    {
       if (curPart->isParticle)
          sumNeighbours(static_cast<pnodPtrT>(curPart));
       curPart = curPart->next;
    }
-
-   //std::cout << this << ":" << _czll << ":" << myThread << "   " << omp_get_wtime() - time << "\n";
+   const double compTime = omp_get_wtime() - startTime;
+   _czll->compTime += static_cast<fType>(compTime);
 }
 
 template<typename _sumT, typename _partT>

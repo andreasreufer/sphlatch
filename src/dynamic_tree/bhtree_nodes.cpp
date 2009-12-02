@@ -98,7 +98,7 @@ void costzoneCellNode::clear()
    }
 
    domain  = 0;
-   absCost = 0.;
+   relCost = 0.;
    noParts = 0;
 
    orphFrst = NULL;
@@ -284,7 +284,11 @@ void costzoneCellNode::initFromCell(qcllT& _cell)
    atBottom = false;
    neighSet = false;
 
-   absCost = 0.;
+   relCost = 0.;
+   compTime = 0.;
+
+   for (size_t i = 0; i < 6; i++)
+     relCostOld[i] = 0.;
 }
 
 ///

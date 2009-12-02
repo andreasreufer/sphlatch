@@ -43,7 +43,7 @@ void BHTreePartsInsertMover::insert(partT& _part)
    newPartPtr->parent = treePtr->rootPtr;
 
    static_cast<czllPtrT>(rootPtr)->noParts++;
-   static_cast<czllPtrT>(rootPtr)->absCost += _part.cost;
+   static_cast<czllPtrT>(rootPtr)->relCost += _part.cost;
 
    pushUpAndToCZSingle(newPartPtr);
 }
@@ -135,7 +135,7 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
 
       if (CZencounter)
       {
-         static_cast<czllPtrT>(curPtr)->absCost -= partCost;
+         static_cast<czllPtrT>(curPtr)->relCost -= partCost;
          static_cast<czllPtrT>(curPtr)->noParts--;
       }
       goUp();
@@ -150,7 +150,7 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
       while (not curPtr->atBottom)
       {
          goChild(getOctant(pos));
-         static_cast<czllPtrT>(curPtr)->absCost += partCost;
+         static_cast<czllPtrT>(curPtr)->relCost += partCost;
          static_cast<czllPtrT>(curPtr)->noParts++;
       }
       static_cast<czllPtrT>(curPtr)->adopt(_pnodPtr);

@@ -13,7 +13,7 @@
 #include "bhtree_worker.cpp"
 
 #ifdef SPHLATCH_MPI
-#include "communication_manager.h"
+ #include "communication_manager.h"
 typedef sphlatch::CommunicationManager   commT;
 #endif
 
@@ -42,7 +42,7 @@ public:
 
 private:
 #ifdef SPHLATCH_MPI
-   commT& CommManager;
+   commT & CommManager;
 #endif
 
    fvectT CZcosts;
@@ -109,7 +109,7 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
          ///      cell and replace them by normal cells
          ///
 
-         if ((*CZlistItr)->absCost > costHighMark)
+         if ((*CZlistItr)->relCost > costHighMark)
          {
             CZbalanced = false;
             const czllPtrT refdCellPtr = *CZlistItr;
@@ -134,7 +134,7 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
          {
             const czllPtrT gathCellPtr =
                static_cast<czllPtrT>((*CZlistItr)->parent);
-            if (gathCellPtr->absCost < costLowMark)
+            if (gathCellPtr->relCost < costLowMark)
             {
                ///
                /// go back again in the CZ cell list just to make sure,
@@ -158,7 +158,7 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
          CZlistItr++;
       }
    }
-  
+
 
    // delete empty cells
 }
@@ -176,7 +176,7 @@ void BHTreeCZBuilder::sumCZcosts()
 
    while (CZlistCItr != CZlistEnd)
    {
-      CZcosts[i] = (*CZlistCItr)->absCost;
+      CZcosts[i] = (*CZlistCItr)->relCost;
       CZparts[i] = (*CZlistCItr)->noParts;
       i++;
       CZlistCItr++;
@@ -196,7 +196,7 @@ void BHTreeCZBuilder::sumCZcosts()
 
    while (CZlistItr != CZlistEnd)
    {
-      (*CZlistItr)->absCost = CZcosts[i];
+      (*CZlistItr)->relCost = CZcosts[i];
       (*CZlistItr)->noParts = CZparts[i];
       i++;
       CZlistItr++;
@@ -215,7 +215,7 @@ void BHTreeCZBuilder::sumCostRecursor()
 {
    if (not curPtr->atBottom)
    {
-      static_cast<czllPtrT>(curPtr)->absCost = 0.;
+      static_cast<czllPtrT>(curPtr)->relCost = 0.;
       static_cast<czllPtrT>(curPtr)->noParts = 0;
 
       for (size_t i = 0; i < 8; i++)
@@ -224,8 +224,8 @@ void BHTreeCZBuilder::sumCostRecursor()
          {
             goChild(i);
             sumCostRecursor();
-            static_cast<czllPtrT>(curPtr->parent)->absCost +=
-               static_cast<czllPtrT>(curPtr)->absCost;
+            static_cast<czllPtrT>(curPtr->parent)->relCost +=
+               static_cast<czllPtrT>(curPtr)->relCost;
             static_cast<czllPtrT>(curPtr->parent)->noParts +=
                static_cast<czllPtrT>(curPtr)->noParts;
             goUp();
@@ -285,18 +285,17 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
       }
    }
 
-
    ///
    /// now count the particles of this child
-   /// estimate the absolute cost of those
+   /// estimate the relative cost of those
    ///
-   const fType relCost = (_czllPtr->absCost / _czllPtr->noParts);
+   const fType relCostPerPart = (_czllPtr->relCost / _czllPtr->noParts);
    for (size_t i = 0; i < 8; i++)
    {
       goChild(i);
       countParts = 0;
       countPartsRecursor();
-      static_cast<czllPtrT>(curPtr)->absCost = countParts * relCost;
+      static_cast<czllPtrT>(curPtr)->relCost = countParts * relCostPerPart;
       static_cast<czllPtrT>(curPtr)->noParts = countParts;
 
       goUp();
@@ -320,7 +319,7 @@ void BHTreeCZBuilder::refineCZcell(const czllPtrT _czllPtr)
       static_cast<czllPtrT>(_czllPtr->child[newOct])->adopt(
          static_cast<pnodPtrT>(curOrph));
       static_cast<czllPtrT>(_czllPtr->child[newOct])->noParts++;
-      static_cast<czllPtrT>(_czllPtr->child[newOct])->absCost += relCost;
+      static_cast<czllPtrT>(_czllPtr->child[newOct])->relCost += relCostPerPart;
 
       curOrph = nxtOrph;
    }
