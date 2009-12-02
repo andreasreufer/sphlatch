@@ -95,6 +95,7 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
       czllPtrListT::iterator       CZlistItr = CZbottom.begin();
       czllPtrListT::const_iterator CZlistEnd = CZbottom.end();
 
+      CZbalanced = true;
       while (CZlistItr != CZlistEnd)
       {
          ///
@@ -108,7 +109,6 @@ void BHTreeCZBuilder::rebalance(const fType _lowMark, const fType _highMark)
          ///      cell and replace them by normal cells
          ///
 
-         CZbalanced = true;
          if ((*CZlistItr)->absCost > costHighMark)
          {
             CZbalanced = false;

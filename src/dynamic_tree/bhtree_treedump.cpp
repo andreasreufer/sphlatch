@@ -107,7 +107,7 @@ void BHTreeDump::dotRecursor()
       dumpFile << ",width=" << curSize << ",height=" << curSize << "];\n";
       }*/
 
-   if (curPtr->isParticle == false)
+   if (not curPtr->isParticle)
    {
       for (size_t i = 0; i < 8; i++)
       {

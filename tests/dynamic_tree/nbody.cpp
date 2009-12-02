@@ -118,9 +118,15 @@ int main(int argc, char* argv[])
    Tree.update(0.8, 1.2);
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
 
+
    gravT gravWorker(&Tree);
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
+
+   /*for (int i = 0; i < noCZbottomLoc; i++)
+     if ( CZbottomLoc[i]->chldFrst != NULL )
+      std::cout << i << " " << CZbottomLoc[i]->absCost << "\n";*/
+
 
    start = omp_get_wtime();
 #pragma omp parallel for firstprivate(gravWorker)
@@ -143,13 +149,14 @@ int main(int argc, char* argv[])
 #pragma omp parallel for firstprivate(accPowWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
    {
-      std::cout << i << ":" << omp_get_thread_num() << "\n";
+      //std::cout << i << ":" << omp_get_thread_num() << "\n";
       accPowWorker(CZbottomLoc[i]);
    }
 
    std::cout << "accPowWorker()   " << omp_get_wtime() - start << "s\n";
 
    std::cout << "number of CZ cells was " << noCZbottomLoc << "\n";
+   
 
    partsTree.saveHDF5("out_tree.h5part");
 
@@ -157,6 +164,8 @@ int main(int argc, char* argv[])
    MPI::Finalize();
 #endif
    return(0);
+
+   
 
    vect3dT cacc;
    size_t  non;

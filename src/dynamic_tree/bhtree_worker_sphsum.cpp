@@ -37,7 +37,7 @@ void SPHsumWorker<_sumT, _partT>::operator()(const czllPtrT _czll)
    if (curPart == NULL)
       return;
 
-   double time = omp_get_wtime();
+   //double time = omp_get_wtime();
 
    while (curPart != stopChld)
    {
@@ -46,7 +46,7 @@ void SPHsumWorker<_sumT, _partT>::operator()(const czllPtrT _czll)
       curPart = curPart->next;
    }
 
-   std::cout << this << ":" << _czll << ":" << myThread << "   " << omp_get_wtime() - time << "\n";
+   //std::cout << this << ":" << _czll << ":" << myThread << "   " << omp_get_wtime() - time << "\n";
 }
 
 template<typename _sumT, typename _partT>
