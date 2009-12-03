@@ -28,21 +28,26 @@ class particle :
 {
 public:
 
-  sphlatch::PredictorCorrectorO2<vect3dT> posIntegrator;
+   sphlatch::PredictorCorrectorO2<vect3dT> posInt;
+   sphlatch::PredictorCorrectorO1<fType>   energyInt;
 
-  void bootstrap()
-  {
-  };
+   void bootstrap()
+   {
+      posInt.bootstrap(pos, vel, acc);
+      energyInt.bootstrap(u, dudt);
+   }
 
-  void predict(const fType _dt)
-  {
-    posIntegrator.predict(pos, vel, acc, _dt);
-  };
-  
-  void correct(const fType _dt)
-  {
-    posIntegrator.correct(pos, vel, acc, _dt);
-  };
+   void predict(const fType _dt)
+   {
+      posInt.predict(pos, vel, acc, _dt);
+      energyInt.predict(u, dudt, _dt);
+   }
+
+   void correct(const fType _dt)
+   {
+      posInt.correct(pos, vel, acc, _dt);
+      energyInt.correct(u, dudt, _dt);
+   }
 
    ioVarLT getLoadVars()
    {
@@ -136,8 +141,6 @@ int main(int argc, char* argv[])
    Tree.update(0.8, 1.2);
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
 
-
-
    gravT gravWorker(&Tree);
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
@@ -155,15 +158,14 @@ int main(int argc, char* argv[])
    std::cout << "calcGravity()    " << omp_get_wtime() - start << "s\n";
 
 
-   for (int i = 0; i < noCZbottomLoc; i++)
+   /*for (int i = 0; i < noCZbottomLoc; i++)
       if (CZbottomLoc[i]->chldFrst != NULL)
          std::cout << i << "\t"
                    << CZbottomLoc[i]->relCost << "\t"
                    << CZbottomLoc[i]->noParts << "\t"
                    << CZbottomLoc[i]->compTime << "\t"
-                   << CZbottomLoc[i]->compTime / CZbottomLoc[i]->relCost <<
-         "\n";
-
+                   << CZbottomLoc[i]->compTime / CZbottomLoc[i]->relCost 
+                   << "\n";*/
 
    densSumT densWorker(&Tree);
    start = omp_get_wtime();
@@ -190,6 +192,7 @@ int main(int argc, char* argv[])
 
    partsTree.saveHDF5("out_tree.h5part");
 
+   std::cout << "particle size: " << sizeof(partT) << "\n";
 
 
 #ifdef SPHLATCH_MPI

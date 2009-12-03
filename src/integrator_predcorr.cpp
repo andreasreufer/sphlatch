@@ -28,7 +28,6 @@ public:
    _T ovar, odvar;
 };
 
-
 template<typename _T>
 class PredictorCorrectorO2
 {

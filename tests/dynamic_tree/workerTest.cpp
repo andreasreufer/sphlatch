@@ -51,16 +51,16 @@ typedef sphlatch::GravityWorker<macT, partT>   gravT;
 
 //#include "bhtree_worker_sphsum.cpp"
 
-/*struct densFunc
+struct densFunc
 {
    void operator()(partT* _i, const partT* _j)
    {
       _i->pos = _j->pos;
    }
-};*/
+};
 
 #include "bhtree_worker_sphsum.cpp"
-typedef sphlatch::SPHsumWorker<densFunc>   densSumT;
+typedef sphlatch::SPHsumWorker<densFunc, partT>   densSumT;
 
 #include "bhtree_worker.h"
 class BHTreeTester : public sphlatch::BHTreeWorker {
@@ -78,7 +78,7 @@ public:
    void dispRoot()
    {
       std::cout << static_cast<czllPtrT>(rootPtr)->noParts << "\n";
-      std::cout << static_cast<czllPtrT>(rootPtr)->absCost << "\n";
+      std::cout << static_cast<czllPtrT>(rootPtr)->relCost << "\n";
    }
 };
 
