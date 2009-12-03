@@ -14,7 +14,6 @@ struct densSum
    void   preSum(_partT* const _i)
    {
       rhoi = 0.;
-      //_i->rho = 0.;
    }
 
    void operator()(_partT* const _i,
@@ -102,7 +101,7 @@ struct accPowSum
 
    void postSum(_partT* const _i)
    {
-      _i->acc  = acci;
+      _i->acc  += acci;
       _i->dudt = dudti;
    }
 
