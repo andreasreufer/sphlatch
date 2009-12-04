@@ -11,28 +11,26 @@
  */
 
 #include "typedefs.h"
-//#ifdef SPHLATCH_LOGGER
-//#include "log_manager.h"
-//#endif
+#ifdef SPHLATCH_LOGGER
+#include "logger.cpp"
+#endif
 
 namespace sphlatch
 {
 
 class EOS
 {
-
 protected:
-/*#ifdef SPHLATCH_LOGGER
-typedef sphlatch::LogManager logManagerType;
-logManagerType& Logger;
-#endif*/
-
+#ifdef SPHLATCH_LOGGER
+typedef sphlatch::Logger logT;
+logT& Logger;
+#endif
 
 public:
-EOS() :
-/*#ifdef SPHLATCH_LOGGER
-Logger(logManagerType::instance()),
-#endif*/
+EOS()
+#ifdef SPHLATCH_LOGGER
+: Logger(logT::instance()),
+#endif
 {};
 
 ~EOS() {};

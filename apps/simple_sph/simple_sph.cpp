@@ -34,6 +34,9 @@ class particle :
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    ,public sphlatch::varHPart
 #endif
+#ifdef SPHLATCH_ANEOS
+   ,public sphlatch::ANEOSPart
+#endif
 {
 public:
 
@@ -119,6 +122,11 @@ typedef sphlatch::SPHsumWorker<densT, partT>     densSumT;
 typedef sphlatch::accPowSum<partT, krnlT>        accPowT;
 typedef sphlatch::SPHsumWorker<accPowT, partT>   accPowSumT;
 
+#ifdef SPHLATCH_ANEOS
+#include "eos_aneos.cpp"
+typedef sphlatch::ANEOS<partT> eosT;
+#endif
+
 // particles are global
 partSetT parts;
 
@@ -159,7 +167,11 @@ void derive()
 
    std::cout << "densWorker()     " << omp_get_wtime() - start << "s\n";
 
-   //FIXME: EOS goes here ...
+   eosT& EOS(eosT::instance());
+   for (size_t i = 0; i < nop; i++)
+   {
+     EOS(parts[i]);
+   }
 
    accPowSumT accPowWorker(&Tree);
    start = omp_get_wtime();
@@ -267,7 +279,7 @@ int main(int argc, char* argv[])
 
    // start the loop
    
-   for (size_t i = 0; i < 16; i++)
+   for (size_t i = 0; i < 1; i++)
    {
      derive();
 

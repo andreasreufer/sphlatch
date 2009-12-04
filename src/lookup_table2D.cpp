@@ -15,7 +15,7 @@
  */
 
 #include "typedefs.h"
-#include "err_handler.h"
+#include "err_handler.cpp"
 namespace sphlatch {
 template<class T_leaftype>
 class LookupTable2D {

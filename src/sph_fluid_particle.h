@@ -63,5 +63,19 @@ class varHPart : public varHGhost
   public:
    fType dhdt, divv;
 };
+
+///
+/// some variables for ANEOS
+///
+class ANEOSGhost {};
+
+class ANEOSPart : public ANEOSGhost 
+{
+  public:
+  fType T;
+  iType mat, phase;
+};
+
+
 };
 #endif

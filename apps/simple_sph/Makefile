@@ -1,4 +1,4 @@
-all: simple_sph_______ simple_sph_GHU___
+all: simple_sph_______ simple_sph_GHU___ simple_sph_GHUA__
 
 simple_sph_______:
 	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
@@ -14,7 +14,22 @@ simple_sph_GHU___:
 	   -DSPHLATCH_TIMEDEP_SMOOTHING \
 	   -DSPHLATCH_TIMEDEP_ENERGY \
 	   -fopenmp \
-	   -o simple_sph_______ simple_sph.cpp
+	   -o simple_sph_GHU___ simple_sph.cpp
+
+simple_sph_GHUA__: libaneos
+	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	   -lhdf5 -lz -I../../src \
+	   -DSPHLATCH_GRAVITY \
+	   -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
+	   -DSPHLATCH_TIMEDEP_SMOOTHING \
+	   -DSPHLATCH_TIMEDEP_ENERGY \
+	   -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+	   -DSPHLATCH_ANEOS_TABLE \
+	   -DSPHLATCH_LOGGER \
+	   -fopenmp \
+	   -o simple_sph_GHUA__ simple_sph.cpp
+libaneos:
+	    $(FC) $(FFLAGS) -c ../../aux/libaneos/libaneos.f -o libaneos.o
 
 
 clean:
