@@ -25,7 +25,7 @@ class GenericError
 {
 public:
 #ifdef SPHLATCH_LOGGER
-typedef sphlatch::LogManager logType;
+typedef sphlatch::Logger logT;
 #endif
 //typedef sphlatch::ParticleManager partManagerType;
 //typedef sphlatch::IOManager ioManagerType;
@@ -35,7 +35,7 @@ GenericError();
 
 protected:
 #ifdef SPHLATCH_LOGGER
-logType & Logger;
+logT & Logger;
 #endif
 //partManagerType & PartManager;
 //ioManagerType&   IOManager;
@@ -43,7 +43,7 @@ logType & Logger;
 
 GenericError::GenericError(void)
 #ifdef SPHLATCH_LOGGER
-  : Logger(logType::instance())
+  : Logger(logT::instance())
 #endif
 //  PartManager(partManagerType::instance()),
 //  IOManager(ioManagerType::instance())

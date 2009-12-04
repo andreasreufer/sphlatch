@@ -29,7 +29,7 @@ logT& Logger;
 public:
 EOS()
 #ifdef SPHLATCH_LOGGER
-: Logger(logT::instance()),
+: Logger(logT::instance())
 #endif
 {};
 

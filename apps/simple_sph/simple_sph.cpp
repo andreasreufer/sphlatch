@@ -13,6 +13,11 @@ typedef sphlatch::box3dT    box3dT;
 
 const fType finf = sphlatch::fTypeInf;
 
+#define SPHLATCH_LOGGER
+#include "logger.cpp"
+typedef sphlatch::Logger logT;
+
+
 #include "bhtree.cpp"
 typedef sphlatch::BHTree    treeT;
 
@@ -72,6 +77,9 @@ public:
       vars.push_back(storeVar(id, "id"));
 
       vars.push_back(storeVar(u, "u"));
+#ifdef SPHLATCH_ANEOS
+      vars.push_back(storeVar(mat, "mat"));
+#endif
 
       return(vars);
    }
@@ -89,6 +97,11 @@ public:
       vars.push_back(storeVar(rho, "rho"));
       vars.push_back(storeVar(noneigh, "noneigh"));
 
+#ifdef SPHLATCH_ANEOS
+      vars.push_back(storeVar(mat, "mat"));
+      vars.push_back(storeVar(T, "T"));
+      vars.push_back(storeVar(phase, "phase"));
+#endif
       return(vars);
    }
 };
@@ -133,10 +146,12 @@ partSetT parts;
 void derive()
 {
    treeT& Tree(treeT::instance());
+   logT& Logger(logT::instance());
    
    double start = omp_get_wtime();
    Tree.update(0.8, 1.2);
-   std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
+   //std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
+   Logger << "Tree.update()";
 
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
@@ -147,6 +162,9 @@ void derive()
    {
      parts[i].acc = 0.,0.,0.;
      parts[i].dudt = 0.;
+#ifdef SPHLATCH_ANEOS
+     //parts[i].mat = 2;
+#endif
    }
 
 #ifdef SPHLATCH_GRAVITY
@@ -155,8 +173,7 @@ void derive()
 #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
-
-   std::cout << "calcGravity()    " << omp_get_wtime() - start << "s\n";
+   Logger << "Tree.calcGravity()";
 #endif
 
    densSumT densWorker(&Tree);
@@ -164,22 +181,21 @@ void derive()
 #pragma omp parallel for firstprivate(densWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       densWorker(CZbottomLoc[i]);
-
-   std::cout << "densWorker()     " << omp_get_wtime() - start << "s\n";
+   Logger << "Tree.densWorker()";
 
    eosT& EOS(eosT::instance());
    for (size_t i = 0; i < nop; i++)
    {
      EOS(parts[i]);
    }
+   Logger << "pressure";
 
    accPowSumT accPowWorker(&Tree);
    start = omp_get_wtime();
 #pragma omp parallel for firstprivate(accPowWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       accPowWorker(CZbottomLoc[i]);
-   
-   std::cout << "accPowWorker()   " << omp_get_wtime() - start << "s\n";
+   Logger << "Tree.accPowWorker()";
 }
 
 fType timestep()
@@ -256,9 +272,11 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
    
+   logT& Logger(logT::instance());
+   
    // load the particles
    parts.loadHDF5("in.h5part");
-   
+   Logger << "loaded particles";
    
    treeT& Tree(treeT::instance());
 
@@ -275,23 +293,18 @@ int main(int argc, char* argv[])
       Tree.insertPart(parts[i]);
       parts[i].bootstrap();
    }
-   std::cout << "parts insert " << omp_get_wtime() - start << "s\n";
+   Logger << "created tree";
 
    // start the loop
-   
    for (size_t i = 0; i < 1; i++)
    {
      derive();
-
-
 
      derive();
    }
 
    parts.saveHDF5("out_tree.h5part");
-
-   std::cout << "particle size: " << sizeof(partT) << "\n";
-
+   Logger << "stored dump ";
 
 #ifdef SPHLATCH_MPI
    MPI::Finalize();
