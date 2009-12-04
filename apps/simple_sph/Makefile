@@ -24,7 +24,6 @@ simple_sph_GHUA__: libaneos
 	   -DSPHLATCH_TIMEDEP_SMOOTHING \
 	   -DSPHLATCH_TIMEDEP_ENERGY \
 	   -DSPHLATCH_ANEOS -lgfortran libaneos.o \
-	   -DSPHLATCH_ANEOS_TABLE \
 	   -fopenmp \
 	   -o simple_sph_GHUA__ simple_sph.cpp
 libaneos:

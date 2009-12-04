@@ -15,11 +15,11 @@ const fType finf = sphlatch::fTypeInf;
 
 #define SPHLATCH_LOGGER
 #include "logger.cpp"
-typedef sphlatch::Logger logT;
+typedef sphlatch::Logger   logT;
 
 
 #include "bhtree.cpp"
-typedef sphlatch::BHTree    treeT;
+typedef sphlatch::BHTree   treeT;
 
 
 ///
@@ -37,10 +37,10 @@ class particle :
    public sphlatch::energyPart,
    public sphlatch::IOPart
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-   ,public sphlatch::varHPart
+   , public sphlatch::varHPart
 #endif
 #ifdef SPHLATCH_ANEOS
-   ,public sphlatch::ANEOSPart
+   , public sphlatch::ANEOSPart
 #endif
 {
 public:
@@ -97,6 +97,8 @@ public:
       vars.push_back(storeVar(rho, "rho"));
       vars.push_back(storeVar(noneigh, "noneigh"));
 
+      vars.push_back(storeVar(p, "p"));
+      vars.push_back(storeVar(cs, "cs"));
 #ifdef SPHLATCH_ANEOS
       vars.push_back(storeVar(mat, "mat"));
       vars.push_back(storeVar(T, "T"));
@@ -113,15 +115,15 @@ class ghost :
    public sphlatch::movingGhost
 { };
 
-typedef ghost                                    ghstT;
+typedef ghost                                  ghstT;
 
 #include "particle_set.cpp"
-typedef sphlatch::ParticleSet<partT>             partSetT;
+typedef sphlatch::ParticleSet<partT>           partSetT;
 
 #ifdef SPHLATCH_GRAVITY
-#include "bhtree_worker_grav.cpp"
-typedef sphlatch::fixThetaMAC                    macT;
-typedef sphlatch::GravityWorker<macT, partT>     gravT;
+ #include "bhtree_worker_grav.cpp"
+typedef sphlatch::fixThetaMAC                  macT;
+typedef sphlatch::GravityWorker<macT, partT>   gravT;
 #endif
 
 #include "sph_algorithms.cpp"
@@ -136,8 +138,8 @@ typedef sphlatch::accPowSum<partT, krnlT>        accPowT;
 typedef sphlatch::SPHsumWorker<accPowT, partT>   accPowSumT;
 
 #ifdef SPHLATCH_ANEOS
-#include "eos_aneos.cpp"
-typedef sphlatch::ANEOS<partT> eosT;
+ #include "eos_aneos.cpp"
+typedef sphlatch::ANEOS<partT>                   eosT;
 #endif
 
 // particles are global
@@ -146,31 +148,32 @@ partSetT parts;
 void derive()
 {
    treeT& Tree(treeT::instance());
-   logT& Logger(logT::instance());
-   
+   logT&  Logger(logT::instance());
+
    double start = omp_get_wtime();
+
    Tree.update(0.8, 1.2);
    //std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
    Logger << "Tree.update()";
 
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
-   
-   
+
+
    const size_t nop = parts.getNop();
    for (size_t i = 0; i < nop; i++)
    {
-     parts[i].acc = 0.,0.,0.;
-     parts[i].dudt = 0.;
+      parts[i].acc  = 0., 0., 0.;
+      parts[i].dudt = 0.;
 #ifdef SPHLATCH_ANEOS
-     //parts[i].mat = 2;
+      //parts[i].mat = 2;
 #endif
    }
 
 #ifdef SPHLATCH_GRAVITY
    gravT gravWorker(&Tree);
    start = omp_get_wtime();
-#pragma omp parallel for firstprivate(gravWorker)
+ #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
    Logger << "Tree.calcGravity()";
@@ -186,7 +189,7 @@ void derive()
    eosT& EOS(eosT::instance());
    for (size_t i = 0; i < nop; i++)
    {
-     EOS(parts[i]);
+      EOS(parts[i]);
    }
    Logger << "pressure";
 
@@ -200,6 +203,8 @@ void derive()
 
 fType timestep()
 {
+   logT&  Logger(logT::instance());
+   
    const size_t nop = parts.getNop();
 
    const fType courantNumber = parts.attributes["COURANT"];
@@ -244,7 +249,7 @@ fType timestep()
 #endif
    }
 
-   dtA *= 0.5;
+   dtA   *= 0.5;
    dtCFL *= courantNumber;
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    dtH *= 0.15;
@@ -262,8 +267,16 @@ fType timestep()
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    dt = dtH < dt ? dtH : dt;
 #endif
+   Logger.stream << "dt:    " << dt 
+                 << "dtA:   " << dtA
+                 << "dtCFL: " << dtCFL
+                 << "dtU:   " << dtU
+                 << "dtH:   " << dtH
+                 << "\n";
+   Logger.flushStream();
 
-   return(dt);
+   //return(dt);
+   return(10.);
 }
 
 int main(int argc, char* argv[])
@@ -271,16 +284,16 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_MPI
    MPI::Init(argc, argv);
 #endif
-   
+
    logT& Logger(logT::instance());
-   
+
    // load the particles
    parts.loadHDF5("in.h5part");
    Logger << "loaded particles";
-   
+
    treeT& Tree(treeT::instance());
 
-   const size_t nop    = parts.getNop();
+   const size_t nop       = parts.getNop();
    const fType  costppart = 1. / nop;
 
    Tree.setExtent(parts.getBox() * 1.5);
@@ -298,9 +311,18 @@ int main(int argc, char* argv[])
    // start the loop
    for (size_t i = 0; i < 1; i++)
    {
-     derive();
+      derive();
+      
+      const fType dt = timestep();
+   
+      for (size_t i = 0; i < nop; i++)
+        parts[i].predict(dt);
+      Logger << "predicted new positions";
 
-     derive();
+      derive();
+      for (size_t i = 0; i < nop; i++)
+        parts[i].correct(dt);
+      Logger << "corrected     positions";
    }
 
    parts.saveHDF5("out_tree.h5part");
