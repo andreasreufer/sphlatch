@@ -31,7 +31,7 @@ BHTreeWorker::BHTreeWorker(const BHTreeWorker& _worker) :
    myThread(0),
 #endif
    treePtr(_worker.treePtr),
-   rootPtr(_worker.rootPtr) //,
+   rootPtr(_worker.rootPtr)
 { }
 
 ///

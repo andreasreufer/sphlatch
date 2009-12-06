@@ -11,6 +11,7 @@
 
 #include "bhtree_worker.cpp"
 #include "bhtree_particle.h"
+#include "timer.cpp"
 
 namespace sphlatch {
 template<typename _sumT, typename _partT>
@@ -20,10 +21,13 @@ public:
    SPHsumWorker(const SPHsumWorker& _SPHwork) : BHTreeWorker(_SPHwork) { }
    ~SPHsumWorker() { }
 
-   _sumT Sum;
    void operator()(const czllPtrT _czll);
 
+   typedef sphlatch::Timer timerT;
+
 private:
+   _sumT Sum;
+   timerT Timer;
    void sumNeighbours(const pnodPtrT _part);
 };
 
@@ -37,14 +41,15 @@ void SPHsumWorker<_sumT, _partT>::operator()(const czllPtrT _czll)
    if (curPart == NULL)
       return;
 
-   const double startTime = omp_get_wtime();
+
+   Timer.start();
    while (curPart != stopChld)
    {
       if (curPart->isParticle)
          sumNeighbours(static_cast<pnodPtrT>(curPart));
       curPart = curPart->next;
    }
-   const double compTime = omp_get_wtime() - startTime;
+   const double compTime = Timer.getRoundTime();
    _czll->compTime += static_cast<fType>(compTime);
 }
 

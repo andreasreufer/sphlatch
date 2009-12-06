@@ -11,9 +11,10 @@
 
 #include "bhtree_worker.cpp"
 #include "bhtree.h"
+#include "timer.cpp"
 
 namespace sphlatch {
-template<typename _MAC, typename _partT>
+template<typename _macT, typename _partT>
 class GravityWorker : public BHTreeWorker {
 public:
    GravityWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
@@ -23,8 +24,11 @@ public:
    void calcGravity(const czllPtrT _czll);
    void calcGravPart(const pnodPtrT _part);
 
-//private:
-   _MAC mac;
+   typedef sphlatch::Timer timerT;
+
+private:
+   _macT MAC;
+   timerT Timer;
 
    void calcGravPartAlt(const pnodPtrT _part);
    void calcGravRec();
@@ -36,8 +40,8 @@ public:
    nodePtrT recCurPartPtr;
 };
 
-template<typename _MAC, typename _partT>
-void GravityWorker<_MAC, _partT>::calcGravity(const czllPtrT _czll)
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::calcGravity(const czllPtrT _czll)
 {
    nodePtrT       curPart  = _czll->chldFrst;
    const nodePtrT stopChld = _czll->chldLast->next;
@@ -46,20 +50,20 @@ void GravityWorker<_MAC, _partT>::calcGravity(const czllPtrT _czll)
    if (curPart == NULL)
       return;
 
-   const double startTime = omp_get_wtime();
+   Timer.start();
    while (curPart != stopChld)
    {
       if (curPart->isParticle)
          calcGravPart(static_cast<pnodPtrT>(curPart));
       curPart = curPart->next;
    }
-   const double compTime = omp_get_wtime() - startTime;
+   const double compTime = Timer.getRoundTime();
    _czll->compTime += static_cast<fType>(compTime);
 }
 
 
-template<typename _MAC, typename _partT>
-void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
 {
    nodePtrT const curPartPtr = _part;
 
@@ -74,7 +78,7 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
    {
       if (not curPtr->isParticle)
       {
-         if (mac(static_cast<qcllPtrT>(curPtr),
+         if (MAC(static_cast<qcllPtrT>(curPtr),
                  static_cast<pnodPtrT>(curPartPtr)))
          {
             interactPartCell();
@@ -98,8 +102,8 @@ void GravityWorker<_MAC, _partT>::calcGravPart(const pnodPtrT _part)
    static_cast<_partT*>(_part->partPtr)->acc += acc;
 }
 
-template<typename _MAC, typename _partT>
-void GravityWorker<_MAC, _partT>::calcGravPartAlt(const pnodPtrT _part)
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::calcGravPartAlt(const pnodPtrT _part)
 {
    ppos = _part->pos;
    acc  = 0, 0, 0;
@@ -113,8 +117,8 @@ void GravityWorker<_MAC, _partT>::calcGravPartAlt(const pnodPtrT _part)
    static_cast<_partT*>(_part->partPtr)->acc += acc;
 }
 
-template<typename _MAC, typename _partT>
-void GravityWorker<_MAC, _partT>::calcGravRec()
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::calcGravRec()
 {
    if (curPtr->isParticle)
    {
@@ -123,7 +127,7 @@ void GravityWorker<_MAC, _partT>::calcGravRec()
    }
    else
    {
-      if (mac(static_cast<qcllPtrT>(curPtr),
+      if (MAC(static_cast<qcllPtrT>(curPtr),
               static_cast<pnodPtrT>(recCurPartPtr)))
       {
          interactPartCell();
@@ -143,8 +147,8 @@ void GravityWorker<_MAC, _partT>::calcGravRec()
    }
 }
 
-template<typename _MAC, typename _partT>
-void GravityWorker<_MAC, _partT>::interactPartPart()
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::interactPartPart()
 {
    //FIXME: try using blitz++ functions
    const fType rx = ppos[0] - static_cast<pnodPtrT>(curPtr)->pos[0];
@@ -164,15 +168,15 @@ void GravityWorker<_MAC, _partT>::interactPartPart()
    //std::cout << "P" << curPtr << " ";
 }
 
-template<typename _MAC, typename _partT>
-void GravityWorker<_MAC, _partT>::interactPartCell()
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::interactPartCell()
 {
    //FIXME: check if fetching those values again is less costly
-   const fType rx = mac.rx;
-   const fType ry = mac.ry;
-   const fType rz = mac.rz;
+   const fType rx = MAC.rx;
+   const fType ry = MAC.ry;
+   const fType rz = MAC.rz;
    
-   const fType rr = mac.rr;
+   const fType rr = MAC.rr;
    const fType r  = sqrt(rr);
 
    const fType Or3 = 1. / (r * rr);

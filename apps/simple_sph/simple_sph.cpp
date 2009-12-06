@@ -2,7 +2,7 @@
 #include <vector>
 
 //#include <omp.h>
-#define SPHLATCH_OPENMP
+//#define SPHLATCH_OPENMP
 #define SPHLATCH_HDF5
 #define SPHLATCH_NONEIGH
 
@@ -17,10 +17,8 @@ const fType finf = sphlatch::fTypeInf;
 #include "logger.cpp"
 typedef sphlatch::Logger   logT;
 
-
 #include "bhtree.cpp"
 typedef sphlatch::BHTree   treeT;
-
 
 ///
 /// define the particle we are using
@@ -150,10 +148,7 @@ void derive()
    treeT& Tree(treeT::instance());
    logT&  Logger(logT::instance());
 
-   double start = omp_get_wtime();
-
    Tree.update(0.8, 1.2);
-   //std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
    Logger << "Tree.update()";
 
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
@@ -172,7 +167,6 @@ void derive()
 
 #ifdef SPHLATCH_GRAVITY
    gravT gravWorker(&Tree);
-   start = omp_get_wtime();
  #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
@@ -180,7 +174,6 @@ void derive()
 #endif
 
    densSumT densWorker(&Tree);
-   start = omp_get_wtime();
 #pragma omp parallel for firstprivate(densWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       densWorker(CZbottomLoc[i]);
@@ -194,7 +187,6 @@ void derive()
    Logger << "pressure";
 
    accPowSumT accPowWorker(&Tree);
-   start = omp_get_wtime();
 #pragma omp parallel for firstprivate(accPowWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       accPowWorker(CZbottomLoc[i]);
@@ -299,7 +291,6 @@ int main(int argc, char* argv[])
    Tree.setExtent(parts.getBox() * 1.5);
 
    double start;
-   start = omp_get_wtime();
    for (size_t i = 0; i < nop; i++)
    {
       parts[i].cost = costppart;

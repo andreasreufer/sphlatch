@@ -12,7 +12,6 @@
 #include "bhtree_nodes.h"
 #include "bhtree.h"
 
-
 namespace sphlatch {
 class BHTree;
 
