@@ -78,7 +78,9 @@ public:
 #ifdef SPHLATCH_ANEOS
       vars.push_back(storeVar(mat, "mat"));
 #endif
-
+#ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
+      vars.push_back(storeVar(eps, "eps"));
+#endif
       return(vars);
    }
 
@@ -101,6 +103,9 @@ public:
       vars.push_back(storeVar(mat, "mat"));
       vars.push_back(storeVar(T, "T"));
       vars.push_back(storeVar(phase, "phase"));
+#endif
+#ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
+      vars.push_back(storeVar(eps, "eps"));
 #endif
       return(vars);
    }
@@ -166,7 +171,8 @@ void derive()
    }
 
 #ifdef SPHLATCH_GRAVITY
-   gravT gravWorker(&Tree);
+   const fType G = parts.attributes["gravconst"];
+   gravT gravWorker(&Tree, G);
  #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
@@ -290,7 +296,6 @@ int main(int argc, char* argv[])
 
    Tree.setExtent(parts.getBox() * 1.5);
 
-   double start;
    for (size_t i = 0; i < nop; i++)
    {
       parts[i].cost = costppart;
@@ -308,12 +313,12 @@ int main(int argc, char* argv[])
    
       for (size_t i = 0; i < nop; i++)
         parts[i].predict(dt);
-      Logger << "predicted new positions";
+      Logger.finishStep("predicted");
 
       derive();
       for (size_t i = 0; i < nop; i++)
         parts[i].correct(dt);
-      Logger << "corrected     positions";
+      Logger.finishStep("corrected");
    }
 
    parts.saveHDF5("out_tree.h5part");

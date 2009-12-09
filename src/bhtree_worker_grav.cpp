@@ -17,17 +17,18 @@ namespace sphlatch {
 template<typename _macT, typename _partT>
 class GravityWorker : public BHTreeWorker {
 public:
-   GravityWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
-   GravityWorker(const GravityWorker& _gw) : BHTreeWorker(_gw) { }
+   GravityWorker(const treePtrT _treePtr,
+                 const fType _G) : BHTreeWorker(_treePtr), G(_G) { }
+   GravityWorker(const GravityWorker& _gw) : BHTreeWorker(_gw), G(_gw.G) { }
    ~GravityWorker() { }
 
    void calcGravity(const czllPtrT _czll);
    void calcGravPart(const pnodPtrT _part);
 
-   typedef sphlatch::Timer timerT;
+   typedef sphlatch::Timer   timerT;
 
 private:
-   _macT MAC;
+   _macT  MAC;
    timerT Timer;
 
    void calcGravPartAlt(const pnodPtrT _part);
@@ -38,6 +39,11 @@ private:
 
    vect3dT  acc, ppos;
    nodePtrT recCurPartPtr;
+
+   fType splineOSmoR3(const fType _r, const fType _h);
+
+protected:
+   const fType G;
 };
 
 template<typename _macT, typename _partT>
@@ -60,7 +66,6 @@ void GravityWorker<_macT, _partT>::calcGravity(const czllPtrT _czll)
    const double compTime = Timer.getRoundTime();
    _czll->compTime += static_cast<fType>(compTime);
 }
-
 
 template<typename _macT, typename _partT>
 void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
@@ -99,14 +104,14 @@ void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
       }
    } while (curPtr != NULL);
 
-   static_cast<_partT*>(_part->partPtr)->acc += acc;
+   static_cast<_partT*>(_part->partPtr)->acc += G * acc;
 }
 
 template<typename _macT, typename _partT>
 void GravityWorker<_macT, _partT>::calcGravPartAlt(const pnodPtrT _part)
 {
-   ppos = _part->pos;
-   acc  = 0, 0, 0;
+   ppos          = _part->pos;
+   acc           = 0, 0, 0;
    recCurPartPtr = _part;
    ///
    /// the complete tree walk
@@ -114,7 +119,7 @@ void GravityWorker<_macT, _partT>::calcGravPartAlt(const pnodPtrT _part)
    goRoot();
    calcGravRec();
 
-   static_cast<_partT*>(_part->partPtr)->acc += acc;
+   static_cast<_partT*>(_part->partPtr)->acc += G * acc;
 }
 
 template<typename _macT, typename _partT>
@@ -159,13 +164,23 @@ void GravityWorker<_macT, _partT>::interactPartPart()
 
    const fType m = static_cast<pnodPtrT>(curPtr)->m;
 
+   //const fType splineOr3 = m*splineOSmoR3(r,h);
+#ifdef SPHLATCH_GRAVITY_SPLINESMOOTHING
+   const fType h =
+      static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr)->h;
+   const fType mOr3 = m * splineOSmoR3(r, h);
+#elif SPHLATCH_GRAVITY_EPSSMOOTHING
+   const fType eps =
+      static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr)->eps;
+   const fType re   = r + eps;
+   const fType mOr3 = m / (re * re * re);
+#else
    const fType mOr3 = m / (rr * r);
+#endif
 
    acc[0] -= mOr3 * rx;
    acc[1] -= mOr3 * ry;
    acc[2] -= mOr3 * rz;
-
-   //std::cout << "P" << curPtr << " ";
 }
 
 template<typename _macT, typename _partT>
@@ -175,7 +190,7 @@ void GravityWorker<_macT, _partT>::interactPartCell()
    const fType rx = MAC.rx;
    const fType ry = MAC.ry;
    const fType rz = MAC.rz;
-   
+
    const fType rr = MAC.rr;
    const fType r  = sqrt(rr);
 
@@ -210,6 +225,43 @@ void GravityWorker<_macT, _partT>::interactPartCell()
    acc[0] += (Or5) * (q1jrj) - (Or7) * (2.5 * qijrirj * rx);
    acc[1] += (Or5) * (q2jrj) - (Or7) * (2.5 * qijrirj * ry);
    acc[2] += (Or5) * (q3jrj) - (Or7) * (2.5 * qijrirj * rz);
+}
+
+///
+/// gravitational spline softening for B Spline kernel from
+/// Hernquist & Katz 1989
+///
+template<typename _macT, typename _partT>
+fType GravityWorker<_macT, _partT>::splineOSmoR3(const fType _r, const fType _h)
+{
+   const fType u = _r / _h;
+
+   if (u >= 2.)
+   {
+      const fType r3 = _r * _r * _r;
+      return(1. / r3);
+   }
+   else
+   if (u > 1.)
+   {
+      const fType r3 = _r * _r * _r;
+      return((1. / r3) * (
+                -(1. / 15.)
+                + (8. / 3.) * u * u * u
+                - 3. * u * u * u * u
+                + (6. / 5.) * u * u * u * u * u
+                - (1. / 6.) * u * u * u * u * u * u
+                ));
+   }
+   else
+   {
+      const fType h3 = _h * _h * _h;
+      return((1. / h3) * (
+                +(4. / 3.)
+                - (6. / 5.) * u * u
+                + (1. / 2.) * u * u * u
+                ));
+   }
 }
 
 class fixThetaMAC {
