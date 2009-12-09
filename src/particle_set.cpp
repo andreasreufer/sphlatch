@@ -37,6 +37,7 @@ std::list<std::string> ParticleSet<_partT>::dsetsInFile;
 template<typename _partT>
 std::list<std::string> ParticleSet<_partT>::attrsInFile;
 
+
 template<typename _partT>
 _partT & ParticleSet<_partT>::operator[](const size_t _i)
 {
@@ -498,6 +499,19 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
    H5Gclose(rg);
    H5Fclose(fh);
 }
+
+template<typename _partT>
+void ParticleSet<_partT>::singlePrecOut()
+{
+  h5fFTYPE = H5T_IEEE_F32LE;
+}
+
+  template<typename _partT>
+void ParticleSet<_partT>::doublePrecOut()
+{
+  h5fFTYPE = H5T_IEEE_F64LE;
+}
+
 
 template<typename _partT>
 herr_t ParticleSet<_partT>::getObsCB(hid_t _fh, const char* _name,

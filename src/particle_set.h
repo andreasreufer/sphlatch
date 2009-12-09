@@ -35,6 +35,9 @@ public:
 #ifdef SPHLATCH_HDF5
    void saveHDF5(std::string _file);
    void loadHDF5(std::string _file);
+
+   void singlePrecOut();
+   void doublePrecOut();
 #endif
 
 

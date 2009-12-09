@@ -1,6 +1,8 @@
 #include <iostream>
 #include <vector>
 
+//#define SPHLATCH_SINGLEPREC
+
 //#include <omp.h>
 //#define SPHLATCH_OPENMP
 #define SPHLATCH_HDF5
@@ -321,6 +323,7 @@ int main(int argc, char* argv[])
       Logger.finishStep("corrected");
    }
 
+   parts.doublePrecOut();
    parts.saveHDF5("out_tree.h5part");
    Logger << "stored dump ";
 

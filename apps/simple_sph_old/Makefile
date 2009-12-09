@@ -19,7 +19,7 @@ shocktube:
 				      -o shocktube simple_sph.cpp
 simple_sph_______:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
-				      -I../../src \
+				      -I../../src -I../../src/old \
 				      -o simple_sph_______ simple_sph.cpp
 
 simple_sph_G_____:
