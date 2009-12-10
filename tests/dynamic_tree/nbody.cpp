@@ -145,27 +145,12 @@ int main(int argc, char* argv[])
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
 
-/*#ifdef SPHLATCH_MPI
-   MPI::Finalize();
- #endif
-   return(0);*/
-
    start = omp_get_wtime();
 #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
 
    std::cout << "calcGravity()    " << omp_get_wtime() - start << "s\n";
-
-
-   /*for (int i = 0; i < noCZbottomLoc; i++)
-      if (CZbottomLoc[i]->chldFrst != NULL)
-         std::cout << i << "\t"
-                   << CZbottomLoc[i]->relCost << "\t"
-                   << CZbottomLoc[i]->noParts << "\t"
-                   << CZbottomLoc[i]->compTime << "\t"
-                   << CZbottomLoc[i]->compTime / CZbottomLoc[i]->relCost 
-                   << "\n";*/
 
    densSumT densWorker(&Tree);
    start = omp_get_wtime();
@@ -174,7 +159,6 @@ int main(int argc, char* argv[])
       densWorker(CZbottomLoc[i]);
 
    std::cout << "densWorker()     " << omp_get_wtime() - start << "s\n";
-
 
    accPowSumT accPowWorker(&Tree);
    start = omp_get_wtime();

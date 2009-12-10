@@ -207,8 +207,8 @@ fType timestep()
    
    const size_t nop = parts.getNop();
 
-   const fType courantNumber = parts.attributes["COURANT"];
-   const fType time          = parts.attributes["TIME"];
+   const fType courantNumber = parts.attributes["courant"];
+   const fType time          = parts.attributes["time"];
 
    fType dtA   = finf;
    fType dtCFL = finf;
