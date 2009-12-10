@@ -180,7 +180,7 @@ void derive()
       gravWorker.calcGravity(CZbottomLoc[i]);
    Logger << "Tree.calcGravity()";
 #endif
-
+   
    densSumT densWorker(&Tree);
 #pragma omp parallel for firstprivate(densWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
@@ -313,18 +313,18 @@ int main(int argc, char* argv[])
       
       const fType dt = timestep();
    
-      for (size_t i = 0; i < nop; i++)
+      /*for (size_t i = 0; i < nop; i++)
         parts[i].predict(dt);
       Logger.finishStep("predicted");
 
       derive();
       for (size_t i = 0; i < nop; i++)
         parts[i].correct(dt);
-      Logger.finishStep("corrected");
+      Logger.finishStep("corrected");*/
    }
 
    parts.doublePrecOut();
-   parts.saveHDF5("out_tree.h5part");
+   parts.saveHDF5("out_both.h5part");
    Logger << "stored dump ";
 
 #ifdef SPHLATCH_MPI

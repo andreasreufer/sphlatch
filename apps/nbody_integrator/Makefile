@@ -1,11 +1,12 @@
-all: nbody
+all: bfnbody
 
-nbody:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 \
-				      -lz -lboost_program_options \
-				      -DSPHLATCH_GRAVITY \
-				      -DSPHLATCH_GRAVITY_EPSSMOOTHING \
-				      -o nbody_integrator nbody_integrator.cpp
+bfnbody:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	   -lhdf5 -lz -I../../src \
+	   -fopenmp \
+	   -o bf_nbody bf_nbody.cpp
 	
-
+	
+clean:
+	rm bf_nbody 2>&1 >/dev/null; true
 
