@@ -13,7 +13,7 @@
 #include "typedefs.h"
 
 namespace sphlatch {
-void impactSetup(
+void getImpactSetup(
    const fType _m_tar,
    const fType _m_imp,
    const fType _R_tar,
@@ -26,9 +26,11 @@ void impactSetup(
    vect3dT&    _r_impv,
    vect3dT&    _v_tarv,
    vect3dT&    _v_impv,
-   fType&      _t_0
+   fType&      _t_0,
+   fType&      _b_scal
    )
 {
+   const fType pi = M_PI;
    const fType m_tot = _m_tar + _m_imp;
    const fType gamma = _m_imp / m_tot;
 
@@ -42,8 +44,8 @@ void impactSetup(
    const fType v_graz = sqrt((2. * mu / r_imp) + _v_inf * _v_inf);
    const fType L_graz = v_graz * _m_imp * (_R_tar + _R_imp);
 
-   const fType b_scal   = _L_tot / L_graz;
-   const fType beta_imp = acos(b_scal);
+   _b_scal   = _L_tot / L_graz;
+   const fType beta_imp = acos(_b_scal);
 
    const fType E_tot = (v_imp * v_imp / 2.) - (mu / r_imp);
 
@@ -56,9 +58,9 @@ void impactSetup(
    const fType r_per = r_imp * (1. + e * cos(theta_imp)) / (1. + e);
    const fType v_per = sqrt(pow(_v_inf, 2.) + (2. * mu / r_per));
 
-   const fType v_0     = sqrt(_v_inf * _v_inf + (2. * mu / r_0));
-   const fType theta_0 = acos((r_per * (1. + e) - _r_0) / (e * r_0));
-   const fType beta_0  = acos(_L_tot / r_0 * v_0 * _m_imp);
+   const fType v_0     = sqrt(_v_inf * _v_inf + (2. * mu / _r_0));
+   const fType theta_0 = acos((r_per * (1. + e) - _r_0) / (e * _r_0));
+   const fType beta_0  = acos(_L_tot / _r_0 * v_0 * _m_imp);
 
    fType k2, t_imp;
 
@@ -82,16 +84,18 @@ void impactSetup(
    {
       k2 = sqrt(mu / (8. * pow(r_per, 3.)));
 
-      t_imp = fabs(0.5 * (tan(thetaimp / 2.)
-                          + (1. / 3.) * pow(tan(thetaimp / 2.), 3.) / k2));
-      _t_0 = fabs(0.5 * (tan(theta0 / 2.)
-                         + (1. / 3.) * pow(tan(theta0 / 2.), 3.)) / k2);
+      t_imp = fabs(0.5 * (tan(theta_imp / 2.)
+                          + (1. / 3.) * pow(tan(theta_imp / 2.), 3.) / k2));
+      _t_0 = fabs(0.5 * (tan(theta_0 / 2.)
+                         + (1. / 3.) * pow(tan(theta_0 / 2.), 3.)) / k2);
    }
 
    vect3dT       r_0v;
-   r_0v[0] = -r_0* cos((pi / 2.) - theta_imp + theta_0);
-   r_0v[1] = r_0 * sin((pi / 2.) - theta_imp + theta_0);
+   r_0v[0] = -_r_0* cos((pi / 2.) - theta_imp + theta_0);
+   r_0v[1] = _r_0 * sin((pi / 2.) - theta_imp + theta_0);
    r_0v[2] = 0.;
+
+   const fType alpha = theta_0 - theta_imp - beta_0;
 
    vect3dT       v_0v;
    v_0v[0] = -v_0* cos(alpha);
