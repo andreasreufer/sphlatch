@@ -100,6 +100,7 @@ public:
       vars.push_back(storeVar(noneigh, "noneigh"));
 
       vars.push_back(storeVar(p, "p"));
+      vars.push_back(storeVar(u, "u"));
       vars.push_back(storeVar(cs, "cs"));
 #ifdef SPHLATCH_ANEOS
       vars.push_back(storeVar(mat, "mat"));
@@ -167,9 +168,6 @@ void derive()
    {
       parts[i].acc  = 0., 0., 0.;
       parts[i].dudt = 0.;
-#ifdef SPHLATCH_ANEOS
-      //parts[i].mat = 2;
-#endif
    }
 
 #ifdef SPHLATCH_GRAVITY
