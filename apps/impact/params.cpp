@@ -56,10 +56,8 @@ int main(int argc, char* argv[])
          continue;
       }
 
-      //std::cout << "p1\n";
       const size_t ts = boost::lexical_cast<size_t>(token);
 
-      //std::cout << "p2\n";
       fin >> token;
       const fType st = boost::lexical_cast<fType>(token);
 
@@ -141,14 +139,22 @@ int main(int argc, char* argv[])
       const fType r_0   = r_0rel * R_tar;
       const fType gamma = m_imp / m_tar;
 
-      if ((gamma > 0.1) && (m_tar > 0.1 * m_E))
+      if ((gamma > 0.1) && (m_tar > 0.01 * m_E))
       {
-         std::cout << "GIANT! " << gamma << "\n";
          sphlatch::getImpactSetup(m_tar, m_imp, R_tar, R_imp,
                                   v_inf, L_tot, r_0, G,
                                   r_tar, r_imp, v_tar, v_imp, t_0, b_scal);
-         std::cout << b1m << " " << b2m << " "
-                   << b_scal << " " << v_inf << "\n";
+
+         std::cout << m_tar << "\t"
+                   << m_imp << "\t"
+                   << R_tar << "\t"
+                   << R_imp << "\t"
+                   << v_inf << "\t"
+                   << L_tot << "\t"
+                   << r_0 << "\t"
+                   << t_0 << "\t"
+                   << b   << "\t"
+                   << b_scal << "\n";
       }
    }
 
