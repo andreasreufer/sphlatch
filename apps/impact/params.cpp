@@ -25,24 +25,46 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
+   if ( argc != 2 )
+   {
+     std::cerr << " input file not specified!\n";
+     std::cerr << "usage: paramsParse <pmc reduced file>\n";
+     exit(1);
+   }
+
    const fType G   = 6.6742e-11;
    const fType m_E = 5.9742e24;
 
    std::fstream fin;
-   fin.open(
-      "/Users/areufer/Documents/UniTAPS/collisions/reduced-0-2396511-4.dat",
-      std::ios::in);
-
+   fin.open(argv[1],std::ios::in);
    std::string token;
 
-   vect3dT r_tar, r_imp, v_tar, v_imp;
+   vect3dT r_tarv, r_impv, v_tarv, v_impv;
    fType   t_0, b_scal, gamma;
-   fType   R_tar, R_imp, m_tar, m_imp;
+   fType   R_tar, R_imp, m_tar, m_imp, v_imp, e;
 
    const fType r_0rel = 10.;
+   size_t      line   = 0;
+
+   std::cout << "# m_tar" << "\t"
+             << "m_imp" << "\t"
+             << "m_imp / m_tar" << "\t"
+             << "R_tar" << "\t"
+             << "R_imp" << "\t"
+             << "v_inf" << "\t"
+             << "v_imp" << "\t"
+             << "L_tot" << "\t"
+             << "r_0" << "\t"
+             << "t_0" << "\t"
+             << "b" << "\t"
+             << "b_scal" << "\t"
+             << "e" << "\t"
+             << "line" << "\n";
 
    while (fin)
    {
+      line++;
+
       fin >> token;
 
       if (!fin)
@@ -139,22 +161,30 @@ int main(int argc, char* argv[])
       const fType r_0   = r_0rel * R_tar;
       const fType gamma = m_imp / m_tar;
 
-      if ((gamma > 0.1) && (m_tar > 0.01 * m_E))
-      {
-         sphlatch::getImpactSetup(m_tar, m_imp, R_tar, R_imp,
-                                  v_inf, L_tot, r_0, G,
-                                  r_tar, r_imp, v_tar, v_imp, t_0, b_scal);
+      sphlatch::getImpactSetup(m_tar, m_imp, R_tar, R_imp,
+                               v_inf, L_tot, r_0, G,
+                               r_tarv, r_impv, v_tarv, v_impv, t_0, b_scal,
+                               v_imp,
+                               e);
 
+      //if (((gamma > 0.05) && (m_tar > 0.05 * m_E)) || (b_scal < 0.9))
+      if ((gamma > 0.05) && (m_tar > 0.05 * m_E))
+      //if (m_tar > 0.05 * m_E)
+      {
          std::cout << m_tar << "\t"
                    << m_imp << "\t"
+                   << m_imp / m_tar << "\t"
                    << R_tar << "\t"
                    << R_imp << "\t"
                    << v_inf << "\t"
+                   << v_imp << "\t"
                    << L_tot << "\t"
                    << r_0 << "\t"
                    << t_0 << "\t"
-                   << b   << "\t"
-                   << b_scal << "\n";
+                   << b << "\t"
+                   << b_scal << "\t"
+                   << e << "\t"
+                   << line << "\n";
       }
    }
 

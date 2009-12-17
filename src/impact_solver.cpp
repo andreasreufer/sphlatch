@@ -27,7 +27,9 @@ void getImpactSetup(
    vect3dT&    _v_tarv,
    vect3dT&    _v_impv,
    fType&      _t_0,
-   fType&      _b_scal
+   fType&      _b_scal,
+   fType&      _v_imp,
+   fType&      _e
    )
 {
    const fType pi = M_PI;
@@ -51,16 +53,19 @@ void getImpactSetup(
 
    const fType e = sqrt(pow((k1 - 1.) * cos(beta_imp), 2.)
                         + pow(sin(beta_imp), 2.));
+   _e = e;
 
    const fType theta_imp = atan2(k1 * sin(beta_imp) * cos(beta_imp),
                                  k1 * cos(beta_imp) * cos(beta_imp) - 1.);
 
    const fType r_per = r_imp * (1. + e * cos(theta_imp)) / (1. + e);
    const fType v_per = sqrt(pow(_v_inf, 2.) + (2. * mu / r_per));
+   
+   _v_imp = sqrt(pow(_v_inf, 2.) + (2. * mu / r_imp));
 
    const fType v_0     = sqrt(_v_inf * _v_inf + (2. * mu / _r_0));
    const fType theta_0 = acos((r_per * (1. + e) - _r_0) / (e * _r_0));
-   const fType beta_0  = acos(_L_tot / _r_0 * v_0 * _m_imp);
+   const fType beta_0  = acos(_L_tot / ( _r_0 * v_0 * _m_imp) );
 
    fType k2, t_imp;
 

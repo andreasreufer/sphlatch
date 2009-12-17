@@ -4,6 +4,10 @@ paramsParse:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src \
 				      -o paramsParse params.cpp
 
+setupImpact:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src \
+				      -o setupImpact setup_impact.cpp
+
 impact_GHUA__: libaneos
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
 				      -I../../src \
@@ -48,4 +52,5 @@ clean:
 	rm impact_* 2>&1 >/dev/null;\
 	rm paramsParse 2>&1 >/dev/null;\
 	rm libaneos.o 2>&1 >/dev/null;\
+	rm setupImpact 2>&1 >/dev/null;
 	true
