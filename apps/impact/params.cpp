@@ -65,18 +65,16 @@ int main(int argc, char* argv[])
    {
       line++;
 
+      while ( fin.peek() == '#' && fin )
+      {
+        std::string dummy;
+        getline(fin, dummy);
+      }
+
       fin >> token;
 
       if (!fin)
          break;
-
-      // header?
-      if (token == "#")
-      {
-         for (size_t j = 1; j <= 45; j++)
-            fin >> token;
-         continue;
-      }
 
       const size_t ts = boost::lexical_cast<size_t>(token);
 

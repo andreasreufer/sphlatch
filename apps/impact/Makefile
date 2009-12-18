@@ -52,5 +52,5 @@ clean:
 	rm impact_* 2>&1 >/dev/null;\
 	rm paramsParse 2>&1 >/dev/null;\
 	rm libaneos.o 2>&1 >/dev/null;\
-	rm setupImpact 2>&1 >/dev/null;
+	rm setupImpact 2>&1 >/dev/null;\
 	true
