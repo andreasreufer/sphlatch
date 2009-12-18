@@ -25,18 +25,18 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   if ( argc != 2 )
+   if (argc != 2)
    {
-     std::cerr << " input file not specified!\n";
-     std::cerr << "usage: paramsParse <pmc reduced file>\n";
-     exit(1);
+      std::cerr << " input file not specified!\n";
+      std::cerr << "usage: paramsParse <pmc reduced file>\n";
+      exit(1);
    }
 
    const fType G   = 6.6742e-11;
    const fType m_E = 5.9742e24;
 
    std::fstream fin;
-   fin.open(argv[1],std::ios::in);
+   fin.open(argv[1], std::ios::in);
    std::string token;
 
    vect3dT r_tarv, r_impv, v_tarv, v_impv;
@@ -65,10 +65,10 @@ int main(int argc, char* argv[])
    {
       line++;
 
-      while ( fin.peek() == '#' && fin )
+      while (fin.peek() == '#' && fin)
       {
-        std::string dummy;
-        getline(fin, dummy);
+         std::string dummy;
+         getline(fin, dummy);
       }
 
       fin >> token;

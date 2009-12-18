@@ -9,6 +9,7 @@
  *
  */
 
+#include "bhtree_worker_neighfunc.cpp"
 #include "bhtree_worker.cpp"
 #include "bhtree_particle.h"
 #include "timer.cpp"
@@ -59,6 +60,9 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
    // go to the particle and load its data
    curPtr = _part;
    _partT* const ipartPtr = static_cast<_partT*>(_part->partPtr);
+   
+   Sum.preSum(ipartPtr);
+   
    const vect3dT ppos     = _part->pos;
 
    //FIXME: this factor should be set more generically
@@ -77,7 +81,6 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
    while (not sphereTotInCell(ppos, srad) && curPtr->parent != NULL)
       goUp();
 
-   Sum.preSum(ipartPtr);
 
    // now start to search the subtree for potential neighbours
    const nodePtrT lastNode = static_cast<gcllPtrT>(curPtr)->skip;

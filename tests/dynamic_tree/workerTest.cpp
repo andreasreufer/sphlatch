@@ -49,8 +49,6 @@ typedef sphlatch::GravityWorker<macT, partT>   gravT;
 //#include "log_manager.h"
 //typedef sphlatch::LogManager                   logT;
 
-//#include "bhtree_worker_sphsum.cpp"
-
 struct densFunc
 {
    void operator()(partT* _i, const partT* _j)
@@ -61,6 +59,10 @@ struct densFunc
 
 #include "bhtree_worker_sphsum.cpp"
 typedef sphlatch::SPHsumWorker<densFunc, partT>   densSumT;
+
+#include "bhtree_worker_neighfunc.cpp"
+typedef sphlatch::NeighWorker<densFunc, partT> neighFuncT;
+
 
 #include "bhtree_worker.h"
 class BHTreeTester : public sphlatch::BHTreeWorker {
@@ -149,7 +151,8 @@ int main(int argc, char* argv[])
    //dumper.dotDump("post_move.dot");
    //dumper.ptrDump("post_move.txt");
 
-   gravT gravWorker(&Tree);
+   const fType G = 1.;
+   gravT gravWorker(&Tree, G);
 
    std::cout << "gravity ...\n";
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
