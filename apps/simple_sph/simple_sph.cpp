@@ -133,6 +133,7 @@ typedef sphlatch::GravityWorker<macT, partT>   gravT;
 #endif
 
 #include "sph_algorithms.cpp"
+#include "sph_kernels.cpp"
 #include "bhtree_worker_sphsum.cpp"
 
 typedef sphlatch::CubicSpline3D                  krnlT;
