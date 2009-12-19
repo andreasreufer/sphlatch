@@ -72,7 +72,7 @@ protected:
    ///
    /// overwrite curPtr by a faster (?) read-only version
    ///
-   const nodePtrT curPtr;
+   nodePtrT const curPtr;
 };
 };
 #endif

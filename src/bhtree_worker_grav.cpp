@@ -15,11 +15,18 @@
 
 namespace sphlatch {
 template<typename _macT, typename _partT>
-class GravityWorker : public BHTreeWorker {
+/*class GravityWorker : public BHTreeWorker {
 public:
    GravityWorker(const treePtrT _treePtr,
-                 const fType _G) : BHTreeWorker(_treePtr), G(_G) { }
+                 const fType    _G) : BHTreeWorker(_treePtr), G(_G) { }
    GravityWorker(const GravityWorker& _gw) : BHTreeWorker(_gw), G(_gw.G) { }
+   ~GravityWorker() { }*/
+
+class GravityWorker : public BHTreeWorkerRO {
+public:
+   GravityWorker(const treePtrT _treePtr,
+                 const fType    _G) : BHTreeWorkerRO(_treePtr), G(_G) { }
+   GravityWorker(const GravityWorker& _gw) : BHTreeWorkerRO(_gw), G(_gw.G) { }
    ~GravityWorker() { }
 
    void calcGravity(const czllPtrT _czll);
@@ -159,12 +166,10 @@ void GravityWorker<_macT, _partT>::interactPartPart()
    const fType rx = ppos[0] - static_cast<pnodPtrT>(curPtr)->pos[0];
    const fType ry = ppos[1] - static_cast<pnodPtrT>(curPtr)->pos[1];
    const fType rz = ppos[2] - static_cast<pnodPtrT>(curPtr)->pos[2];
+   const fType m  = static_cast<pnodPtrT>(curPtr)->m;
    const fType rr = rx * rx + ry * ry + rz * rz;
    const fType r  = sqrt(rr);
 
-   const fType m = static_cast<pnodPtrT>(curPtr)->m;
-
-   //const fType splineOr3 = m*splineOSmoR3(r,h);
 #ifdef SPHLATCH_GRAVITY_SPLINESMOOTHING
    const fType h =
       static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr)->h;
