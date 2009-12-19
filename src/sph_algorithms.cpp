@@ -10,10 +10,17 @@ struct densSum
    _krnlT K;
 
    fType  rhoi;
+#ifdef SPHLATCH_NONEIGH
+   cType  noneighi;
+#endif
 
    void   preSum(_partT* const _i)
    {
       rhoi = 0.;
+
+#ifdef SPHLATCH_NONEIGH
+      noneighi = 0;
+#endif
    }
 
    void operator()(_partT* const _i,
@@ -27,11 +34,17 @@ struct densSum
       const fType mj  = _j->m;
 
       rhoi += mj * K.value(r, hij);
+#ifdef SPHLATCH_NONEIGH
+      noneighi++;
+#endif
    }
 
    void postSum(_partT* const _i)
    {
       _i->rho = rhoi;
+#ifdef SPHLATCH_NONEIGH
+      _i->noneigh = noneighi;
+#endif
    }
 };
 

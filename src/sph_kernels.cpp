@@ -1,7 +1,7 @@
 #ifndef SPHLATCH_SPH_KERNELS_CPP
- #define SPHLATCH_SPH_KERNELS_CPP
+#define SPHLATCH_SPH_KERNELS_CPP
 
- #include "typedefs.h"
+#include "typedefs.h"
 
 namespace sphlatch {
 ///
@@ -61,9 +61,6 @@ public:
 
    vect3dT deriv;
 };
-};
-
-#endif
 
 ///
 /// 2D M4 cubic spline kernel
