@@ -18,7 +18,7 @@ template<typename _funcT, typename _partT>
 class NeighWorker : public BHTreeWorker {
 public:
    NeighWorker(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
-   NeighWorker(const NeighWorker& _SPHwork) : BHTreeWorker(_SPHwork) { }
+   NeighWorker(const NeighWorker& _Nworker) : BHTreeWorker(_Nworker) { }
    ~NeighWorker() { }
 
    void neighExecFunc(const pnodPtrT _part, const fType _srad);
@@ -58,7 +58,7 @@ void NeighWorker<_funcT, _partT>::neighExecFunc(const pnodPtrT _pnod,
          {
             Func(ipartPtr,
                  static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr),
-                 rvec, rr);
+                 rvec, rr, _srad);
          }
 
          goNext();

@@ -9,10 +9,11 @@
  *
  */
 
-#include "bhtree_worker_neighfunc.cpp"
 #include "bhtree_worker.cpp"
 #include "bhtree_particle.h"
 #include "timer.cpp"
+
+#include "bhtree_worker_neighfunc.cpp"
 
 namespace sphlatch {
 template<typename _sumT, typename _partT>
@@ -24,10 +25,10 @@ public:
 
    void operator()(const czllPtrT _czll);
 
-   typedef sphlatch::Timer timerT;
+   typedef sphlatch::Timer   timerT;
 
 private:
-   _sumT Sum;
+   _sumT  Sum;
    timerT Timer;
    void sumNeighbours(const pnodPtrT _part);
 };
@@ -60,13 +61,13 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
    // go to the particle and load its data
    curPtr = _part;
    _partT* const ipartPtr = static_cast<_partT*>(_part->partPtr);
-   
+
    Sum.preSum(ipartPtr);
-   
-   const vect3dT ppos     = _part->pos;
+
+   const vect3dT ppos = _part->pos;
 
    //FIXME: this factor should be set more generically
-   const fType hi = static_cast<_partT*>(_part->partPtr)->h;
+   const fType hi    = static_cast<_partT*>(_part->partPtr)->h;
    const fType srad  = 2. * hi;
    const fType srad2 = srad * srad;
 
@@ -89,13 +90,13 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
       if (curPtr->isParticle)
       {
          const vect3dT rvec = ppos - static_cast<pnodPtrT>(curPtr)->pos;
-         const fType rr = dot( rvec, rvec );
+         const fType   rr   = dot(rvec, rvec);
 
          if (rr < srad2)
          {
             Sum(ipartPtr,
                 static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr),
-                rvec, rr, hi);
+                rvec, rr, srad);
 #ifdef SPHLATCH_NONEIGH
             non++;
 #endif
@@ -120,9 +121,59 @@ void SPHsumWorker<_sumT, _partT>::sumNeighbours(const pnodPtrT _part)
 #ifdef SPHLATCH_NONEIGH
    static_cast<_partT*>(_part->partPtr)->noneigh = non;
 #endif
-   
-   Sum.postSum(ipartPtr);
 
+   Sum.postSum(ipartPtr);
+}
+
+template<typename _sumT, typename _partT>
+class SPHsum2Worker : public NeighWorker<_sumT, _partT> {
+public:
+   SPHsum2Worker(const BHTreeWorker::treePtrT _treePtr) :
+      NeighWorker<_sumT, _partT>(_treePtr) { }
+   SPHsum2Worker(const SPHsum2Worker& _SPHwork) :
+      NeighWorker<_sumT, _partT>(_SPHwork) { }
+   ~SPHsum2Worker() { }
+
+   void operator()(const czllPtrT _czll);
+
+   typedef sphlatch::Timer   timerT;
+private:
+
+   _sumT  Sum;
+   timerT Timer;
+};
+
+
+template<typename _sumT, typename _partT>
+void SPHsum2Worker<_sumT, _partT>::operator()(const czllPtrT _czll)
+{
+   nodePtrT       curPart  = _czll->chldFrst;
+   const nodePtrT stopChld = _czll->chldLast->next;
+
+   // an empty CZ cell may have an chldFrst pointing to NULL
+   if (curPart == NULL)
+      return;
+
+   Timer.start();
+   while (curPart != stopChld)
+   {
+      if (curPart->isParticle)
+      {
+         _partT* const partPtr = static_cast<_partT*>(
+           static_cast<pnodPtrT>(curPart)->partPtr);
+         const fType hi = partPtr->h;
+         const fType srad = 2. * hi;
+         
+         Sum.preSum(partPtr);
+         NeighWorker<_sumT,
+                     _partT>::neighExecFunc(static_cast<pnodPtrT>(curPart),
+                                            srad);
+         Sum.postSum(partPtr);
+      }
+      curPart = curPart->next;
+   }
+   const double compTime = Timer.getRoundTime();
+   _czll->compTime += static_cast<fType>(compTime);
 }
 };
 

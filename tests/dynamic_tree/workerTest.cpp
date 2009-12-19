@@ -59,6 +59,7 @@ struct densFunc
 
 #include "bhtree_worker_sphsum.cpp"
 typedef sphlatch::SPHsumWorker<densFunc, partT>   densSumT;
+typedef sphlatch::SPHsum2Worker<densFunc, partT>   densSum2T;
 
 #include "bhtree_worker_neighfunc.cpp"
 typedef sphlatch::NeighWorker<densFunc, partT> neighFuncT;

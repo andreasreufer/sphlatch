@@ -141,7 +141,8 @@ int main(int argc, char* argv[])
    Tree.update(0.8, 1.2);
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
 
-   gravT gravWorker(&Tree);
+   const fType G = 1.;
+   gravT gravWorker(&Tree, G);
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
 

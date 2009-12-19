@@ -20,10 +20,10 @@ struct densSum
                    const _partT* const _j,
                    const vect3dT& _rvec,
                    const fType _rr,
-                   const fType _hi)
+                   const fType _srad)
    {
       const fType r   = sqrt(_rr);
-      const fType hij = 0.5 * (_hi + _j->h);
+      const fType hij = 0.25*_srad + 0.5*(_j->h);
       const fType mj  = _j->m;
 
       rhoi += mj * K.value(r, hij);
@@ -57,14 +57,14 @@ struct accPowSum
                    const _partT* const _j,
                    const vect3dT& _rvec,
                    const fType _rr,
-                   const fType _hi)
+                   const fType _srad)
    {
       //FIXME: that doesn't belong here
       const fType alpha = 1.;
       const fType beta  = 2.;
 
       const fType r   = sqrt(_rr);
-      const fType hij = 0.5 * (_hi + _j->h);
+      const fType hij = 0.25*_srad + 0.5*(_j->h);
 
       const fType pj   = _j->p;
       const fType rhoj = _j->rho;

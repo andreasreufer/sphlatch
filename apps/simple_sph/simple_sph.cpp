@@ -138,7 +138,7 @@ typedef sphlatch::GravityWorker<macT, partT>   gravT;
 typedef sphlatch::CubicSpline3D                  krnlT;
 
 typedef sphlatch::densSum<partT, krnlT>          densT;
-typedef sphlatch::SPHsumWorker<densT, partT>     densSumT;
+typedef sphlatch::SPHsum2Worker<densT, partT>     densSumT;
 
 typedef sphlatch::accPowSum<partT, krnlT>        accPowT;
 typedef sphlatch::SPHsumWorker<accPowT, partT>   accPowSumT;
