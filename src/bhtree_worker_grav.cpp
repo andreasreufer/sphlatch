@@ -15,18 +15,11 @@
 
 namespace sphlatch {
 template<typename _macT, typename _partT>
-/*class GravityWorker : public BHTreeWorker {
+class GravityWorker : public BHTreeWorker {
 public:
    GravityWorker(const treePtrT _treePtr,
                  const fType    _G) : BHTreeWorker(_treePtr), G(_G) { }
    GravityWorker(const GravityWorker& _gw) : BHTreeWorker(_gw), G(_gw.G) { }
-   ~GravityWorker() { }*/
-
-class GravityWorker : public BHTreeWorkerRO {
-public:
-   GravityWorker(const treePtrT _treePtr,
-                 const fType    _G) : BHTreeWorkerRO(_treePtr), G(_G) { }
-   GravityWorker(const GravityWorker& _gw) : BHTreeWorkerRO(_gw), G(_gw.G) { }
    ~GravityWorker() { }
 
    void calcGravity(const czllPtrT _czll);
