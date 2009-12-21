@@ -47,11 +47,10 @@ typedef sphlatch::ANEOS eosType;
 using namespace boost::assign;
 using namespace sphlatch::vectindices;
 using namespace sphlatch::constants;
+using namespace sphlatch::constants::unitsCGS;
 
 int main(int argc, char* argv[])
 {
-  //MPI::Init(argc, argv);
-
   io_type&        IOManager(io_type::instance());
   po::options_description Options("Global Options");
 
@@ -291,6 +290,5 @@ int main(int argc, char* argv[])
   IOManager.saveAttribute(Solver.gravConst, "gravconst", dumpfilename);
   IOManager.saveAttribute(Solver.uMin, "umin", dumpfilename);
 
-  //MPI::Finalize();
   return(EXIT_SUCCESS);
 }
