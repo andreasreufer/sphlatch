@@ -1,1051 +1,338 @@
-// some defs
-
-//#define SPHLATCH_CARTESIAN_XYZ
-//#define SPHLATCH_CARTESIAN_YZX
-//#define SPHLATCH_CARTESIAN_ZXY
-#define SPHLATCH_HILBERT3D
-
-// uncomment for single-precision calculation
-//#define SPHLATCH_SINGLEPREC
-
-// enable parallel version
-#define SPHLATCH_PARALLEL
-
-// enable Logger
-#define SPHLATCH_LOGGER
-
-// enable intensive logging for toptree global summation
-//#define SPHLATCH_TREE_LOGSUMUPMP
-
-//#define SPHLATCH_RANKSPACESERIALIZE
-
-// enable checking of bounds for the neighbour lists
-//#define SPHLATCH_CHECKNONEIGHBOURS
-
-// enable selfgravity?
-//#define SPHLATCH_GRAVITY
-
-// time dependent energy?
-//#define SPHLATCH_TIMEDEP_ENERGY
-
-// time dependent smoothing length?
-//#define SPHLATCH_TIMEDEP_SMOOTHING
-
-// shocktube boundary conditions?
-//#define SPHLATCH_SHOCKTUBE
-
-// integrate rho instead of using the SPH sum?
-//#define SPHLATCH_INTEGRATERHO
-
-// linear velocity damping term?
-//#define SPHLATCH_FRICTION
-
-// remove particles on escaping orbits?
-//#define SPHLATCH_REMOVEESCAPING
-
-// do we need the velocity divergence?
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-#ifndef SPHLATCH_VELDIV
-#define SPHLATCH_VELDIV
-#endif
-#endif
-
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-#ifndef SPHLATCH_VELDIV
-#define SPHLATCH_VELDIV
-#endif
-#endif
-
-#ifdef SPHLATCH_INTEGRATERHO
-#ifndef SPHLATCH_VELDIV
-#define SPHLATCH_VELDIV
-#endif
-#endif
-
-#include <cstdlib>
 #include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <string>
-#include <cmath>
-
-#include <boost/program_options/option.hpp>
-#include <boost/program_options/cmdline.hpp>
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/positional_options.hpp>
-
-#include <boost/assign/std/vector.hpp>
-
-#include <boost/mpl/vector_c.hpp>
-
-namespace po = boost::program_options;
-
-#include "typedefs.h"
-typedef sphlatch::fType fType;
-typedef sphlatch::fType& fRefType;
-
-typedef sphlatch::valvectType valvectType;
-typedef sphlatch::valvectRefType valvectRefType;
-
-typedef sphlatch::countsType countsType;
-
-typedef sphlatch::idvectRefType idvectRefType;
-typedef sphlatch::matrixRefType matrixRefType;
-typedef sphlatch::partsIndexVectType partsIndexVectType;
-
-typedef sphlatch::quantsType quantsType;
-
-#include "io_manager.h"
-typedef sphlatch::IOManager io_type;
-
-#include "particle_manager.h"
-typedef sphlatch::ParticleManager part_type;
-
-#include "communication_manager.h"
-typedef sphlatch::CommunicationManager comm_type;
-
-#include "costzone.h"
-typedef sphlatch::CostZone costzone_type;
-
-#include "log_manager.h"
-typedef sphlatch::LogManager log_type;
-
-//#include "integrator_verlet.h"
-//typedef sphlatch::VerletMetaIntegrator integrator_type;
-
-#include "integrator_predcorr.h"
-typedef sphlatch::PredCorrMetaIntegrator integrator_type;
-
-#ifdef SPHLATCH_TILLOTSON
-#include "eos_tillotson.h"
-#define SPHLATCH_EOS_DEFINED
-typedef sphlatch::Tillotson eos_type;
-#endif
-
-#ifdef SPHLATCH_ANEOS
-#include "eos_aneos.h"
-#define SPHLATCH_EOS_DEFINED
-typedef sphlatch::ANEOS eos_type;
-#endif
-
-#ifndef SPHLATCH_EOS_DEFINED
-#include "eos_idealgas.h"
-#define SPHLATCH_EOS_DEFINED
-typedef sphlatch::IdealGas eos_type;
-#endif
-
-#include <boost/progress.hpp>
 #include <vector>
 
-#include "kernel_cubicspline.h"
-typedef sphlatch::CubicSpline3D kernel_type;
+//#define SPHLATCH_SINGLEPREC
 
-#ifdef SPHLATCH_GRAVITY
-#include "bhtree.h"
-typedef sphlatch::BHtree<sphlatch::Quadrupoles> tree_type;
+//#include <omp.h>
+//#define SPHLATCH_OPENMP
+#define SPHLATCH_HDF5
+#define SPHLATCH_NONEIGH
+
+#include "typedefs.h"
+typedef sphlatch::fType     fType;
+typedef sphlatch::vect3dT   vect3dT;
+typedef sphlatch::box3dT    box3dT;
+
+const fType finf = sphlatch::fTypeInf;
+
+#define SPHLATCH_LOGGER
+#include "logger.cpp"
+typedef sphlatch::Logger   logT;
+
+#include "bhtree.cpp"
+typedef sphlatch::BHTree   treeT;
+
+///
+/// define the particle we are using
+///
+#include "bhtree_particle.h"
+#include "sph_fluid_particle.h"
+#include "io_particle.h"
+#include "integrator_predcorr.cpp"
+
+class particle :
+   public sphlatch::treePart,
+   public sphlatch::movingPart,
+   public sphlatch::SPHfluidPart,
+   public sphlatch::energyPart,
+   public sphlatch::IOPart
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+   , public sphlatch::varHPart
 #endif
-
-#include "rankspace.h"
-typedef sphlatch::Rankspace neighsearch_type;
-
-using namespace sphlatch::vectindices;
-using namespace boost::assign;
-
-fType timeStep()
+#ifdef SPHLATCH_ANEOS
+   , public sphlatch::ANEOSPart
+#endif
 {
-  part_type& PartManager(part_type::instance());
-  comm_type& CommManager(comm_type::instance());
-  log_type& Logger(log_type::instance());
-  io_type& IOManager(io_type::instance());
+public:
 
-  matrixRefType pos(PartManager.pos);
-  matrixRefType vel(PartManager.vel);
-  matrixRefType acc(PartManager.acc);
+   sphlatch::PredictorCorrectorO2<vect3dT> posInt;
+   sphlatch::PredictorCorrectorO1<fType>   energyInt;
 
-  valvectRefType m(PartManager.m);
-  valvectRefType h(PartManager.h);
-  valvectRefType p(PartManager.p);
-  valvectRefType u(PartManager.u);
-  valvectRefType cs(PartManager.cs);
-  valvectRefType rho(PartManager.rho);
-  valvectRefType dudt(PartManager.dudt);
-  valvectRefType dhdt(PartManager.dhdt);
-  valvectRefType divv(PartManager.divv);
+   void bootstrap()
+   {
+      posInt.bootstrap(pos, vel, acc);
+      energyInt.bootstrap(u, dudt);
+   }
+
+   void predict(const fType _dt)
+   {
+      posInt.predict(pos, vel, acc, _dt);
+      energyInt.predict(u, dudt, _dt);
+   }
+
+   void correct(const fType _dt)
+   {
+      posInt.correct(pos, vel, acc, _dt);
+      energyInt.correct(u, dudt, _dt);
+   }
+
+   ioVarLT getLoadVars()
+   {
+      ioVarLT vars;
+
+      vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(id, "id"));
+
+      vars.push_back(storeVar(u, "u"));
+#ifdef SPHLATCH_ANEOS
+      vars.push_back(storeVar(mat, "mat"));
+#endif
+#ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
+      vars.push_back(storeVar(eps, "eps"));
+#endif
+      return(vars);
+   }
+
+   ioVarLT getSaveVars()
+   {
+      ioVarLT vars;
+
+      vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(acc, "acc"));
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(id, "id"));
+      vars.push_back(storeVar(rho, "rho"));
+      vars.push_back(storeVar(noneigh, "noneigh"));
+
+      vars.push_back(storeVar(p, "p"));
+      vars.push_back(storeVar(u, "u"));
+      vars.push_back(storeVar(cs, "cs"));
+#ifdef SPHLATCH_ANEOS
+      vars.push_back(storeVar(mat, "mat"));
+      vars.push_back(storeVar(T, "T"));
+      vars.push_back(storeVar(phase, "phase"));
+#endif
+#ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
+      vars.push_back(storeVar(eps, "eps"));
+#endif
+      return(vars);
+   }
+};
+
+typedef particle   partT;
+
+class ghost :
+   public sphlatch::treeGhost,
+   public sphlatch::movingGhost
+{ };
+
+typedef ghost                                  ghstT;
+
+#include "particle_set.cpp"
+typedef sphlatch::ParticleSet<partT>           partSetT;
 
 #ifdef SPHLATCH_GRAVITY
-  valvectRefType eps(PartManager.eps);
+ #include "bhtree_worker_grav.cpp"
+typedef sphlatch::fixThetaMAC                  macT;
+typedef sphlatch::GravityWorker<macT, partT>   gravT;
 #endif
-#ifdef SPHLATCH_INTEGRATERHO
-  valvectRefType drhodt(PartManager.drhodt);
-#endif
-  idvectRefType id(PartManager.id);
-  idvectRefType noneigh(PartManager.noneigh);
-#ifdef SPHLATCH_TILLOTSON
-  idvectRefType mat(PartManager.mat);
-#endif
+
+#include "sph_algorithms.cpp"
+#include "sph_kernels.cpp"
+#include "bhtree_worker_sphsum.cpp"
+
+typedef sphlatch::CubicSpline3D                  krnlT;
+
+typedef sphlatch::densSum<partT, krnlT>          densT;
+typedef sphlatch::SPHsum2Worker<densT, partT>     densSumT;
+
+typedef sphlatch::accPowSum<partT, krnlT>        accPowT;
+typedef sphlatch::SPHsumWorker<accPowT, partT>   accPowSumT;
+
 #ifdef SPHLATCH_ANEOS
-  idvectRefType mat(PartManager.mat);
-  idvectRefType phase(PartManager.phase);
-  valvectRefType T(PartManager.T);
+ #include "eos_aneos.cpp"
+typedef sphlatch::ANEOS<partT>                   eosT;
 #endif
 
-  fRefType time(PartManager.attributes["time"]);
-  fRefType saveItrvl(IOManager.saveItrvl);
+// particles are global
+partSetT parts;
 
-  int& step(PartManager.step);
-  //int& substep(PartManager.substep);
+void derive()
+{
+   treeT& Tree(treeT::instance());
+   logT&  Logger(logT::instance());
 
-  const size_t noParts = PartManager.getNoLocalParts();
-  //const size_t myDomain = CommManager.getMyDomain();
+   Tree.update(0.8, 1.2);
+   Logger << "Tree.update()";
 
-  ///
-  /// timestep criterion for acceleration
-  /// ( see Wetzstein et. al 2008 )
-  ///
-  fType dtA = std::numeric_limits<fType>::max();
-  for (size_t i = 0; i < noParts; i++)
-    {
-      const fType ai = sqrt(acc(i, X) * acc(i, X) +
-                            acc(i, Y) * acc(i, Y) +
-                            acc(i, Z) * acc(i, Z));
+   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
+   const int           noCZbottomLoc = CZbottomLoc.size();
 
-      if (ai > 0.)
-        {
-          const fType dtAi = sqrt(h(i) / ai);
-          dtA = dtAi < dtA ? dtAi : dtA;
-        }
-    }
-  dtA *= 0.5;
-  CommManager.min(dtA);
 
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-  ///
-  /// limit oooling speed in integration time
-  /// energy integration
-  ///
-  fType dtU = std::numeric_limits<fType>::max();
-  for (size_t i = 0; i < noParts; i++)
-    {
-      if (dudt(i) < 0.)
-        {
-          const fType dtUi = -u(i) / dudt(i);
-          dtU = dtUi < dtU ? dtUi : dtU;
-        }
-    }
-  CommManager.min(dtU);
-#endif
+   const size_t nop = parts.getNop();
+   for (size_t i = 0; i < nop; i++)
+   {
+      parts[i].acc  = 0., 0., 0.;
+      parts[i].dudt = 0.;
+   }
 
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-  ///
-  /// timestep criterion for smoothing length integration
-  /// ( see Wetzstein et. al 2008 )
-  ///
-  fType dtH = std::numeric_limits<fType>::max();
-  for (size_t i = 0; i < noParts; i++)
-    {
-      const fType absdtHi = fabs(h(i) / dhdt(i));
-
-      if (absdtHi > 0.)
-        {
-          dtH = absdtHi < dtH ? absdtHi : dtH;
-        }
-    }
-  dtH *= 0.15;
-  CommManager.min(dtH);
-#endif
-
-  ///
-  /// CFL condition
-  ///
-  fType dtCFL = std::numeric_limits<fType>::max();
-  const fType courantNumber = PartManager.attributes["courant"];
-  for (size_t i = 0; i < noParts; i++)
-    {
-      const fType dtCFLi = h(i) / cs(i);
-      dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
-      if (cs(i) > 0.)
-        {
-          dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
-        }
-    }
-  dtCFL *= courantNumber;
-  CommManager.min(dtCFL);
-
-  ///
-  /// distance to next save time
-  ///
-  const fType dtSave = (floor((time / saveItrvl) + 1.e-6)
-                        + 1.) * saveItrvl - time;
-
-  ///
-  /// determine global minimum.
-  /// by parallelly minimizing the timesteps, we
-  /// can estimate which ones are dominant
-  ///
-  fType dtGlob = std::numeric_limits<fType>::max();
-
-  dtGlob = dtA < dtGlob ? dtA : dtGlob;
-  dtGlob = dtCFL < dtGlob ? dtCFL : dtGlob;
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-  dtGlob = dtU < dtGlob ? dtU : dtGlob;
-#endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-  dtGlob = dtH < dtGlob ? dtH : dtGlob;
-#endif
-  dtGlob = dtSave < dtGlob ? dtSave : dtGlob;
-
-  Logger.stream << "dtA: " << dtA
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-                << " dtU: " << dtU
-#endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-                << " dtH: " << dtH
-#endif
-                << " dtCFL: " << dtCFL
-                << " dtSave: " << dtSave
-                << "   dtGlob: " << dtGlob;
-  Logger.flushStream();
-
-  ///
-  /// define the quantities to save in a dump
-  ///
-  quantsType saveQuants;
-  saveQuants.vects += &pos, &vel, &acc;
-  saveQuants.scalars += &m, &rho, &u, &p, &h, &cs;
-  saveQuants.ints += &id, &noneigh;
-
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-  saveQuants.scalars += &dudt;
-#endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-  saveQuants.scalars += &dhdt;
-  saveQuants.scalars += &divv;
-#endif
 #ifdef SPHLATCH_GRAVITY
-  saveQuants.scalars += &eps;
+   const fType G = parts.attributes["gravconst"];
+   gravT gravWorker(&Tree, G);
+ #pragma omp parallel for firstprivate(gravWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      gravWorker.calcGravity(CZbottomLoc[i]);
+   Logger << "Tree.calcGravity()";
 #endif
-#ifdef SPHLATCH_TILLOTSON
-  saveQuants.ints += &mat;
-#endif
-#ifdef SPHLATCH_ANEOS
-  saveQuants.scalars += &T;
-  saveQuants.ints += &mat, &phase;
-#endif
-#ifdef SPHLATCH_INTEGRATERHO
-  saveQuants.scalars += &drhodt;
-#endif
-  const fType curSaveTime = (floor((time / saveItrvl) + 1.e-9))
-                            * saveItrvl;
-  if (fabs(curSaveTime - time) < 1.e-9)
-    {
-      std::string fileName = "dump";
+   
+   densSumT densWorker(&Tree);
+#pragma omp parallel for firstprivate(densWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      densWorker(CZbottomLoc[i]);
+   Logger << "Tree.densWorker()";
 
-      std::ostringstream stepSS;
-      stepSS << step;
+   eosT& EOS(eosT::instance());
+   for (size_t i = 0; i < nop; i++)
+   {
+      EOS(parts[i]);
+   }
+   Logger << "pressure";
 
-      ///
-      /// pad step number to 7 numbers
-      ///
-      for (size_t i = stepSS.str().size(); i < 7; i++)
-        {
-          fileName.append("0");
-        }
-      fileName.append(stepSS.str());
-
-      fileName.append("_T");
-      std::ostringstream timeSS;
-      timeSS << std::setprecision(4) << std::scientific << time;
-
-      ///
-      /// pad to a size of 11 characters
-      /// (sign 1, mantissa 1, '.' 1, prec 3, 'e+' 2, exponent 3)
-      ///
-      for (size_t i = timeSS.str().size(); i < 11; i++)
-        {
-          fileName.append("0");
-        }
-      fileName.append(timeSS.str());
-      fileName.append(".h5part");
-
-      IOManager.saveDump(fileName, saveQuants);
-      Logger.stream << "dump saved: " << fileName;
-      Logger.flushStream();
-    }
-
-  return dtGlob;
+   accPowSumT accPowWorker(&Tree);
+#pragma omp parallel for firstprivate(accPowWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      accPowWorker(CZbottomLoc[i]);
+   Logger << "Tree.accPowWorker()";
 }
 
-void derivate()
+fType timestep()
 {
-  part_type& PartManager(part_type::instance());
-  comm_type& CommManager(comm_type::instance());
-  //io_type& IOManager(io_type::instance());
-  costzone_type& CostZone(costzone_type::instance());
-  log_type& Logger(log_type::instance());
-  eos_type& EOS(eos_type::instance());
+   logT&  Logger(logT::instance());
+   
+   const size_t nop = parts.getNop();
 
-  matrixRefType pos(PartManager.pos);
-  matrixRefType vel(PartManager.vel);
-  matrixRefType acc(PartManager.acc);
+   const fType courantNumber = parts.attributes["courant"];
+   const fType time          = parts.attributes["time"];
 
-  valvectRefType m(PartManager.m);
-  valvectRefType h(PartManager.h);
-  valvectRefType p(PartManager.p);
-  valvectRefType u(PartManager.u);
-  valvectRefType cs(PartManager.cs);
-  valvectRefType rho(PartManager.rho);
-  valvectRefType dudt(PartManager.dudt);
-  valvectRefType dhdt(PartManager.dhdt);
-  valvectRefType divv(PartManager.divv);
-
-#ifdef SPHLATCH_GRAVITY
-  valvectRefType eps(PartManager.eps);
-#endif
-#ifdef SPHLATCH_INTEGRATERHO
-  valvectRefType drhodt(PartManager.drhodt);
-#endif
-
-  idvectRefType id(PartManager.id);
-  idvectRefType noneigh(PartManager.noneigh);
-
-  ///
-  /// exchange particle data
-  ///
-  CostZone.createDomainPartsIndex();
-  Logger << "new domain decomposition";
-  CommManager.exchange(CostZone.domainPartsIndex,
-                       CostZone.getNoGhosts());
-
-  ///
-  /// prepare ghost sends
-  ///
-  CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-  Logger.stream << "distributed particles: "
-                << PartManager.getNoLocalParts() << " parts. & "
-                << PartManager.getNoGhostParts() << " ghosts";
-  Logger.flushStream();
-
-  const size_t noParts = PartManager.getNoLocalParts();
-  const size_t noTotParts = noParts + PartManager.getNoGhostParts();
-  int& step(PartManager.step);
-  int& substep(PartManager.substep);
-  //const size_t myDomain = CommManager.getMyDomain();
-
-  /// send ghosts to other domains
-  CommManager.sendGhosts(pos);
-  CommManager.sendGhosts(vel);
-  CommManager.sendGhosts(id);
-  CommManager.sendGhosts(m);
-  CommManager.sendGhosts(h);
-#ifdef SPHLATCH_GRAVITY
-  CommManager.sendGhosts(eps); // << eps is not yet used for interacting partners!
-#endif
-  Logger << " sent to ghosts: pos, vel, id, m, h, eps";
-
-  ///
-  /// zero the derivatives
-  ///
-  for (size_t i = 0; i < noParts; i++)
-    {
-      acc(i, X) = 0.;
-      acc(i, Y) = 0.;
-      acc(i, Z) = 0.;
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-      dudt(i) = 0.;
-#endif
-#ifdef SPHLATCH_SHOCKTUBE
-      ///
-      /// shocktube boundary condition
-      ///
-      vel(i, X) = 0.;
-      vel(i, Y) = 0.;
-
-      if (pos(i, Z) < 5. || pos(i, Z) > 295.)
-        vel(i, Z) = 0;
-#endif
-#ifdef SPHLATCH_GRAVITY
-      eps(i) = 0.7 * h(i);
-#endif
-    }
-
-#ifdef SPHLATCH_GRAVITY
-  const fType gravTheta = PartManager.attributes["gravtheta"];
-  const fType gravConst = PartManager.attributes["gravconst"];
-
-  tree_type Tree(gravTheta, gravConst,
-                 CostZone.getDepth(), CostZone.getCenter(),
-                 CostZone.getSidelength());
-
-  ///
-  /// fill up tree, determine ordering, calculate multipoles
-  ///
-  for (size_t k = 0; k < noTotParts; k++)
-    {
-      Tree.insertParticle(k);
-    }
-
-  Tree.detParticleOrder();
-  Tree.calcMultipoles();
-  Logger << "Tree ready";
-
-  for (size_t k = 0; k < noParts; k++)
-    {
-      const size_t i = Tree.particleOrder[k];
-      Tree.calcGravity(i);
-    }
-  Logger << "gravity calculated";
-#endif
-
-  ///
-  /// define kernel and neighbour search algorithm
-  ///
-  kernel_type Kernel;
-  neighsearch_type Nsearch;
-
-  ///
-  /// the size of the neighbour list doesn't really
-  /// affect the performance of the neighbour search,
-  /// so it can be choosen quite large
-  ///
-  Nsearch.prepare();
-  Nsearch.neighbourList.resize(16384);
-  Nsearch.neighDistList.resize(16384);
-  Logger << "Rankspace prepared";
-
-#ifndef SPHLATCH_INTEGRATERHO
-  ///
-  /// 1st SPH sum: density
-  /// I need    : pos, h, m
-  /// I provide : rho
-  ///
-  for (size_t k = 0; k < noParts; k++)
-    {
-      ///
-      /// find neighbours
-      ///
-#ifdef SPHLATCH_GRAVITY
-      const size_t i = Tree.particleOrder[k];
-#else
-      const size_t i = k;
-#endif
-      const fType hi = h(i);
-      const fType srchRad = 2. * hi;
-      Nsearch.findNeighbours(i, srchRad);
-
-      const size_t noNeighs = Nsearch.neighbourList[0];
-
-      static fType rhoi;
-      rhoi = 0.;
-
-      ///
-      /// sum over neighbours
-      ///
-      for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
-        {
-          const fType r = Nsearch.neighDistList[curNeigh];
-          const size_t j = Nsearch.neighbourList[curNeigh];
-
-          const fType hij = 0.5 * (hi + h(j));
-
-          rhoi += m(j) * Kernel.value(r, hij);
-        }
-      rho(i) = rhoi;
-    }
-  Logger << "SPH sum: rho";
-#endif
-  CommManager.sendGhosts(rho);
-  Logger << " sent to ghosts: rho";
+   fType dtA   = finf;
+   fType dtCFL = finf;
 
 #ifdef SPHLATCH_TIMEDEP_ENERGY
-  ///
-  /// lower temperature bound
-  ///
-
-  const fType uMin = PartManager.attributes["umin"];
-  for (size_t i = 0; i < noParts; i++)
-    {
-      if (u(i) < uMin)
-        {
-          u(i) = uMin;
-        }
-    }
-  Logger.stream << "assure minimal temperature (umin = " << uMin << ")";
-  Logger.flushStream();
+   fType dtU = finf;
 #endif
-
-  ///
-  /// pressure
-  /// I need    : u, rho
-  /// I provide : p, cs
-  ///
-  for (size_t k = 0; k < noParts; k++)
-    {
-      EOS(k, p(k), cs(k));
-    }
-  Logger << "calculated pressure";
-  CommManager.sendGhosts(p);
-  CommManager.sendGhosts(cs);
-  Logger << " sent to ghosts: p, cs";
-
-  ///
-  /// 2st SPH sum: acceleration, specific power & velocity divergence
-  /// I need    : pos, vel, h, m, rho, u
-  /// I provide : acc, dudt, divv
-  ///
-  const fType alpha = 1;
-  const fType beta = 2;
-
-  fType curAccX = 0., curAccY = 0., curAccZ = 0.;
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-  fType curPow = 0.;
-#endif
-#ifdef SPHLATCH_VELDIV
-  fType curDrhoDt = 0.;
-  fType divvMax = std::numeric_limits<fType>::min();
-#endif
-  for (size_t k = 0; k < noParts; k++)
-    {
-#ifdef SPHLATCH_GRAVITY
-      const size_t i = Tree.particleOrder[k];
-#else
-      const size_t i = k;
-#endif
-      const fType hi = h(i);
-      const fType rhoi = rho(i);
-      const fType pi = p(i);
-
-      const fType piOrhoirhoi = pi / (rhoi * rhoi);
-
-      /// find the neighbours
-      const fType srchRad = 2. * hi;
-      Nsearch.findNeighbours(i, srchRad);
-
-      ///
-      /// store the number of neighbours
-      ///
-      const size_t noNeighs = Nsearch.neighbourList[0];
-      noneigh(i) = noNeighs;
-
-      curAccX = 0.;
-      curAccY = 0.;
-      curAccZ = 0.;
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-      curPow = 0.;
-#endif
-#ifdef SPHLATCH_VELDIV
-      curDrhoDt = 0.;
-#endif
-      const fType viX = vel(i, X);
-      const fType viY = vel(i, Y);
-      const fType viZ = vel(i, Z);
-
-      const fType riX = pos(i, X);
-      const fType riY = pos(i, Y);
-      const fType riZ = pos(i, Z);
-
-      const fType ci = cs(i);
-
-      ///
-      /// sum over the neighbours
-      ///
-      for (size_t curNeigh = 1; curNeigh <= noNeighs; curNeigh++)
-        {
-          const fType rij = Nsearch.neighDistList[curNeigh];
-          const size_t j = Nsearch.neighbourList[curNeigh];
-
-          const fType rhoj = rho(j);
-          const fType pj = p(j);
-
-          const fType hij = 0.5 * (hi + h(j));
-
-          const fType rijX = riX - pos(j, X);
-          const fType rijY = riY - pos(j, Y);
-          const fType rijZ = riZ - pos(j, Z);
-
-          const fType vijX = viX - vel(j, X);
-          const fType vijY = viY - vel(j, Y);
-          const fType vijZ = viZ - vel(j, Z);
-
-          const fType vijrij = rijX * vijX + rijY * vijY + rijZ * vijZ;
-
-          /// make that a static or define outside of loop?
-          fType av = 0;
-
-          /// AV
-          if (vijrij < 0.)
-            {
-              const fType rijrij = rijX * rijX + rijY * rijY + rijZ * rijZ;
-              const fType rhoij = 0.5 * (rhoi + rhoj);
-              const fType cij = 0.5 * (ci + cs(j));
-              const fType muij = hij * vijrij / (rijrij + 0.01 * hij * hij);
-
-              av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
-            }
-
-          const fType accTerm = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
-          const fType mj = m(j);
-
-          /// acceleration
-          Kernel.derive(rij, hij, rijX, rijY, rijZ);
-
-          curAccX -= mj * accTerm * Kernel.derivX;
-          curAccY -= mj * accTerm * Kernel.derivY;
-          curAccZ -= mj * accTerm * Kernel.derivZ;
-
-#ifdef SPHLATCH_VELDIV
-          ///
-          /// m_j * v_ij * divW_ij
-          ///
-          const fType mjvijdivWij = mj * (vijX * Kernel.derivX +
-                                          vijY * Kernel.derivY +
-                                          vijZ * Kernel.derivZ);
-#endif
-
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-          ///
-          /// pdV + AV heating
-          ///
-          curPow += (0.5 * accTerm * mjvijdivWij);
-#endif
-#ifdef SPHLATCH_VELDIV
-          ///
-          /// velocity divergence
-          ///
-          curDrhoDt += mjvijdivWij;
-#endif
-        }
-      acc(i, X) += curAccX;
-      acc(i, Y) += curAccY;
-      acc(i, Z) += curAccZ;
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-      dudt(i) = curPow;
-#endif
-#ifdef SPHLATCH_VELDIV
-      divv(i) = curDrhoDt / rho(i);
-      divvMax = divv(i) > divvMax ? divv(i) : divvMax;
-#endif
-#ifdef SPHLATCH_INTEGRATERHO
-      drhodt(i) = -curDrhoDt;
-#endif
-#ifdef SPHLATCH_FRICTION
-      const fType fricCoeff = 1. / PartManager.attributes["frictime"];
-      acc(i, X) -= vel(i, X) * fricCoeff;
-      acc(i, Y) -= vel(i, Y) * fricCoeff;
-      acc(i, Z) -= vel(i, Z) * fricCoeff;
-#endif
-#ifdef SPHLATCH_SHOCKTUBE
-      ///
-      /// shocktube boundary condition
-      ///
-      if (pos(i, Z) < 5. || pos(i, Z) > 295.)
-        acc(i, Z) = 0.;
-#endif
-    }
-#ifdef SPHLATCH_VELDIV
-  CommManager.max(divvMax);
-#endif
-  Logger << "SPH sum: acc, pow, divv";
-
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-  ///
-  /// time derivative of smoothing length, limit smoothing
-  /// length if necessary
-  /// I need    : divv, noneigh
-  /// I provide : h, dhdt
-  ///
-  const fType noNeighOpt = PartManager.attributes["noneigh"];
-  const fType noNeighMin = (2. / 3.) * noNeighOpt;
-  const fType noNeighMax = (5. / 3.) * noNeighOpt;
-  const fType cDivvMax = divvMax;
+   fType dtH = finf;
 #endif
+   for (size_t i = 0; i < nop; i++)
+   {
+      const fType ai = sqrt(dot(parts[i].acc, parts[i].acc));
+      if (ai > 0.)
+      {
+         const fType dtAi = sqrt(parts[i].h / ai);
+         dtA = dtAi < dtA ? dtAi : dtA;
+      }
 
-  const fType czAtomicLength = CostZone.getAtomicLength();
-  for (size_t i = 0; i < noParts; i++)
-    {
+      const fType dtCFLi = parts[i].h / parts[i].cs;
+      dtCFL = dtCFLi < dtCFL ? dtCFLi : dtCFL;
+
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+      const fType dudti = parts[i].dudt;
+      if (dudti < 0.)
+      {
+         const fType dtUi = -parts[i].u / dudti;
+         dtU = dtUi < dtU ? dtUi : dtU;
+      }
+#endif
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-      const fType noNeighCur = static_cast<fType>(noneigh(i));
-
-      ///
-      /// k1: too few neighbours   k2: number ok   k3: too many neighbours
-      ///
-      //const fType k1 = 0.5 * (1 + tanh((noNeighCur - noNeighMin) / -5.));
-      const fType k1 = 0.;
-      const fType k3 = 0.5 * (1 + tanh((noNeighCur - noNeighMax) / 5.));
-      const fType k2 = 1. - k1 - k3;
-
-      dhdt(i) = (k1 * cDivvMax - k3 * cDivvMax
-                 - k2 * static_cast<fType>(1. / 3.) * divv(i)) * h(i);
+      const fType dhdti = parts[i].dhdt;
+      if (dhdti < 0.)
+      {
+         const fType dtHi = -parts[i].h / dhdti;
+         dtH = dtHi < dtH ? dtHi : dtH;
+      }
 #endif
-      ///
-      /// hard upper limit
-      ///
-      /*if (2.5 * h(i) > czAtomicLength)
-        {
+   }
+
+   dtA   *= 0.5;
+   dtCFL *= courantNumber;
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-          if (dhdt(i) > 0.)
-            dhdt(i) = 0.;
+   dtH *= 0.15;
 #endif
-          h(i) = czAtomicLength / 2.5;
-        }*/
-    }
-  Logger.stream << "adapted smoothing length (2.5h < " << czAtomicLength
+
+   //FIXME: globally minimize all dts
+   fType dt = finf;
+
+   dt = dtA < dt ? dtA : dt;
+   dt = dtCFL < dt ? dtCFL : dt;
+
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+   dt = dtU < dt ? dtU : dt;
+#endif
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-                << ", divvmax " << cDivvMax
+   dt = dtH < dt ? dtH : dt;
 #endif
-                << ")";
+   Logger.stream << "dt:    " << dt 
+                 << "dtA:   " << dtA
+                 << "dtCFL: " << dtCFL
+                 << "dtU:   " << dtU
+                 << "dtH:   " << dtH
+                 << "\n";
+   Logger.flushStream();
 
-
-  Logger.flushStream();
-};
+   //return(dt);
+   return(10.);
+}
 
 int main(int argc, char* argv[])
 {
-  ///
-  /// parse program options
-  ///
-  po::options_description Options(
-    "<input-file> <save-time> <stop-time>\n ... or use options");
-
-  Options.add_options()
-  ("input-file,i", po::value<std::string>(),
-   "input file")
-  ("save-time,s", po::value<fType>(),
-   "save dumps when (time) modulo (save time) = 0.")
-  ("stop-time,S", po::value<fType>(),
-   "stop simulaton at this time");
-
-  po::positional_options_description posDesc;
-  posDesc.add("input-file", 1);
-  posDesc.add("save-time", 1);
-  posDesc.add("stop-time", 1);
-
-  po::variables_map poMap;
-  po::store(po::command_line_parser(argc, argv).options(Options).positional(posDesc).run(), poMap);
-  po::notify(poMap);
-
-  if (!poMap.count("input-file") ||
-      !poMap.count("save-time") ||
-      !poMap.count("stop-time"))
-    {
-      std::cerr << Options << "\n";
-      return EXIT_FAILURE;
-    }
-
-  ///
-  /// everythings set, now start the parallel envirnoment
-  ///
-  MPI::Init(argc, argv);
-
-  ///
-  /// instantate managers
-  ///
-  io_type& IOManager(io_type::instance());
-  part_type& PartManager(part_type::instance());
-  comm_type& CommManager(comm_type::instance());
-  costzone_type& CostZone(costzone_type::instance());
-  log_type& Logger(log_type::instance());
-
-  ///
-  /// some simulation parameters
-  /// attributes will be overwritten, when defined in file
-  ///
-  std::string loadDumpFile = poMap["input-file"].as<std::string>();
-  const fType maxTime = poMap["stop-time"].as<fType>();
-  IOManager.saveItrvl = poMap["save-time"].as<fType>();
-
-  PartManager.attributes["gamma"] = 5. / 3.;
-  PartManager.attributes["gravconst"] = 1.0;
-  PartManager.attributes["gravtheta"] = 0.7;
-  PartManager.attributes["courant"] = 0.3;
-
-  PartManager.attributes["noneigh"] = 50.;
-  PartManager.attributes["umin"] = 1.8;
-#ifdef SPHLATCH_FRICTION
-  PartManager.attributes["frictime"] = 200.;
-#endif
-#ifdef SPHLATCH_ANEOS_TABLE
-  PartManager.attributes["rhomin"] = 1.e-3;
-  PartManager.attributes["rhomax"] = 15.;
-  /// umin already set
-  PartManager.attributes["umax"] = 1.e12;
+#ifdef SPHLATCH_MPI
+   MPI::Init(argc, argv);
 #endif
 
-  ///
-  /// define what we're doing
-  ///
-  PartManager.useGravity();
-  PartManager.useBasicSPH();
-  PartManager.useAVMonaghan();
-  PartManager.useEnergy();
+   logT& Logger(logT::instance());
 
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-  PartManager.useTimedepEnergy();
-#endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-  PartManager.useTimedepH();
-#endif
-#ifdef SPHLATCH_TILLOTSON
-  PartManager.useMaterials();
-#endif
-#ifdef SPHLATCH_ANEOS
-  PartManager.useMaterials();
-  PartManager.usePhase();
-  PartManager.useTemperature();
-#endif
-#ifdef SPHLATCH_INTEGRATERHO
-  PartManager.useIntegratedRho();
-#endif
+   // load the particles
+   parts.loadHDF5("in.h5part");
+   Logger << "loaded particles";
 
-  ///
-  /// some useful references
-  ///
-  matrixRefType pos(PartManager.pos);
-  matrixRefType vel(PartManager.vel);
-  matrixRefType acc(PartManager.acc);
+   treeT& Tree(treeT::instance());
 
-  valvectRefType m(PartManager.m);
-  valvectRefType u(PartManager.u);
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-  valvectRefType dudt(PartManager.dudt);
-#endif
-  valvectRefType h(PartManager.h);
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-  valvectRefType dhdt(PartManager.dhdt);
-#endif
-#ifdef SPHLATCH_GRAVITY
-  valvectRefType eps(PartManager.eps);
-#endif
-#ifdef SPHLATCH_TILLOTSON
-  idvectRefType mat(PartManager.mat);
-#endif
-#ifdef SPHLATCH_ANEOS
-  idvectRefType mat(PartManager.mat);
-  valvectRefType T(PartManager.T);
-#endif
-#ifdef SPHLATCH_INTEGRATERHO
-  valvectRefType rho(PartManager.rho);
-  valvectRefType drhodt(PartManager.drhodt);
-#endif
+   const size_t nop       = parts.getNop();
+   const fType  costppart = 1. / nop;
 
-  idvectRefType id(PartManager.id);
-  idvectRefType noneigh(PartManager.noneigh);
+   Tree.setExtent(parts.getBox() * 1.5);
 
-  int& step(PartManager.step);
-  fRefType time(PartManager.attributes["time"]);
+   for (size_t i = 0; i < nop; i++)
+   {
+      parts[i].cost = costppart;
+      Tree.insertPart(parts[i]);
+      parts[i].bootstrap();
+   }
+   Logger << "created tree";
 
-  const size_t myDomain = CommManager.getMyDomain();
+   // start the loop
+   for (size_t i = 0; i < 1; i++)
+   {
+      derive();
+      
+      const fType dt = timestep();
+   
+      /*for (size_t i = 0; i < nop; i++)
+        parts[i].predict(dt);
+      Logger.finishStep("predicted");
 
-  ///
-  /// register the quantites to be exchanged
-  ///
-  CommManager.exchangeQuants.vects += &pos, &vel;
-  CommManager.exchangeQuants.scalars += &m, &u, &h;
-  CommManager.exchangeQuants.ints += &id;
+      derive();
+      for (size_t i = 0; i < nop; i++)
+        parts[i].correct(dt);
+      Logger.finishStep("corrected");*/
+   }
 
-#ifdef SPHLATCH_GRAVITY
-  CommManager.exchangeQuants.scalars += &eps;
-#endif
-#ifdef SPHLATCH_TILLOTSON
-  CommManager.exchangeQuants.ints += &mat;
-#endif
-#ifdef SPHLATCH_ANEOS
-  CommManager.exchangeQuants.ints += &mat;
-  CommManager.exchangeQuants.scalars += &T;
-#endif
-#ifdef SPHLATCH_INTEGRATERHO
-  CommManager.exchangeQuants.scalars += &rho;
-#endif
+   parts.doublePrecOut();
+   parts.saveHDF5("out_both.h5part");
+   Logger << "stored dump ";
 
-  ///
-  /// instantate the MetaIntegrator
-  ///
-  //sphlatch::VerletMetaIntegrator Integrator(derivate, timestep);
-  sphlatch::PredCorrMetaIntegrator Integrator(derivate, timeStep);
+#ifdef SPHLATCH_MPI
+   MPI::Finalize();
+#endif
+   return(0);
 
-  ///
-  /// register spatial, energy and smoothing length integration
-  ///
-  Integrator.regIntegration(pos, vel, acc);
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-  Integrator.regIntegration(h, dhdt);
+#ifdef SPHLATCH_MPI
+   MPI::Finalize();
 #endif
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-  Integrator.regIntegration(u, dudt);
-#endif
-#ifdef SPHLATCH_INTEGRATERHO
-  Integrator.regIntegration(rho, drhodt);
-#endif
-
-  ///
-  /// log program compilation time
-  ///
-  Logger.stream << "executable compiled from " << __FILE__
-                << " on " << __DATE__
-                << " at " << __TIME__ << "\n\n"
-                << "    features: \n"
-#ifdef SPHLATCH_GRAVITY
-                << "     gravity  \n"
-#endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-                << "     time dependent smoothing length\n"
-#endif
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-                << "     time dependent specific energy\n"
-#endif
-#ifdef SPHLATCH_TILLOTSON
-                << "     Tillotson EOS\n"
-#endif
-#ifdef SPHLATCH_ANEOS
-                << "     ANEOS\n"
-#endif
-#ifdef SPHLATCH_INTEGRATERHO
-                << "     integrated density\n"
-#endif
-#ifdef SPHLATCH_FRICTION
-                << "     friction\n"
-#endif
-                << "     basic SPH\n";
-  Logger.flushStream();
-
-  ///
-  /// load particles
-  ///
-  IOManager.loadDump(loadDumpFile);
-  Logger.stream << "loaded " << loadDumpFile;
-  Logger.flushStream();
-
-  ///
-  /// bootstrap the integrator
-  ///
-  Integrator.bootstrap();
-  Logger << "integrator bootstrapped";
-
-  ///
-  /// the integration loop
-  ///
-  while (time <= maxTime)
-    {
-      ///
-      /// integrate
-      ///
-      Integrator.integrate();
-
-      Logger.stream << "finished step " << step << ", now at t = " << time;
-      Logger.flushStream();
-      Logger.zeroRelTime();
-
-      if (myDomain == 0)
-        {
-          std::cout << "t = " << std::fixed << std::right
-                    << std::setw(12) << std::setprecision(6)
-                    << time << " (" << step << ")\n";
-        }
-    }
-
-  MPI::Finalize();
-  return EXIT_SUCCESS;
+   return(0);
 }
-
-
