@@ -2,32 +2,68 @@
 #include <vector>
 
 #include <omp.h>
+#define SPHLATCH_OPENMP
 
 #include "typedefs.h"
-typedef sphlatch::matrixRefType            matrixRefT;
+typedef sphlatch::fType      fType;
 
-#include "particle_manager.h"
-typedef sphlatch::ParticleManager          partMgrT;
+#include "bhtree.cpp"
+typedef sphlatch::BHTree     treeT;
 
-#include "bhtree_dynamic.h"
-typedef sphlatch::BHTree                   treeT;
-typedef sphlatch::BHTree::BHTreeConfig     treeConfigT;
+typedef sphlatch::pnodT      pnodT;
+typedef sphlatch::pnodPtrT   pnodPtrT;
 
-typedef sphlatch::particleNode             partT;
+typedef sphlatch::nodeT      nodeT;
+typedef sphlatch::nodePtrT   nodePtrT;
 
-typedef sphlatch::genericNode              nodeT;
-typedef sphlatch::genericNode*             nodePtrT;
+typedef sphlatch::gcllT      gcllT;
+typedef sphlatch::gcllPtrT   gcllPtrT;
 
-typedef sphlatch::quadrupoleCellNode       cellT;
-typedef sphlatch::quadrupoleCellNode*      cellPtrT;
+typedef sphlatch::czllT      czllT;
+typedef sphlatch::czllPtrT   czllPtrT;
 
-typedef sphlatch::costzoneCellNode         czllT;
 
-#include "bhtree_part_insertmover.h"
-typedef sphlatch::BHTreePartsInsertMover   inserterT;
+#include "bhtree_particle.h"
+#include "sph_fluid_particle.h"
 
-#include "bhtree_treedump.h"
-typedef sphlatch::BHTreeDump               dumpT;
+class particle :
+   public sphlatch::treePart,
+   public sphlatch::movingPart,
+   public sphlatch::SPHfluidPart { };
+
+class ghost :
+   public sphlatch::treeGhost,
+   public sphlatch::movingGhost,
+   public sphlatch::SPHfluidGhost { };
+
+typedef particle                               partT;
+typedef ghost                                  ghstT;
+
+#include "bhtree_treedump.cpp"
+typedef sphlatch::BHTreeDump                   dumpT;
+
+#include "bhtree_worker_grav.cpp"
+typedef sphlatch::fixThetaMAC                  macT;
+typedef sphlatch::GravityWorker<macT, partT>   gravT;
+
+//#include "log_manager.h"
+//typedef sphlatch::LogManager                   logT;
+
+struct densFunc
+{
+   void operator()(partT* _i, const partT* _j)
+   {
+      _i->pos = _j->pos;
+   }
+};
+
+#include "bhtree_worker_sphsum.cpp"
+typedef sphlatch::SPHsumWorker<densFunc, partT>   densSumT;
+typedef sphlatch::SPHsum2Worker<densFunc, partT>   densSum2T;
+
+#include "bhtree_worker_neighfunc.cpp"
+typedef sphlatch::NeighWorker<densFunc, partT> neighFuncT;
+
 
 #include "bhtree_worker.h"
 class BHTreeTester : public sphlatch::BHTreeWorker {
@@ -41,50 +77,100 @@ public:
 
    void test()
    { }
+
+   void dispRoot()
+   {
+      std::cout << static_cast<czllPtrT>(rootPtr)->noParts << "\n";
+      std::cout << static_cast<czllPtrT>(rootPtr)->relCost << "\n";
+   }
 };
 
 int main(int argc, char* argv[])
 {
-   sleep(1);
+#ifdef SPHLATCH_MPI
    MPI::Init(argc, argv);
+#endif
+   treeT& Tree(treeT::instance());
+   dumpT  dumper(&Tree);
 
-   partMgrT&  PartManager(partMgrT::instance());
-   matrixRefT pos(PartManager.pos);
-
-   PartManager.useBasicSPH();
-
-   PartManager.setNoParts(4);
-   PartManager.resizeAll();
-   
-   pos(0, X) = 0.25;
-   pos(0, Y) = 0.25;
-   pos(0, Z) = 0.25;
-
-   pos(1, X) = 0.75;
-   pos(1, Y) = 0.75;
-   pos(1, Z) = 0.75;
-
-   treeConfigT treeConfig;
-   treeT&      Tree(treeT::instance(treeConfig));
-
-   inserterT    inserter(&Tree);
-   dumpT        dumper(&Tree);
    BHTreeTester testWorker(&Tree);
-   std::cout << "tree workers instantiated\n";
 
-   std::cout << "insert particle ...\n";
-   inserter.insert(0);
-   std::cout << " done!\n";
-   dumper.dotDump("test0.dot");
+   const fType costMin = 1.0e4, costMax = 1.5e4;
+   const size_t       noParts = 1000000;
+   //const size_t noParts = 300000;
+
+   //const fType costMin = 10., costMax = 15.;
+   //const size_t noParts = 100;
+
+   std::vector<partT> particles(noParts);
+   for (size_t i = 0; i < noParts; i++)
+   {
+      particles[i].pos[0] = static_cast<fType>(rand()) / RAND_MAX;
+      particles[i].pos[1] = static_cast<fType>(rand()) / RAND_MAX;
+      particles[i].pos[2] = static_cast<fType>(rand()) / RAND_MAX;
+
+      particles[i].m = 1.;
+
+      particles[i].id   = i;
+      particles[i].cost = 1.;
+   }
+
+   double start;
+   start = omp_get_wtime();
+   for (size_t i = 0; i < noParts; i++)
+   {
+      Tree.insertPart(particles[i]);
+   }
+   std::cout << "particles insert " << omp_get_wtime() - start << "s\n";
+
+   std::cout << "Tree.update() .........\n";
+   start = omp_get_wtime();
+   Tree.update(costMin, costMax);
+   std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
+
+   //dumper.ptrDump("postCZdump.txt");
+   //dumper.dotDump("postCZdump.dot");
+
+   /*testWorker.dispRoot();
+      testWorker.build();
+      testWorker.test();*/
+
+   /*for (size_t i = 0; i < noParts; i++)
+   {
+      if (particles[i].pos[2] < 0.5)
+         particles[i].pos[2] += 0.25;
+
+      particles[i].cost = 1.;
+
+   }*/
+
+   std::cout << "Tree.update() .........\n";
+   start = omp_get_wtime();
+   Tree.update(costMin, costMax);
+   std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
    
-   std::cout << "push down particle ...\n";
-   inserter.pushDown(0);
-   std::cout << " done!\n";
-   dumper.dotDump("test1.dot");
+   //dumper.dotDump("post_move.dot");
+   //dumper.ptrDump("post_move.txt");
 
-   testWorker.build();
-   testWorker.test();
+   const fType G = 1.;
+   gravT gravWorker(&Tree, G);
 
+   std::cout << "gravity ...\n";
+   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
+   const int           noCZbottomLoc = CZbottomLoc.size();
+
+   start = omp_get_wtime();
+#pragma omp parallel for firstprivate(gravWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      gravWorker.calcGravity(CZbottomLoc[i]);
+
+   std::cout << "gravity finished " << omp_get_wtime() - start << "s\n";
+
+   //for (size_t i = 0; i < noParts; i++)
+   //std::cout << particles[i].acc << "\n";
+
+#ifdef SPHLATCH_MPI
    MPI::Finalize();
+#endif
    return(0);
 }

@@ -9,7 +9,7 @@
 //#define SPHLATCH_SINGLEPREC
 
 // enable parallel version
-#define SPHLATCH_PARALLEL
+//#define SPHLATCH_PARALLEL
 
 // enable intensive logging for toptree global summation
 //#define SPHLATCH_TREE_LOGSUMUPMP
@@ -73,7 +73,7 @@ typedef sphlatch::LogManager log_type;
 #include <vector>
 
 /// tree stuff
-#include "bhtree.h"
+#include "bhtree_old.h"
 
 using namespace sphlatch::vectindices;
 using namespace boost::assign;
@@ -119,21 +119,27 @@ int main(int argc, char* argv[])
   ///
   /// register the quantites to be exchanged
   ///
+#ifdef SPHLATCH_PARALLEL
   CommManager.exchangeQuants.vects += &pos;
   CommManager.exchangeQuants.scalars += &m, &eps;
   CommManager.exchangeQuants.ints += &id;
+#endif
 
   ///
   /// exchange particles
   ///
   CostZone.createDomainPartsIndex();
+#ifdef SPHLATCH_PARALLEL
   CommManager.exchange(CostZone.domainPartsIndex,
                        CostZone.getNoGhosts());
+#endif
 
   ///
   /// prepare ghost sends
   ///
+#ifdef SPHLATCH_PARALLEL
   CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
+#endif
   Logger.stream << "distributed particles: "
                 << PartManager.getNoLocalParts() << " parts. & "
                 << PartManager.getNoGhostParts() << " ghosts";
@@ -144,13 +150,15 @@ int main(int argc, char* argv[])
   const size_t noTotParts = noParts + PartManager.getNoGhostParts();
 
   /// send ghosts to other domains
+#ifdef SPHLATCH_PARALLEL
   CommManager.sendGhosts(pos);
   CommManager.sendGhosts(id);
   CommManager.sendGhosts(m);
   CommManager.sendGhosts(eps); // << eps is not used for interacting partners!
   Logger << " sent to ghosts: pos, id, m, eps";
+#endif
 
-  for (size_t i = 0; i < 2; i++)
+  for (size_t i = 0; i < 1; i++)
     {
       PartManager.step = i;
 

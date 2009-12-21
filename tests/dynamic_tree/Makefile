@@ -1,36 +1,46 @@
-all: treefun nodesize buildcz
-
-treefun:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
-	  -I../../src -I../../src/dynamic_tree \
-	  -lhdf5 -lz \
-	  -fopenmp \
-	  -DSPHLATCH_GRAVITY \
-	  -o treeFun treeFun.cpp
+all: nodesfun nodesize workertest sphworker particleset nbody
 
 nodesfun:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
-	  -I../../src -I../../src/dynamic_tree \
+	  -I../../src \
 	  -o nodesFun nodesFun.cpp
 
 nodesize:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
-	  -I../../src -I../../src/dynamic_tree \
-	  -o nodeSize nodeSize.cpp
-
-buildcz:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
-	  -I../../src -I../../src/dynamic_tree \
+	  -I../../src \
 	  -fopenmp \
-	  -lhdf5 -lz \
-	  -o buildCZ buildCZ.cpp
+	  -o nodeSize nodeSize.cpp
 
 workertest:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
-	  -I../../src -I../../src/dynamic_tree \
+	  -I../../src \
 	  -fopenmp \
 	  -lhdf5 -lz \
 	  -o workerTest workerTest.cpp
 
+sphworker:
+	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+		  -I../../src -I../../src/dynamic_tree \
+		  -lhdf5 -lz \
+		  -fopenmp \
+		  -o sphWorker sphWorker.cpp
+
+particleset:
+	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+		  -I../../src -I../../src/dynamic_tree \
+		  -lhdf5 -lz \
+		  -fopenmp \
+		  -o particleSet particleSet.cpp
+
+
+nbody:
+	        $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+		  -I../../src \
+		  -lhdf5 -lz \
+		  -fopenmp \
+		  -o nBody nbody.cpp
+
 clean:
-	rm treeFun nodesFun 2>&1 >/dev/null; true
+	rm nodesFun nodeSize workerTest sphWorker \
+	  particleSet nBody 2>&1 >/dev/null; true
+

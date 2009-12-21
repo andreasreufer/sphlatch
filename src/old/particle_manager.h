@@ -11,10 +11,10 @@ namespace sphlatch
 {
 namespace vectindices
 {
-enum VectIndices
+/*enum VectIndices
 {
    X, Y, Z
-};
+};*/
 enum TensorIndices
 {
    XX, XY, XZ, YY, YZ
@@ -65,6 +65,8 @@ public:
 
    void useStress(void);
    void useDamage(void);
+
+   void usePeakPress(void);
 
    void setNoParts(size_t _noParts, size_t _noGhostParts);
    void setNoParts(size_t _noParts);
@@ -156,7 +158,8 @@ public:
                acoef,           /// crack growth timescale
                mweib,           /// Weibull m exponent
                young,           /// Youngs modulus
-               cost;            /// relative computational cost
+               cost,            /// relative computational cost
+               peakp;           /// peak pressure
 
    ///
    /// integers
@@ -321,6 +324,7 @@ ParticleManager::ParticleManager(void)
    knownScalars["mweib"]    = &mweib;
    knownScalars["young"]    = &young;
    knownScalars["cost"]     = &cost;
+   knownScalars["peakp"]    = &peakp;
 
    ///
    /// scalar quantities which are ghost
@@ -522,6 +526,15 @@ void ParticleManager::useDamage()
    using namespace boost::assign;
    usedQuants.scalars += &dam, &ddamdt, &epsmin, &acoef, &mweib, &young;
    usedQuants.ints    += &noflaws;
+}
+
+///
+/// use variables for the stress tensor
+///
+void ParticleManager::usePeakPress()
+{
+   using namespace boost::assign;
+   usedQuants.scalars += &peakp;
 }
 
 void ParticleManager::setNoParts(size_t _noLocalParts, size_t _noGhostParts)

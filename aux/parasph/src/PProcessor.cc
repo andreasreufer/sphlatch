@@ -13,6 +13,9 @@
 #include "Timer.cc"
 #include "TList.cc"
 
+#include <fstream>
+#include <iomanip>
+
 class Processor {
 private:
   CellList        cellList;
@@ -66,6 +69,56 @@ public:
     Timer t;
 
     for (p = 0; p < size; p++) pList[p].preForces();
+#ifdef PHASESTAT
+    const size_t noPhases = 8;
+    double phase_histogram[noPhases], phase_histogram_tot[noPhases];
+    
+    for (size_t i = 0; i < noPhases; i++)
+    {
+      phase_histogram[i] = 0., phase_histogram_tot[i] = 0.;
+    }
+
+    for (p = 0; p < size; p++) 
+    {
+      // quick hack: only do it for ice
+      if ( lrint(pList[p].getMatId()) == 2 )
+      {
+        const size_t phase = pList[p].getPhase();
+        phase_histogram[phase] += pList[p].getMass();
+      }
+    };  
+    
+    MCW.Allreduce(&phase_histogram,
+                  &phase_histogram_tot,
+                  noPhases, MPI::DOUBLE, MPI_SUM);
+    
+    if (global::noisy)
+    {
+      std::fstream fout;
+      fout.open("ice_phases_histogram.txt", std::ios::out | std::ios::app);
+      
+      std::cout << "  >>> ice phases: [";
+      fout << std::setw(14) << std::setprecision(6) << std::scientific;
+      fout << time << "\t";
+
+      for (size_t i = 0; i < noPhases; i++)
+      {
+        fout << std::setw(14) << std::setprecision(6) << std::scientific;
+        fout << phase_histogram_tot[i] << "\t";
+        std::cout << phase_histogram_tot[i] << ",";
+      }
+      
+      fout << "\n";
+      fout.close();
+      std::cout << "]\n";
+    }
+#endif
+#ifdef SPH
+#ifdef PEAKP
+    for (p = 0; p < size; p++) 
+      pList[p].peakPress();
+#endif
+#endif
 
     cellList.pFindNeighbourCells();
     cellList.pSpreadGhosts();

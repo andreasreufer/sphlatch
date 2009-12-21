@@ -4,46 +4,77 @@
 /*
  *  bhtree.h
  *
- *  base header file for the SPHLATCH Barnes&Hut tree
+ *  header file for the dynamic SPHLATCH Barnes&Hut tree
  *
- *  Created by Andreas Reufer on 12.11.07.
+ *  Created by Andreas Reufer on 07.10.09.
  *  Copyright 2007 University of Berne. All rights reserved.
  *
  */
 
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <cassert>
-#include <cmath>
-#include <vector>
-#include <stack>
-#include <queue>
-
 #include "typedefs.h"
 
-//
-// generic BHtree methods
-//
-#include "bhtree_generic.h"
-#include "bhtree_errhandler.h"
+#include "bhtree_nodes.h"
+#include "bhtree_housekeeper.h"
+#include "bhtree_part_insertmover.h"
 
-//
-// specialized BHtree methods for 
-// desired degree of series expansion
-//
-#include "bhtree_monopoles.h"
-#include "bhtree_quadrupoles.h"
-#include "bhtree_octupoles.h"
+namespace sphlatch {
 
-//
-// a specialization without any
-// multipole moments or gravity
-// functionality
-//
-// useful to use the tree for other purposes
-//
-#include "bhtree_nomultipoles.h"
+class BHTree {
+public:
+   friend class BHTreeWorker;
+   friend class BHTreeCZBuilder;
+   friend class BHTreePartsInsertMover;
+   friend class BHTreeWorkerGrav;
 
+   typedef BHTree                   selfType;
+   typedef BHTree&                  selfRef;
+   typedef BHTree*                  selfPtr;
+
+   typedef std::list<czllPtrT>      czllPtrListT;
+   typedef std::vector<czllPtrT>    czllPtrVectT;
+
+   BHTree();
+   ~BHTree();
+
+   static selfRef instance(void);
+
+   ///
+   /// some constants
+   ///
+   static const size_t maxDepth       = 128;
+   static const size_t maxCZBottCells = 16384;
+
+   static const fType cellsPerThread = 8;
+
+   ///
+   /// public functions
+   ///
+   void setExtent(const box3dT _box);
+   void insertPart(treeGhost& _part);
+   void update(const fType _cmin, const fType _cmax);
+   czllPtrVectT getCZbottomLoc();
+
+private:
+   static selfPtr _instance;
+
+   czllPtrVectT getCzllPtrVect(czllPtrListT _czllList);
+   void sumUpCosts(), sumUpCostsRec();
+   size_t round;
+
+protected:
+   nodePtrT rootPtr;
+
+   ///
+   /// first and last (local) CZ cell at bottom
+   ///
+   std::list<czllPtrT> CZbottom, CZbottomLoc;
+
+   size_t noCells, noParts;
+
+   const size_t noThreads;
+
+private:
+   BHTreePartsInsertMover insertmover;
+};
+};
 #endif
-

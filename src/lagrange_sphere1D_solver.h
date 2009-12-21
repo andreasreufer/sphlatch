@@ -22,6 +22,8 @@ typedef sphlatch::Tillotson eosType;
 typedef sphlatch::ANEOS eosType;
 #endif
 
+#include <boost/progress.hpp>
+
 #include <float.h>
 
 namespace sphlatch {
@@ -101,12 +103,27 @@ bool firstStep;
 
 void LagrangeSphere1DSolver::integrateTo(fType _t)
 {
+  const size_t dispSteps = 1000;
+  size_t curStep = 0;
+
+  const fType totTime = _t - time;
+  const fType startTime = time;
+
   if (firstStep)
     bootstrap();
+
+  boost::progress_display show_progress(dispSteps);
   while (time < _t)
   {
-    std::cout << time << "\n";
     integrate(_t - time);
+
+    while ( 
+    ( static_cast<fType>(curStep) /
+      static_cast<fType>(dispSteps) ) < ( ( time - startTime ) / totTime ) )
+    {
+      curStep++;
+      ++show_progress;
+    }
   }
 }
 

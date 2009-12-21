@@ -109,6 +109,12 @@ int main(int argc, char* argv[])
   "mat", "p", "T", "rho", "u", "dm", "rft", "sxx", "sxy",
   "sxz", "syy", "syz";
 
+#ifdef PEAKP
+  varNames += "peakp";
+  //const fType minFloat = std::numeric_limits<fType>::min();
+  const fType minFloat = -1.e50;
+#endif
+
   CDATWriter.open("initial.xdr", "none", PartManager.attributes["time"],
                   noParts, varNames, false);
 
@@ -138,6 +144,9 @@ int main(int argc, char* argv[])
       CDATWriter.write(i, 18, S(i, XZ));
       CDATWriter.write(i, 19, S(i, YY));
       CDATWriter.write(i, 20, S(i, YZ));
+#ifdef PEAKP
+      CDATWriter.write(i, 21, minFloat);
+#endif
     }
 
   CDATWriter.close();

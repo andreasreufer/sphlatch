@@ -3,7 +3,7 @@
 
 #include <omp.h>
 
-#include "bhtree_dynamic.h"
+#include "bhtree.cpp"
 typedef sphlatch::BHTree treeType;
 
 typedef sphlatch::particleNode partType;
@@ -32,16 +32,16 @@ int main()
   curPtr->clear();
   std::cout << curPtr->ident << "\n";
 
-  static_cast<czllPtr>(curPtr)->xCen = 4.2;
-  std::cout << static_cast<czllPtr>(curPtr)->xCen << " "
-            << static_cast<czllPtr>(curPtr)->cost << "\n";
+  static_cast<czllPtr>(curPtr)->cen[0] = 4.2;
+  std::cout << static_cast<czllPtr>(curPtr)->cen[0] << " "
+            << static_cast<czllPtr>(curPtr)->relCost << "\n";
 
   static_cast<czllPtr>(curPtr)->clear();
 
-  std::cout << static_cast<czllPtr>(curPtr)->xCen << " "
-            << static_cast<czllPtr>(curPtr)->cost << "\n";
+  std::cout << static_cast<czllPtr>(curPtr)->cen[0] << " "
+            << static_cast<czllPtr>(curPtr)->relCost << "\n";
 
-  static_cast<czllPtr>(curPtr)->xCen = 4.2;
+  static_cast<czllPtr>(curPtr)->cen[0] = 4.2;
   static_cast<czllPtr>(curPtr)->q23  = 5.3;
 
   cellType newCell;
@@ -52,7 +52,7 @@ int main()
   static_cast<czllPtr>(curPtr)->clear();
   static_cast<czllPtr>(curPtr)->initFromCell(newCell);
 
-  std::cout << static_cast<czllPtr>(curPtr)->xCen << " "
+  std::cout << static_cast<czllPtr>(curPtr)->cen[0] << " "
             << static_cast<czllPtr>(curPtr)->q23 << "\n";
 
   std::cout << "    cell size " << sizeof(cellType) << "\n";

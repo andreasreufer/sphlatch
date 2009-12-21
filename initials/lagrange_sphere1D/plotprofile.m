@@ -13,26 +13,22 @@ color = strcat(num2str(color_idx),' ');
 prof = load(filename);
 
 subplot(2,2,1);
+hold on;
 plot( prof.r, prof.rho, color);
 title('density');
-hold on;
 
 subplot(2,2,2);
+hold on;
 plot( prof.r, prof.u, color);
 title('spec. energy');
-hold on;
 
 subplot(2,2,3);
+hold on;
 semilogy( prof.r, prof.p, color);
 title('pressure');
-hold on;
-
-#subplot(2,2,4);
-#plot( prof.r, prof.mat, strcat('x',color));
-#title('material');
-#hold on;
 
 subplot(2,2,4);
-plot( prof.r, 11700.*prof.T, color);
-title('material');
 hold on;
+plot( prof.r, 11604.*prof.T, color);
+title('material');
+

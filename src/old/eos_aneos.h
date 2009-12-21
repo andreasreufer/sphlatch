@@ -262,7 +262,7 @@ private:
       }
 
       valvectType logrhoVect(noPointsRho);
-      const fType dlogrho   =
+      const fType dlogrho =
          (log10(rhoMax) - log10(rhoMin)) / (noPointsRho - 1);
       const fType logrhoMin = log10(rhoMin);
 
@@ -325,6 +325,7 @@ private:
 #endif
 
 
+
 ///
 /// get p(rho,T) and u(rho,T)
 ///
@@ -350,6 +351,30 @@ public:
 #endif
       _cs = static_cast<fType>(cs);
       _u  = static_cast<fType>(u);
+   }
+
+   void getSpecEnergy(const fType _rho, const fType _T,
+                      const identType _mat,
+                      fType& _p, fType& _cs, fType& _u, identType& _ph)
+   {
+      static double T, rho, p, u, S, cv, dpdt, dpdr, fkros, cs, fme, fma;
+      static int    kpa, mat;
+
+      rho = static_cast<double>(_rho);
+      T   = static_cast<double>(_T);
+      mat = static_cast<int>(_mat);
+
+      aneos_(&T, &rho, &p, &u, &S, &cv, &dpdt, &dpdr, &fkros,
+             &cs, &kpa, &mat, &fme, &fma);
+
+      _p = static_cast<fType>(p);
+#ifdef SPHLATCH_NONEGPRESS
+      if (_p < 0.)
+         _p = 0.;
+#endif
+      _cs = static_cast<fType>(cs);
+      _u  = static_cast<fType>(u);
+      _ph = static_cast<identType>(kpa);
    }
 
 ///
