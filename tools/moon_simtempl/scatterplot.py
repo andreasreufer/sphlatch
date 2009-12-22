@@ -21,7 +21,7 @@ rc('savefig', dpi=300)
 figure( figsize=(3, 2) )
 a = axes( [0.0, 0.0, 1.0, 1.0], axisbg='k')
 
-slice = load(filename)
+slice = loadtxt(filename)
 
 # slice[:,2] is 0 for mantle and 1 for iron
 # slice[:,3] is 0 for protoearth and 1 for impactor
