@@ -24,7 +24,7 @@ public:
    void neighExecFunc(const pnodPtrT _part, const fType _srad);
    void neighExecFunc(const czllPtrT _czll, const fType _srad);
 
-private:
+protected:
    _funcT Func;
 };
 

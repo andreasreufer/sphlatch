@@ -44,7 +44,7 @@ public:
    static const size_t maxDepth       = 128;
    static const size_t maxCZBottCells = 16384;
 
-   static const fType cellsPerThread = 8;
+   static const fType cellsPerThread = 16;
 
    ///
    /// public functions
