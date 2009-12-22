@@ -7,12 +7,12 @@
 //#define SPHLATCH_SINGLEPREC
 
 // enable parallel version
-#define SPHLATCH_PARALLEL
+//#define SPHLATCH_PARALLEL
 
 //#define SPHLATCH_RANKSPACESERIALIZE
 
 // enable checking of bounds for the neighbour lists
-//#define SPHLATCH_CHECKNONEIGHBOURS
+#define SPHLATCH_CHECKNONEIGHBOURS
 
 #include <cstdlib>
 #include <iostream>

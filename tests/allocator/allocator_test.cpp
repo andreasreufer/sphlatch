@@ -1,9 +1,6 @@
 #include <iostream>
-
-#include "allocator_chunk.h"
-#include "allocator_simple.h"
-#include "allocator_fixedbucket.h"
-#include "bhtree_node_cells.h"
+#include "chunk_allocator.h"
+#include "bhtree_nodes.h"
 
 int main()
 {
@@ -11,18 +8,16 @@ int main()
 
   sleep(1);
   //ChunkAllocator<quadrupoleCellNode, 32768> myAllocator;
-  //ChunkAllocator<quadrupoleCellNode, 16> myAllocator;
-  ChunkAllocator<int, 65535> myAllocator;
-  //SimpleAllocator<int, 65535> myAllocator;
+  ChunkAllocator<quadrupoleCellNode, 16> myAllocator;
+  //ChunkAllocator<int, 8> myAllocator;
 
   int* intPtr = NULL;
 
   for (size_t i = 0; i < 32; i++)
   //for (size_t i = 0; i < 100000; i++)
   {
-    intPtr = myAllocator.pop();
-    *intPtr = i;
-    std::cout << i << ": " << *intPtr << "\n";
+    std::cout << i << "\n";
+    myAllocator.pop();
     //intPtr = myAllocator.pop();
     //std::cout << intPtr << "\n";
   }
@@ -32,7 +27,7 @@ int main()
   //for (size_t i = 0; i < 100000; i++)
   {
     std::cout << i << "\n";
-    //myAllocator.push(intPtr);
+    myAllocator.push();
   }
 
   sleep(1);
