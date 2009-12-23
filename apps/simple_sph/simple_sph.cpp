@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <vector>
 
 //#define SPHLATCH_SINGLEPREC
@@ -281,8 +282,7 @@ fType timestep()
                  << "\n";
    Logger.flushStream();
 
-   //return(dt);
-   return(10.);
+   return(dt);
 }
 
 int main(int argc, char* argv[])
@@ -291,10 +291,27 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
+   if (argc != 3)
+   {
+      std::cerr <<
+      "usage: simple_sph_XXXXXX <inputdump> <saveStepTime> <stopTime>\n";
+      return(1);
+   }
+
+   std::string inFilename = argv[1];
+
+   std::istringstream stepStr(argv[2]);
+   fType stepTime;
+   stepStr >> stepTime;
+
+   std::istringstream stopStr(argv[3]);
+   fType stopTime;
+   stopStr >> stopTime;
+
    logT& Logger(logT::instance());
 
    // load the particles
-   parts.loadHDF5("in.h5part");
+   parts.loadHDF5(inFilename);
    Logger << "loaded particles";
 
    treeT& Tree(treeT::instance());
@@ -313,7 +330,7 @@ int main(int argc, char* argv[])
    Logger << "created tree";
 
    // start the loop
-   for (size_t i = 0; i < 1; i++)
+   while ( parts.time < stopTime )
    {
       derive();
 
@@ -327,6 +344,7 @@ int main(int argc, char* argv[])
       for (size_t i = 0; i < nop; i++)
          parts[i].correct(dt);
       Logger.finishStep("corrected");
+      parts.time += dt;
    }
 
    parts.doublePrecOut();
