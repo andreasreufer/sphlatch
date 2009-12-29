@@ -1,4 +1,4 @@
-all: simple_sph_______ simple_sph_GHU___ simple_sph_GHUA__
+all: simple_sph_______ simple_sph_GHU___ simple_sph_GHUA__ simple_sph_GHUA_F simple_sph_GHUa__ simple_sph_GHUa_F
 
 simple_sph_______:
 	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \

@@ -244,6 +244,7 @@ fType timestep(const fType _stepTime)
    const fType courant = parts.attributes["courant"];
    const fType time          = parts.attributes["time"];
 
+   fType dtSave = (floor((time / _stepTime) + 1.e-6) + 1.) * _stepTime - time;
    fType dtA   = finf;
    fType dtCFL = finf;
 

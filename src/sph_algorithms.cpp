@@ -124,6 +124,9 @@ struct accPowSum
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       _i->dudt = dudti;
 #endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+      _i->dhdt = dhdti;
+#endif
    }
 
    vect3dT vi, acci;
