@@ -175,10 +175,12 @@ void derive()
    Logger << "created tree";
 
    Tree.update(0.8, 1.2);
-   Logger << "Tree.update()";
 
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
+   
+   Logger.stream << "Tree.update() -> " << noCZbottomLoc << " CZ cells";
+   Logger.flushStream();
 
    //const size_t nop = parts.getNop();
    for (size_t i = 0; i < nop; i++)
@@ -305,8 +307,6 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   omp_set_num_threads(4);
-
    if (argc != 4)
    {
       std::cerr <<
@@ -394,9 +394,12 @@ int main(int argc, char* argv[])
       
       for (size_t i = 0; i < nop; i++)
          parts[i].correct(dt);
-      Logger.finishStep("corrected");
-      
       time += dt;
+      
+      std::stringstream sstr;
+      sstr << "corrected (t = " << time << ")";
+      Logger.finishStep(sstr.str());
+      
    }
 
    parts.doublePrecOut();
