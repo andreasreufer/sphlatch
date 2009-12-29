@@ -52,7 +52,6 @@ public:
    void setExtent(const box3dT _box);
    void insertPart(treeGhost& _part);
    void update(const fType _cmin, const fType _cmax);
-   void clear();
    czllPtrVectT getCZbottomLoc();
 
 private:

@@ -13,19 +13,6 @@
 #include "bhtree_worker.cpp"
 
 namespace sphlatch {
-BHTreePartsInsertMover::BHTreePartsInsertMover(treePtrT _treePtr) :
-   BHTreeWorker(_treePtr),
-   maxDepth(_treePtr->maxDepth)
-{ }
-
-BHTreePartsInsertMover::BHTreePartsInsertMover(const selfT& _inserter) :
-   BHTreeWorker(_inserter),
-   maxDepth(_inserter.maxDepth)
-{ }
-
-BHTreePartsInsertMover::~BHTreePartsInsertMover() { }
-
-
 ///
 /// entry function to insert particle:
 /// - check whether particle lies inside root cell
@@ -69,14 +56,14 @@ void BHTreePartsInsertMover::move(const czllPtrT _czll)
       _czll->chldLast->next = NULL;
 
    ///
-   /// if there is a last child, set its next pointer to NULL,
+   /// of there is a last child, set its next pointer to NULL,
    /// so that the next walk for moving terminates
    ///
    while (curPart != NULL)
    {
       const nodePtrT nextPart = curPart->next;
       if (curPart->isParticle)
-         pushUpAndToCZSingle(static_cast<pnodPtrT>(curPart));
+        pushUpAndToCZSingle(static_cast<pnodPtrT>(curPart));
       curPart = nextPart;
    }
 }
@@ -153,7 +140,6 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
       }
       goUp();
    }
-   _pnodPtr->parent = curPtr;
 
    ///
    /// in case are now in the CZ tree, try to go down again to
@@ -171,15 +157,14 @@ void BHTreePartsInsertMover::pushUpAndToCZSingle(const pnodPtrT _pnodPtr)
    }
    else
       pushDownSingle(_pnodPtr);
+
+   _pnodPtr->parent = curPtr;
 }
 
 void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
 {
    curPtr = _pnodPtr->parent;
    const vect3dT pos = _pnodPtr->pos;
-
-   //if (not pointInsideCell(pos))
-   //  std::cout << _pnodPtr->partPtr->id << "\n";
 
    assert(pointInsideCell(pos));
    assert(not curPtr->isParticle);
@@ -203,21 +188,6 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
       }
       else
       {
-         /*if (curPtr->depth > maxDepth)
-         {
-            std::cerr
-             << static_cast<pnodPtrT>(static_cast<gcllPtrT>(curPtr)->child[
-                                         curOct])->pos << "\n"
-                                                       << pos << "\n"
-                                                       << static_cast<pnodPtrT>(
-               static_cast<gcllPtrT>(curPtr)->child[
-                  curOct
-               ])->pos - pos << "\n"
-                             <<
-            static_cast<gcllPtrT>(curPtr)->cen << " " <<
-            static_cast<gcllPtrT>(curPtr)->clSz << "\n";
-            exit(1);
-         }*/
          if (static_cast<gcllPtrT>(curPtr)->child[curOct]->isParticle)
             static_cast<gcllPtrT>(curPtr)->child[curOct] =
                partToCell(curPtr, curOct);

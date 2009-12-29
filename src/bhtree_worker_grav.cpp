@@ -60,10 +60,7 @@ void GravityWorker<_macT, _partT>::calcGravity(const czllPtrT _czll)
    while (curPart != stopChld)
    {
       if (curPart->isParticle)
-      {
          calcGravPart(static_cast<pnodPtrT>(curPart));
-         //calcGravPartAlt(static_cast<pnodPtrT>(curPart));
-      }
       curPart = curPart->next;
    }
    const double compTime = Timer.getRoundTime();
@@ -106,7 +103,7 @@ void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
          goNext();
       }
    } while (curPtr != NULL);
-   
+
    static_cast<_partT*>(_part->partPtr)->acc += G * acc;
 }
 
@@ -116,7 +113,6 @@ void GravityWorker<_macT, _partT>::calcGravPartAlt(const pnodPtrT _part)
    ppos          = _part->pos;
    acc           = 0, 0, 0;
    recCurPartPtr = _part;
-   
    ///
    /// the complete tree walk
    ///

@@ -101,12 +101,14 @@ struct accPowSum
          av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
       }
 
-      K.derive(r, hij, _rvec);
 
       const fType accTerm     = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
       const fType mjvijdivWij = mj * dot(vij, K.deriv);
 
+      K.derive(r, hij, _rvec);
+
       acci -= mj * accTerm * K.deriv;
+
       dudti += 0.5 * accTerm * mjvijdivWij;
    }
 
