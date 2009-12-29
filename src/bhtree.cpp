@@ -78,13 +78,13 @@ void BHTree::insertPart(treeGhost& _part)
 
 void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
 {
-   std::cout << "entered Tree.update() ... round " << round << "\n";
+   /*std::cout << "entered Tree.update() ... round " << round << "\n";
 
    BHTreeDump         dumper(this);
    std::ostringstream roundStr;
    roundStr << round;
    std::string dumpName = "dump";
-   dumpName.append(roundStr.str());
+   dumpName.append(roundStr.str());*/
 
    // rebalance trees
    //dumper.dotDump(dumpName + "_0.dot");
@@ -94,7 +94,8 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    // (prepare next walk?)
    czllPtrListT::iterator       CZItr = CZbottom.begin();
    czllPtrListT::const_iterator CZEnd = CZbottom.end();
-   std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
+   
+   /*std::cout << "move parts in " << CZbottom.size() << " CZ cells\n";
    while (CZItr != CZEnd)
    {
       insertmover.move(*CZItr);
@@ -117,6 +118,8 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    std::cout << "rebalance done!\n";
    //dumper.dotDump(dumpName + "_2.dot");
    //dumper.ptrDump(dumpName + "_2.txt");
+   //
+   */
 
    // compose vector of CZ cell pointers
    czllPtrVectT CZbottomV       = getCzllPtrVect(CZbottom);
@@ -125,7 +128,7 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    // exchange costzone cells and their particles
 
    // push down orphans
-   std::cout << "push down orphans\n";
+   //std::cout << "push down orphans\n";
    CZItr = CZbottom.begin();
    while (CZItr != CZEnd)
    {
@@ -133,13 +136,14 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
       CZItr++;
    }
 
+
    //dumper.dotDump(dumpName + "_3.dot");
    //dumper.ptrDump(dumpName + "_3.txt");
 
    // clean up tree
 
    // prepare walks (next & skip)
-   std::cout << "housekeeping          \n";
+   //std::cout << "housekeeping          \n";
 
    BHTreeHousekeeper HK(this);
    BHTreeMPWorker    MP(this);
@@ -158,11 +162,11 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    //dumper.dotDump(dumpName + "_4.dot");
    //dumper.ptrDump(dumpName + "_4.txt");
 
-   std::cout << "prepare CZ next walk  \n";
+   //std::cout << "prepare CZ next walk  \n";
    HK.setNextCZ();
-   std::cout << "prepare    skip walk  \n";
+   //std::cout << "prepare    skip walk  \n";
    HK.setSkip();
-   std::cout << "calculate MP moments  \n\n";
+   //std::cout << "calculate MP moments  \n\n";
    MP.calcMultipolesCZ();
 
    //dumper.dotDump(dumpName + "_5.dot");
@@ -188,8 +192,29 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
 //FIXME: insert the actual clearing algorithm
 void BHTree::clear()
 {
-  BHTreeClear TreeClearer(this);
-   
+  BHTreeClear TC(this); 
+  TC( rootPtr);
+  
+  /*const czllPtrT rootPtr = static_cast<czllPtrT>(rootPtr);
+  rootPtr->noParts = 0;
+  rootPtr->relCost = 0.;
+  rootPtr->atBottom = true;*/
+
+  noParts = 0;
+  noCells = 0;
+
+  static_cast<czllPtrT>(rootPtr)->noParts = 0;
+  static_cast<czllPtrT>(rootPtr)->relCost = 0.;
+  static_cast<czllPtrT>(rootPtr)->atBottom = true;
+
+  CZbottomLoc.clear();
+  CZbottom.clear();
+  
+  CZbottomLoc.push_back(static_cast<czllPtrT>(rootPtr));
+  CZbottom.push_back(static_cast<czllPtrT>(rootPtr));
+
+  //CZbottomLoc.push_back(rootPtr);
+  //CZbottom.push_back(rootPtr);
 }
 
 
