@@ -128,7 +128,6 @@ struct accPowSum
 
    vect3dT vi, acci;
    fType   rhoi, pi, ci, piOrhoirhoi;
-
 #ifdef SPHLATCH_TIMEDEP_ENERGY
    fType dudti;
 #endif

@@ -241,7 +241,7 @@ fType timestep(const fType _stepTime)
 {
    logT& Logger(logT::instance());
 
-   const fType courantNumber = parts.attributes["courant"];
+   const fType courant = parts.attributes["courant"];
    const fType time          = parts.attributes["time"];
 
    fType dtA   = finf;
