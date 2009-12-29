@@ -139,7 +139,7 @@ typedef sphlatch::GravityWorker<macT, partT>   gravT;
 typedef sphlatch::CubicSpline3D                  krnlT;
 
 typedef sphlatch::densSum<partT, krnlT>          densT;
-typedef sphlatch::SPHsum2Worker<densT, partT>     densSumT;
+typedef sphlatch::SPHsumWorker<densT, partT>     densSumT;
 
 typedef sphlatch::accPowSum<partT, krnlT>        accPowT;
 typedef sphlatch::SPHsumWorker<accPowT, partT>   accPowSumT;
@@ -147,6 +147,9 @@ typedef sphlatch::SPHsumWorker<accPowT, partT>   accPowSumT;
 #ifdef SPHLATCH_ANEOS
  #include "eos_aneos.cpp"
 typedef sphlatch::ANEOS<partT>                   eosT;
+#else
+ #include "eos_idealgas.cpp"
+typedef sphlatch::IdealGas<partT>                eosT;
 #endif
 
 // particles are global
@@ -173,13 +176,13 @@ void derive()
 
 #ifdef SPHLATCH_GRAVITY
    const fType G = parts.attributes["gravconst"];
-   gravT gravWorker(&Tree, G);
+   gravT       gravWorker(&Tree, G);
  #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
    Logger << "Tree.calcGravity()";
 #endif
-   
+
    densSumT densWorker(&Tree);
 #pragma omp parallel for firstprivate(densWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
@@ -202,8 +205,8 @@ void derive()
 
 fType timestep()
 {
-   logT&  Logger(logT::instance());
-   
+   logT& Logger(logT::instance());
+
    const size_t nop = parts.getNop();
 
    const fType courantNumber = parts.attributes["courant"];
@@ -266,11 +269,15 @@ fType timestep()
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    dt = dtH < dt ? dtH : dt;
 #endif
-   Logger.stream << "dt:    " << dt 
+   Logger.stream << "dt:    " << dt
                  << "dtA:   " << dtA
                  << "dtCFL: " << dtCFL
+#ifdef SPHLATCH_TIMEDEP_ENERGY
                  << "dtU:   " << dtU
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
                  << "dtH:   " << dtH
+#endif
                  << "\n";
    Logger.flushStream();
 
@@ -309,27 +316,22 @@ int main(int argc, char* argv[])
    for (size_t i = 0; i < 1; i++)
    {
       derive();
-      
+
       const fType dt = timestep();
-   
-      /*for (size_t i = 0; i < nop; i++)
-        parts[i].predict(dt);
+
+      for (size_t i = 0; i < nop; i++)
+         parts[i].predict(dt);
       Logger.finishStep("predicted");
 
       derive();
       for (size_t i = 0; i < nop; i++)
-        parts[i].correct(dt);
-      Logger.finishStep("corrected");*/
+         parts[i].correct(dt);
+      Logger.finishStep("corrected");
    }
 
    parts.doublePrecOut();
    parts.saveHDF5("out_both.h5part");
    Logger << "stored dump ";
-
-#ifdef SPHLATCH_MPI
-   MPI::Finalize();
-#endif
-   return(0);
 
 #ifdef SPHLATCH_MPI
    MPI::Finalize();
