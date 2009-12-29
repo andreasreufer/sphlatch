@@ -102,7 +102,7 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
       CZItr++;
    }
 
-   std::cout << "move done!\n";
+   std::cout << "move done!\n";*/
 
    // rebalance trees
    //dumper.dotDump(dumpName + "_1.dot");
@@ -112,14 +112,13 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    const fType costMin = normCellCost * _cmarkLow;
    const fType costMax = normCellCost * _cmarkHigh;
 
-   std::cout << "rebalance ...\n";
+   //std::cout << "rebalance ...\n";
    BHTreeCZBuilder czbuilder(this);
    czbuilder.rebalance(costMin, costMax);
-   std::cout << "rebalance done!\n";
+   //std::cout << "rebalance done!\n";
    //dumper.dotDump(dumpName + "_2.dot");
    //dumper.ptrDump(dumpName + "_2.txt");
    //
-   */
 
    // compose vector of CZ cell pointers
    czllPtrVectT CZbottomV       = getCzllPtrVect(CZbottom);
@@ -136,12 +135,10 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
       CZItr++;
    }
 
-
    //dumper.dotDump(dumpName + "_3.dot");
    //dumper.ptrDump(dumpName + "_3.txt");
 
    // clean up tree
-
    // prepare walks (next & skip)
    //std::cout << "housekeeping          \n";
 
@@ -189,16 +186,10 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    }
 }
 
-//FIXME: insert the actual clearing algorithm
 void BHTree::clear()
 {
   BHTreeClear TC(this); 
   TC( rootPtr);
-  
-  /*const czllPtrT rootPtr = static_cast<czllPtrT>(rootPtr);
-  rootPtr->noParts = 0;
-  rootPtr->relCost = 0.;
-  rootPtr->atBottom = true;*/
 
   noParts = 0;
   noCells = 0;
@@ -212,9 +203,6 @@ void BHTree::clear()
   
   CZbottomLoc.push_back(static_cast<czllPtrT>(rootPtr));
   CZbottom.push_back(static_cast<czllPtrT>(rootPtr));
-
-  //CZbottomLoc.push_back(rootPtr);
-  //CZbottom.push_back(rootPtr);
 }
 
 
