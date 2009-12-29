@@ -11,6 +11,7 @@
 
 #include "typedefs.h"
 typedef sphlatch::fType     fType;
+typedef sphlatch::cType     cType;
 typedef sphlatch::vect3dT   vect3dT;
 typedef sphlatch::box3dT    box3dT;
 
@@ -111,6 +112,12 @@ public:
 #ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
       vars.push_back(storeVar(eps, "eps"));
 #endif
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+      vars.push_back(storeVar(dudt, "dudt"));
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+      vars.push_back(storeVar(dhdt, "dhdt"));
+#endif
       return(vars);
    }
 };
@@ -160,7 +167,7 @@ void derive()
 {
    treeT& Tree(treeT::instance());
    logT&  Logger(logT::instance());
-   
+
    const size_t nop       = parts.getNop();
    const fType  costppart = 1. / nop;
 
@@ -178,7 +185,7 @@ void derive()
 
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
-   
+
    Logger.stream << "Tree.update() -> " << noCZbottomLoc << " CZ cells";
    Logger.flushStream();
 
@@ -221,13 +228,14 @@ void derive()
    Logger << "Tree.clear()";
 }
 
-fType timestep()
+fType timestep(const fType _stepTime)
 {
    logT& Logger(logT::instance());
 
-   const fType courantNumber = parts.attributes["courant"];
-   const fType time          = parts.attributes["time"];
-
+   const fType courant = parts.attributes["courant"];
+   const fType time    = parts.attributes["time"];
+   const fType dtSave  =
+      (floor((time / _stepTime) + 1.e-6) + 1.) * _stepTime - time;
    fType dtA   = finf;
    fType dtCFL = finf;
 
@@ -237,7 +245,7 @@ fType timestep()
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    fType dtH = finf;
 #endif
-   
+
    const size_t nop = parts.getNop();
    for (size_t i = 0; i < nop; i++)
    {
@@ -270,7 +278,7 @@ fType timestep()
    }
 
    dtA   *= 0.5;
-   dtCFL *= courantNumber;
+   dtCFL *= courant;
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    dtH *= 0.15;
 #endif
@@ -278,6 +286,7 @@ fType timestep()
    //FIXME: globally minimize all dts
    fType dt = finf;
 
+   dt = dtSave < dt ? dtSave : dt;
    dt = dtA < dt ? dtA : dt;
    dt = dtCFL < dt ? dtCFL : dt;
 
@@ -287,14 +296,15 @@ fType timestep()
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    dt = dtH < dt ? dtH : dt;
 #endif
-   Logger.stream << "dt: " << dt    << " "
-                 << "dtA: " << dtA   << " "
+   Logger.stream << "dt: " << dt << " "
+                 << "dtSave: " << dtSave << " "
+                 << "dtA: " << dtA << " "
                  << "dtCFL: " << dtCFL << " "
 #ifdef SPHLATCH_TIMEDEP_ENERGY
-                 << "dtU: " << dtU   << " "
+                 << "dtU: " << dtU << " "
 #endif
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-                 << "dtH: " << dtH   << " "
+                 << "dtH: " << dtH << " "
 #endif
                  << " ";
    Logger.flushStream();
@@ -307,12 +317,13 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   if (argc != 4)
+   if (not ((argc == 4) || (argc == 5)))
    {
       std::cerr <<
-      "usage: simple_sph_XXXXXX <inputdump> <saveStepTime> <stopTime>\n";
+      "usage: simple_sph_XXXXXX <inputdump> <saveStepTime> <stopTime> (<numthreads>)\n";
       return(1);
    }
+
 
    std::string inFilename = argv[1];
 
@@ -323,6 +334,14 @@ int main(int argc, char* argv[])
    std::istringstream stopStr(argv[3]);
    fType stopTime;
    stopStr >> stopTime;
+
+   if (argc == 5)
+   {
+      std::istringstream threadStr(argv[4]);
+      int numThreads;
+      threadStr >> numThreads;
+      omp_set_num_threads(numThreads);
+   }
 
    logT& Logger(logT::instance());
 
@@ -357,49 +376,66 @@ int main(int argc, char* argv[])
                  << "     basic SPH\n";
    Logger.flushStream();
 
+   Logger.stream << "working on " << omp_get_num_threads() << " threads";
+   Logger.flushStream();
+
    // load the particles
    parts.loadHDF5(inFilename);
    Logger << "loaded particles";
 
+   fType& time(parts.attributes["time"]);
+   cType& step(parts.step);
    treeT& Tree(treeT::instance());
-
-   /*const size_t nop       = parts.getNop();
-   const fType  costppart = 1. / nop;
-
-   Tree.setExtent(parts.getBox() * 1.5);
-
-   for (size_t i = 0; i < nop; i++)
-   {
-      parts[i].cost = costppart;
-      Tree.insertPart(parts[i]);
-      parts[i].bootstrap();
-   }
-   Logger << "created tree";*/
-
-   fType& time( parts.attributes["time"] );
 
    // start the loop
    while (time < stopTime)
    {
       derive();
-   
+
       const size_t nop = parts.getNop();
-      const fType dt = timestep();
+      const fType  dt  = timestep(stepTime);
 
       for (size_t i = 0; i < nop; i++)
          parts[i].predict(dt);
       Logger.finishStep("predicted");
 
       derive();
-      
+
       for (size_t i = 0; i < nop; i++)
          parts[i].correct(dt);
       time += dt;
-      
+      step++;
+
       std::stringstream sstr;
       sstr << "corrected (t = " << time << ")";
       Logger.finishStep(sstr.str());
-      
+
+      const fType dumpTime = (floor((time / stepTime) + 1.e-9)) * stepTime;
+      if (fabs(dumpTime - time) < 1.e-9)
+      {
+         std::stringstream dumpStr, stepStr, timeStr;
+
+         dumpStr << "dump";
+
+         stepStr << step;
+         // pad step number to 7 digits
+         for (size_t i = stepStr.str().size(); i < 7; i++)
+            dumpStr << "0";
+         dumpStr << stepStr.str();
+
+         dumpStr << "_T";
+         timeStr << std::setprecision(4) << std::scientific << time;
+         // pad time string to 11 digits
+         for (size_t i = timeStr.str().size(); i < 11; i++)
+            dumpStr << "0";
+         dumpStr << timeStr.str();
+         dumpStr << ".h5part";
+
+         parts.saveHDF5(dumpStr.str());
+
+         Logger.stream << "write " << dumpStr.str();
+         Logger.flushStream();
+      }
    }
 
    parts.doublePrecOut();
