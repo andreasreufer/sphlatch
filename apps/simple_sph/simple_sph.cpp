@@ -192,7 +192,7 @@ void derive()
 #ifdef SPHLATCH_GRAVITY
    const fType G = parts.attributes["gravconst"];
    gravT       gravWorker(&Tree, G);
-#pragma omp parallel for firstprivate(gravWorker)
+ #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
    Logger << "Tree.calcGravity()";
