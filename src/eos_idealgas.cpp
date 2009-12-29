@@ -20,17 +20,14 @@ namespace sphlatch {
 template<typename _partT>
 class IdealGas : public EOS {
 public:
-   IdealGas<_partT>()
-   {}
-
-   ~IdealGas()
-   { }
+   IdealGas<_partT>() {gamma = 1.4; gammaone = 0.4;}
+   ~IdealGas() {}
 
    static IdealGas& instance();
    static IdealGas* _instance;
 
 private:
-   fType nan;
+   fType gamma, gammaone;
 
 ///
 /// get the pressure & speed of sound for particle _i
@@ -40,8 +37,14 @@ private:
 public:
    void operator()(_partT& _part)
    {
-      //(*this)(_part.rho, _part.u, _part.mat, _part.p, _part.cs, _part.T,
-      //        _part.phase);
+     _part.p = gammaone * ( _part.u * _part.rho );
+     _part.cs = sqrt( _part.p * gamma / _part.rho );
+   }
+
+   setGamma( const fType _gamma)
+   {
+     gamma = _gamma;
+     gammaone = ( gamma - 1.);
    }
 };
 
