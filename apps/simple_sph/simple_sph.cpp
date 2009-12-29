@@ -193,7 +193,12 @@ void derive()
    for (size_t i = 0; i < nop; i++)
    {
       parts[i].acc  = 0., 0., 0.;
+#ifdef SPHLATCH_TIMEDEP_ENERGY
       parts[i].dudt = 0.;
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+      parts[i].dhdt = 0.;
+#endif
    }
 
 #ifdef SPHLATCH_GRAVITY
@@ -213,9 +218,7 @@ void derive()
 
    eosT& EOS(eosT::instance());
    for (size_t i = 0; i < nop; i++)
-   {
       EOS(parts[i]);
-   }
    Logger << "pressure";
 
    accPowSumT accPowWorker(&Tree);
@@ -223,6 +226,12 @@ void derive()
    for (int i = 0; i < noCZbottomLoc; i++)
       accPowWorker(CZbottomLoc[i]);
    Logger << "Tree.accPowWorker()";
+
+#ifdef SPHLATCH_FRICTION
+   const fType fricCoeff = 1. / parts.attributes["frictime"];
+   for (size_t i = 0; i < nop; i++)
+     parts[i].acc -= parts[i].vel * fricCoeff;
+#endif
 
    Tree.clear();
    Logger << "Tree.clear()";
@@ -234,8 +243,8 @@ fType timestep(const fType _stepTime)
 
    const fType courant = parts.attributes["courant"];
    const fType time    = parts.attributes["time"];
-   const fType dtSave  =
-      (floor((time / _stepTime) + 1.e-6) + 1.) * _stepTime - time;
+   const fType dtSave  = (floor((time / _stepTime) + 1.e-6) + 1.)
+                          * _stepTime - time;
    fType dtA   = finf;
    fType dtCFL = finf;
 

@@ -56,7 +56,12 @@ struct accPowSum
    void    preSum(_partT* const _i)
    {
       acci  = 0., 0., 0.;
+#ifdef SPHLATCH_TIMEDEP_ENERGY
       dudti = 0.;
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+      dhdti = 0.;
+#endif
 
       vi   = _i->vel;
       rhoi = _i->rho;
@@ -101,25 +106,35 @@ struct accPowSum
          av = (-alpha * cij * muij + beta * muij * muij) / rhoij;
       }
 
+      K.derive(r, hij, _rvec);
 
       const fType accTerm     = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
       const fType mjvijdivWij = mj * dot(vij, K.deriv);
 
-      K.derive(r, hij, _rvec);
-
       acci -= mj * accTerm * K.deriv;
-
+#ifdef SPHLATCH_TIMEDEP_ENERGY
       dudti += 0.5 * accTerm * mjvijdivWij;
+#endif
+
    }
 
    void postSum(_partT* const _i)
    {
       _i->acc += acci;
+#ifdef SPHLATCH_TIMEDEP_ENERGY
       _i->dudt = dudti;
+#endif
    }
 
    vect3dT vi, acci;
-   fType   rhoi, pi, ci, piOrhoirhoi, dudti;
+   fType   rhoi, pi, ci, piOrhoirhoi;
+
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+   fType dudti;
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+   fType dhdti;
+#endif
 };
 };
 #endif
