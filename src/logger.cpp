@@ -129,7 +129,7 @@ void Logger::operator<<(std::string _str)
 void Logger::finishStep(std::string _str)
 {
    locLog << std::fixed << std::right << std::setw(18) << std::setprecision(6)
-          << Timer.lapse() << "***\n" << _str << std::flush;
+          << Timer.lapse() << "***   " << _str << "\n" << std::flush;
 }
 
 void Logger::finishStep()

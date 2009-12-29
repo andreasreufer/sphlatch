@@ -18,11 +18,9 @@ public:
    typedef BHTreePartsInsertMover   selfT;
    typedef treeGhost                partT;
 
-   BHTreePartsInsertMover(treePtrT _treePtr)
-      : BHTreeWorker(_treePtr) { }
-   BHTreePartsInsertMover(const selfT& _inserter)
-      : BHTreeWorker(_inserter) { }
-   ~BHTreePartsInsertMover() { }
+   BHTreePartsInsertMover(treePtrT _treePtr);
+   BHTreePartsInsertMover(const selfT& _inserter);
+   ~BHTreePartsInsertMover();
 
 public:
    void insert(partT& _part);
@@ -33,6 +31,9 @@ private:
    void pushUpAndToCZSingle(const pnodPtrT _pnodPtr);
 
    void pushDownSingle(const pnodPtrT _pnodPtr);
+
+protected:
+   const size_t maxDepth;
 };
 };
 

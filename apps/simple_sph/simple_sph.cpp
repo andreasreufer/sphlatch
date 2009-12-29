@@ -4,8 +4,8 @@
 
 //#define SPHLATCH_SINGLEPREC
 
-//#include <omp.h>
-//#define SPHLATCH_OPENMP
+#include <omp.h>
+#define SPHLATCH_OPENMP
 #define SPHLATCH_HDF5
 #define SPHLATCH_NONEIGH
 
@@ -270,18 +270,17 @@ fType timestep()
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    dt = dtH < dt ? dtH : dt;
 #endif
-   Logger.stream << "dt:    " << dt
-                 << "dtA:   " << dtA
-                 << "dtCFL: " << dtCFL
+   Logger.stream << "dt: " << dt    << " "
+                 << "dtA: " << dtA   << " "
+                 << "dtCFL: " << dtCFL << " "
 #ifdef SPHLATCH_TIMEDEP_ENERGY
-                 << "dtU:   " << dtU
+                 << "dtU: " << dtU   << " "
 #endif
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-                 << "dtH:   " << dtH
+                 << "dtH: " << dtH   << " "
 #endif
-                 << "\n";
+                 << " ";
    Logger.flushStream();
-
    return(dt);
 }
 
@@ -291,7 +290,9 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   if (argc != 3)
+   omp_set_num_threads(4);
+
+   if (argc != 4)
    {
       std::cerr <<
       "usage: simple_sph_XXXXXX <inputdump> <saveStepTime> <stopTime>\n";
@@ -350,7 +351,6 @@ int main(int argc, char* argv[])
    const size_t nop       = parts.getNop();
    const fType  costppart = 1. / nop;
 
-   // 
    Tree.setExtent(parts.getBox() * 1.5);
 
    for (size_t i = 0; i < nop; i++)
@@ -380,8 +380,6 @@ int main(int argc, char* argv[])
       Logger.finishStep("corrected");
       
       time += dt;
-
-      std::cerr << time << " " <<  parts.attributes["time"] << "\n";
    }
 
    parts.doublePrecOut();
