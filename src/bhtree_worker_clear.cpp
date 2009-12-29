@@ -17,16 +17,17 @@ public:
    BHTreeClear(const treePtrT _treePtr) : BHTreeWorker(_treePtr) { }
    ~BHTreeClear() { }
 
-   void operator()();
+   void operator()(const nodePtrT _node);
 
 private:
    void recursor();
 };
 
-void BHTreeClear::operator()()
+void BHTreeClear::operator()(const nodePtrT _node)
 {
-  goRoot();
-};
+   curPtr = _node;
+   recursor();
+}
 
 void BHTreeClear::recursor()
 {
@@ -34,19 +35,27 @@ void BHTreeClear::recursor()
    {
       for (size_t i = 0; i < 8; i++)
       {
-         goChild(i);
-         recursor();
-         goRoot();
+         if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
+         {
+            if (static_cast<gcllPtrT>(curPtr)->child[i]->isParticle)
+               delete static_cast<pnodPtrT>(
+                  static_cast<gcllPtrT>(curPtr)->child[i]);
+            else
+            {
+               goChild(i);
+               recursor();
+               goUp();
+               if (static_cast<gcllPtrT>(curPtr)->child[i]->isCZ)
+                  delete static_cast<czllPtrT>(
+                     static_cast<gcllPtrT>(curPtr)->child[i]);
+               else
+                  delete static_cast<qcllPtrT>(
+                     static_cast<gcllPtrT>(curPtr)->child[i]);
+            }
+            static_cast<gcllPtrT>(curPtr)->child[i] = NULL;
+         }
       }
-      if (curPtr->isCZ)
-         delete static_cast<czllPtrT>(curPtr);
-      else
-         delete static_cast<qcllPtrT>(curPtr);
    }
-   else
-      delete static_cast<pnodPtrT>(curPtr);
-};
-
-
+}
 };
 #endif

@@ -160,6 +160,19 @@ void derive()
 {
    treeT& Tree(treeT::instance());
    logT&  Logger(logT::instance());
+   
+   const size_t nop       = parts.getNop();
+   const fType  costppart = 1. / nop;
+
+   Tree.setExtent(parts.getBox() * 1.1);
+
+   for (size_t i = 0; i < nop; i++)
+   {
+      parts[i].cost = costppart;
+      Tree.insertPart(parts[i]);
+      parts[i].bootstrap();
+   }
+   Logger << "created tree";
 
    Tree.update(0.8, 1.2);
    Logger << "Tree.update()";
@@ -167,8 +180,7 @@ void derive()
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
 
-
-   const size_t nop = parts.getNop();
+   //const size_t nop = parts.getNop();
    for (size_t i = 0; i < nop; i++)
    {
       parts[i].acc  = 0., 0., 0.;
@@ -202,13 +214,14 @@ void derive()
    for (int i = 0; i < noCZbottomLoc; i++)
       accPowWorker(CZbottomLoc[i]);
    Logger << "Tree.accPowWorker()";
+
+   Tree.clear();
+   Logger << "Tree.clear()";
 }
 
 fType timestep()
 {
    logT& Logger(logT::instance());
-
-   const size_t nop = parts.getNop();
 
    const fType courantNumber = parts.attributes["courant"];
    const fType time          = parts.attributes["time"];
@@ -222,6 +235,8 @@ fType timestep()
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    fType dtH = finf;
 #endif
+   
+   const size_t nop = parts.getNop();
    for (size_t i = 0; i < nop; i++)
    {
       const fType ai = sqrt(dot(parts[i].acc, parts[i].acc));
@@ -348,7 +363,7 @@ int main(int argc, char* argv[])
 
    treeT& Tree(treeT::instance());
 
-   const size_t nop       = parts.getNop();
+   /*const size_t nop       = parts.getNop();
    const fType  costppart = 1. / nop;
 
    Tree.setExtent(parts.getBox() * 1.5);
@@ -359,7 +374,7 @@ int main(int argc, char* argv[])
       Tree.insertPart(parts[i]);
       parts[i].bootstrap();
    }
-   Logger << "created tree";
+   Logger << "created tree";*/
 
    fType& time( parts.attributes["time"] );
 
@@ -367,7 +382,8 @@ int main(int argc, char* argv[])
    while (time < stopTime)
    {
       derive();
-
+   
+      const size_t nop = parts.getNop();
       const fType dt = timestep();
 
       for (size_t i = 0; i < nop; i++)
@@ -375,6 +391,7 @@ int main(int argc, char* argv[])
       Logger.finishStep("predicted");
 
       derive();
+      
       for (size_t i = 0; i < nop; i++)
          parts[i].correct(dt);
       Logger.finishStep("corrected");
