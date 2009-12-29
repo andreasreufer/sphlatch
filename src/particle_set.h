@@ -40,7 +40,6 @@ public:
    void doublePrecOut();
 #endif
 
-
    void resize(const size_t _i);
    size_t getNop();
 
@@ -48,6 +47,7 @@ public:
    box3dT  getBox();
 
    cType   step;
+
    ioVarLT loadVars, saveVars;
    attrMT  attributes;
 

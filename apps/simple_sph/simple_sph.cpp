@@ -310,6 +310,37 @@ int main(int argc, char* argv[])
 
    logT& Logger(logT::instance());
 
+   ///
+   /// log program compilation time
+   ///
+   Logger.stream << "executable compiled from " << __FILE__
+                 << " on " << __DATE__
+                 << " at " << __TIME__ << "\n\n"
+                 << "    features: \n"
+#ifdef SPHLATCH_GRAVITY
+                 << "     gravity  \n"
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+                 << "     time dependent smoothing length\n"
+#endif
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+                 << "     time dependent specific energy\n"
+#endif
+#ifdef SPHLATCH_TILLOTSON
+                 << "     Tillotson EOS\n"
+#endif
+#ifdef SPHLATCH_ANEOS
+                 << "     ANEOS\n"
+#endif
+#ifdef SPHLATCH_INTEGRATERHO
+                 << "     integrated density\n"
+#endif
+#ifdef SPHLATCH_FRICTION
+                 << "     friction\n"
+#endif
+                 << "     basic SPH\n";
+   Logger.flushStream();
+
    // load the particles
    parts.loadHDF5(inFilename);
    Logger << "loaded particles";
@@ -319,6 +350,7 @@ int main(int argc, char* argv[])
    const size_t nop       = parts.getNop();
    const fType  costppart = 1. / nop;
 
+   // 
    Tree.setExtent(parts.getBox() * 1.5);
 
    for (size_t i = 0; i < nop; i++)
@@ -329,8 +361,10 @@ int main(int argc, char* argv[])
    }
    Logger << "created tree";
 
+   fType& time( parts.attributes["time"] );
+
    // start the loop
-   while ( parts.time < stopTime )
+   while (time < stopTime)
    {
       derive();
 
@@ -344,7 +378,10 @@ int main(int argc, char* argv[])
       for (size_t i = 0; i < nop; i++)
          parts[i].correct(dt);
       Logger.finishStep("corrected");
-      parts.time += dt;
+      
+      time += dt;
+
+      std::cerr << time << " " <<  parts.attributes["time"] << "\n";
    }
 
    parts.doublePrecOut();
