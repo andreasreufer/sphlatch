@@ -9,6 +9,25 @@
 #define SPHLATCH_HDF5
 #define SPHLATCH_NONEIGH
 
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
+
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
+
+#ifdef SPHLATCH_INTEGRATERHO
+#ifndef SPHLATCH_VELDIV
+#define SPHLATCH_VELDIV
+#endif
+#endif
+
+
 #include "typedefs.h"
 typedef sphlatch::fType     fType;
 typedef sphlatch::cType     cType;
@@ -111,6 +130,9 @@ public:
 #endif
 #ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
       vars.push_back(storeVar(eps, "eps"));
+#endif
+#ifdef SPHLATCH_VELDIV
+      vars.push_back(storeVar(divv, "divv"));
 #endif
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       vars.push_back(storeVar(dudt, "dudt"));
@@ -227,10 +249,23 @@ void derive()
       accPowWorker(CZbottomLoc[i]);
    Logger << "Tree.accPowWorker()";
 
+#ifdef SPHLATCH_VELDIV
+   for (size_t i = 0; i < nop; i++)
+     parts[i].setDivvMax();
+   Logger << "setDivvMax()";
+#endif
+
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+   for (size_t i = 0; i < nop; i++)
+     setDhDt(parts[i]);
+#endif
+
 #ifdef SPHLATCH_FRICTION
    const fType fricCoeff = 1. / parts.attributes["frictime"];
    for (size_t i = 0; i < nop; i++)
      parts[i].acc -= parts[i].vel * fricCoeff;
+   Logger.stream << "friction (t_fric = " << 1. / fricCoeff << ")";
+   Logger.flushStream();
 #endif
 
    Tree.clear();
@@ -396,12 +431,22 @@ int main(int argc, char* argv[])
    cType& step(parts.step);
    treeT& Tree(treeT::instance());
 
+   const size_t nop = parts.getNop();
+
+   parts[0].noneighOpt = 50;
+      
+   derive();
+   for (size_t i = 0; i < nop; i++)
+     parts[i].bootstrap();
+   Logger.finishStep("bootstrapped integrator");
+   parts.saveHDF5("bootstrap.h5part");
+
+
    // start the loop
    while (time < stopTime)
    {
       derive();
 
-      const size_t nop = parts.getNop();
       const fType  dt  = timestep(stepTime);
 
       for (size_t i = 0; i < nop; i++)

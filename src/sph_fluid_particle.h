@@ -62,7 +62,17 @@ class varHPart : public varHGhost
 {
   public:
    fType dhdt, divv;
+   static cType noneighOpt;
+   static fType divvmax;
+
+   void setDivvMax()
+   {
+     divvmax = divv > divvmax ? divv : divvmax;
+   }
 };
+
+cType varHPart::noneighOpt;
+fType varHPart::divvmax;
 
 ///
 /// some variables for ANEOS

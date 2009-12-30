@@ -2,7 +2,6 @@
 #define SPHLATCH_SPH_ALGORITHMS_CPP
 
 #include "typedefs.h"
-
 namespace sphlatch {
 template<typename _partT, typename _krnlT>
 struct densSum
@@ -59,10 +58,9 @@ struct accPowSum
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       dudti = 0.;
 #endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-      dhdti = 0.;
+#ifdef SPHLATCH_VELDIV
+      curDrhoDti = 0.;
 #endif
-
       vi   = _i->vel;
       rhoi = _i->rho;
       pi   = _i->p;
@@ -109,23 +107,25 @@ struct accPowSum
       K.derive(r, hij, _rvec);
 
       const fType accTerm     = piOrhoirhoi + (pj / (rhoj * rhoj)) + av;
+#ifdef SPHLATCH_VELDIV
       const fType mjvijdivWij = mj * dot(vij, K.deriv);
+      curDrhoDti += mjvijdivWij;
+#endif
 
       acci -= mj * accTerm * K.deriv;
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       dudti += 0.5 * accTerm * mjvijdivWij;
 #endif
-
    }
 
    void postSum(_partT* const _i)
    {
       _i->acc += acci;
+#ifdef SPHLATCH_VELDIV
+      _i->divv = curDrhoDti / rhoi;
+#endif
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       _i->dudt = dudti;
-#endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-      _i->dhdt = dhdti;
 #endif
    }
 
@@ -134,9 +134,28 @@ struct accPowSum
 #ifdef SPHLATCH_TIMEDEP_ENERGY
    fType dudti;
 #endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-   fType dhdti;
+#ifdef SPHLATCH_VELDIV
+   fType curDrhoDti;
 #endif
 };
+
+template<typename _partT>
+void setDhDt(_partT& _i)
+{
+  //const fType noNeighMin = (2./3.)*_i.noneighOpt;
+  const fType noNeighMax = (5./3.)*_i.noneighOpt;
+
+  //const fType k1 = 0.5 * (1 + tanh((_i.noneigh - noNeighMin) / -5.));
+  const fType k1 = 0.;
+  const fType k3 = 0.5 * (1 + tanh((_i.noneigh - noNeighMax) / 5.));
+  const fType k2 = 1. - k1 - k3;
+
+
+  _i.dhdt = (k1 * _i.divvmax - k3 * _i.divvmax - k2 * static_cast<fType>(1. / 3.) * _i.divv) * _i.h;
+ 
+ if ( _i.id == 0 )
+   std::cout << _i.id << " " << k3 << " " << _i.dhdt << " " << _i.divvmax << " " << _i.vel << " " << _i.acc << " " << " dhdt\n";
+};
+
 };
 #endif
