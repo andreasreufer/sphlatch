@@ -237,6 +237,8 @@ void derive()
 
 #ifdef SPHLATCH_TIMEDEP_ENERGY
    const fType uMin = parts.attributes["umin"];
+   Logger.stream << "assure minimal spec. energy umin = " << uMin;
+   Logger.flushStream();
 #endif
 
    eosT& EOS(eosT::instance());
