@@ -218,9 +218,6 @@ void derive()
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       parts[i].dudt = 0.;
 #endif
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
-      parts[i].dhdt = 0.;
-#endif
    }
 
 #ifdef SPHLATCH_GRAVITY
@@ -238,9 +235,19 @@ void derive()
       densWorker(CZbottomLoc[i]);
    Logger << "Tree.densWorker()";
 
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+   const fType uMin = parts.attributes["umin"];
+#endif
+
    eosT& EOS(eosT::instance());
    for (size_t i = 0; i < nop; i++)
+   {
+#ifdef SPHLATCH_TIMEDEP_ENERGY
+      if ( parts[i].u < uMin )
+        parts[i].u = uMin;
+#endif
       EOS(parts[i]);
+   }
    Logger << "pressure";
 
    accPowSumT accPowWorker(&Tree);
