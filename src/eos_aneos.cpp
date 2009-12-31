@@ -66,8 +66,8 @@ public:
       /// set the number of points in rho and u
       /// for the interpolation tables
       ///
-      noPointsRho = 3000;
-      noPointsU   = 3000;
+      noPointsRho = 2000;
+      noPointsU   = 2000;
 
       /*if (PartManager.attributes.count("umin") < 1)
          throw GeneralError("umin not set for ANEOS table!");

@@ -1,3 +1,5 @@
+#!/usr/bin/env octave
+
 G   = 6.6742e-8;
 Re  = 6.37814e8;
 me  = 5.9742e27;

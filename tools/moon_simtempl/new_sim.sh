@@ -19,7 +19,7 @@ fi
 mkdir $SIMDIR
 
 # copy everything to new simdir
-cp -Rpv bf_nbody.m config.sh scatterplot.sh setup_gi.m setup_gi_show.m \
+cp -Lpv bf_nbody.m config.sh scatterplot.sh setup_gi.m setup_gi_show.m \
  $EXTRAFILES $SIMDIR >/dev/null
 cd $SIMDIR
 
@@ -38,8 +38,10 @@ echo $VINF >>$PARAMFILE
 echo $LTOT >>$PARAMFILE
 echo $RSEP >>$PARAMFILE
 #./setup_gi_show.m < $PARAMFILE >/dev/null
-./setup_gi.m < $PARAMFILE >/dev/null
-./setup_gi.sh
+$TMPLDIR/setup_gi.m < $PARAMFILE >/dev/null
+cd bodies
+../setup_gi.sh
+cd ..
 sleep 1
 h5part_writeattr -i bodies/combined.h5part -k umin -v $UMIN
 h5part_writeattr -i bodies/combined.h5part -k maxradius -v $MAXR
