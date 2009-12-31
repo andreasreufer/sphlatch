@@ -150,11 +150,7 @@ void setDhDt(_partT& _i)
   const fType k3 = 0.5 * (1 + tanh((_i.noneigh - noNeighMax) / 5.));
   const fType k2 = 1. - k1 - k3;
 
-
   _i.dhdt = (k1 * _i.divvmax - k3 * _i.divvmax - k2 * static_cast<fType>(1. / 3.) * _i.divv) * _i.h;
- 
- if ( _i.id == 0 )
-   std::cout << _i.id << " " << k3 << " " << _i.dhdt << " " << _i.divvmax << " " << _i.vel << " " << _i.acc << " " << " dhdt\n";
 };
 
 };
