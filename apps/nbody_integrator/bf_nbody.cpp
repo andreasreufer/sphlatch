@@ -28,8 +28,9 @@ public:
       ioVarLT vars;
 
       vars.push_back(storeVar(pos, "pos"));
-      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(vel, "vel"));
       vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(id, "id"));
       return(vars);
    }
@@ -39,9 +40,10 @@ public:
       ioVarLT vars;
 
       vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
       vars.push_back(storeVar(acc, "acc"));
-      vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(m, "m"));
 
       vars.push_back(storeVar(id, "id"));
 
@@ -109,7 +111,7 @@ void derive()
             const fType   r    = sqrt(rvec[0] * rvec[0] +
                                       rvec[1] * rvec[1] +
                                       rvec[2] * rvec[2]);
-            const fType h    = parts[i].h;
+            const fType h = 0.5*(parts[i].h + parts[j].h );
             const fType mOr3 = parts[i].m* splineOSmoR3(r, h);
 
             cacc -= mOr3 * rvec;
