@@ -31,12 +31,13 @@ template<typename _partT>
 ParticleSet<_partT>::~ParticleSet()
 { }
 
+#ifdef SPHLATCH_HDF5
 template<typename _partT>
 std::list<std::string> ParticleSet<_partT>::dsetsInFile;
 
 template<typename _partT>
 std::list<std::string> ParticleSet<_partT>::attrsInFile;
-
+#endif
 
 template<typename _partT>
 _partT & ParticleSet<_partT>::operator[](const size_t _i)
