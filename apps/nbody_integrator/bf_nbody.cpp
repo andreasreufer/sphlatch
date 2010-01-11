@@ -49,10 +49,10 @@ public:
    }
 };
 
-typedef particle                               partT;
+typedef particle                       partT;
 
 #include "particle_set.cpp"
-typedef sphlatch::ParticleSet<partT>           partSetT;
+typedef sphlatch::ParticleSet<partT>   partSetT;
 
 // particles are global
 partSetT parts;
@@ -91,55 +91,56 @@ fType splineOSmoR3(const fType _r, const fType _h)
 
 void derive()
 {
-   const int nop = parts.getNop();
-   for (int i = 0; i < nop; i++)
-   {
-      parts[i].acc = 0., 0., 0.;
-   }
-
-   const fType G = parts.attributes["gravconst"];
+   const int   nop = parts.getNop();
+   const fType G   = parts.attributes["gravconst"];
 
    vect3dT cacc;
+
 #pragma omp parallel for private(cacc)
    for (int j = 0; j < nop; j++)
    {
-     cacc = 0., 0., 0.;
+      cacc = 0., 0., 0.;
 
-     for (int i = 0; i < nop; i++)
-     {
-       if ( i != j )
-       {
-         const vect3dT rvec = parts[j].pos - parts[i].pos;
-         const fType r = sqrt( rvec[0] * rvec[0] +
-                               rvec[1] * rvec[1] +
-                               rvec[2] * rvec[2]);
-         const fType h = parts[i].h;
-         const fType mOr3 = parts[i].m * splineOSmoR3(r, h);
+      for (int i = 0; i < nop; i++)
+      {
+         if (i != j)
+         {
+            const vect3dT rvec = parts[j].pos - parts[i].pos;
+            const fType   r    = sqrt(rvec[0] * rvec[0] +
+                                      rvec[1] * rvec[1] +
+                                      rvec[2] * rvec[2]);
+            const fType h    = parts[i].h;
+            const fType mOr3 = parts[i].m* splineOSmoR3(r, h);
 
-         cacc -= mOr3* rvec;
-       }
-     }
+            cacc -= mOr3 * rvec;
+         }
+      }
 
-     parts[j].acc = G * cacc;
+      parts[j].acc = G * cacc;
    }
 }
 
 int main(int argc, char* argv[])
 {
-#ifdef SPHLATCH_MPI
-   MPI::Init(argc, argv);
-#endif
+   if (not argc == 3)
+   {
+      std::cerr << "usage: nbody_bf <inputdump> <outputdump>\n";
+      return(1);
+   }
+
+   std::string inFilename  = argv[1];
+   std::string outFilename = argv[2];
+
 
    // load the particles
-   parts.loadHDF5("in.h5part");
+   parts.loadHDF5(inFilename);
 
+   // derive
    derive();
 
+   // store the particles
    parts.doublePrecOut();
-   parts.saveHDF5("out_bf.h5part");
+   parts.saveHDF5(outFilename);
 
-#ifdef SPHLATCH_MPI
-   MPI::Finalize();
-#endif
    return(0);
 }

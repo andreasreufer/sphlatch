@@ -18,6 +18,7 @@ public:
       _var += (1.5 * _dvar - 0.5 * odvar) * _dt;
 
       odvar = _dvar;
+      //_dvar = 0.;
    }
 
    void correct(_T& _var, _T& _dvar, const fType _dt)

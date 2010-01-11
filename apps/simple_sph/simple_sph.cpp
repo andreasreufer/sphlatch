@@ -68,23 +68,41 @@ public:
 
    sphlatch::PredictorCorrectorO2<vect3dT> posInt;
    sphlatch::PredictorCorrectorO1<fType>   energyInt;
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+   sphlatch::PredictorCorrectorO1<fType>   smolenInt;
+#endif
 
    void bootstrap()
    {
       posInt.bootstrap(pos, vel, acc);
+#ifdef SPHLATCH_TIMEDEP_ENERGY
       energyInt.bootstrap(u, dudt);
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+      smolenInt.bootstrap(h, dhdt);
+#endif
    }
 
    void predict(const fType _dt)
    {
       posInt.predict(pos, vel, acc, _dt);
+#ifdef SPHLATCH_TIMEDEP_ENERGY
       energyInt.predict(u, dudt, _dt);
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+      smolenInt.predict(h, dhdt, _dt);
+#endif
    }
 
    void correct(const fType _dt)
    {
       posInt.correct(pos, vel, acc, _dt);
+#ifdef SPHLATCH_TIMEDEP_ENERGY
       energyInt.correct(u, dudt, _dt);
+#endif
+#ifdef SPHLATCH_TIMEDEP_SMOOTHING
+      smolenInt.correct(h, dhdt, _dt);
+#endif
    }
 
    ioVarLT getLoadVars()
@@ -447,6 +465,7 @@ int main(int argc, char* argv[])
    derive();
    for (size_t i = 0; i < nop; i++)
      parts[i].bootstrap();
+   parts.doublePrecOut();
    Logger.finishStep("bootstrapped integrator");
    parts.saveHDF5("bootstrap.h5part");
 
@@ -462,11 +481,11 @@ int main(int argc, char* argv[])
          parts[i].predict(dt);
       Logger.finishStep("predicted");
 
+      time += dt;
       derive();
 
       for (size_t i = 0; i < nop; i++)
          parts[i].correct(dt);
-      time += dt;
       step++;
 
       std::stringstream sstr;
@@ -501,8 +520,6 @@ int main(int argc, char* argv[])
       }
    }
 
-   parts.doublePrecOut();
-   parts.saveHDF5("out_both.h5part");
    Logger << "stored dump ";
 
 #ifdef SPHLATCH_MPI
