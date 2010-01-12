@@ -47,6 +47,7 @@ simple_sph_GHUA_F: libaneos
 	   -DSPHLATCH_TIMEDEP_SMOOTHING \
 	   -DSPHLATCH_TIMEDEP_ENERGY \
 	   -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+	   -DSPHLATCH_FRICTION \
 	   -fopenmp \
 	   -o simple_sph_GHUA_F simple_sph.cpp
 

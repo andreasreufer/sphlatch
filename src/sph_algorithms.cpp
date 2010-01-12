@@ -29,7 +29,7 @@ struct densSum
                    const fType _srad)
    {
       const fType r   = sqrt(_rr);
-      const fType hij = 0.25 * _srad + 0.5 * (_j->h);
+      const fType hij = 0.25 * _srad + 0.5 * (_j->h); // 0.5*_srad == hi
       const fType mj  = _j->m;
 
       rhoi += mj * K.value(r, hij);
@@ -142,11 +142,11 @@ struct accPowSum
 template<typename _partT>
 void setDhDt(_partT& _i)
 {
-  //const fType noNeighMin = (2./3.)*_i.noneighOpt;
+  const fType noNeighMin = (2./3.)*_i.noneighOpt;
   const fType noNeighMax = (5./3.)*_i.noneighOpt;
 
-  //const fType k1 = 0.5 * (1 + tanh((_i.noneigh - noNeighMin) / -5.));
-  const fType k1 = 0.;
+  const fType k1 = 0.5 * (1 + tanh((_i.noneigh - noNeighMin) / -5.));
+  //const fType k1 = 0.;
   const fType k3 = 0.5 * (1 + tanh((_i.noneigh - noNeighMax) / 5.));
   const fType k2 = 1. - k1 - k3;
 

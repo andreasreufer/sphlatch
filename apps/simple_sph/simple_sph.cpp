@@ -19,6 +19,9 @@
 #ifndef SPHLATCH_VELDIV
 #define SPHLATCH_VELDIV
 #endif
+#ifndef SPHLATCH_NONEIGH
+#define SPHLATCH_NONEIGH
+#endif
 #endif
 
 #ifdef SPHLATCH_INTEGRATERHO
