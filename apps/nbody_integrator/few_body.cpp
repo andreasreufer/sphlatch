@@ -180,6 +180,7 @@ int main(int argc, char* argv[])
          std::cout << time << "\t";
          for (size_t i = 0; i < nop; i++)
          {
+            std::cout << std::scientific;
             std::cout << parts[i].pos[0] << "\t"
                       << parts[i].pos[1] << "\t"
                       << parts[i].pos[2] << "\t"
