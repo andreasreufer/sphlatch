@@ -1,3 +1,5 @@
+#define SPHLATCH_HDF5
+
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
@@ -16,14 +18,30 @@ namespace po = boost::program_options;
 #include "typedefs.h"
 typedef sphlatch::fType fType;
 
-#include "particle_manager.h"
-typedef sphlatch::ParticleManager part_type;
+#include "io_particle.h"
+class particle :
+  public sphlatch::IOPart
+{
+  public:
+  ioVarLT getLoadVars()
+  {
+    ioVarLT vars;
+    return vars;
+  }
+  
+  ioVarLT getSaveVars()
+  {
+    ioVarLT vars;
+    return vars;
+  }
+};
 
-#include "io_manager.h"
-typedef sphlatch::IOManager io_type;
+typedef particle partT;
 
-using namespace boost::assign;
-using namespace sphlatch::vectindices;
+#include "particle_set.cpp"
+typedef sphlatch::ParticleSet<partT>           partSetT;
+
+partSetT parts;
 
 int main(int argc, char* argv[])
 {
@@ -43,25 +61,26 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
     }
 
-  part_type& PartManager(part_type::instance());
-  io_type& IOManager(io_type::instance());
-
   std::string inputFileName = VMap["input-file"].as<std::string>();
   std::string attrKey = VMap["attr-key"].as<std::string>();
 
-  IOManager.loadDump(inputFileName);
+  parts.loadHDF5(inputFileName);
 
-  if (PartManager.attrExists(attrKey))
-    {
-      std::cout << attrKey << ":\t" << PartManager.attributes[attrKey] << "\n";
-      return EXIT_SUCCESS;
-    }
+  sphlatch::attrMT::iterator attItr = parts.attributes.find(attrKey);
+
+  if ( attItr != parts.attributes.end() )
+  {
+    std::cout << attrKey << ":\t" 
+              << std::scientific << std::setprecision(12) 
+              << (*attItr).second << "\n";
+    return EXIT_SUCCESS;
+  }
   else
-    {
+  {
       std::cerr << "attribute \"" << attrKey
                 << "\" not found in " << inputFileName << "!\n";
       return EXIT_FAILURE;
-    }
+  }
 }
 
 
