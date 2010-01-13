@@ -1,247 +1,162 @@
-// some defs
-
-//#define SPHLATCH_CARTESIAN_XYZ
-//#define SPHLATCH_CARTESIAN_YZX
-//#define SPHLATCH_CARTESIAN_ZXY
-#define SPHLATCH_HILBERT3D
-
-// uncomment for single-precision calculation
-//#define SPHLATCH_SINGLEPREC
-
-// enable parallel version
-//#define SPHLATCH_PARALLEL
-
-// enable intensive logging for toptree global summation
-//#define SPHLATCH_TREE_LOGSUMUPMP
-
-// enable checking of bounds for the neighbour lists
-//#define SPHLATCH_CHECKNONEIGHBOURS
-
-// enable selfgravity?
-//#define SPHLATCH_GRAVITY
-
-#include <cstdlib>
 #include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <string>
-#include <cmath>
-
-#include <boost/program_options/option.hpp>
-#include <boost/program_options/cmdline.hpp>
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/positional_options.hpp>
-
-#include <boost/assign/std/vector.hpp>
-
-#include <boost/mpl/vector_c.hpp>
-
-namespace po = boost::program_options;
-
-#include "typedefs.h"
-typedef sphlatch::fType fType;
-typedef sphlatch::fRefType fRefType;
-typedef sphlatch::valvectType valvectType;
-typedef sphlatch::zerovalvectType zerovalvectType;
-typedef sphlatch::valvectRefType valvectRefType;
-
-typedef sphlatch::particleRowType particleRowType;
-
-typedef sphlatch::idvectRefType idvectRefType;
-typedef sphlatch::matrixRefType matrixRefType;
-typedef sphlatch::partsIndexVectType partsIndexVectType;
-typedef sphlatch::quantsType quantsType;
-
-#include "io_manager.h"
-typedef sphlatch::IOManager io_type;
-
-#include "particle_manager.h"
-typedef sphlatch::ParticleManager part_type;
-
-#include "communication_manager.h"
-typedef sphlatch::CommunicationManager comm_type;
-
-#include "costzone.h"
-typedef sphlatch::CostZone costzone_type;
-
-#include "log_manager.h"
-typedef sphlatch::LogManager log_type;
-
-#include <boost/progress.hpp>
+#include <sstream>
 #include <vector>
 
-/// tree stuff
-#include "bhtree_old.h"
+//#define SPHLATCH_SINGLEPREC
 
-using namespace sphlatch::vectindices;
-using namespace boost::assign;
+#include <omp.h>
+#define SPHLATCH_OPENMP
+#define SPHLATCH_HDF5
+
+#include "typedefs.h"
+typedef sphlatch::fType     fType;
+typedef sphlatch::cType     cType;
+typedef sphlatch::vect3dT   vect3dT;
+typedef sphlatch::box3dT    box3dT;
+
+const fType finf = sphlatch::fTypeInf;
+
+#include "bhtree.cpp"
+typedef sphlatch::BHTree   treeT;
+
+///
+/// define the particle we are using
+///
+#include "bhtree_particle.h"
+#include "sph_fluid_particle.h"
+#include "io_particle.h"
+
+class particle :
+   public sphlatch::treePart,
+   public sphlatch::movingPart,
+   public sphlatch::SPHfluidPart,
+   public sphlatch::energyPart,
+   public sphlatch::IOPart
+{
+public:
+   
+  ioVarLT getLoadVars()
+   {
+      ioVarLT vars;
+
+      vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(id, "id"));
+
+#ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
+      vars.push_back(storeVar(eps, "eps"));
+#endif
+      return(vars);
+   }
+
+   ioVarLT getSaveVars()
+   {
+      ioVarLT vars;
+
+      vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(acc, "acc"));
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(id, "id"));
+#ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
+      vars.push_back(storeVar(eps, "eps"));
+#endif
+      return(vars);
+   }
+};
+
+typedef particle   partT;
+
+#include "particle_set.cpp"
+typedef sphlatch::ParticleSet<partT>           partSetT;
+
+#ifdef SPHLATCH_GRAVITY
+ #include "bhtree_worker_grav.cpp"
+typedef sphlatch::fixThetaMAC                  macT;
+typedef sphlatch::GravityWorker<macT, partT>   gravT;
+#endif
+
+// particles are global
+partSetT parts;
+
+void derive()
+{
+   treeT& Tree(treeT::instance());
+
+   const size_t nop       = parts.getNop();
+   const fType  costppart = 1. / nop;
+
+   Tree.setExtent(parts.getBox() * 1.1);
+
+   for (size_t i = 0; i < nop; i++)
+   {
+      parts[i].cost = costppart;
+      Tree.insertPart(parts[i]);
+   }
+
+   Tree.update(0.8, 1.2);
+
+   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
+   const int           noCZbottomLoc = CZbottomLoc.size();
+
+   //const size_t nop = parts.getNop();
+   for (size_t i = 0; i < nop; i++)
+      parts[i].acc  = 0., 0., 0.;
+
+#ifdef SPHLATCH_GRAVITY
+   const fType G = parts.attributes["gravconst"];
+   gravT       gravWorker(&Tree, G);
+ #pragma omp parallel for firstprivate(gravWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      gravWorker.calcGravity(CZbottomLoc[i]);
+#endif
+
+
+   Tree.clear();
+}
 
 int main(int argc, char* argv[])
 {
-  MPI::Init(argc, argv);
-
-  ///
-  /// instantate managers
-  ///
-  io_type& IOManager(io_type::instance());
-  part_type& PartManager(part_type::instance());
-  comm_type& CommManager(comm_type::instance());
-  costzone_type& CostZone(costzone_type::instance());
-  log_type& Logger(log_type::instance());
-
-  ///
-  /// some simulation parameters
-  /// attributes will be overwritten, when defined in file
-  ///
-  PartManager.attributes["gravconst"] = 1.0;
-  PartManager.attributes["gravtheta"] = 0.7;
-
-  ///
-  /// define what we're doing and load data
-  ///
-  PartManager.useGravity();
-  IOManager.loadDump("initial.h5part");
-
-  ///
-  /// some useful references
-  ///
-  idvectRefType id(PartManager.id);
-
-  matrixRefType pos(PartManager.pos);
-  //matrixRefType vel(PartManager.vel);
-  matrixRefType acc(PartManager.acc);
-
-  valvectRefType m(PartManager.m);
-  valvectRefType eps(PartManager.eps);
-
-  ///
-  /// register the quantites to be exchanged
-  ///
-#ifdef SPHLATCH_PARALLEL
-  CommManager.exchangeQuants.vects += &pos;
-  CommManager.exchangeQuants.scalars += &m, &eps;
-  CommManager.exchangeQuants.ints += &id;
+#ifdef SPHLATCH_MPI
+   MPI::Init(argc, argv);
 #endif
 
-  ///
-  /// exchange particles
-  ///
-  CostZone.createDomainPartsIndex();
-#ifdef SPHLATCH_PARALLEL
-  CommManager.exchange(CostZone.domainPartsIndex,
-                       CostZone.getNoGhosts());
-#endif
-
-  ///
-  /// prepare ghost sends
-  ///
-#ifdef SPHLATCH_PARALLEL
-  CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-#endif
-  Logger.stream << "distributed particles: "
-                << PartManager.getNoLocalParts() << " parts. & "
-                << PartManager.getNoGhostParts() << " ghosts";
-  Logger.flushStream();
+   if (not ((argc == 3) || (argc == 4)))
+   {
+      std::cerr <<
+      "usage: nbody_onerun_XXXXXX <inputdump> <outputdump> (<numthreads>)\n";
+      return(1);
+   }
 
 
-  const size_t noParts = PartManager.getNoLocalParts();
-  const size_t noTotParts = noParts + PartManager.getNoGhostParts();
+   std::string inFilename = argv[1];
+   std::string outFilename = argv[2];
 
-  /// send ghosts to other domains
-#ifdef SPHLATCH_PARALLEL
-  CommManager.sendGhosts(pos);
-  CommManager.sendGhosts(id);
-  CommManager.sendGhosts(m);
-  CommManager.sendGhosts(eps); // << eps is not used for interacting partners!
-  Logger << " sent to ghosts: pos, id, m, eps";
-#endif
+   if (argc == 4)
+   {
+      std::istringstream threadStr(argv[3]);
+      int numThreads;
+      threadStr >> numThreads;
+      omp_set_num_threads(numThreads);
+   }
 
-  for (size_t i = 0; i < 1; i++)
-    {
-      PartManager.step = i;
+   ///
+   /// log program compilation time
+   ///
+   std::cout  << "executable compiled from " << __FILE__
+                 << " on " << __DATE__
+                 << " at " << __TIME__ << "\n\n";
 
-      const fType gravTheta = PartManager.attributes["gravtheta"];
-      const fType gravConst = PartManager.attributes["gravconst"];
+   // load the particles
+   parts.loadHDF5(inFilename);
 
-      //sphlatch::BHtree<sphlatch::Monopoles> Tree(gravTheta,
-      sphlatch::BHtree<sphlatch::Quadrupoles> Tree(gravTheta,
-                                                   gravConst,
-                                                   CostZone.getDepth(),
-                                                   CostZone.getCenter(),
-                                                   CostZone.getSidelength()
-                                                   );
+   derive();
 
-      ///
-      /// fill up tree, determine ordering, calculate multipoles
-      ///
-      for (size_t i = 0; i < noTotParts; i++)
-        {
-          Tree.insertParticle(i);
-        }
+   parts.doublePrecOut();
+   parts.saveHDF5(outFilename);
 
-      const size_t myDomain = CommManager.getMyDomain();
-      std::string domString = "step";
-      domString.append(boost::lexical_cast<std::string>(PartManager.step));
-      domString.append(".domain");
-      domString.append(boost::lexical_cast<std::string>(myDomain));
-      std::string treeDumpfile;
-
-      treeDumpfile = "treeDump_preMP.";
-      treeDumpfile.append(domString);
-      treeDumpfile.append(".dot");
-      Tree.treeDOTDump(treeDumpfile);
-      Logger.stream << "tree dumped to " << treeDumpfile;
-      Logger.flushStream();
-
-      ///
-      /// determine particle order and calculate multipoles
-      ///
-      Tree.detParticleOrder();
-      Tree.calcMultipoles();
-      Logger << "Tree ready";
-
-      ///
-      /// inspect the tree
-      ///
-      std::string toptreeDumpfile = "toptreeDump.";
-      toptreeDumpfile.append(domString);
-      Tree.toptreeDump(toptreeDumpfile);
-      Logger.stream << "toptree dumped to " << toptreeDumpfile;
-      Logger.flushStream();
-
-      treeDumpfile = "treeDump_postMP.";
-      treeDumpfile.append(domString);
-      treeDumpfile.append(".dot");
-      Tree.treeDOTDump(treeDumpfile);
-      Logger.stream << "tree dumped to " << treeDumpfile;
-      Logger.flushStream();
-
-
-      ///
-      /// calc gravity
-      ///
-      for (size_t i = 0; i < noParts; i++)
-        {
-          const size_t curIdx = Tree.particleOrder[i];
-          Tree.calcGravity(curIdx);
-        }
-      Logger << "gravity calculated";
-    }
-
-  ///
-  /// define the quantities to save in a dump
-  ///
-  quantsType saveQuants;
-  saveQuants.vects += &pos, &acc;
-  saveQuants.scalars += &m, &eps;
-  saveQuants.ints += &id;
-
-  IOManager.saveDump("saveDump.h5part", saveQuants);
-
-  MPI::Finalize();
-  return EXIT_SUCCESS;
+   return(0);
 }
-
-

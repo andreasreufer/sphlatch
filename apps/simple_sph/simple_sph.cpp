@@ -220,7 +220,6 @@ void derive()
    {
       parts[i].cost = costppart;
       Tree.insertPart(parts[i]);
-      parts[i].bootstrap();
    }
    Logger << "created tree";
 
@@ -464,14 +463,16 @@ int main(int argc, char* argv[])
    const size_t nop = parts.getNop();
 
    parts[0].noneighOpt = 50;
-      
+     
+   // first bootstrapping step 
    derive();
    for (size_t i = 0; i < nop; i++)
      parts[i].bootstrap();
-   parts.doublePrecOut();
-   Logger.finishStep("bootstrapped integrator");
-   parts.saveHDF5("bootstrap.h5part");
 
+   Logger.finishStep("bootstrapped integrator");
+   
+   parts.doublePrecOut();
+   parts.saveHDF5("bootstrap.h5part");
 
    // start the loop
    while (time < stopTime)
