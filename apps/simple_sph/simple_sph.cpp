@@ -68,7 +68,6 @@ class particle :
 #endif
 {
 public:
-
    sphlatch::PredictorCorrectorO2<vect3dT> posInt;
    sphlatch::PredictorCorrectorO1<fType>   energyInt;
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
@@ -161,6 +160,8 @@ public:
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
       vars.push_back(storeVar(dhdt, "dhdt"));
 #endif
+      
+      vars.push_back(storeVar(cost, "cost"));
       return(vars);
    }
 };
@@ -194,6 +195,9 @@ typedef sphlatch::SPHsumWorker<densT, partT>     densSumT;
 
 typedef sphlatch::accPowSum<partT, krnlT>        accPowT;
 typedef sphlatch::SPHsumWorker<accPowT, partT>   accPowSumT;
+
+#include "bhtree_worker_cost.cpp"
+typedef sphlatch::CostWorker<partT>              costT;
 
 #ifdef SPHLATCH_ANEOS
  #include "eos_aneos.cpp"
@@ -296,6 +300,12 @@ void derive()
    Logger.stream << "friction (t_fric = " << 1. / fricCoeff << ")";
    Logger.flushStream();
 #endif
+   
+   costT costWorker(&Tree);
+#pragma omp parallel for firstprivate(costWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      costWorker(CZbottomLoc[i]);
+   Logger << "Tree.costWorker()";
 
    Tree.clear();
    Logger << "Tree.clear()";

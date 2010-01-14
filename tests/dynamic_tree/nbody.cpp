@@ -77,6 +77,8 @@ public:
       vars.push_back(storeVar(rho, "rho"));
       vars.push_back(storeVar(noneigh, "noneigh"));
 
+      vars.push_back(storeVar(cost, "cost"));
+
       return(vars);
    }
 };
@@ -88,16 +90,17 @@ class ghost :
    public sphlatch::movingGhost
 { };
 
-typedef ghost                                    ghstT;
+typedef ghost                                  ghstT;
 
 #include "particle_set.cpp"
-typedef sphlatch::ParticleSet<partT>             partSetT;
+typedef sphlatch::ParticleSet<partT>           partSetT;
 
 #include "bhtree_worker_grav.cpp"
-typedef sphlatch::fixThetaMAC                    macT;
-typedef sphlatch::GravityWorker<macT, partT>     gravT;
+typedef sphlatch::fixThetaMAC                  macT;
+typedef sphlatch::GravityWorker<macT, partT>   gravT;
 
 #include "sph_algorithms.cpp"
+#include "sph_kernels.cpp"
 #include "bhtree_worker_sphsum.cpp"
 
 typedef sphlatch::CubicSpline3D                  krnlT;
@@ -108,6 +111,8 @@ typedef sphlatch::SPHsumWorker<densT, partT>     densSumT;
 typedef sphlatch::accPowSum<partT, krnlT>        accPowT;
 typedef sphlatch::SPHsumWorker<accPowT, partT>   accPowSumT;
 
+#include "bhtree_worker_cost.cpp"
+typedef sphlatch::CostWorker<partT>              costT;
 
 int main(int argc, char* argv[])
 {
@@ -141,8 +146,8 @@ int main(int argc, char* argv[])
    Tree.update(0.8, 1.2);
    std::cout << "Tree.update()    " << omp_get_wtime() - start << "s\n";
 
-   const fType G = 1.;
-   gravT gravWorker(&Tree, G);
+   const fType         G = 1.;
+   gravT               gravWorker(&Tree, G);
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
 
@@ -158,35 +163,35 @@ int main(int argc, char* argv[])
 #pragma omp parallel for firstprivate(densWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       densWorker(CZbottomLoc[i]);
-
    std::cout << "densWorker()     " << omp_get_wtime() - start << "s\n";
 
    accPowSumT accPowWorker(&Tree);
    start = omp_get_wtime();
 #pragma omp parallel for firstprivate(accPowWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
-   {
-      //std::cout << i << ":" << omp_get_thread_num() << "\n";
       accPowWorker(CZbottomLoc[i]);
-   }
-
    std::cout << "accPowWorker()   " << omp_get_wtime() - start << "s\n";
 
+   costT costWorker(&Tree);
+   start = omp_get_wtime();
+#pragma omp parallel for firstprivate(costWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      costWorker(CZbottomLoc[i]);
+   std::cout << "costWorker()     " << omp_get_wtime() - start << "s\n";
+
+
+
    std::cout << "number of CZ cells was " << noCZbottomLoc << "\n";
-
-
    partsTree.saveHDF5("out_tree.h5part");
-
    std::cout << "particle size: " << sizeof(partT) << "\n";
+   
+   fType totCost = 0.;
+   for (size_t i = 0; i < nop; i++)
+      totCost += partsTree[i].cost;
 
+   std::cout << "total cost was " << totCost << "\n";
 
-#ifdef SPHLATCH_MPI
-   MPI::Finalize();
-#endif
-   return(0);
-
-
-
+#ifdef BRUTEFORCE
    vect3dT cacc;
    size_t  non;
    start = omp_get_wtime();
@@ -227,6 +232,7 @@ int main(int argc, char* argv[])
       nonDiffSum += abs(partsTree[i].noneigh - partsBF[i].noneigh);
 
    std::cout << " sum of difference in neighbours " << nonDiffSum << "\n";
+#endif
 
 #ifdef SPHLATCH_MPI
    MPI::Finalize();

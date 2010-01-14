@@ -1,18 +1,22 @@
-#ifndef BHTREE_WORKER_CPP
-#define BHTREE_WORKER_CPP
+#ifndef SPHLATCH_CLUMP_FINDER_CPP
+#define SPHLATCH_CLUMP_FINDER_CPP
 
 /*
  *  clump_finder.cpp
  *
- *  Created by Andreas Reufer on 21.12.09
+ *
+ *  Created by Andreas Reufer on 10.12.09
  *  Copyright 2009 University of Berne. All rights reserved.
  *
  */
 
+#include "typedefs.h"
 
-#include "bhtree_worker.h"
-#include "bhtree.cpp"
+
 
 namespace sphlatch {
-};
+
+
+
+}
 #endif

@@ -189,7 +189,7 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
 void BHTree::clear()
 {
   BHTreeClear TC(this); 
-  TC( rootPtr);
+  TC(rootPtr);
 
   noParts = 0;
   noCells = 0;
