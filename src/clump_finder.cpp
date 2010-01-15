@@ -20,9 +20,8 @@ typedef sphlatch::BHTree   treeT;
 #include "bhtree_worker_neighfunc.cpp"
 
 namespace sphlatch {
-
 template<typename _partT>
-void getClumps(ParticleSet<_partT>& _parts)
+void getClumps(ParticleSet<_partT>& _parts, const fType _rhoMin)
 {
    treeT& Tree(treeT::instance());
 
@@ -43,64 +42,70 @@ void getClumps(ParticleSet<_partT>& _parts)
    NeighFindWorker<_partT> NFW(&Tree);
    for (size_t i = 0; i < nop; i++)
    {
-       // neigh search & add to friends stack
+      std::cout << "particle " << i << " rho = " << _parts[i].rho << "\n";
+      cType& clumpid(_parts[i].clumpid);
 
-     /*switch(_parts[i].clumpid)
-     {
-       case CLUMPNONE:
-         break;
+      //
+      // if density is too low, particle does not belong to any clump
+      // regardless of previous state
+      //
+      if (_parts[i].rho < _rhoMin)
+      {
+         clumpid = CLUMPNONE;
+         continue;
+      }
 
-       case CLUMPNOTSET:
-       // get new clump id
-       // neigh search & add to friends stack
-       // infect friends
-         break;
-       
-       default:
-       // rho > rhoMin?
-       // neigh search & add to friends stack
-       // infect friends
-         break;
-
-     }*/
-
-     const cType clumpid = _parts[i].clumpid;
-
-     if ( clumpid != CLUMPNONE )
-     {
-       cType curid;
-       if ( clumpid != CLUMPNOTSET )
-       {
-         curid = nextFreeId;
+      //
+      // density is high enough to belong to a clump
+      //
+      if ((clumpid == CLUMPNONE) || (clumpid == CLUMPNOTSET))
+      {
+         clumpid = nextFreeId;
          nextFreeId++;
-       }
-       else
-         curid = clumpid;
+      }
 
-       //std::list<_partT*> pFriends = NF(&(_parts[i]), _parts[i].h);
+      //
+      // now start to look for friends
+      //
+      std::list<_partT*> ffriends;
+      ffriends.push_back(&(_parts[i]));
 
-       std::list<_partT*> ffriends;
-       ffriends.push_back(&(_parts[i]));
-
-       while ( ffriends.size() != 0 )
-       {
-         const _partT* curff = ffriends.back();
+      const cType curclump = clumpid;
+      while (ffriends.size() != 0)
+      {
+         std::cout << " ff: " << ffriends.size() << "\n";
+         _partT* const curff = ffriends.back();
          ffriends.pop_back();
+         std::cout << " ff: " << ffriends.size() << "\n";
+
+
+         if (curff->rho > _rhoMin)
+         {
+            if (curff->clumpid > 0)
+            {
+               // add to dictionnary
+            }
+            curff->clumpid = curclump;
+            // add neighbours to the friends of friends list
+            std::list<_partT*> newffriends = NFW(curff, curff->h);
+            std::cout << "   " << newffriends.size() << " new friends found\n";
+
+            // only add the particle, if it does not yet belong to a clump
+            //ffriends.splice(ffriends.end(), newffriends);
+         }
 
          // condition for a friend
          //if curff->rho > rhoMin;
-       }
-
-
-     }
+      }
    }
 
-   //treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
-   //const int           noCZbottomLoc = CZbottomLoc.size();
+   // assign real clump IDs
 
+   // output clumps?
+
+   // clear tree
    Tree.clear();
 }
-
 
 /*class clump
    {

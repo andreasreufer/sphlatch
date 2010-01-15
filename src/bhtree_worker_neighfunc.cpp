@@ -103,8 +103,9 @@ void NeighWorker<_funcT, _partT>::neighExecFunc(const czllPtrT _czll,
 template<typename _partT>
 class NeighListFunc
 {
+  public:
    void operator()(_partT* const _i,
-                   const _partT* const _j,
+                   _partT* const _j,
                    const vect3dT& _rvec,
                    const fType _rr,
                    const fType _srad)
