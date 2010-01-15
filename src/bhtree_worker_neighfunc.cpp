@@ -12,6 +12,7 @@
 #include "bhtree_worker.cpp"
 #include "bhtree_particle.h"
 #include "timer.cpp"
+#include <list>
 
 namespace sphlatch {
 template<typename _funcT, typename _partT>
@@ -36,7 +37,7 @@ void NeighWorker<_funcT, _partT>::neighExecFunc(const pnodPtrT _pnod,
    curPtr = _pnod;
    _partT* const ipartPtr = static_cast<_partT*>(_pnod->partPtr);
    const vect3dT ppos     = _pnod->pos;
-   const fType srad2 = _srad*_srad;
+   const fType   srad2    = _srad * _srad;
 
    // go to particles parent cell
    goUp();
@@ -93,13 +94,45 @@ void NeighWorker<_funcT, _partT>::neighExecFunc(const czllPtrT _czll,
 
    while (curPart != stopChld)
    {
-     if (curPart->isParticle)
-       neighExecFunc(static_cast<pnodPtrT>(curPart), _srad);
-     curPart = curPart->next;
+      if (curPart->isParticle)
+         neighExecFunc(static_cast<pnodPtrT>(curPart), _srad);
+      curPart = curPart->next;
    }
 }
 
+template<typename _partT>
+class NeighListFunc
+{
+   void operator()(_partT* const _i,
+                   const _partT* const _j,
+                   const vect3dT& _rvec,
+                   const fType _rr,
+                   const fType _srad)
+   {
+      neighList.push_back(_j);
+   }
 
+   std::list<_partT*> neighList;
+};
+
+template<typename _partT>
+class NeighFindWorker : public NeighWorker<NeighListFunc<_partT> , _partT> {
+public:
+   typedef NeighWorker<NeighListFunc<_partT> , _partT>   parentT;
+
+   NeighFindWorker(const BHTreeWorker::treePtrT _treePtr) :
+      NeighWorker<NeighListFunc<_partT> , _partT>(_treePtr) { }
+   NeighFindWorker(const NeighFindWorker& _NFwork) :
+      NeighWorker<NeighListFunc<_partT> , _partT>(_NFwork) { }
+   ~NeighFindWorker() { }
+
+   std::list<_partT*> operator()(const _partT* _part, const fType _srad)
+   {
+      parentT::Func.neighList.clear();
+      parentT::neighExecFunc(_part->treeNode, _srad);
+      return(parentT::Func.neighList);
+   }
+};
 };
 
 

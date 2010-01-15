@@ -180,7 +180,6 @@ int main(int argc, char* argv[])
    std::cout << "costWorker()     " << omp_get_wtime() - start << "s\n";
 
 
-
    std::cout << "number of CZ cells was " << noCZbottomLoc << "\n";
    partsTree.saveHDF5("out_tree.h5part");
    std::cout << "particle size: " << sizeof(partT) << "\n";
