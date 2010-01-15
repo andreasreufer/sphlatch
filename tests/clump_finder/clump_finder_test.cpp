@@ -30,12 +30,13 @@ typedef sphlatch::BHTree   treeT;
 #include "bhtree_particle.h"
 #include "sph_fluid_particle.h"
 #include "io_particle.h"
-
+#include "clump_particle.h"
 class particle :
    public sphlatch::treePart,
    public sphlatch::movingPart,
    public sphlatch::SPHfluidPart,
    public sphlatch::energyPart,
+   public sphlatch::clumpPart,
    public sphlatch::IOPart
 {
 public:
@@ -69,6 +70,7 @@ public:
       vars.push_back(storeVar(id, "id"));
       vars.push_back(storeVar(rho, "rho"));
       vars.push_back(storeVar(noneigh, "noneigh"));
+      vars.push_back(storeVar(clumpid, "clumpid"));
 
       vars.push_back(storeVar(u, "u"));
 #ifdef SPHLATCH_ANEOS
