@@ -134,6 +134,23 @@ public:
       return(parentT::Func.neighList);
    }
 };
+
+template<typename _partT>
+class SmoLenFindWorker : public NeighFindWorker<_partT> {
+  public:
+    typedef NeighFindWorker<_partT> parentT;
+
+    SmoLenFindWorker(const BHTreeWorker::treePtrT _treePtr) :
+      NeighFindWorker<_partT>(_treePtr) {}
+    SmoLenFindWorker(const SmoLenFindWorker& _SLwork) :
+      NeighFindWorker<_partT>(_SLwork) {}
+    ~SmoLenFindWorker() {}
+
+    void operator()(const czllPtrT _czll)
+    {
+    }
+};
+
 };
 
 

@@ -40,6 +40,8 @@ protected:
    bool sphereTotInCell(const vect3dT& _pos, const fType& _r);
    bool sphereTotOutCell(const vect3dT& _pos, const fType& _r);
 
+   fType maxMassEncloseRad(const pnodPtrT _partPtr, const fType _m);
+
    size_t getOctant(const vect3dT& _pos);
    size_t getOctant(const vect3dT& _pos, const nodePtrT _nodePtr);
 
