@@ -103,7 +103,7 @@ void NeighWorker<_funcT, _partT>::neighExecFunc(const czllPtrT _czll,
 template<typename _partT>
 class NeighListFunc
 {
-  public:
+public:
    void operator()(_partT* const _i,
                    _partT* const _j,
                    const vect3dT& _rvec,
@@ -115,6 +115,8 @@ class NeighListFunc
 
    std::list<_partT*> neighList;
 };
+
+
 
 template<typename _partT>
 class NeighFindWorker : public NeighWorker<NeighListFunc<_partT> , _partT> {
@@ -133,24 +135,123 @@ public:
       parentT::neighExecFunc(_part->treeNode, _srad);
       return(parentT::Func.neighList);
    }
+
+   std::list<_partT*> operator()(const pnodPtrT _pnod, const fType _srad)
+   {
+      parentT::Func.neighList.clear();
+      parentT::neighExecFunc(_pnod, _srad);
+      return(parentT::Func.neighList);
+   }
 };
 
 template<typename _partT>
-class SmoLenFindWorker : public NeighFindWorker<_partT> {
-  public:
-    typedef NeighFindWorker<_partT> parentT;
+class NeighDistListFunc
+{
+public:
+   class PartPtrDist 
+   {
+     public:
+       PartPtrDist(_partT* _ptr, const fType _rr) : ptr(_ptr), rr(_rr) {};
+       ~PartPtrDist() {};
+       _partT* ptr;
+       const fType rr;
+   };
 
-    SmoLenFindWorker(const BHTreeWorker::treePtrT _treePtr) :
-      NeighFindWorker<_partT>(_treePtr) {}
-    SmoLenFindWorker(const SmoLenFindWorker& _SLwork) :
-      NeighFindWorker<_partT>(_SLwork) {}
-    ~SmoLenFindWorker() {}
+   void operator()(_partT* const _i,
+                   _partT* const _j,
+                   const vect3dT& _rvec,
+                   const fType _rr,
+                   const fType _srad)
+   {
+      neighList.push_back( PartPtrDist(_j, _rr) );
+   }
 
-    void operator()(const czllPtrT _czll)
-    {
-    }
+   std::list<PartPtrDist> neighList;
 };
 
+template<typename _partT>
+
+class SmoLenFindWorker : public NeighWorker<NeighDistListFunc<_partT> , _partT> {
+public:
+   typedef NeighWorker<NeighDistListFunc<_partT> , _partT>   parentT;
+   //typedef NeighDistListFunc<_partT>::PartPtrDist PartPtrDistT;
+   
+   //std::list<PartPtrDistT> neighList;
+
+   SmoLenFindWorker(const BHTreeWorker::treePtrT _treePtr) :
+      NeighWorker<NeighDistListFunc<_partT> , _partT>(_treePtr) { }
+   SmoLenFindWorker(const SmoLenFindWorker& _NFwork) :
+      NeighWorker<NeighDistListFunc<_partT> , _partT>(_NFwork) { }
+   ~SmoLenFindWorker() { }
+
+/*class SmoLenFindWorker : public NeighFindWorker<_partT> {
+public:
+   typedef NeighFindWorker<_partT>   parentT;
+
+   SmoLenFindWorker(const BHTreeWorker::treePtrT _treePtr) :
+      NeighFindWorker<_partT>(_treePtr) { }
+   SmoLenFindWorker(const SmoLenFindWorker& _SLwork) :
+      NeighFindWorker<_partT>(_SLwork) { }
+   ~SmoLenFindWorker() { }*/
+
+   void operator()(const czllPtrT _czll)
+   {
+      nodePtrT       curPart  = _czll->chldFrst;
+      const nodePtrT stopChld = _czll->chldLast->next;
+
+      if (curPart == NULL)
+         return;
+
+      while (curPart != stopChld)
+      {
+         if (curPart->isParticle)
+         {
+            const pnodPtrT pnod = static_cast<pnodPtrT>(curPart);
+            const _partT* partPtr = static_cast<_partT*>(pnod->partPtr);
+
+            const cType noneigh = partPtr->noneigh;
+            const fType smass  = static_cast<fType>(noneigh);
+            const fType srad   = BHTreeWorker::maxMassEncloseRad(pnod, smass);
+            /*std::list<_partT*> neighs =
+               NeighFindWorker<_partT>::operator()(pnod, srad);*/
+
+            parentT::Func.neighList.clear();
+            parentT::neighExecFunc(pnod, srad);
+            //std::list<PartPtrDistT>& neighList(parentT::Func.neighList);
+
+      //return(parentT::Func.neighList);
+
+
+            //NeighDistComp myNeighDistComp(partPtr);
+            //neighs.sort(myNeighDistComp);
+
+            //if ( neighs.size() <= noneigh )
+
+         }
+         curPart = curPart->next;
+      }
+   }
+
+private:
+   // true if _p1 is nearer to _ref than to _p2
+   class NeighDistComp
+   {
+public:
+      NeighDistComp(_partT* _ref) : ref(_ref->pos) { }
+      ~NeighDistComp() { }
+
+      bool operator()(_partT* _p1, _partT* _p2)
+      {
+         const vect3dT rvec1 = ref - _p1->pos;
+         const vect3dT rvec2 = ref - _p2->pos;
+
+         return(dot(rvec1, rvec1) < dot(rvec2, rvec2));
+      }
+
+private:
+      const vect3dT ref;
+   };
+};
 };
 
 
