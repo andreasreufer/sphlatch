@@ -148,13 +148,22 @@ template<typename _partT>
 class NeighDistListFunc
 {
 public:
-   class PartPtrDist 
+   class PPtrD 
    {
      public:
-       PartPtrDist(_partT* _ptr, const fType _rr) : ptr(_ptr), rr(_rr) {};
-       ~PartPtrDist() {};
+       PPtrD(_partT* _ptr, const fType _rr) : ptr(_ptr), rr(_rr) {};
+       ~PPtrD() {};
        _partT* ptr;
        const fType rr;
+   };
+
+   class PPtrDsorter
+   {
+     public:
+      bool operator()(PPtrD& _ppd1, PPtrD& _ppd2)
+      {
+         return( _ppd1.rr < _ppd2.rr );
+      }
    };
 
    void operator()(_partT* const _i,
@@ -163,36 +172,25 @@ public:
                    const fType _rr,
                    const fType _srad)
    {
-      neighList.push_back( PartPtrDist(_j, _rr) );
+      neighList.push_back( PPtrD(_j, _rr) );
    }
 
-   std::list<PartPtrDist> neighList;
+   std::list<PPtrD> neighList;
 };
 
 template<typename _partT>
-
 class SmoLenFindWorker : public NeighWorker<NeighDistListFunc<_partT> , _partT> {
 public:
    typedef NeighWorker<NeighDistListFunc<_partT> , _partT>   parentT;
-   //typedef NeighDistListFunc<_partT>::PartPtrDist PartPtrDistT;
-   
-   //std::list<PartPtrDistT> neighList;
+   typedef typename NeighDistListFunc<_partT>::PPtrD pptrDT;
+   typedef typename NeighDistListFunc<_partT>::PPtrDsorter pptrDsortT;
+   typedef typename std::list<pptrDT> pptrDLT;
 
    SmoLenFindWorker(const BHTreeWorker::treePtrT _treePtr) :
       NeighWorker<NeighDistListFunc<_partT> , _partT>(_treePtr) { }
    SmoLenFindWorker(const SmoLenFindWorker& _NFwork) :
       NeighWorker<NeighDistListFunc<_partT> , _partT>(_NFwork) { }
    ~SmoLenFindWorker() { }
-
-/*class SmoLenFindWorker : public NeighFindWorker<_partT> {
-public:
-   typedef NeighFindWorker<_partT>   parentT;
-
-   SmoLenFindWorker(const BHTreeWorker::treePtrT _treePtr) :
-      NeighFindWorker<_partT>(_treePtr) { }
-   SmoLenFindWorker(const SmoLenFindWorker& _SLwork) :
-      NeighFindWorker<_partT>(_SLwork) { }
-   ~SmoLenFindWorker() { }*/
 
    void operator()(const czllPtrT _czll)
    {
@@ -212,16 +210,17 @@ public:
             const cType noneigh = partPtr->noneigh;
             const fType smass  = static_cast<fType>(noneigh);
             const fType srad   = BHTreeWorker::maxMassEncloseRad(pnod, smass);
-            /*std::list<_partT*> neighs =
-               NeighFindWorker<_partT>::operator()(pnod, srad);*/
 
+            // clear the neighbour list and start the search
             parentT::Func.neighList.clear();
             parentT::neighExecFunc(pnod, srad);
-            //std::list<PartPtrDistT>& neighList(parentT::Func.neighList);
 
-      //return(parentT::Func.neighList);
-
-
+            // sort the list according to the distance
+            pptrDLT& neighList(parentT::Func.neighList);
+            pptrDsortT neighSorter;
+            neighList.sort(neighSorter);
+      
+            //return(parentT::Func.neighList);
             //NeighDistComp myNeighDistComp(partPtr);
             //neighs.sort(myNeighDistComp);
 
