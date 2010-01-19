@@ -1,4 +1,4 @@
-#define SPHLATCH_PARALLEL
+//#define SPHLATCH_PARALLEL
 #define SPHLATCH_CARTESIAN_XYZ
 
 #include <cstdlib>
@@ -34,11 +34,11 @@ typedef sphlatch::CostZone costzone_type;
 typedef sphlatch::CommunicationManager comm_type;
 
 using namespace boost::assign;
-using namespace sphlatch::vectindices;
+//using namespace sphlatch::vectindices;
 
 int main(int argc, char* argv[])
 {
-   MPI::Init(argc, argv);
+   //MPI::Init(argc, argv);
    po::options_description Options("Global Options");
 
    const fType fMax = std::numeric_limits<fType>::max();
@@ -129,6 +129,6 @@ int main(int argc, char* argv[])
 
    IOManager.saveDump(outputFileName, saveQuants);
 
-   MPI::Finalize();
+   //MPI::Finalize();
    return(EXIT_SUCCESS);
 }

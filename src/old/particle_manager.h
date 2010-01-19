@@ -9,17 +9,6 @@
 
 namespace sphlatch
 {
-namespace vectindices
-{
-/*enum VectIndices
-{
-   X, Y, Z
-};*/
-enum TensorIndices
-{
-   XX, XY, XZ, YY, YZ
-};
-}
 
 class ParticleManager
 {
