@@ -35,7 +35,7 @@ LagrangeSphere1DSolver(size_t _noCells) :
   firstStep = true;
   time = 0.;
 
-  gravConst = 6.67e-8;
+  gravConst = sphlatch::constants::unitsCGS::G;
   courantNumber = 0.3;
   friction = 1.e-9;
 
