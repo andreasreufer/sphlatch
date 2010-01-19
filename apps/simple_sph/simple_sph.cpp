@@ -30,6 +30,12 @@
 #endif
 #endif
 
+#ifdef SPHLATCH_ANEOS
+#ifndef SPHLATCH_NONEGPRESS
+#define SPHLATCH_NONEGPRESS
+#endif
+#endif
+
 
 #include "typedefs.h"
 typedef sphlatch::fType     fType;
