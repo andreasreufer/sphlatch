@@ -59,6 +59,7 @@ int main(int argc, char* argv[])
   ("output-file,o", po::value<std::string>(), " output file")
   ("mtot,M", po::value<fType>(), " total  mass")
   ("core-frac,f", po::value<fType>(), " core   mass fraction")
+  ("stop-time,S", po::value<fType>(), " stopping time       ")
   ("mat-core", po::value<identType>(), " core   material ")
   ("mat-mantle", po::value<identType>(), " mantle material")
   ("rho-core", po::value<fType>(), " core   initial density")
@@ -96,7 +97,11 @@ int main(int argc, char* argv[])
   fType mCoreFrac = 0.30;
   if (VMap.count("core-frac"))
     mCoreFrac = VMap["core-frac"].as<fType>();
-
+  
+  fType stopTime  = 5.e3;
+  if (VMap.count("stop-time"))
+    stopTime  = VMap["stop-time"].as<fType>();
+    
   identType matCore = 5;
   if (VMap.count("mat-core"))
     matCore = VMap["mat-core"].as<identType>();
@@ -251,7 +256,7 @@ int main(int argc, char* argv[])
   /// integrate for a certain physical time
   ///
   std::cerr << " start 1D Lagrange solver\n";
-  Solver.integrateTo(5.e3);  /// replace by option
+  Solver.integrateTo(stopTime);
   std::cerr << " ... finished\n";
 
   ///

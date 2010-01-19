@@ -21,16 +21,16 @@ namespace po = boost::program_options;
 #include "typedefs.h"
 typedef sphlatch::fType             fType;
 
-#include "particle_manager.h"
+#include "old/particle_manager.h"
 typedef sphlatch::ParticleManager   part_type;
 
-#include "io_manager.h"
+#include "old/io_manager.h"
 typedef sphlatch::IOManager         io_type;
 
-#include "costzone.h"
+#include "old/costzone.h"
 typedef sphlatch::CostZone costzone_type;
 
-#include "communication_manager.h"
+#include "old/communication_manager.h"
 typedef sphlatch::CommunicationManager comm_type;
 
 using namespace boost::assign;
