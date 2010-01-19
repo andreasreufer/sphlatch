@@ -28,9 +28,9 @@ const fType R_earth = 6.3781e6;    // m
 namespace unitsCGS
 {
 // conversion constants to derive quantities from SI
-const fType unitLength = 1.e-2; // cm in m
-const fType unitTime = 1.e0;    // s in s
-const fType unitMass = 1.e3;    // g in kg
+const fType unitLength = 1.e2; // cm in m
+const fType unitTime   = 1.e0; // s  in s
+const fType unitMass   = 1.e3; // g  in kg
 
 const fType G = unitsSI::G * (unitLength * unitLength * unitLength)
                 / (unitMass * unitTime * unitTime);
