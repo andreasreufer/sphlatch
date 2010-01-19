@@ -40,14 +40,13 @@ public:
       vars.push_back(storeVar(pos, "pos"));
       vars.push_back(storeVar(h, "h"));
       vars.push_back(storeVar(id, "id"));
+      vars.push_back(storeVar(noneigh, "noneigh"));
       return(vars);
    }
 
    ioVarLT getSaveVars()
    {
       ioVarLT vars;
-
-      vars.push_back(storeVar(pos, "pos"));
       vars.push_back(storeVar(h, "h"));
       return(vars);
    }
@@ -79,34 +78,25 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   if (not ((argc == 3) || (argc == 4)))
+   if (not ((argc == 2) || (argc == 3)))
    {
       std::cerr <<
-      "usage: nbody_onerun_XXXXXX <inputdump> <outputdump> (<numthreads>)\n";
+      "usage: nbody_onerun_XXXXXX <dump> (<numthreads>)\n";
       return(1);
    }
 
+   std::string filename = argv[1];
 
-   std::string inFilename = argv[1];
-   std::string outFilename = argv[2];
-
-   if (argc == 4)
+   if (argc == 3)
    {
-      std::istringstream threadStr(argv[3]);
+      std::istringstream threadStr(argv[2]);
       int numThreads;
       threadStr >> numThreads;
       omp_set_num_threads(numThreads);
    }
 
-   ///
-   /// log program compilation time
-   ///
-   std::cout  << "executable compiled from " << __FILE__
-                 << " on " << __DATE__
-                 << " at " << __TIME__ << "\n\n";
-
    // load the particles
-   parts.loadHDF5(inFilename);
+   parts.loadHDF5(filename);
 
    // create tree
    treeT& Tree(treeT::instance());
@@ -119,6 +109,8 @@ int main(int argc, char* argv[])
    for (size_t i = 0; i < nop; i++)
    {
       parts[i].cost = costppart;
+      parts[i].m = 1.;
+      parts[i].noneigh = 50;
       Tree.insertPart(parts[i]);
    }
 
@@ -128,7 +120,8 @@ int main(int argc, char* argv[])
    const int           noCZbottomLoc = CZbottomLoc.size();
 
    // estimate h
-   smolT       smolWorker(&Tree);
+   const fType multiplier = 2.;
+   smolT       smolWorker(&Tree,multiplier);
  
 #pragma omp parallel for firstprivate(smolWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
@@ -136,8 +129,9 @@ int main(int argc, char* argv[])
 
    Tree.clear();
 
+   // store the smoothing length
    parts.doublePrecOut();
-   parts.saveHDF5(outFilename);
+   parts.saveHDF5(filename);
 
    return(0);
 }

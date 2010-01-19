@@ -144,25 +144,31 @@ public:
    }
 };
 
+//
+// small class which makes a list of neighbours and also store
+// the squared distance to those neighbours
+//
 template<typename _partT>
 class NeighDistListFunc
 {
 public:
-   class PPtrD 
+   // small helper class which keeps a particle pointer and the squared dist.
+   class PPtrD
    {
-     public:
-       PPtrD(_partT* _ptr, const fType _rr) : ptr(_ptr), rr(_rr) {};
-       ~PPtrD() {};
-       _partT* ptr;
-       const fType rr;
+public:
+      PPtrD(_partT* _ptr, const fType _rr) : ptr(_ptr), rr(_rr) { }
+      ~PPtrD() { }
+      _partT      * ptr;
+      const fType rr;
    };
 
+   // small helper class to sort a list of neighbours according to distance
    class PPtrDsorter
    {
-     public:
+public:
       bool operator()(PPtrD& _ppd1, PPtrD& _ppd2)
       {
-         return( _ppd1.rr < _ppd2.rr );
+         return(_ppd1.rr < _ppd2.rr);
       }
    };
 
@@ -172,24 +178,26 @@ public:
                    const fType _rr,
                    const fType _srad)
    {
-      neighList.push_back( PPtrD(_j, _rr) );
+      neighList.push_back(PPtrD(_j, _rr));
    }
 
    std::list<PPtrD> neighList;
 };
 
 template<typename _partT>
-class SmoLenFindWorker : public NeighWorker<NeighDistListFunc<_partT> , _partT> {
+class SmoLenFindWorker : 
+  public NeighWorker<NeighDistListFunc<_partT> , _partT> {
 public:
    typedef NeighWorker<NeighDistListFunc<_partT> , _partT>   parentT;
-   typedef typename NeighDistListFunc<_partT>::PPtrD pptrDT;
-   typedef typename NeighDistListFunc<_partT>::PPtrDsorter pptrDsortT;
-   typedef typename std::list<pptrDT> pptrDLT;
+   typedef typename NeighDistListFunc<_partT>::PPtrD         pptrDT;
+   typedef typename NeighDistListFunc<_partT>::PPtrDsorter   pptrDsortT;
+   typedef typename std::list<pptrDT>                        pptrDLT;
 
-   SmoLenFindWorker(const BHTreeWorker::treePtrT _treePtr) :
-      NeighWorker<NeighDistListFunc<_partT> , _partT>(_treePtr) { }
-   SmoLenFindWorker(const SmoLenFindWorker& _NFwork) :
-      NeighWorker<NeighDistListFunc<_partT> , _partT>(_NFwork) { }
+   SmoLenFindWorker(const BHTreeWorker::treePtrT _treePtr, const fType _mult) :
+      NeighWorker<NeighDistListFunc<_partT> , _partT>(_treePtr), mult(_mult) { }
+   SmoLenFindWorker(const SmoLenFindWorker& _SLFwork) :
+      NeighWorker<NeighDistListFunc<_partT> , _partT>(_SLFwork)
+      , mult(_SLFwork.mult) { }
    ~SmoLenFindWorker() { }
 
    void operator()(const czllPtrT _czll)
@@ -204,52 +212,41 @@ public:
       {
          if (curPart->isParticle)
          {
-            const pnodPtrT pnod = static_cast<pnodPtrT>(curPart);
-            const _partT* partPtr = static_cast<_partT*>(pnod->partPtr);
+            const pnodPtrT pnod    = static_cast<pnodPtrT>(curPart);
+            _partT* const  partPtr = static_cast<_partT*>(pnod->partPtr);
 
-            const cType noneigh = partPtr->noneigh;
-            const fType smass  = static_cast<fType>(noneigh);
-            const fType srad   = BHTreeWorker::maxMassEncloseRad(pnod, smass);
+            const size_t noneigh = partPtr->noneigh;
+            const fType  smass   = static_cast<fType>(noneigh);
+            const fType  srad    = BHTreeWorker::maxMassEncloseRad(pnod, smass);
+            
+            assert(noneigh > 0);
 
             // clear the neighbour list and start the search
             parentT::Func.neighList.clear();
             parentT::neighExecFunc(pnod, srad);
 
             // sort the list according to the distance
-            pptrDLT& neighList(parentT::Func.neighList);
+            pptrDLT&   neighList(parentT::Func.neighList);
             pptrDsortT neighSorter;
             neighList.sort(neighSorter);
-      
-            //return(parentT::Func.neighList);
-            //NeighDistComp myNeighDistComp(partPtr);
-            //neighs.sort(myNeighDistComp);
 
-            //if ( neighs.size() <= noneigh )
+            if (neighList.size() <= noneigh)
+               partPtr->h = sqrt((*(neighList.end())).rr) / mult;
+            else
+            {
+              typename pptrDLT::const_iterator nitr = neighList.begin();
+              for (size_t i = 0; i < noneigh; i++)
+                nitr++;
 
+              partPtr->h = sqrt( (*nitr).rr ) / mult;
+            }
          }
          curPart = curPart->next;
       }
    }
 
-private:
-   // true if _p1 is nearer to _ref than to _p2
-   class NeighDistComp
-   {
-public:
-      NeighDistComp(_partT* _ref) : ref(_ref->pos) { }
-      ~NeighDistComp() { }
-
-      bool operator()(_partT* _p1, _partT* _p2)
-      {
-         const vect3dT rvec1 = ref - _p1->pos;
-         const vect3dT rvec2 = ref - _p2->pos;
-
-         return(dot(rvec1, rvec1) < dot(rvec2, rvec2));
-      }
-
-private:
-      const vect3dT ref;
-   };
+protected:
+   const fType mult;
 };
 };
 
