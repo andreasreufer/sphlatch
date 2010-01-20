@@ -218,7 +218,7 @@ typedef sphlatch::IdealGas<partT>                eosT;
 typedef sphlatch::InterpolateLinear              intplT;
 typedef sphlatch::LookupTable1D<intplT>          engLUT;
 
-engLUT energyLUT("energyprofile.hdf5", "r", "u");
+engLUT energyLUT("profile1D.hdf5", "r", "u");
 #endif
 
 // particles are global

@@ -89,7 +89,7 @@ simple_sph_GHKa_F: libaneos
 	   -DSPHLATCH_FRICTION \
 	   -DSPHLATCH_KEEPENERGYPROFILE \
 	   -fopenmp \
-	   -o simple_sph_GHUa_F simple_sph.cpp
+	   -o simple_sph_GHKa_F simple_sph.cpp
 
 libaneos:
 	    $(FC) $(FFLAGS) -c ../../aux/libaneos/libaneos.f -o libaneos.o
