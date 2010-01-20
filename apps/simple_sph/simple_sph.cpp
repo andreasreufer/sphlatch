@@ -10,30 +10,30 @@
 #define SPHLATCH_NONEIGH
 
 #ifdef SPHLATCH_TIMEDEP_ENERGY
-#ifndef SPHLATCH_VELDIV
-#define SPHLATCH_VELDIV
-#endif
+ #ifndef SPHLATCH_VELDIV
+  #define SPHLATCH_VELDIV
+ #endif
 #endif
 
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
-#ifndef SPHLATCH_VELDIV
-#define SPHLATCH_VELDIV
-#endif
-#ifndef SPHLATCH_NONEIGH
-#define SPHLATCH_NONEIGH
-#endif
+ #ifndef SPHLATCH_VELDIV
+  #define SPHLATCH_VELDIV
+ #endif
+ #ifndef SPHLATCH_NONEIGH
+  #define SPHLATCH_NONEIGH
+ #endif
 #endif
 
 #ifdef SPHLATCH_INTEGRATERHO
-#ifndef SPHLATCH_VELDIV
-#define SPHLATCH_VELDIV
-#endif
+ #ifndef SPHLATCH_VELDIV
+  #define SPHLATCH_VELDIV
+ #endif
 #endif
 
 #ifdef SPHLATCH_ANEOS
-#ifndef SPHLATCH_NONEGPRESS
-#define SPHLATCH_NONEGPRESS
-#endif
+ #ifndef SPHLATCH_NONEGPRESS
+  #define SPHLATCH_NONEGPRESS
+ #endif
 #endif
 
 
@@ -166,7 +166,7 @@ public:
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
       vars.push_back(storeVar(dhdt, "dhdt"));
 #endif
-      
+
       vars.push_back(storeVar(cost, "cost"));
       return(vars);
    }
@@ -213,8 +213,18 @@ typedef sphlatch::ANEOS<partT>                   eosT;
 typedef sphlatch::IdealGas<partT>                eosT;
 #endif
 
+#ifdef SPHLATCH_KEEPENERGYPROFILE
+#include "lookup_table1D.cpp"
+typedef sphlatch::InterpolateLinear              intplT;
+typedef sphlatch::LookupTable1D<intplT>          engLUT;
+
+engLUT energyLUT("energyprofile.hdf5", "r", "u");
+#endif
+
 // particles are global
 partSetT parts;
+
+
 
 void derive()
 {
@@ -244,7 +254,7 @@ void derive()
    //const size_t nop = parts.getNop();
    for (size_t i = 0; i < nop; i++)
    {
-      parts[i].acc  = 0., 0., 0.;
+      parts[i].acc = 0., 0., 0.;
 #ifdef SPHLATCH_TIMEDEP_ENERGY
       parts[i].dudt = 0.;
 #endif
@@ -275,8 +285,8 @@ void derive()
    for (size_t i = 0; i < nop; i++)
    {
 #ifdef SPHLATCH_TIMEDEP_ENERGY
-      if ( parts[i].u < uMin )
-        parts[i].u = uMin;
+      if (parts[i].u < uMin)
+         parts[i].u = uMin;
 #endif
       EOS(parts[i]);
    }
@@ -290,23 +300,51 @@ void derive()
 
 #ifdef SPHLATCH_VELDIV
    for (size_t i = 0; i < nop; i++)
-     parts[i].setDivvMax();
+      parts[i].setDivvMax();
    Logger << "setDivvMax()";
 #endif
 
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
    for (size_t i = 0; i < nop; i++)
-     setDhDt(parts[i]);
+      setDhDt(parts[i]);
 #endif
 
 #ifdef SPHLATCH_FRICTION
    const fType fricCoeff = 1. / parts.attributes["frictime"];
    for (size_t i = 0; i < nop; i++)
-     parts[i].acc -= parts[i].vel * fricCoeff;
+      parts[i].acc -= parts[i].vel * fricCoeff;
    Logger.stream << "friction (t_fric = " << 1. / fricCoeff << ")";
    Logger.flushStream();
 #endif
-   
+
+#ifdef SPHLATCH_KEEPENERGYPROFILE
+   vect3dT com;
+   com = 0., 0., 0.;
+   fType   totM = 0.;
+   for (size_t i = 0; i < nop; i++)
+   {
+      com  += parts[i].pos * parts[i].m;
+      totM += parts[i].m;
+   }
+   com /= totM;
+
+   Logger.stream << "center of mass: ["
+                 << com[0] << ","
+                 << com[1] << ","
+                 << com[2] << "]";
+   Logger.flushStream();
+
+   const fType thermFricCoeff = 1. / parts.attributes["frictime"];
+   for (size_t i = 0; i < nop; i++)
+   {
+      const vect3dT rveci  = parts[i].pos - com;
+      const fType   ri     = sqrt(dot(rveci, rveci));
+      const fType   utheoi = energyLUT(ri);
+
+      parts[i].dudt -= (parts[i].u - utheoi) * thermFricCoeff;
+   }
+#endif
+
    costT costWorker(&Tree);
 #pragma omp parallel for firstprivate(costWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
@@ -322,11 +360,11 @@ fType timestep(const fType _stepTime)
    logT& Logger(logT::instance());
 
    const fType courant = parts.attributes["courant"];
-   const fType time          = parts.attributes["time"];
+   const fType time    = parts.attributes["time"];
 
    fType dtSave = (floor((time / _stepTime) + 1.e-6) + 1.) * _stepTime - time;
-   fType dtA   = finf;
-   fType dtCFL = finf;
+   fType dtA    = finf;
+   fType dtCFL  = finf;
 
 #ifdef SPHLATCH_TIMEDEP_ENERGY
    fType dtU = finf;
@@ -479,14 +517,14 @@ int main(int argc, char* argv[])
    const size_t nop = parts.getNop();
 
    parts[0].noneighOpt = 50;
-     
-   // first bootstrapping step 
+
+   // first bootstrapping step
    derive();
    for (size_t i = 0; i < nop; i++)
-     parts[i].bootstrap();
+      parts[i].bootstrap();
 
    Logger.finishStep("bootstrapped integrator");
-   
+
    parts.doublePrecOut();
    parts.saveHDF5("bootstrap.h5part");
 
@@ -495,7 +533,7 @@ int main(int argc, char* argv[])
    {
       derive();
 
-      const fType  dt  = timestep(stepTime);
+      const fType dt = timestep(stepTime);
 
       for (size_t i = 0; i < nop; i++)
          parts[i].predict(dt);

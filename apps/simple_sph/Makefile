@@ -51,6 +51,19 @@ simple_sph_GHUA_F: libaneos
 	   -fopenmp \
 	   -o simple_sph_GHUA_F simple_sph.cpp
 
+simple_sph_GHKA_F: libaneos
+	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	   -lhdf5 -lz -I../../src \
+	   -DSPHLATCH_GRAVITY \
+	   -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
+	   -DSPHLATCH_TIMEDEP_SMOOTHING \
+	   -DSPHLATCH_TIMEDEP_ENERGY \
+	   -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+	   -DSPHLATCH_FRICTION \
+	   -DSPHLATCH_KEEPENERGYPROFILE \
+	   -fopenmp \
+	   -o simple_sph_GHKA_F simple_sph.cpp
+
 simple_sph_GHUa_F: libaneos
 	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
 	   -lhdf5 -lz -I../../src \
@@ -64,6 +77,19 @@ simple_sph_GHUa_F: libaneos
 	   -fopenmp \
 	   -o simple_sph_GHUa_F simple_sph.cpp
 
+simple_sph_GHKa_F: libaneos
+	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	   -lhdf5 -lz -I../../src \
+	   -DSPHLATCH_GRAVITY \
+	   -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
+	   -DSPHLATCH_TIMEDEP_SMOOTHING \
+	   -DSPHLATCH_TIMEDEP_ENERGY \
+	   -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+	   -DSPHLATCH_ANEOS_TABLE \
+	   -DSPHLATCH_FRICTION \
+	   -DSPHLATCH_KEEPENERGYPROFILE \
+	   -fopenmp \
+	   -o simple_sph_GHUa_F simple_sph.cpp
 
 libaneos:
 	    $(FC) $(FFLAGS) -c ../../aux/libaneos/libaneos.f -o libaneos.o

@@ -1,5 +1,5 @@
-#ifndef SPHLATCH_IOMANAGER_H
-#define SPHLATCH_IOMANAGER_H
+#ifndef SPHLATCH_HDF5_IO_H
+#define SPHLATCH_HDF5_IO_H
 
 ///
 /// we use HDF5 >= 1.8 functions
