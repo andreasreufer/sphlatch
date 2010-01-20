@@ -46,7 +46,7 @@ public:
    {
       HDF5File profFile(_file);
 
-      size_t nx, ny;
+      size_t ny;
 
       profFile.getDims(_xname, nx, ny);
 
@@ -63,7 +63,6 @@ public:
       fMax = f(nx - 1);
    }
 #endif
-
 
    ~LookupTable1D()
    { }
