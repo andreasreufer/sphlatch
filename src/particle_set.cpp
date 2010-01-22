@@ -9,11 +9,6 @@ namespace sphlatch {
 template<typename _partT>
 ParticleSet<_partT>::ParticleSet()
 {
-   partT proto;
-
-   loadVars = proto.getLoadVars();
-   saveVars = proto.getSaveVars();
-
 #ifdef SPHLATCH_HDF5
    if (sizeof(fType) == 8)
       h5mFTYPE = H5T_NATIVE_DOUBLE;
@@ -49,8 +44,6 @@ template<typename _partT>
 void ParticleSet<_partT>::operator=(const ParticleSet& _rhs)
 {
    step       = _rhs.step;
-   loadVars   = _rhs.loadVars;
-   saveVars   = _rhs.saveVars;
    attributes = _rhs.attributes;
    parts      = _rhs.parts;
    return(*this);
@@ -158,6 +151,11 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
 
    bool   nopdet = false;
    size_t notp, nolp = 0, nopck;
+
+   // get the variables we have to load
+   ioVarLT loadVars;
+   partT proto;
+   loadVars = proto.getLoadVars();
 
    ioVarT iovDm("_null", 0, 0, IOPart::ITYPE);
    for (strLT::const_iterator dsetItr = dsetsInFile.begin();
@@ -372,6 +370,10 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
    H5Pset_dxpl_mpio(accpl, H5FD_MPIO_COLLECTIVE);
    //H5Pset_dxpl_mpio(accpl, H5FD_MPIO_INDEPENDENT);
  #endif
+   
+   ioVarLT saveVars;
+   partT proto;
+   saveVars = proto.getSaveVars();
 
    // write data
    for (ioVarLT::const_iterator vItr = saveVars.begin();

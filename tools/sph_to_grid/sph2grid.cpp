@@ -83,11 +83,11 @@ public:
       
       vars.push_back(storeVar(f, "p"));
 
-      /*if (not fName.empty())
+      if (not fName.empty())
          vars.push_back(storeVar(f, fName));
 
       if (not vName.empty())
-         vars.push_back(storeVar(v, vName));*/
+         vars.push_back(storeVar(v, vName));
 
       return(vars);
    }
@@ -98,14 +98,12 @@ public:
       
       vars.push_back(storeVar(pos, "pos"));
       
-      /*if (not fName.empty())
+      if (not fName.empty())
          vars.push_back(storeVar(ftar, fName));
 
       if (not vName.empty())
-         vars.push_back(storeVar(vtar, vName));*/
+         vars.push_back(storeVar(vtar, vName));
       
-      vars.push_back(storeVar(ftar, "p"));
-
       return(vars);
    }
 
@@ -118,13 +116,11 @@ public:
    void setLoadF(std::string _str)
    {
       fName = _str;
-      std::cout << "load " << fName << "\n";
    }
 
    void setLoadV(std::string _str)
    {
       vName = _str;
-      std::cout << "load " << vName << "\n";
    }
 };
 
@@ -252,15 +248,18 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   if (not ((argc == 3) || (argc == 4)))
+   if (not ((argc == 5) || (argc == 6)))
    {
       std::cerr <<
-      "usage: sph2grid <inputdump> <outputFile> (<numthreads>)\n";
+      "usage: sph2grid <inputdump> <outputFile> <scalar> <vector> (<numthreads>)\n";
       return(1);
    }
 
    std::string inFilename = argv[1];
    std::string outFilename = argv[2];
+   std::string scalStr     = argv[3];
+   std::string vectStr     = argv[4];
+
 
    if (argc == 4)
    {
@@ -271,36 +270,34 @@ int main(int argc, char* argv[])
    }
   
    parts.resize(1);
-   parts[0].setLoadF("rho");
-   parts[0].setLoadV("vel");
-
+   parts[0].setLoadF(scalStr);
+   parts[0].setLoadV(vectStr);
+   
    // load the particles
    parts.loadHDF5(inFilename);
    std::cout << "loaded particles\n";
-
-   fType& time(parts.attributes["time"]);
 
    gridParts.step = parts.step;
    gridParts.attributes = parts.attributes;
 
    const box3dT box = parts.getBox();
 
-   const size_t ni = 100;
-   const size_t nj = 100;
+   const size_t ni = 400;
+   const size_t nj = 800;
 
    vect3dT r0;
 
    r0[0] = box.cen[0] - 0.5*box.size;
-   r0[1] = box.cen[1] - 0.5*box.size;
-   r0[2] = 0.;
+   r0[1] = 0.;
+   r0[2] = box.cen[2] - 0.5*box.size;
 
    vect3dT ri, rj;
    ri[0] = box.size / ( ni + 1. );
    ri[1] = 0.;
    ri[2] = 0.;
    rj[0] = 0.;
-   rj[1] = box.size / ( nj + 1. );
-   rj[2] = 0.;
+   rj[1] = 0.;
+   rj[2] = box.size / ( nj + 1. );
 
    const size_t nogp = ni*nj;
    gridParts.resize(nogp);
