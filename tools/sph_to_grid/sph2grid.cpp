@@ -80,12 +80,14 @@ public:
       vars.push_back(storeVar(id, "id"));
 
       vars.push_back(storeVar(u, "u"));
+      
+      vars.push_back(storeVar(f, "p"));
 
-      if (not fName.empty())
+      /*if (not fName.empty())
          vars.push_back(storeVar(f, fName));
 
       if (not vName.empty())
-         vars.push_back(storeVar(v, vName));
+         vars.push_back(storeVar(v, vName));*/
 
       return(vars);
    }
@@ -93,6 +95,16 @@ public:
    ioVarLT getSaveVars()
    {
       ioVarLT vars;
+      
+      vars.push_back(storeVar(pos, "pos"));
+      
+      /*if (not fName.empty())
+         vars.push_back(storeVar(ftar, fName));
+
+      if (not vName.empty())
+         vars.push_back(storeVar(vtar, vName));*/
+      
+      vars.push_back(storeVar(ftar, "p"));
 
       return(vars);
    }
@@ -106,11 +118,13 @@ public:
    void setLoadF(std::string _str)
    {
       fName = _str;
+      std::cout << "load " << fName << "\n";
    }
 
    void setLoadV(std::string _str)
    {
       vName = _str;
+      std::cout << "load " << vName << "\n";
    }
 };
 
@@ -132,12 +146,12 @@ struct interpolSum
                    const fType _srad)
    {
       const fType r  = sqrt(_rr);
-      const fType hj = _j->h;
+      const fType hi = _i->h;
 
       const fType rhoi = _i->rho;
       const fType mi   = _i->m;
 
-      const fType k = (K.value(r, hj)) * (mi / rhoi);
+      const fType k = (K.value(r, hi)) * (mi / rhoi);
 
       _j->ftar += k * _i->f;
       _j->vtar += k * _i->v;
@@ -212,7 +226,7 @@ void derive()
       gridParts[i].rho = 1.;
       Tree.insertPart(gridParts[i]);
    }
-   std::cout << "created tree";
+   std::cout << "created tree\n";
 
    Tree.update(0.8, 1.2);
 
@@ -220,16 +234,16 @@ void derive()
 #pragma omp parallel for firstprivate(densWorker)
    for (int i = 0; i < nop; i++)
       densWorker(&(parts[i]));
-   std::cout << "Tree.densWorker()";
+   std::cout << "Tree.densWorker()\n";
 
    interpolWorkT interpolWorker(&Tree);
 #pragma omp parallel for firstprivate(interpolWorker)
    for (int i = 0; i < nop; i++)
       interpolWorker(&(parts[i]));
-   std::cout << "Tree.interpolWorker()";
+   std::cout << "Tree.interpolWorker()\n";
 
    Tree.clear();
-   std::cout << "Tree.clear()";
+   std::cout << "Tree.clear()\n";
 }
 
 int main(int argc, char* argv[])
@@ -245,7 +259,6 @@ int main(int argc, char* argv[])
       return(1);
    }
 
-
    std::string inFilename = argv[1];
    std::string outFilename = argv[2];
 
@@ -256,16 +269,56 @@ int main(int argc, char* argv[])
       threadStr >> numThreads;
       omp_set_num_threads(numThreads);
    }
+  
+   parts.resize(1);
+   parts[0].setLoadF("rho");
+   parts[0].setLoadV("vel");
 
    // load the particles
    parts.loadHDF5(inFilename);
-   std::cout << "loaded particles";
+   std::cout << "loaded particles\n";
 
    fType& time(parts.attributes["time"]);
 
    gridParts.step = parts.step;
    gridParts.attributes = parts.attributes;
 
+   const box3dT box = parts.getBox();
+
+   const size_t ni = 100;
+   const size_t nj = 100;
+
+   vect3dT r0;
+
+   r0[0] = box.cen[0] - 0.5*box.size;
+   r0[1] = box.cen[1] - 0.5*box.size;
+   r0[2] = 0.;
+
+   vect3dT ri, rj;
+   ri[0] = box.size / ( ni + 1. );
+   ri[1] = 0.;
+   ri[2] = 0.;
+   rj[0] = 0.;
+   rj[1] = box.size / ( nj + 1. );
+   rj[2] = 0.;
+
+   const size_t nogp = ni*nj;
+   gridParts.resize(nogp);
+
+   for (size_t i = 0; i < ni; i++)
+     for (size_t j = 0; j < nj; j++)
+     {
+       const size_t k = j*ni + i;
+       const fType fi = i;
+       const fType fj = j;
+       gridParts[k].pos = r0 + ri*fi + rj*fj;
+       
+       gridParts[k].id = -1;
+       gridParts[k].m = 0.;
+       gridParts[k].h = 0.;
+       gridParts[k].rho = 1.;
+     }
+  
    // first bootstrapping step
    derive();
 
