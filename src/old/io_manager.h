@@ -308,7 +308,7 @@ void IOManager::loadDump(std::string _inputFile)
 
       if (dataTypeClass == H5T_INTEGER)
         {
-          if (H5Sget_simple_extent_ndims(fileSpace) == 1)
+          //if (H5Sget_simple_extent_ndims(fileSpace) == 1)
             {
               /// load integer quantity
               idvectPtrType idPtr =
