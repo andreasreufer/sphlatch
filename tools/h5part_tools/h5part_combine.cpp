@@ -19,14 +19,14 @@ namespace po = boost::program_options;
 #include "typedefs.h"
 typedef sphlatch::fType fType;
 
-#include "particle_manager.h"
+#include "old/particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
 
-#include "io_manager.h"
+#include "old/io_manager.h"
 typedef sphlatch::IOManager io_type;
 
 using namespace boost::assign;
-using namespace sphlatch::vectindices;
+//using namespace sphlatch::vectindices;
 
 int main(int argc, char* argv[])
 {
