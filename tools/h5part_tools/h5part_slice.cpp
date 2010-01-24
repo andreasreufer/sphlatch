@@ -38,7 +38,7 @@ using namespace boost::assign;
 
 int main(int argc, char* argv[])
 {
-   //MPI::Init(argc, argv);
+   MPI::Init(argc, argv);
    po::options_description Options("Global Options");
 
    const fType fMax = std::numeric_limits<fType>::max();
@@ -129,6 +129,6 @@ int main(int argc, char* argv[])
 
    IOManager.saveDump(outputFileName, saveQuants);
 
-   //MPI::Finalize();
+   MPI::Finalize();
    return(EXIT_SUCCESS);
 }
