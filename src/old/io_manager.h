@@ -337,7 +337,14 @@ void IOManager::loadDump(std::string _inputFile)
         }
       else if (dataTypeClass == H5T_FLOAT)
         {
-          if (H5Sget_simple_extent_ndims(fileSpace) > 1)
+          hsize_t dimsf[2];
+          dimsf[0] = 0;
+          dimsf[1] = 0;
+
+          H5Sget_simple_extent_dims(fileSpace, dimsf, NULL);
+
+          //if (H5Sget_simple_extent_ndims(fileSpace) > 1)
+          if (dimsf[1] > 1)
             {
               /// load vectorial quantity
               matrixPtrType matrPtr =
