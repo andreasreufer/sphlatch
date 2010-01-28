@@ -33,7 +33,6 @@ public:
    ~Clumps() { }
 
    void findClumps(partSetT& _parts, const fType _rhoMin);
-   void startNewClump(partT* _part);
    cType mergeClumps(const cType cida, const cType cidb, partSetT& _parts);
 };
 
@@ -64,7 +63,6 @@ cType Clumps<_partT>::mergeClumps(const cType cida, const cType cidb,
    return(nid);
 }
 
-
 template<typename _partT>
 void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
                                 const fType          _rhoMin)
@@ -90,12 +88,8 @@ void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
 
    NeighFindWorker<_partT> NFW(&Tree);
    for (size_t i = 0; i < nop; i++)
-   //for (size_t i = 0; i < 1; i++)
    {
-      //std::cout << i << "\n";
-      //std::cout << "particle " << i << " rho = " << _parts[i].rho << "\n";
-      cType& clumpid(_parts[i].clumpid);
-      partT  * cPart = &(_parts[i]);
+      partT* cPart = &(_parts[i]);
 
       //
       // if density is too low, particle does not belong to any clump
@@ -103,58 +97,90 @@ void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
       //
       if (_parts[i].rho < _rhoMin)
       {
-         clumpid = CLUMPNONE;
-         //std::cout << " rho too low, continue ...\n";
+         _parts[i].clumpid = CLUMPNONE;
          continue;
       }
       else
       {
-         if ((clumpid == CLUMPNONE) || (clumpid == CLUMPNOTSET))
+         if ((_parts[i].clumpid == CLUMPNONE) ||
+             (_parts[i].clumpid == CLUMPNOTSET))
          {
-            partPtrLT friends = NFW(cPart, cPart->h);
+            partPtrLT neighs = NFW(cPart, cPart->h);
 
             std::set<cType> neighClumps;
-            typename partPtrLT::iterator fitr = friends.begin();
-            while (fitr != friends.end())
-            {
-               if ((*fitr)->clumpid > 0)
-                  neighClumps.insert((*fitr)->clumpid);
-               fitr++;
-            }
+            typename partPtrLT::iterator nitr;
+            for (nitr = neighs.begin(); nitr != neighs.end(); nitr++)
+               if (((*nitr)->rho > _rhoMin) && ((*nitr)->clumpid > 0))
+                  neighClumps.insert((*nitr)->clumpid);
 
             const size_t noClumpsFound = neighClumps.size();
             switch (noClumpsFound)
             {
             case 0:
             {
-               clumpid = nextFreeId;
+               // so all particles
+               cType nclumpid = nextFreeId;
                nextFreeId++;
 
-               //std::cout << "newclump! " << clumpid << " " << friends.size() << "\n";
-
-               while (friends.size() > 0)
-               {
-                  partT* curf = friends.back();
-                  friends.pop_back();
-
-                  if (curf->rho > _rhoMin)
+               partPtrLT clumpees;
+               for (nitr = neighs.begin(); nitr != neighs.end(); nitr++)
+                  if ((*nitr)->rho > _rhoMin)
                   {
-                     if (curf->clumpid < 1)
+                     (*nitr)->clumpid = CLUMPONLIST;
+                     clumpees.push_back(*nitr);
+                  }
+                  else
+                     (*nitr)->clumpid = CLUMPNONE;
+
+               // start a new clump.
+               size_t nocp = 0;
+               while (not clumpees.empty())
+               {
+                  partT* curf = clumpees.back();
+                  clumpees.pop_back();
+
+                  curf->clumpid = nclumpid;
+                  nocp++;
+
+                  neighs.clear();
+                  neighs = NFW(curf, curf->h);
+
+                  for (nitr = neighs.begin(); nitr != neighs.end(); nitr++)
+                  {
+                     if ((*nitr)->rho > _rhoMin)
                      {
-                     //curf->clumpid = clumpid;
-                        //std::cout << " untouched!\n";
+                        if ((*nitr)->clumpid == nclumpid)
+                           continue;
+
+                        switch ((*nitr)->clumpid)
+                        {
+                        case CLUMPNONE:
+                           (*nitr)->clumpid = CLUMPONLIST;
+                           clumpees.push_back(*nitr);
+                           break;
+
+                        case CLUMPNOTSET:
+                           (*nitr)->clumpid = CLUMPONLIST;
+                           clumpees.push_back(*nitr);
+                           break;
+
+                        case CLUMPONLIST:
+                           break;
+
+                        default:
+                           nclumpid = mergeClumps((*nitr)->clumpid,
+                                                  nclumpid, _parts);
+                           (*nitr)->clumpid = nclumpid;
+                           break;
+                        }
                      }
                      else
                      {
-                        //FIXME: merge clumps
-                        //std::cout << " was " << curf->clumpid << "\n";
-                        //clumpid = mergeClumps(curf->clumpid, clumpid, _parts);
+                        (*nitr)->clumpid = CLUMPNONE;
                      }
-                     curf->clumpid = clumpid;
-                     //std::cout << " flavoured!\n";
                   }
                }
-               //startNewClump(cPart);
+               std::cerr << "clump " << nclumpid << " has " << nocp << " particles\n";
             }
                break;
 
@@ -167,6 +193,7 @@ void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
             default:
             {
                //FIXME: merge clumps
+               //mergeClumps(curf->clumpid, clumpid, _parts);
                cPart->clumpid = *(neighClumps.begin());
             }
                break;
@@ -176,124 +203,26 @@ void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
          { }
       }
 
-      //
-      // density is high enough to belong to a clump
-      //
+   Tree.clear();
 
-      /*if ((clumpid == CLUMPNONE) || (clumpid == CLUMPNOTSET))
-         {
+   return;
 
-         std::cout << " rho high enough, new clump! (id: "
-                   << nextFreeId << ")\n";
-         clumpid = nextFreeId;
-         nextFreeId++;
-         }*/
-
-      //
-      // now start to look for friends
-      //
-
-      /*std::list<_partT*> ffriends;
-         ffriends.push_back(&(_parts[i]));
-
-         while (ffriends.size() != 0)
-         {
-         //std::cout << " ff: " << ffriends.size() << "\n";
-         _partT* const curff = ffriends.back();
-         ffriends.pop_back();
-
-         if ((ffriends.size() % 1000) == 0)
-            std::cout << ffriends.size() << "\n";
-
-         if (curff->rho > _rhoMin)
-         {
-            curff->clumpid = clumpid;
-            // if two clumps are connected, create a single
-            // new one with the lower id of both
-            if ((curff->clumpid > 0) && (curff->clumpid != clumpid))
-            {
-               cType oldid, newid;
-               if (clumpid > curff->clumpid)
-               {
-                  oldid = clumpid;
-                  newid = curff->clumpid;
-               }
-               else
-               {
-                  oldid = curff->clumpid;
-                  newid = clumpid;
-               }
-
-               std::cout << "clumps " << newid
-                         << " & " << oldid
-                         << " -> " << newid << "\n";
-
-               for (size_t i = 0; i < nop; i++)
-                  if (_parts[i].clumpid == oldid)
-                     _parts[i].clumpid = newid;
-
-               clumpid = newid;
-            }
-
-
-            const fType srad = std::min(curff->h, 3.e8);
-
-            // add neighbours to the friends of friends list
-            //std::list<_partT*> newffriends = NFW(curff, curff->h);
-            std::list<_partT*> newffriends = NFW(curff, srad);
-            //std::cout << "   " << newffriends.size() << " new friends found\n";
-
-            typename std::list<_partT*>::iterator fitr = newffriends.begin();
-            while (fitr != newffriends.end())
-            {
-               // only add it to the search, if
-               if (((*fitr)->clumpid == -1) && ((*fitr)->rho > _rhoMin))
-               {
-                  ffriends.push_back(*fitr);
-               }
-
-               fitr++;
-            }
-
-            // only add the particle, if it does not yet belong to a clump
-            //ffriends.splice(ffriends.end(), newffriends);
-         }
-
-         // condition for a friend
-         //if curff->rho > rhoMin;
-         }*/
-   }
-
-
-
-   //std::set<cType, cType> clumpSizes;
-   std::set<cType> clumpIDs;
+   typedef std::map<cType, fType>   clumpMassT;
+   clumpMassT clumpMasses;
 
    // assign real clump IDs
    for (size_t i = 0; i < nop; i++)
+      clumpMasses[_parts[i].clumpid] += 1.; //_parts[i].m;
+
+   clumpMassT::const_iterator cItr;
+
+   for (clumpMassT::const_iterator cItr = clumpMasses.begin();
+        cItr != clumpMasses.end(); cItr++)
    {
-      clumpIDs.insert(_parts[i].clumpid);
-
-      //if (_parts[i].clumpid > 0)
-      //  std::cout << i << ": " << _parts[i].clumpid << "\n";
+      const fType cm = (*cItr).second;
+      if (cm > 1.e2)
+         std::cout << cm << "\n";
    }
-
-   /*std::set<cType>::const_iterator ciditr;
-      for (ciditr = clumpIDs.begin(); ciditr != clumpIDs.end(); ciditr++)
-      std::cout << *ciditr << "\n";*/
-
-   std::cout << clumpIDs.size() << " clumps known!\n";
-
-
-   // output clumps?
-
-   // clear tree
-   Tree.clear();
-}
-
-template<typename _partT>
-void Clumps<_partT>::startNewClump(partT* _part)
-{ }
 }
 
 #endif

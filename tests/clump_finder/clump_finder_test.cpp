@@ -214,12 +214,9 @@ int main(int argc, char* argv[])
    // first bootstrapping step 
    derive();
 
-   //getClumps(parts, 1.0);
    sphlatch::Clumps<partT> clumps;
 
    clumps.findClumps(parts, 1.0);
-
-
    
    parts.doublePrecOut();
    parts.saveHDF5("out.h5part");

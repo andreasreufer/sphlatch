@@ -15,7 +15,7 @@
 namespace sphlatch {
 enum clumpType
 {
-   CLUMPNONE = -1, CLUMPNOTSET = 0
+   CLUMPONLIST = -2, CLUMPNONE = -1, CLUMPNOTSET = 0
 };
 
 class clumpPart
@@ -23,5 +23,11 @@ class clumpPart
 public:
    iType clumpid;
 };
+
+
+class clump
+{
+};
+
 };
 #endif
