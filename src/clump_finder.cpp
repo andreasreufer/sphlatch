@@ -10,6 +10,8 @@
  *
  */
 
+#include <list>
+
 #include "typedefs.h"
 #include "particle_set.cpp"
 #include "clump_particle.h"
@@ -18,8 +20,62 @@
 #include "bhtree_worker_neighfunc.cpp"
 
 namespace sphlatch {
+
 template<typename _partT>
-class Clumps
+class Clump
+{
+public:
+   typedef std::list<_partT*>   partPtrLT;
+   vect3dT com;
+   vect3dT vel;
+   vect3dT L;
+   vect3dT P;
+   fType   m;
+
+   cType id;
+
+   void addParticle(_partT* _partPtr)
+   {
+      pList.push_back(_partPtr);
+   }
+
+   bool operator<(const Clump& _rhs)
+   {
+      return(m < _rhs.m);
+   }
+
+   void calcProperties()
+   {
+      typename partPtrLT::const_iterator pItr;
+      m   = 0.;
+      com = 0., 0., 0.;
+
+      for (pItr = pList.begin(); pItr != pList.end(); pItr++)
+      {
+         const fType mi = (*pItr)->m;
+         m   += mi;
+         P   += mi * (*pItr)->vel;
+         com += mi * (*pItr)->pos;
+      }
+      com /= m;
+      vel  = P / m;
+
+      L = 0., 0., 0.;
+      for (pItr = pList.begin(); pItr != pList.end(); pItr++)
+      {
+         const fType   mi   = (*pItr)->m;
+         const vect3dT rvec = (*pItr)->pos - com;
+         L += mi * cross(rvec, (*pItr)->vel);
+      }
+   }
+
+private:
+   partPtrLT pList;
+};
+  
+  
+template<typename _partT>
+class Clumps : public std::list< Clump<_partT> >
 {
 public:
    typedef _partT                partT;
@@ -28,18 +84,26 @@ public:
 
    typedef BHTree                treeT;
 
+   typedef Clump<_partT>         clumpT;
+   typedef std::list<clumpT> parentT;
+
 public:
    Clumps() { }
    ~Clumps() { }
 
-   void findClumps(partSetT& _parts, const fType _rhoMin);
+   void getClumps(partSetT& _parts, const fType _rhoMin);
+
+private:
    cType mergeClumps(const cType cida, const cType cidb, partSetT& _parts);
 };
 
 template<typename _partT>
 cType Clumps<_partT>::mergeClumps(const cType cida, const cType cidb,
-                                  partSetT& _parts)
+                                       partSetT& _parts)
 {
+   if (cida == cidb)
+      return(cida);
+
    cType nid, oid;
 
    if (cida < cidb)
@@ -64,8 +128,8 @@ cType Clumps<_partT>::mergeClumps(const cType cida, const cType cidb,
 }
 
 template<typename _partT>
-void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
-                                const fType          _rhoMin)
+void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
+                                    const fType          _rhoMin)
 {
    treeT& Tree(treeT::instance());
 
@@ -84,7 +148,7 @@ void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
    for (size_t i = 0; i < nop; i++)
       _parts[i].clumpid = CLUMPNOTSET;
 
-   cType nextFreeId = nop + 1;
+   cType nextFreeId = 1;
 
    NeighFindWorker<_partT> NFW(&Tree);
    for (size_t i = 0; i < nop; i++)
@@ -180,7 +244,6 @@ void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
                      }
                   }
                }
-               std::cerr << "clump " << nclumpid << " has " << nocp << " particles\n";
             }
                break;
 
@@ -192,9 +255,14 @@ void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
 
             default:
             {
-               //FIXME: merge clumps
-               //mergeClumps(curf->clumpid, clumpid, _parts);
-               cPart->clumpid = *(neighClumps.begin());
+               cType nclumpid = *(neighClumps.begin());
+
+               std::set<cType>::const_iterator ncItr;
+               for (ncItr = neighClumps.begin(); ncItr != neighClumps.end();
+                    ncItr++)
+                  nclumpid = mergeClumps(*ncItr, nclumpid, _parts);
+
+               cPart->clumpid = nclumpid;
             }
                break;
             }
@@ -202,27 +270,35 @@ void Clumps<_partT>::findClumps(ParticleSet<_partT>& _parts,
          else
          { }
       }
-
+   }
    Tree.clear();
 
-   return;
+   // search for all clump ids
+   std::set<cType> clumpIDs;
 
-   typedef std::map<cType, fType>   clumpMassT;
-   clumpMassT clumpMasses;
-
-   // assign real clump IDs
    for (size_t i = 0; i < nop; i++)
-      clumpMasses[_parts[i].clumpid] += 1.; //_parts[i].m;
+      if (_parts[i].clumpid > 0)
+         clumpIDs.insert(_parts[i].clumpid);
 
-   clumpMassT::const_iterator cItr;
-
-   for (clumpMassT::const_iterator cItr = clumpMasses.begin();
-        cItr != clumpMasses.end(); cItr++)
+   std::set<cType>::const_iterator cidItr;
+   for (cidItr = clumpIDs.begin(); cidItr != clumpIDs.end(); cidItr++)
    {
-      const fType cm = (*cItr).second;
-      if (cm > 1.e2)
-         std::cout << cm << "\n";
-   }
-}
+      clumpT curClump;
+      const cType cid = *cidItr;
+      curClump.id = cid;
 
+      for (size_t i = 0; i < nop; i++)
+        if ( _parts[i].clumpid == cid )
+          curClump.addParticle( &(_parts[i]) );
+
+      curClump.calcProperties();
+
+      parentT::push_back( curClump );
+   }
+   parentT::sort();
+
+   return;
+}
+}
 #endif
+

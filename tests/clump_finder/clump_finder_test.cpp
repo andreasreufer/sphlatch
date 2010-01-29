@@ -214,9 +214,16 @@ int main(int argc, char* argv[])
    // first bootstrapping step 
    derive();
 
-   sphlatch::Clumps<partT> clumps;
+   typedef sphlatch::Clumps<partT> clumpsT;
+   clumpsT clumps;
 
-   clumps.findClumps(parts, 1.0);
+   clumps.clear();
+   clumps.getClumps(parts, 1.0);
+
+   clumpsT::const_iterator cItr;
+   for (cItr = clumps.begin(); cItr != clumps.end(); cItr++)
+     std::cout << (*cItr).m << "\n";
+
    
    parts.doublePrecOut();
    parts.saveHDF5("out.h5part");
