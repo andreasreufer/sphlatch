@@ -50,6 +50,8 @@ public:
       vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(h, "h"));
       vars.push_back(storeVar(id, "id"));
+      
+      vars.push_back(storeVar(rho, "rho"));
 
       vars.push_back(storeVar(u, "u"));
 #ifdef SPHLATCH_ANEOS
@@ -61,26 +63,7 @@ public:
    ioVarLT getSaveVars()
    {
       ioVarLT vars;
-
-      vars.push_back(storeVar(pos, "pos"));
-      vars.push_back(storeVar(vel, "vel"));
-      vars.push_back(storeVar(acc, "acc"));
-      vars.push_back(storeVar(m, "m"));
-      vars.push_back(storeVar(h, "h"));
-      vars.push_back(storeVar(id, "id"));
-      vars.push_back(storeVar(rho, "rho"));
-      vars.push_back(storeVar(noneigh, "noneigh"));
-      vars.push_back(storeVar(clumpid, "clumpid"));
-
-      vars.push_back(storeVar(u, "u"));
-#ifdef SPHLATCH_ANEOS
-      vars.push_back(storeVar(mat, "mat"));
-      vars.push_back(storeVar(T, "T"));
-      vars.push_back(storeVar(phase, "phase"));
-#endif
-      
-      vars.push_back(storeVar(cost, "cost"));
-      return(vars);
+      return vars;
    }
 };
 
@@ -89,82 +72,12 @@ typedef particle   partT;
 #include "particle_set.cpp"
 typedef sphlatch::ParticleSet<partT>           partSetT;
 
-#include "sph_algorithms.cpp"
-#include "sph_kernels.cpp"
-#include "bhtree_worker_sphsum.cpp"
-typedef sphlatch::CubicSpline3D                  krnlT;
-
-typedef sphlatch::densSum<partT, krnlT>          densT;
-typedef sphlatch::SPHsumWorker<densT, partT>     densSumT;
-
-#include "bhtree_worker_cost.cpp"
-typedef sphlatch::CostWorker<partT>              costT;
-
-#ifdef SPHLATCH_ANEOS
- #include "eos_aneos.cpp"
-typedef sphlatch::ANEOS<partT>                   eosT;
-#else
- #include "eos_idealgas.cpp"
-typedef sphlatch::IdealGas<partT>                eosT;
-#endif
-
-#include "clump_finder.cpp"
+#include "clumps.cpp"
+typedef sphlatch::Clumps<partT> clumpsT;
 
 // particles are global
 partSetT parts;
-
-void derive()
-{
-   treeT& Tree(treeT::instance());
-   logT&  Logger(logT::instance());
-
-   const size_t nop       = parts.getNop();
-   const fType  costppart = 1. / nop;
-
-   Tree.setExtent(parts.getBox() * 1.1);
-
-   for (size_t i = 0; i < nop; i++)
-   {
-      parts[i].cost = costppart;
-      Tree.insertPart(parts[i]);
-   }
-   Logger << "created tree";
-
-   Tree.update(0.8, 1.2);
-
-   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
-   const int           noCZbottomLoc = CZbottomLoc.size();
-
-   Logger.stream << "Tree.update() -> " << noCZbottomLoc << " CZ cells";
-   Logger.flushStream();
-
-   densSumT densWorker(&Tree);
-#pragma omp parallel for firstprivate(densWorker)
-   for (int i = 0; i < noCZbottomLoc; i++)
-      densWorker(CZbottomLoc[i]);
-   Logger << "Tree.densWorker()";
-
-   eosT& EOS(eosT::instance());
-   for (size_t i = 0; i < nop; i++)
-   {
-#ifdef SPHLATCH_TIMEDEP_ENERGY
-      if ( parts[i].u < uMin )
-        parts[i].u = uMin;
-#endif
-      EOS(parts[i]);
-   }
-   Logger << "pressure";
-
-   
-   costT costWorker(&Tree);
-#pragma omp parallel for firstprivate(costWorker)
-   for (int i = 0; i < noCZbottomLoc; i++)
-      costWorker(CZbottomLoc[i]);
-   Logger << "Tree.costWorker()";
-
-   Tree.clear();
-   Logger << "Tree.clear()";
-}
+clumpsT clumps;
 
 int main(int argc, char* argv[])
 {
@@ -212,22 +125,18 @@ int main(int argc, char* argv[])
    const size_t nop = parts.getNop();
 
    // first bootstrapping step 
-   derive();
 
-   typedef sphlatch::Clumps<partT> clumpsT;
-   clumpsT clumps;
-
-   clumps.clear();
+   //clumps.clear();
    clumps.getClumps(parts, 1.0);
 
-   clumpsT::const_iterator cItr;
+   /*clumpsT::const_iterator cItr;
    for (cItr = clumps.begin(); cItr != clumps.end(); cItr++)
-     std::cout << (*cItr).m << "\n";
+     std::cout << (*cItr).m << "\n";*/
 
-   
-   parts.doublePrecOut();
-   parts.saveHDF5("out.h5part");
-   Logger << "stored dump ";
+   std::cout << clumps.getNop() << "\n";
+
+   clumps.doublePrecOut();
+   clumps.saveHDF5("clump.h5part");
 
    return(0);
 }

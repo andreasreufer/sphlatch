@@ -154,7 +154,7 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
 
    // get the variables we have to load
    ioVarLT loadVars;
-   partT proto;
+   _partT proto;
    loadVars = proto.getLoadVars();
 
    ioVarT iovDm("_null", 0, 0, IOPart::ITYPE);
@@ -234,7 +234,7 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
          fcounts[1] = 1;
 
       const size_t msize  = H5Tget_size(h5mtype);
-      const size_t psize  = sizeof(partT);
+      const size_t psize  = sizeof(_partT);
       void         * dptr =
          reinterpret_cast<void*>(reinterpret_cast<char*>(&parts[0]) +
                                  iovMatch.offset);
@@ -307,7 +307,7 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
 {
    const size_t myDo  = 0;
    const size_t noDo  = 1;
-   const size_t psize = sizeof(partT);
+   const size_t psize = sizeof(_partT);
 
    cVType nopG(noDo);
    size_t loff = 0;
@@ -372,7 +372,7 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
  #endif
    
    ioVarLT saveVars;
-   partT proto;
+   _partT proto;
    saveVars = proto.getSaveVars();
 
    // write data

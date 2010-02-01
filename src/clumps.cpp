@@ -15,18 +15,18 @@
 #include "typedefs.h"
 #include "particle_set.cpp"
 #include "clump_particle.h"
+#include "io_particle.h"
 
 #include "bhtree.cpp"
 #include "bhtree_worker_neighfunc.cpp"
 
 namespace sphlatch {
-
 template<typename _partT>
-class Clump
+class Clump : public IOPart
 {
 public:
    typedef std::list<_partT*>   partPtrLT;
-   vect3dT com;
+   vect3dT pos;
    vect3dT vel;
    vect3dT L;
    vect3dT P;
@@ -48,34 +48,49 @@ public:
    {
       typename partPtrLT::const_iterator pItr;
       m   = 0.;
-      com = 0., 0., 0.;
+      pos = 0., 0., 0.;
 
       for (pItr = pList.begin(); pItr != pList.end(); pItr++)
       {
          const fType mi = (*pItr)->m;
          m   += mi;
          P   += mi * (*pItr)->vel;
-         com += mi * (*pItr)->pos;
+         pos += mi * (*pItr)->pos;
       }
-      com /= m;
+      pos /= m;
       vel  = P / m;
 
       L = 0., 0., 0.;
       for (pItr = pList.begin(); pItr != pList.end(); pItr++)
       {
          const fType   mi   = (*pItr)->m;
-         const vect3dT rvec = (*pItr)->pos - com;
+         const vect3dT rvec = (*pItr)->pos - pos;
          L += mi * cross(rvec, (*pItr)->vel);
       }
+   }
+
+   ioVarLT getSaveVars()
+   {
+      ioVarLT vars;
+
+      vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(L, "L"));
+      vars.push_back(storeVar(P, "P"));
+
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(id, "id"));
+
+      return(vars);
    }
 
 private:
    partPtrLT pList;
 };
-  
-  
+
+
 template<typename _partT>
-class Clumps : public std::list< Clump<_partT> >
+class Clumps : public ParticleSet< Clump<_partT> >
 {
 public:
    typedef _partT                partT;
@@ -85,7 +100,7 @@ public:
    typedef BHTree                treeT;
 
    typedef Clump<_partT>         clumpT;
-   typedef std::list<clumpT> parentT;
+   typedef ParticleSet<clumpT>     parentT;
 
 public:
    Clumps() { }
@@ -99,7 +114,7 @@ private:
 
 template<typename _partT>
 cType Clumps<_partT>::mergeClumps(const cType cida, const cType cidb,
-                                       partSetT& _parts)
+                                  partSetT& _parts)
 {
    if (cida == cidb)
       return(cida);
@@ -129,8 +144,10 @@ cType Clumps<_partT>::mergeClumps(const cType cida, const cType cidb,
 
 template<typename _partT>
 void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
-                                    const fType          _rhoMin)
+                               const fType          _rhoMin)
 {
+  parentT::step = _parts.step;
+   
    treeT& Tree(treeT::instance());
 
    const size_t nop       = _parts.getNop();
@@ -280,25 +297,28 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
       if (_parts[i].clumpid > 0)
          clumpIDs.insert(_parts[i].clumpid);
 
-   std::set<cType>::const_iterator cidItr;
-   for (cidItr = clumpIDs.begin(); cidItr != clumpIDs.end(); cidItr++)
+
+   const size_t noc = clumpIDs.size();
+   parentT::resize(noc);
+
+   std::set<cType>::const_iterator cidItr = clumpIDs.begin();
+
+   for (size_t i = 0; i < noc; i++)
    {
-      clumpT curClump;
+      clumpT&     curClump(parentT::operator[](i));
       const cType cid = *cidItr;
       curClump.id = cid;
 
-      for (size_t i = 0; i < nop; i++)
-        if ( _parts[i].clumpid == cid )
-          curClump.addParticle( &(_parts[i]) );
+      for (size_t j = 0; j < nop; j++)
+         if (_parts[j].clumpid == cid)
+            curClump.addParticle(&(_parts[j]));
 
       curClump.calcProperties();
 
-      parentT::push_back( curClump );
+      cidItr++;
    }
-   parentT::sort();
 
    return;
 }
 }
 #endif
-
