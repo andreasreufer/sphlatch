@@ -5,9 +5,12 @@ execfile("config.sh")
 import matplotlib
 matplotlib.use('Agg')
 
+from matplotlib.patches import Circle
+
 from pylab import *
 filename = sys.argv[1]
-timesec = float(sys.argv[2])
+clmpname = sys.argv[2]
+timesec = float(sys.argv[3])
 timestring = '$\\mathrm{ t = ' + '%6.2f' % ( timesec/3600 ) + ' h }$'
 
 plotline1 = '$\\mathrm{mass~ratio~' + '%1.2f' % ( MIMP/MTAR ) + '}$'
@@ -22,6 +25,7 @@ figure( figsize=(3, 2) )
 a = axes( [0.0, 0.0, 1.0, 1.0], axisbg='k')
 
 slice = loadtxt(filename)
+clump = loadtxt(clmpname)
 
 # slice[:,2] is 0 for mantle and 1 for iron
 # slice[:,3] is 0 for protoearth and 1 for impactor
@@ -39,6 +43,10 @@ map[1,5] = 0.10
 color = map[ bod, mat ]
 
 scatter( slice[:,0], slice[:,1], 0.10, color, linewidth=0)
+ca().add_patch( Circle( ( clump[0,0], clump[0,1]) , radius=clump[0,2], ec='yellow', fc='yellow', lw=1., ) )
+
+
+#scatter( slice[:,0], slice[:,1], 0.10, color, linewidth=0)
 clim(0., 1.)
 axhline(color='w', ls=':', lw=0.10, alpha=0.2)
 axvline(color='w', ls=':', lw=0.10, alpha=0.2)

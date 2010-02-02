@@ -30,7 +30,7 @@ public:
    vect3dT vel;
    vect3dT L;
    vect3dT P;
-   fType   m;
+   fType   m, rc, V;
 
    cType id;
 
@@ -49,6 +49,7 @@ public:
       typename partPtrLT::const_iterator pItr;
       m   = 0.;
       pos = 0., 0., 0.;
+      V = 0.;
 
       for (pItr = pList.begin(); pItr != pList.end(); pItr++)
       {
@@ -56,9 +57,11 @@ public:
          m   += mi;
          P   += mi * (*pItr)->vel;
          pos += mi * (*pItr)->pos;
+         V  += mi / (*pItr)->rho;
       }
       pos /= m;
       vel  = P / m;
+      rc = pow( 0.75*V / M_PI, 1./3. );
 
       L = 0., 0., 0.;
       for (pItr = pList.begin(); pItr != pList.end(); pItr++)
@@ -79,6 +82,8 @@ public:
       vars.push_back(storeVar(P, "P"));
 
       vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(rc, "rc"));
+      
       vars.push_back(storeVar(id, "id"));
 
       return(vars);
