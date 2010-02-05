@@ -43,7 +43,7 @@ map[1,5] = 0.10
 color = map[ bod, mat ]
 
 scatter( slice[:,0], slice[:,1], 0.10, color, linewidth=0)
-ca().add_patch( Circle( ( clump[0,0], clump[0,1]) , radius=clump[0,2], ec='yellow', fc='yellow', lw=1., ) )
+gca().add_patch( Circle( ( clump[0,0], clump[0,1]) , radius=clump[0,2], ec='yellow', fc='yellow', lw=1., ) )
 
 
 #scatter( slice[:,0], slice[:,1], 0.10, color, linewidth=0)
