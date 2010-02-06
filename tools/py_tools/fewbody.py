@@ -1,7 +1,4 @@
 import numpy as np
-import matplotlib as mp
-mp.use('agg')
-import pylab as pl
 
 class FewBodies(object):
   pos = []
@@ -11,6 +8,7 @@ class FewBodies(object):
   __oacc = []
   d = []
   rc = []
+  traj = []
 
   Mm = 0.
   Mpos = []
@@ -44,6 +42,9 @@ class FewBodies(object):
 
     self.Mpos = self.pos[iM, :]
     self.Mvel = self.vel[iM, :]
+    
+    for i in range(self.noc):
+      self.traj.append( np.array( [ self.pos[i,:] ] ) )
 
   def forces(self):
     self.acc = np.zeros( self.pos.shape )
@@ -78,7 +79,6 @@ class FewBodies(object):
       acci = np.sqrt( np.dot( self.acc[i,:], self.acc[i,:] ) )
       dts[i] = ( -veli + np.sqrt( veli*veli + 4*acci*dsi ) ) / (2.*acci )
       dta[i] = 0.01*(veli / acci)
-    print 't:  ',self.t,'dts: ',min( dts ),' dta: ',min(dta)
     return min( min(dts), min(dta) )
 
   def storepos(self, ds):
@@ -86,8 +86,7 @@ class FewBodies(object):
       dsi = min( ds - ( self.s[i] % ds ), self.s[i] % ds )
       if ( ( dsi / ds ) < 1.e-3 ):
         self.s[i] += dsi
-        #print i, self.s[i]
-        pl.gca().add_patch( mp.patches.Circle((self.pos[i,2], self.pos[i,0]), radius=self.rc[i], ec='yellow', fc='none', lw=0.3, alpha=0.3) )
+        self.traj[i] = np.append(self.traj[i], [self.pos[i,:]], axis=0 )
 
   def integrate(self, t, ds):
     while (self.t < t):
@@ -95,7 +94,3 @@ class FewBodies(object):
       self.advance(self.timestep(ds))
       self.storepos(ds)
 
-    pl.rc('savefig', dpi=600)
-    pl.axis("scaled")
-    pl.axis([-8.e9, 4.e9, -4.e9, 2.e9])
-    pl.savefig("integrate.png")
