@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
 
    // load the particles
    parts.loadHDF5(inFilename);
-   clumps.getClumps(parts, 1.0);
+   clumps.getClumps(parts, 1.0, 1.0);
    parts.saveHDF5(inFilename);
 
    clumps.doublePrecOut();

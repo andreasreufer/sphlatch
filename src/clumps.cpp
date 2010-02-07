@@ -111,7 +111,7 @@ public:
    Clumps() { }
    ~Clumps() { }
 
-   void getClumps(partSetT& _parts, const fType _rhoMin);
+   void getClumps(partSetT& _parts, const fType _rhoMin, const fType _hMult);
 
 private:
    cType mergeClumps(const cType cida, const cType cidb, partSetT& _parts);
@@ -149,7 +149,8 @@ cType Clumps<_partT>::mergeClumps(const cType cida, const cType cidb,
 
 template<typename _partT>
 void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
-                               const fType          _rhoMin)
+                               const fType          _rhoMin,
+                               const fType          _hMult)
 {
   parentT::step = _parts.step;
    
@@ -191,7 +192,8 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
          if ((_parts[i].clumpid == CLUMPNONE) ||
              (_parts[i].clumpid == CLUMPNOTSET))
          {
-            partPtrLT neighs = NFW(cPart, cPart->h);
+            const fType srad = _hMult * cPart->h;
+            partPtrLT neighs = NFW(cPart, srad);
 
             std::set<cType> neighClumps;
             typename partPtrLT::iterator nitr;

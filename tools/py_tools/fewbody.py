@@ -86,7 +86,7 @@ class FewBodies(object):
         print 'acci zero!'
         dts[i] = dsi / veli
         dta[i] = 1.e600
-    #print 't = ',self.t,' dts = ', min(dts),' dta = ', min(dta)
+    print 't = ',self.t,' dts = ', min(dts),' dta = ', min(dta)
     return min( min(dts), min(dta))
 
   def storepos(self, ds):

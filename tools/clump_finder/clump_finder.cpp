@@ -74,10 +74,10 @@ clumpsT clumps;
 
 int main(int argc, char* argv[])
 {
-   if (not ((argc == 4) || (argc == 5)))
+   if (not ((argc == 5) || (argc == 6)))
    {
       std::cerr <<
-      "usage: clump_finder <inputdump> <clumpsfile> <minrho> (<numthreads>)\n";
+      "usage: clump_finder <inputdump> <clumpsfile> <minrho> <hmult> (<numthreads>)\n";
       return(1);
    }
 
@@ -87,10 +87,15 @@ int main(int argc, char* argv[])
    std::istringstream rhoStr(argv[3]);
    fType minRho;
    rhoStr >> minRho;
+   
+   std::istringstream hMultStr(argv[4]);
+   fType hMult;
+   hMultStr >> hMult;
 
-   if (argc == 5)
+
+   if (argc == 6)
    {
-      std::istringstream threadStr(argv[4]);
+      std::istringstream threadStr(argv[5]);
       int numThreads;
       threadStr >> numThreads;
       omp_set_num_threads(numThreads);
@@ -99,7 +104,7 @@ int main(int argc, char* argv[])
 
    // load the particles
    parts.loadHDF5(inFilename);
-   clumps.getClumps(parts, minRho);
+   clumps.getClumps(parts, minRho, hMult);
    parts.saveHDF5(inFilename);
 
    std::cerr << clumps.getNop() << " clump(s) found!\n";
