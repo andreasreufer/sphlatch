@@ -77,8 +77,13 @@ class FewBodies(object):
       dsi = ds - ( self.s[i] % ds )
       veli = np.sqrt( np.dot( self.vel[i,:], self.vel[i,:] ) )
       acci = np.sqrt( np.dot( self.acc[i,:], self.acc[i,:] ) )
-      dts[i] = ( -veli + np.sqrt( veli*veli + 4*acci*dsi ) ) / (2.*acci )
-      dta[i] = 0.01*(veli / acci)
+      if ( acci > 0. ):
+        dts[i] = ( -veli + np.sqrt( veli*veli + 4*acci*dsi ) ) / (2.*acci )
+        dta[i] = 0.01*(veli / acci)
+      else:
+        print 'acci zero!'
+        dts[i] = dsi / veli
+        dta[i] = 1.e600
     return min( min(dts), min(dta) )
 
   def storepos(self, ds):
