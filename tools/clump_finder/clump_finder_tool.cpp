@@ -55,16 +55,7 @@ public:
    ioVarLT getSaveVars()
    {
       ioVarLT vars;
-      
-      vars.push_back(storeVar(pos, "pos"));
-      vars.push_back(storeVar(vel, "vel"));
-      vars.push_back(storeVar(m, "m"));
-      vars.push_back(storeVar(h, "h"));
-      vars.push_back(storeVar(id, "id"));
-      
       vars.push_back(storeVar(clumpid, "clumpid"));
-      
-      vars.push_back(storeVar(rho, "rho"));
       return vars;
    }
 };
@@ -83,18 +74,23 @@ clumpsT clumps;
 
 int main(int argc, char* argv[])
 {
-   if (not ((argc == 2) || (argc == 3)))
+   if (not ((argc == 4) || (argc == 5)))
    {
       std::cerr <<
-      "usage: clump_finder <inputdump> (<numthreads>)\n";
+      "usage: clump_finder <inputdump> <clumpsfile> <minrho> (<numthreads>)\n";
       return(1);
    }
 
    std::string inFilename = argv[1];
+   std::string clFilename = argv[2];
 
-   if (argc == 3)
+   std::istringstream rhoStr(argv[3]);
+   fType minRho;
+   rhoStr >> minRho;
+
+   if (argc == 5)
    {
-      std::istringstream threadStr(argv[2]);
+      std::istringstream threadStr(argv[4]);
       int numThreads;
       threadStr >> numThreads;
       omp_set_num_threads(numThreads);
@@ -103,11 +99,12 @@ int main(int argc, char* argv[])
 
    // load the particles
    parts.loadHDF5(inFilename);
-   clumps.getClumps(parts, 1.0);
+   clumps.getClumps(parts, minRho);
    parts.saveHDF5(inFilename);
 
+   std::cerr << clumps.getNop() << " clump(s) found!\n";
    clumps.doublePrecOut();
-   clumps.saveHDF5("clump.h5part");
+   clumps.saveHDF5(clFilename);
 
    return(0);
 }

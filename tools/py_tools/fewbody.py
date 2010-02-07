@@ -52,10 +52,12 @@ class FewBodies(object):
       for j in range(self.noc):
         if ( i != j ):
           rij = self.pos[i,:] - self.pos[j,:]
-          vij = self.vel[i,:] - self.vel[j,:]
-          r = np.sqrt( np.dot( rij, rij ) )
-          rrr = r*r*r
-          self.acc[i,:] -= self.G * rij * self.m[j] / rrr
+          rree = np.dot( rij, rij ) + 1.e14
+          re = np.sqrt( rree )
+          #r = np.sqrt( np.dot( rij, rij ) )
+          #rrr = r*r*r
+          #self.acc[i,:] -= self.G * rij * self.m[j] / rrr
+          self.acc[i,:] -= self.G * rij * self.m[j] / (rree*re)
 
   def advance(self, dt):
     dpos = self.vel*dt + self.acc*dt*dt
@@ -84,7 +86,8 @@ class FewBodies(object):
         print 'acci zero!'
         dts[i] = dsi / veli
         dta[i] = 1.e600
-    return min( min(dts), min(dta) )
+    #print 't = ',self.t,' dts = ', min(dts),' dta = ', min(dta)
+    return min( min(dts), min(dta))
 
   def storepos(self, ds):
     for i in range(self.noc):
