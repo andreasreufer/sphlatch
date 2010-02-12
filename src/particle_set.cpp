@@ -154,7 +154,7 @@ void ParticleSet<_partT>::loadHDF5(std::string _filename)
 
    // get the variables we have to load
    ioVarLT loadVars;
-   _partT proto;
+   _partT  proto;
    loadVars = proto.getLoadVars();
 
    ioVarT iovDm("_null", 0, 0, IOPart::ITYPE);
@@ -344,7 +344,9 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
          fh = H5Fcreate(_filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fpll);
          H5Fclose(fh);
          H5Pclose(fpll);
+ #ifdef SPHLATCH_MPI
          sleep(1);
+ #endif
       }
    }
    // FIXME: put a global barrier here
@@ -364,15 +366,14 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
       sg = H5Gcreate(fh, stepnam.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
    hid_t accpl = H5Pcreate(H5P_DATASET_XFER);
-
  #ifdef SPHLATCH_MPI
    // FIXME: make sure ind. is used, when some processes don't have parts
    H5Pset_dxpl_mpio(accpl, H5FD_MPIO_COLLECTIVE);
    //H5Pset_dxpl_mpio(accpl, H5FD_MPIO_INDEPENDENT);
  #endif
-   
+
    ioVarLT saveVars;
-   _partT proto;
+   _partT  proto;
    saveVars = proto.getSaveVars();
 
    // write data
@@ -435,19 +436,30 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
       hid_t mspace = H5Screate_simple(2, mwcounts, NULL);
       hid_t fspace = H5Screate_simple(2, fcounts, NULL);
 
-      //
-      fcounts[1] = 1;
-
       // create or open dataset
-      // FIXME: handle case where dataset exists but with wrong dims
       hid_t dset;
       if (objExist(sg, dsetnam))
+      {
          dset = H5Dopen(sg, dsetnam.c_str(), H5P_DEFAULT);
+         hid_t xfspace = H5Dget_space(dset);
+         hsize_t xfcounts[2];
+         xfcounts[0] = 0;
+         xfcounts[1] = 0;
+         H5Sget_simple_extent_dims(xfspace, xfcounts, NULL);
+         if (not ((xfcounts[0] == fcounts[0]) && (xfcounts[1] == fcounts[1])))
+         {
+            H5Dclose(dset);
+            H5Ldelete(sg, dsetnam.c_str(), H5P_DEFAULT);
+            dset = H5Dcreate(sg, dsetnam.c_str(), ftype,
+                             fspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+         }
+      }
       else
          dset = H5Dcreate(sg, dsetnam.c_str(), ftype,
                           fspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-
+      // for each write, only write width=1
+      fcounts[1] = 1;
       for (size_t i = 0; i < width; i++)
       {
          H5Sselect_hyperslab(fspace, H5S_SELECT_SET,
@@ -506,15 +518,14 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
 template<typename _partT>
 void ParticleSet<_partT>::singlePrecOut()
 {
-  h5fFTYPE = H5T_IEEE_F32LE;
+   h5fFTYPE = H5T_IEEE_F32LE;
 }
 
-  template<typename _partT>
+template<typename _partT>
 void ParticleSet<_partT>::doublePrecOut()
 {
-  h5fFTYPE = H5T_IEEE_F64LE;
+   h5fFTYPE = H5T_IEEE_F64LE;
 }
-
 
 template<typename _partT>
 herr_t ParticleSet<_partT>::getObsCB(hid_t _fh, const char* _name,
