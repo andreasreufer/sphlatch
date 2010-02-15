@@ -104,11 +104,6 @@ int main(int argc, char* argv[])
 
    // load the particles
    parts.loadHDF5(inFilename);
-   
-   const size_t nop = parts.getNop();
-   for (size_t i = 0; i < nop; i++)
-     parts[i].clumpid = -1;
-
    clumps.getClumps(parts, minRho, hMult);
    parts.saveHDF5(inFilename);
 

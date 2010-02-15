@@ -52,7 +52,6 @@ class FewBodies(object):
       for j in range(self.noc):
         if ( i != j ):
           rij = self.pos[i,:] - self.pos[j,:]
-          #FIXME hardcoded smoothing length
           rree = np.dot( rij, rij ) + 1.e14
           re = np.sqrt( rree )
           #r = np.sqrt( np.dot( rij, rij ) )
