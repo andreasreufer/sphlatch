@@ -25,12 +25,14 @@ G = 6.67428e-8
 if attrnams.__contains__("gravconst"):
   G    = attrlist["gravconst"]
 
-Mmin = 1.e27
+Mearth = 5.9736e27
+Mmin = 1.e-4*Mearth
+Mmin = 1.e23
 
 print "load clumps ...        "
 cpos = {}
 clmph = pt.openFile(sys.argv[2], "r")
-sats = orbit.SatSystem(clmph.root.current, G, Mmin)
+satSystem = orbit.SatSystem(clmph.root.current, G, Mmin)
 
 #print "keep ",clumps.rc.shape[0]," clumps"
 #cdump = clmph.root.current
@@ -38,6 +40,8 @@ sats = orbit.SatSystem(clmph.root.current, G, Mmin)
 #  cpos[int(cdump.id[i])] = cdump.pos[i,:]
 #clmph.close()
 
+#for sat in satSystem.sats:
+#  a.add_patch( mp.patches.Circle(
 
 #print "plotting clumps with trajectories ... "
 #for i in range(clumps.noc):
