@@ -34,6 +34,8 @@ cpos = {}
 clmph = pt.openFile(sys.argv[2], "r")
 satSystem = orbit.SatSystem(clmph.root.current, G, Mmin)
 
+
+
 #print "keep ",clumps.rc.shape[0]," clumps"
 #cdump = clmph.root.current
 #for i in range(cdump.id.shape[0]):
