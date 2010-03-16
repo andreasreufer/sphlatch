@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env ipython
 
 import tables as pt
 import numpy as np
@@ -9,7 +9,7 @@ import sys
 import fewbody
 
 #pl.rc('text', usetex=True)
-#pl.rc('text.latex', preamble = '\usepackage{amssymb}, \usepackage{wasysym}')
+pl.rc('text.latex', preamble = '\usepackage{amssymb}, \usepackage{wasysym}')
 
 execfile("config.sh")
 
@@ -101,10 +101,8 @@ for i in range(clumps.noc):
   a.add_patch( mp.patches.Circle((curtraj[0,2], curtraj[0,0]), radius=clumps.rc[i], ec='yellow', fc='none', lw=0.3, alpha=0.3) )
   a.add_patch( mp.patches.Circle((curtraj[-1,2], curtraj[-1,0]), radius=clumps.rc[i], ec='green', fc='none', lw=0.3, alpha=0.6) )
   a.plot( curtraj[:,2], curtraj[:,0], color='white', lw=0.3, alpha=0.3)
-  a.text( curtraj[0,2], curtraj[0,0], '$\mathrm{'+ '%1.4f' % ( clumps.m[i] / Mearth ) +' M_{\earth}}$', size=3, color='yellow')
+  a.text( curtraj[0,2], curtraj[0,0], '$\mathrm{'+ '%1.4f' % ( clumps.m[i] / Mearth ) +' M_{earth}}$', size=3, color='yellow')
   
-  #a.text( curtraj[0,2], curtraj[0,0], ' '+ '%1.4f' % ( clumps.m[i] / Mearth ) +' Me', size=3, color='yellow')
-
 
 
 a.axis("scaled")

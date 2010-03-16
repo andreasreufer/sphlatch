@@ -152,6 +152,7 @@ public:
 #ifdef SPHLATCH_ANEOS
       vars.push_back(storeVar(mat, "mat"));
       vars.push_back(storeVar(T, "T"));
+      vars.push_back(storeVar(S, "S"));
       vars.push_back(storeVar(phase, "phase"));
 #endif
 #ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
