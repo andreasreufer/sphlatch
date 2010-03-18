@@ -82,7 +82,7 @@ class ANEOSGhost {};
 class ANEOSPart : public ANEOSGhost 
 {
   public:
-  fType T;
+  fType T, S;
   iType mat, phase;
 };
 
