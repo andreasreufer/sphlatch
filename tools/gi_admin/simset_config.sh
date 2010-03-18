@@ -1,0 +1,4 @@
+SIMSETNAME="test001"
+SIMSETDIR="~/"
+BODIESDIR=""
+
