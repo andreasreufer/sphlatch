@@ -2,3 +2,7 @@ SIMSETNAME="test001"
 SIMSETDIR="~/"
 BODIESDIR=""
 
+MIMP=[0.01,0.1,1.0]
+MTAR=[0.01,0.1,1.0]
+
+

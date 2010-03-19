@@ -24,44 +24,71 @@ log = Logger("gi_admin.log")
 if os.path.exists("simset_config.sh"):
   execfile("simset_config.sh")
   log.write("simset_config.sh loaded")
-  print "haba"
 else:
   log.write("simset_config.sh not found!")
   sys.exit(1)
 
 
+(unprepared, prepared, queued, run, failed, finished, error, unknown) = range(8)
+
+
 #def genSimTable():
-
-
-
-
 #class Simulation(object):
-#  status
-#
-#  def 
+  #status
+  #def 
 
-(idle, queued, run, failed, finished, error, unknown) = range(5)
-def getJobStatus(_id):
-  (stat, out) = commands.getstatusoutput("qacct -j " + str(id) )
-  if stat == 32512:
-    return unknown
-  if stat == 0:
-    return finished
+class SimParams(object):
+  def __init__(self, mimp, mtar, b, vimp):
+    self.mimp = mimp
+    self.mtar = mtar
+    self.b    = b
+    self.vimp = vimp
 
-  (stat, out) = commands.getstatusoutput("qstat -g d")
+class Body(object):
+  def __init__(self,file, m, rc, 
+
+
+class Simulation(object):
+  state = idle
+  simdir = ""
+
+  def __init__(self,params):
+    self.params = params
+
+  def prepare(self):
+    pass
+
+  def start(self):
+    pass
+
+
+
+def getJobStats():
+  alljobs = {}
+
+  (stat, runwaitraw) = commands.getstatusoutput("qstat -g d")
+  if stat != 0:
+    return
+  for line in runwaitraw.splitlines()[2:]:
+    lsplt = line.split()
+    if len(lsplt) == 9:
+      (id, prio, name, user, statestr, date, time, queue, slots) = line.split()
+      alljobs[int(id)] = (name, user, run)
+    if len(lsplt) == 8:
+      (id, prio, name, user, statestr, date, time, slots) = line.split()
+      state = unknown
+      if statestr == "qw":
+        state = queued
+      alljobs[int(id)] = (name, user, state)
+  
+  (stat, finishedraw) = commands.getstatusoutput("qstat -g d -s z")
   if stat != 0:
     return unknown
+  for line in finishedraw.splitlines()[2:]:
+    print line.split()
+    (id, prio, name, user, statestr, date, time, slots) = line.split()
+    alljobs[int(id)] = (name, user, finished)
 
-  lines = out.splitlines()
-  for line in lines:
-    (id, prio, name, user, state, date, time, queue, slots) = line.split()
-    if id == _id:
-      if state == 'r':
-        return run
-      else if state == 'qw':
-        return queued
-      else if state.find('E') >= 0:
-        return error
-  return unknown
+  alljobs['timestamp'] = time.time()
 
-
+  return alljobs
