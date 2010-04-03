@@ -11,10 +11,21 @@ import numpy as np
 import shutil
 
 from numpy import sqrt, sin, cos, arccos, log, abs, tan, arctan2, pi, zeros
+from body import BodyFile
+    
+import pdb
 
 (unprepared, prepared, queued, run, failed, finished, error, unknown) = range(8)
 rad2deg = 360./(2.*pi)
 deg2rad = 1./rad2deg
+
+# constants to transform the initial parameters to physical values
+G   = 6.67429e-8
+Re  = 6.37814e8
+Me  = 5.97360e27
+lem = 3.40000e41 # Canup (2001) value
+#lem = 2.88993e41 # actual (?) value
+
 
 
 class Logger(object):
@@ -41,28 +52,14 @@ class SimParams(object):
 
     self.cfg = cfg
 
+    self.temp = float(cfg["TEMP"])
+
     self.key = 'mtar%07.3f' % mtar + '_' \
       + 'mimp%07.3f' % mimp + '_' \
       + 'impa%04.1f' % impa + '_' \
       + 'vimp%04.1f' % vimp
 
-
-class Body(object):
-  def __init__(self, file, m, r, T, res):
-    self.file = file
-    self.m = m
-    self.r = r
-    self.T = T
-    self.res = res
-
-
-
-    
 class Simulation(object):
-  #state = unprepared
-  #simdir = ""
-  #jobid = -1
-
   def __init__(self,params):
     self.params = params
     ssbdir = params.cfg["SIMSETBDIR"]
@@ -89,6 +86,8 @@ class Simulation(object):
     #if not path.exists(self.dir + "initial.h5part"):
     
     # prepare bodies:
+    #  find fitting bodies
+    (self.tarb, self.impb) = self.findBodies()
     #  combine bodies
     #  write attributes
     #  
@@ -104,6 +103,42 @@ class Simulation(object):
 
   def getKey(self):
     return params.key
+
+  def findBodies(self):
+    nan = float('nan')
+
+    toler = float(self.params.cfg["BODTOLERANCE"])
+    boddb = shelve.open(self.params.cfg["BODIESDB"])
+
+    # find target candidates
+    targtmpl = BodyFile("", Me*self.params.mtar, nan, \
+        self.params.temp, nan, {})
+    targcand = []
+    for key in boddb.keys():
+      if boddb[key].isSimilar(targtmpl, toler):
+        targcand.append(boddb[key])
+
+    # find impactor candidates
+    impatmpl = BodyFile("", Me*self.params.mimp, nan, \
+        self.params.temp, nan, {})
+    impacand = []
+    for key in boddb.keys():
+      if boddb[key].isSimilar(impatmpl, toler):
+        impacand.append(boddb[key])
+    
+    # find fitting pairs
+    pairs = []
+    for tarbd in targcand:
+      for impbd in impacand:
+        print 
+        if abs((impbd.h - tarbd.h)/tarbd.h) < toler:
+          pairs.append( (tarbd, impbd) )
+
+    # sort according to smoothing length
+    pairs.sort(key=lambda bod: bod[0].h)
+    
+    boddb.close()
+    return pairs[0]
 
 
 class SimSet(object):
@@ -181,6 +216,6 @@ def getJobStats():
 
 log = Logger("gi_admin.log")
 simset = SimSet(log)
-
-
+sim = simset.sims['mtar000.100_mimp000.100_impa75.0_vimp03.0']
+pairs = sim.findBodies()
 
