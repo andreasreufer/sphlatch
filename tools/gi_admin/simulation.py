@@ -63,6 +63,7 @@ class Task(object):
 
 
 class Simulation(object):
+  # noCPUs, 
   def __init__(self,params):
     self.params = params
     ssbdir = params.cfg["SIMSETBDIR"]
