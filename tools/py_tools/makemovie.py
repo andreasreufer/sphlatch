@@ -15,16 +15,17 @@ out = sys.argv[3]
 frg = '-b 20000k'
 
 filelist = filter( isimg, os.listdir( dir ) )
-filelist.sort()
 
 tmpdir = tempfile.mkdtemp( dir=dir )
 
 count = 0
 for file in filelist:
+  print "../" + file, "  -->  ", tmpdir + "/img" + '%06d' % count + sfx
   os.symlink( "../" + file, tmpdir + "/img" + '%06d' % count + sfx )
   count += 1
 
-os.system( "echo y | ffmpeg -i " + tmpdir + "/img%06d" + sfx + " " + frg + " " + out )
+print "ffmpeg -i " + tmpdir + "/img%06d" + sfx + " " + frg + " " + out
+os.system( "ffmpeg -i " + tmpdir + "/img%06d" + sfx + " " + frg + " " + out )
 
 count = 0
 for file in filelist:
