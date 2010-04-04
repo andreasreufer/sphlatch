@@ -1,7 +1,3 @@
-#!/usr/bin/python
-
-import pickle
-import sys
 import os
 import os.path as path
 import time
@@ -25,7 +21,6 @@ Re  = 6.37814e8
 Me  = 5.97360e27
 lem = 3.40000e41 # Canup (2001) value
 #lem = 2.88993e41 # actual (?) value
-
 
 
 class Logger(object):
@@ -95,12 +90,7 @@ class Simulation(object):
       if jobid == 0:
         self.state = prepared
         return self.state
-      else:
-
-
-
-
-
+      #else:
 
   def openTasks(self):
     return Task(self.prepare)
@@ -114,12 +104,12 @@ class Simulation(object):
     ssbdir = self.params.cfg["SIMSETBDIR"]
     auxf = self.params.cfg["AUXFILES"].split()
     
-    self.log = Logger(self.dir + "/logfile.txt")
+    self.Log = Logger(self.dir + "/logfile.txt")
     
     for file in auxf:
       shutil.copy2(ssbdir + file, self.dir)
     
-    self.log.write("auxiliary files copied")
+    self.Log.write("auxiliary files copied")
     
     #if not path.exists(self.dir + "initial.h5part"):
     
@@ -186,16 +176,15 @@ class SimSet(object):
   #log = []
 
   def __init__(self, logger):
-    self.log = logger
+    self.Log = logger
     self.simsetcfg = {}
     
     if path.exists("simset_config.sh"):
       execfile("simset_config.sh", self.simsetcfg)
-      log.write("simset_config.sh loaded")
+      self.Log.write("simset_config.sh loaded")
     else:
-      log.write("simset_config.sh not found!")
-      log.write("exiting")
-      sys.exit(1)
+      self.Log.write("simset_config.sh not found!")
+      self.Log.write("exiting")
     
     mtara = np.array( self.simsetcfg["MTAR"].split(), dtype=float)
     mimpa = np.array( self.simsetcfg["MIMP"].split(), dtype=float)
@@ -219,10 +208,4 @@ class SimSet(object):
 
   def __del__(self):
     pass
-
-
-log = Logger("gi_admin.log")
-simset = SimSet(log)
-sim = simset.sims['mtar000.100_mimp000.100_impa75.0_vimp03.0']
-pairs = sim._findBodies()
 
