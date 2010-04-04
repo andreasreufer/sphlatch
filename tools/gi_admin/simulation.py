@@ -15,7 +15,7 @@ from body import BodyFile
     
 import pdb
 
-(unprepared, prepared, queued, run, failed, finished, error, unknown) = range(8)
+(unprepared, prepared, queued, run, failed, finished, error) = range(7)
 rad2deg = 360./(2.*pi)
 deg2rad = 1./rad2deg
 
@@ -59,15 +59,53 @@ class SimParams(object):
       + 'impa%04.1f' % impa + '_' \
       + 'vimp%04.1f' % vimp
 
+class Task(object):
+  def __init__(self, callfunc):
+    self.callfunc = callfunc
+
+  def __run__(self):
+    self.callfunc()
+
+
 class Simulation(object):
   def __init__(self,params):
     self.params = params
     ssbdir = params.cfg["SIMSETBDIR"]
-    self.dir = path.normpath( ssbdir + "/" + params.key + "/" )
-
+    self.dir = path.normpath(ssbdir + "/sim_" + params.key + "/")
+    self.state = unprepared
     # fetch bodies
 
-  def prepare(self):
+
+   #(unprepared, prepared, queued, run, failed, finished, error) = range(8)
+  def getState(self):
+    if not path.exists(self.dir):
+      self.state = unprepared
+      return self.state
+    else:
+
+      neededfiles = self.params.cfg["AUXFILES"].split()
+      neededfiles.append(self.params.cfg["BINARY"])
+      neededfiles.append("initial.h5part")
+
+      for file in neededfiles:
+        if not os.path.exists(self.dir + os.path.split(file)[1]):
+          return self.state
+
+      # so everything's ready
+      if jobid == 0:
+        self.state = prepared
+        return self.state
+      else:
+
+
+
+
+
+
+  def openTasks(self):
+    return Task(self.prepare)
+
+  def _prepare(self):
     # if it does not yet exist, make dir
     if not path.exists(self.dir):
       os.mkdir(self.dir)
@@ -89,22 +127,23 @@ class Simulation(object):
     #  find fitting bodies
     (self.tarb, self.impb) = self.findBodies()
     #  combine bodies
+
     #  write attributes
     #  
     # compile code
     #pass
 
-  def run(self):
+  def _run(self):
     # check if everything's there
     pass
 
-  def archive(self):
+  def _archive(self):
     pass
 
-  def getKey(self):
+  def _getKey(self):
     return params.key
 
-  def findBodies(self):
+  def _findBodies(self):
     nan = float('nan')
 
     toler = float(self.params.cfg["BODTOLERANCE"])
@@ -182,40 +221,8 @@ class SimSet(object):
     pass
 
 
-
-def getJobStats():
-  alljobs = {}
-
-  (stat, runwaitraw) = commands.getstatusoutput("qstat -g d")
-  if stat != 0:
-    return
-  for line in runwaitraw.splitlines()[2:]:
-    lsplt = line.split()
-    if len(lsplt) == 9:
-      (id, prio, name, user, statestr, date, time, queue, slots) = line.split()
-      alljobs[int(id)] = (name, user, run)
-    if len(lsplt) == 8:
-      (id, prio, name, user, statestr, date, time, slots) = line.split()
-      state = unknown
-      if statestr == "qw":
-        state = queued
-      alljobs[int(id)] = (name, user, state)
-  
-  (stat, finishedraw) = commands.getstatusoutput("qstat -g d -s z")
-  if stat != 0:
-    return unknown
-  for line in finishedraw.splitlines()[2:]:
-    print line.split()
-    (id, prio, name, user, statestr, date, time, slots) = line.split()
-    alljobs[int(id)] = (name, user, finished)
-
-  alljobs['timestamp'] = time.time()
-
-  return alljobs
-
-
 log = Logger("gi_admin.log")
 simset = SimSet(log)
 sim = simset.sims['mtar000.100_mimp000.100_impa75.0_vimp03.0']
-pairs = sim.findBodies()
+pairs = sim._findBodies()
 
