@@ -112,12 +112,17 @@ class Simulation(object):
     
     self.Log.write("auxiliary files copied")
     
-    #if not path.exists(self.dir + "initial.h5part"):
+    if path.exists(self.dir + "initial.h5part"):
+      os.remote(self.dir + "initial.h5part")
     
+
+
     # prepare bodies:
     #  find fitting bodies
     (self.tarb, self.impb) = self.findBodies()
     #  combine bodies
+    #self.tarb.file 
+    #self.impb.file
 
     #  write attributes
     #  
@@ -173,9 +178,6 @@ class Simulation(object):
 
 class SimSet(object):
   sims = {}
-  #simsetcfg = {}
-  #log = []
-
   def __init__(self, logger):
     self.Log = logger
     self.simsetcfg = {}
@@ -193,6 +195,10 @@ class SimSet(object):
     impaa = np.array( self.simsetcfg["IMPA"].split(), dtype=float)
 
     bdir = self.simsetcfg["SIMSETBDIR"]
+    if not path.exists(bdir):
+      os.mkdir(bdir)
+      os.chdir(bdir)
+
     cond = self.simsetcfg["SIMCOND"]
     if len(cond) < 1:
       cond = "True"

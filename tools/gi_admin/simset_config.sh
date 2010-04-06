@@ -1,5 +1,4 @@
-SIMSETNAME="test001"
-SIMSETBDIR="./"
+SIMSETBDIR="./test001"
 BODIESDB="./bodies"
 
 TEMP="1500"
