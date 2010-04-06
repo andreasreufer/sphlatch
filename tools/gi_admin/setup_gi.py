@@ -6,10 +6,6 @@ import sys
 from numpy import sqrt, sin, arcsin, cos, arccos, \
     log, abs, tan, arctan2, pi, zeros, array
 
-defstdout = sys.stdout
-
-logfile = open("setup_gi.log", 'w')
-
 # constants to transform the initial parameters to physical values
 Re  = 6.37814e8
 Me  = 5.97360e27
