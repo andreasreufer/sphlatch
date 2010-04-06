@@ -3,7 +3,8 @@
 import numpy as np
 import sys
 
-from numpy import sqrt, sin, cos, arccos, log, abs, tan, arctan2, pi, zeros, array
+from numpy import sqrt, sin, arcsin, cos, arccos, \
+    log, abs, tan, arctan2, pi, zeros, array
 
 defstdout = sys.stdout
 
@@ -36,9 +37,15 @@ class GiantImpact(object):
     self.vesc = sqrt( 2.*self.mu / self.rimp )
 
   def getInitVinfL0(self, vinf, L0, relsep):
+    rimp = self.rimp
+    mimp = self.mimp
+    vesc = self.vesc
     
-    vimp = sqrt(vinf*vinf + self.vesc*self.vesc)
+    vimp = sqrt(vinf*vinf + vesc*vesc)
     Lgraz = vimp*mimp*rimp
+    impa = arcsin( L0 / Lgraz )
+
+    return self.getInitVimpAlpha(vimp, impa, relsep)
 
 
   def getInitVimpAlpha(self, vimp, impa, relsep):
