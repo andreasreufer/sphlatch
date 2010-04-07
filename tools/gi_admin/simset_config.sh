@@ -1,5 +1,7 @@
+# definition of 
 SIMSETBDIR="./test001"
 BODIESDB="./bodies"
+LOGFILE="simset.log"
 
 TEMP="1500"
 
@@ -12,9 +14,13 @@ SIMCOND="(mimp <= mtar)"
 BODTOLERANCE="0.1"
 
 AUXFILES="./aux/aneos.input"
-SRCDIR="~/repos/sphlatch/apps/impact"
-MAKETARG="impact_GHUA__"
-BINARY="impact_GHUA__"
+SRCDIR="~/repos/sphlatch/apps/simple_sph"
+MAKETARG="simple_sph_GHUa__"
+BINARY="simple_sph_GHUa__"
+
+SUBCMD=""
+RUNARGS="16"
+NOCPUS="8"
 
 RELSEP="3.0"
 GRAVCONST="6.67429e-8"

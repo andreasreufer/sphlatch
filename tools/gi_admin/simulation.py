@@ -23,6 +23,8 @@ Me  = 5.97360e27
 lem = 3.40000e41 # Canup (2001) value
 #lem = 2.88993e41 # actual (?) value
 
+def resolvePath(_path):
+  return path.abspath( path.expanduser(_path) )
 
 class Logger(object):
   logfile = []
@@ -34,7 +36,7 @@ class Logger(object):
     self.logfile.close()
 
   def write(self, str):
-    self.logfile.write(time.ctime() + " " + str + "\n")
+    self.logfile.write(time.ctime() + ":   " + str + "\n")
     self.logfile.flush()
 
 
@@ -67,8 +69,8 @@ class Simulation(object):
   # noCPUs, 
   def __init__(self,params):
     self.params = params
-    ssbdir = path.abspath(params.cfg["SIMSETBDIR"])
-    self.dir = path.normpath(ssbdir + "/sim_" + params.key) + "/"
+    ssbdir = resolvePath(params.cfg["SIMSETBDIR"]) + "/"
+    self.dir = resolvePath(ssbdir + "sim_" + params.key) + "/"
     self.state = unprepared
 
    #(unprepared, prepared, queued, run, failed, finished, error) = range(8)
@@ -102,13 +104,12 @@ class Simulation(object):
       os.mkdir(self.dir)
 
     # copy files
-    ssbdir = self.params.cfg["SIMSETBDIR"] + "/"
     auxf = self.params.cfg["AUXFILES"].split()
     
-    self.Log = Logger(self.dir + "/logfile.txt")
+    self.Log = Logger(self.dir + "logfile.txt")
     
     for file in auxf:
-      shutil.copy2(file, self.dir)
+      shutil.copy2(resolvePath(file), self.dir)
     
     self.Log.write("auxiliary files copied")
     
@@ -130,7 +131,7 @@ class Simulation(object):
 
     gi = GiantImpact(mtar, mimp, Rtar, Rimp, G)
     vimp = self.params.vimprel * gi.vesc
-    impa = self.params.impa
+    impa = self.params.impa * deg2rad
 
     (r0tar, r0imp, v0tar, v0imp, t0, logstr) = \
         gi.getInitVimpAlpha(vimp, impa, relsep)
@@ -138,10 +139,8 @@ class Simulation(object):
     print >>gilog, logstr
     gilog.close()
 
-
     # displace bodies
     cmds = []
-
     cmds.append("cp -Rpv " + self.tarb.file + " " + self.dir + "tarb.h5part")
     cmds.append("h5part_displace -i " + self.dir + "tarb.h5part " +\
         "--pos [%e,%e,%e] " % (r0tar[0], r0tar[1], r0tar[2]) +\
@@ -166,8 +165,22 @@ class Simulation(object):
       cmds.append("h5part_writeattr -i " + self.dir + "initial.h5part " +\
           " -k " + key + " -v " + val)
 
+    # prepare and copy binary
+    if not self.params.cfg.has_key("BINFILE"):
+      srcdir = resolvePath(self.params.cfg["SRCDIR"]) + "/"
+      targ = self.params.cfg["MAKETARG"]
+      oldwd = os.getcwd()
+      os.chdir(srcdir)
+      (stat, out) = commands.getstatusoutput("make " + targ)
+      os.chdir(oldwd)
+      self.params.cfg["BINFILE"] = \
+          resolvePath(srcdir + self.params.cfg["BINARY"])
+    binf = self.params.cfg["BINFILE"]
+    print binf
+    cmds.append("cp -Rpv " + binf + " " + self.dir)
+
+    # now execute the commands
     for cmd in cmds:
-      print cmd
       (stat, out) = commands.getstatusoutput(cmd)
       self.Log.write(out)
       if not stat == 0:
@@ -176,10 +189,9 @@ class Simulation(object):
         self.state = error
         return
 
-
-  
   def _run(self):
     # check if everything's there
+    
     pass
 
   def _archive(self):
@@ -244,34 +256,30 @@ class SimParams(object):
       + 'impa%04.1f' % impa + '_' \
       + 'vimp%04.1f' % vimprel
 
-    #  write attributes (time, gravconst, minenergy)
-    #  
-    # compile code
-    #pass
-
 
 class SimSet(object):
   sims = {}
-  def __init__(self, logger):
-    self.Log = logger
+  def __init__(self, cfgfile):
     self.simsetcfg = {}
     
-    if path.exists("simset_config.sh"):
-      execfile("simset_config.sh", self.simsetcfg)
-      self.Log.write("simset_config.sh loaded")
+    if path.exists(cfgfile):
+      execfile(cfgfile, self.simsetcfg)
+      print cfgfile + " loaded"
     else:
-      self.Log.write("simset_config.sh not found!")
-      self.Log.write("exiting")
+      print cfgfile + " not found!   exiting ..."
+    
+    bdir = self.simsetcfg["SIMSETBDIR"]
+    if not path.exists(bdir):
+      os.mkdir(bdir)
+
+    logfile = self.simsetcfg["LOGFILE"]
+    self.Log = Logger(logfile)
+    self.Log.write("new SimSet")
     
     mtara = np.array( self.simsetcfg["MTAR"].split(), dtype=float)
     mimpa = np.array( self.simsetcfg["MIMP"].split(), dtype=float)
     vimprela = np.array( self.simsetcfg["VIMPREL"].split(), dtype=float)
     impaa = np.array( self.simsetcfg["IMPA"].split(), dtype=float)
-
-    bdir = self.simsetcfg["SIMSETBDIR"]
-    if not path.exists(bdir):
-      os.mkdir(bdir)
-      os.chdir(bdir)
 
     cond = self.simsetcfg["SIMCOND"]
     if len(cond) < 1:
