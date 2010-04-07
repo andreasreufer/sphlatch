@@ -1,4 +1,4 @@
-#define SPHLATCH_PARALLEL
+//#define SPHLATCH_PARALLEL
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
@@ -30,7 +30,7 @@ using namespace boost::assign;
 
 int main(int argc, char* argv[])
 {
-  MPI::Init(argc, argv);
+  //MPI::Init(argc, argv);
   po::options_description Options("Global Options");
 
   Options.add_options() ("help,h", "Produces this Help")
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
   IOManager.loadDump(inputBFileName);
   IOManager.saveDump(outputFileName, saveQuants);
 
-  MPI::Finalize();
+  //MPI::Finalize();
   return EXIT_SUCCESS;
 }
 

@@ -149,7 +149,7 @@ class GiantImpact(object):
         "# v0imp   = " + str(v0imp) + " cm/s" + "\n" +\
         "#" + "\n"
 
-    return (r0tar, r0imp, v0tar, v0imp, t0, logstr)
+    return (r0tar, r0imp, v0tar, v0imp, timp - t0, logstr)
 
   def getOrbit(self):
     pass

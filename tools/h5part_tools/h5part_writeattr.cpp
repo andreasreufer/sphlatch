@@ -24,10 +24,11 @@ typedef sphlatch::ParticleManager part_type;
 typedef sphlatch::IOManager io_type;
 
 using namespace boost::assign;
-using namespace sphlatch::vectindices;
+using namespace sphlatch;
 
 int main(int argc, char* argv[])
 {
+
   po::options_description Options("Global Options");
 
   Options.add_options() ("help,h", "Produces this Help")

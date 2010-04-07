@@ -1,4 +1,4 @@
-#define SPHLATCH_PARALLEL
+//#define SPHLATCH_PARALLEL
 
 #include <iostream>
 
@@ -29,11 +29,11 @@ typedef sphlatch::IOManager io_type;
 #include "parse_po_vectors.h"
 
 using namespace boost::assign;
-using namespace sphlatch::vectindices;
+using namespace sphlatch;
 
 int main(int argc, char* argv[])
 {
-  MPI::Init(argc, argv);
+  //MPI::Init(argc, argv);
 
   po::options_description Options("Global Options");
 
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
   if (changed)
     IOManager.saveDump(inputFileName, saveQuants);
   
-  MPI::Finalize();
+  //MPI::Finalize();
   return EXIT_SUCCESS;
 }
 

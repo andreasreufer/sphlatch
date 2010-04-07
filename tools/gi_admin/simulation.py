@@ -67,8 +67,8 @@ class Simulation(object):
   # noCPUs, 
   def __init__(self,params):
     self.params = params
-    ssbdir = params.cfg["SIMSETBDIR"]
-    self.dir = path.normpath(ssbdir + "/sim_" + params.key + "/")
+    ssbdir = path.abspath(params.cfg["SIMSETBDIR"])
+    self.dir = path.normpath(ssbdir + "/sim_" + params.key) + "/"
     self.state = unprepared
 
    #(unprepared, prepared, queued, run, failed, finished, error) = range(8)
@@ -91,6 +91,7 @@ class Simulation(object):
         self.state = prepared
         return self.state
       #else:
+      #FIXME
 
   def openTasks(self):
     return Task(self.prepare)
@@ -133,29 +134,48 @@ class Simulation(object):
 
     (r0tar, r0imp, v0tar, v0imp, t0, logstr) = \
         gi.getInitVimpAlpha(vimp, impa, relsep)
+    gilog = open(self.dir + "gi_setup.log", "w")
+    print >>gilog, logstr
+    gilog.close()
+
 
     # displace bodies
-    #shutil.copy2(ssbdir + file, self.dir)
-    #shutil.copy2(self.tarb.file, self.dir + "tarb.h5part")
-    cmd = "h5part_displace -i tarb.h5part " +\
+    cmds = []
+
+    cmds.append("cp -Rpv " + self.tarb.file + " " + self.dir + "tarb.h5part")
+    cmds.append("h5part_displace -i " + self.dir + "tarb.h5part " +\
         "--pos [%e,%e,%e] " % (r0tar[0], r0tar[1], r0tar[2]) +\
-        "--vel [%e,%e,%e] " % (v0tar[0], v0tar[1], v0tar[2])
-    print cmd
-    
-    #shutil.copy2(self.impb.file, self.dir + "impb.h5part")
-    cmd = "h5part_displace -i impb.h5part " +\
+        "--vel [%e,%e,%e] " % (v0tar[0], v0tar[1], v0tar[2]) )
+    cmds.append("cp -Rpv " + self.impb.file + " " + self.dir + "impb.h5part")
+    cmds.append("h5part_displace -i " + self.dir + "impb.h5part " +\
         "--pos [%e,%e,%e] " % (r0imp[0], r0imp[1], r0imp[2]) +\
         "--vel [%e,%e,%e] " % (v0imp[0], v0imp[1], v0imp[2]) +\
-        "--id 2000000"
-    print cmd
-
-    #argstr = h5part_displace -i impactor.h5part --pos [%e,%e,%e] --vel [%e,%e,%e] --id 200000
+        "--id 2000000" )
+    cmds.append("h5part_combine -a " + self.dir + "tarb.h5part -b " +\
+        self.dir + "impb.h5part -o " + self.dir + "initial.h5part")
+    cmds.append("rm " + self.dir + "tarb.h5part " + self.dir + "impb.h5part")
     
-    #impf = self.impb.file
-
-
-
     # write attributes (gravconst, attrs)
+    attrkeys = self.params.cfg["ATTRKEYS"].split()
+    attrvals = self.params.cfg["ATTRVALS"].split()
+
+    attrkeys.extend(["time", "gravconst"])
+    attrvals.extend([str(t0), str(G)])
+
+    for key,val in zip(attrkeys, attrvals):
+      cmds.append("h5part_writeattr -i " + self.dir + "initial.h5part " +\
+          " -k " + key + " -v " + val)
+
+    for cmd in cmds:
+      print cmd
+      (stat, out) = commands.getstatusoutput(cmd)
+      self.Log.write(out)
+      if not stat == 0:
+        self.Log.write("error when executing \"" + cmd + \
+            " setting state to error")
+        self.state = error
+        return
+
 
   
   def _run(self):
