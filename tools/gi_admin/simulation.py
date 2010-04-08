@@ -76,8 +76,7 @@ class Simulation(object):
     
     self.jobid = 0
 
-    self.state = "unprepared"
-    self.next = self._prepare
+    self.getState()
 
   def setError(self, str=None):
     if not str == None and hasattr(self, "Log"):
@@ -257,7 +256,6 @@ class Simulation(object):
     oldwd = os.getcwd()
     os.chdir(self.dir)
     (stat, out) = commands.getstatusoutput(subcmd)
-    stat = 0
     os.chdir(oldwd)
 
     if not stat == 0:
@@ -313,7 +311,7 @@ class Simulation(object):
     nan = float('nan')
 
     toler = float(self.params.cfg["BODTOLERANCE"])
-    boddb = shelve.open(self.params.cfg["BODIESDB"])
+    boddb = shelve.open(resolvePath(self.params.cfg["BODIESDB"]))
 
     # find target candidates
     targtmpl = BodyFile("", Me*self.params.mtar, nan, \

@@ -10,6 +10,15 @@ class SGEquery(object):
     if self.timestamp < ( time.time() - notolderthan):
       self._refreshData()
     return self.jobslist
+  
+  def getFullname(self, jobid):
+    (stat, out) = commands.getstatusoutput("qstat -j " + str(jobid))
+    if not stat == 0:
+      return None
+
+    for line in out.splitlines():
+      if line.count("job_name:"):
+        return line.split()[1]
 
   def _refreshData(self):
     jobslist = {}
@@ -37,6 +46,7 @@ class SGEquery(object):
   
     self.timestamp = time.time()
     self.jobslist = jobslist
+
 
 
 class SGEdummy(object):
