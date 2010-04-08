@@ -40,7 +40,6 @@ class Logger(object):
       self.logfile.write(time.ctime() + ":   " + str + "\n")
       self.logfile.flush()
 
-
 class SimParams(object):
   def __init__(self, mimp, mtar, impa, vimprel, cfg):
     self.mimp = mimp
@@ -71,6 +70,9 @@ class Simulation(object):
     self.params = params
     ssbdir = resolvePath(params.cfg["SIMSETBDIR"]) + "/"
     self.dir = resolvePath(ssbdir + "sim_" + params.key) + "/"
+    
+    if path.exists(self.dir):
+      self.Log = Logger(self.dir + "logfile.txt")
     
     self.jobid = 0
 
@@ -112,6 +114,11 @@ class Simulation(object):
     self.next = self._doNothing
     return self.state
 
+  def reset(self):
+    self.state = "unprepared"
+    self.next = self._prepare
+    return self.state
+
   def _doNothing(self):
     return self.state
 
@@ -119,11 +126,10 @@ class Simulation(object):
     # if it does not yet exist, make dir
     if not path.exists(self.dir):
       os.mkdir(self.dir)
+      self.Log = Logger(self.dir + "logfile.txt")
 
     # copy files
     auxf = self.params.cfg["AUXFILES"].split()
-    
-    self.Log = Logger(self.dir + "logfile.txt")
     
     for file in auxf:
       shutil.copy2(resolvePath(file), self.dir)
@@ -149,12 +155,14 @@ class Simulation(object):
     gi = GiantImpact(mtar, mimp, Rtar, Rimp, G)
     vimp = self.params.vimprel * gi.vesc
     impa = self.params.impa * deg2rad
+    tscl = (Rtar + Rimp)/gi.vesc
 
     (r0tar, r0imp, v0tar, v0imp, t0, logstr) = \
         gi.getInitVimpAlpha(vimp, impa, relsep)
     gilog = open(self.dir + "gi_setup.log", "w")
     print >>gilog, logstr
     gilog.close()
+    self.Log.write("giant impact calculated")
 
     # displace bodies
     cmds = []
@@ -175,8 +183,8 @@ class Simulation(object):
     attrkeys = self.params.cfg["ATTRKEYS"].split()
     attrvals = self.params.cfg["ATTRVALS"].split()
 
-    attrkeys.extend(["time", "gravconst"])
-    attrvals.extend([str(t0), str(G)])
+    attrkeys.extend(["time", "gravconst", "tscal"])
+    attrvals.extend([str(t0), str(G), str(tscl)])
 
     for key,val in zip(attrkeys, attrvals):
       cmds.append("h5part_writeattr -i " + self.dir + "initial.h5part " +\
@@ -188,8 +196,9 @@ class Simulation(object):
       targ = self.params.cfg["MAKETARG"]
       oldwd = os.getcwd()
       os.chdir(srcdir)
-      #(stat, out) = commands.getstatusoutput("make " + targ)
+      (stat, out) = commands.getstatusoutput("make " + targ)
       os.chdir(oldwd)
+      self.Log.write("binary compiled")
       self.params.cfg["BINFILE"] = \
           resolvePath(srcdir + self.params.cfg["BINARY"])
     binf = self.params.cfg["BINFILE"]
@@ -202,8 +211,9 @@ class Simulation(object):
       if not stat == 0:
         self.setError(cmd + " failed")
         return self.state
-
+    
     self.next = self._submit
+    self.Log.write("prepared state")
     self.state = "prepared"
     return self.state
 
@@ -217,12 +227,27 @@ class Simulation(object):
     binary = self.params.cfg["BINARY"]
     runarg = self.params.cfg["RUNARGS"]
     sstnam = self.params.cfg["SIMSETNAME"]
-    
-    stoptime = 86400
-    savetime = 3600
+
+    self.jobname = sstnam + "_" + self.params.key
+  
+    cmd = "h5part_readattr -i " + self.dir + "initial.h5part -k tscal"
+    (stat, out) = commands.getstatusoutput(cmd)
+    if not stat == 0:
+      self.setError(cmd + " failed")
+      return self.state
+
+    # FIXME: doesn't belong here
+    nodumps = 50
+    k = 75.
+
+    tscal = float( out.split()[1] )
+    stoptime = tscal * k
+    savetime = round( stoptime / (60.*nodumps) ) * 60.
+    self.Log.write("tscal = %9.3e" % tscal)
+    self.Log.write("tstop = %9.3e" % stoptime)
 
     subcmd = subcmd.replace('$NOCPUS' , str(nocpus))
-    subcmd = subcmd.replace('$SIMNAME', sstnam + "_" + self.params.key)
+    subcmd = subcmd.replace('$SIMNAME', self.jobname)
     subcmd = subcmd.replace('$BINARY' , binary)
     
     subcmd = subcmd.replace('$SAVETIME' , str(savetime))
@@ -233,19 +258,24 @@ class Simulation(object):
     os.chdir(self.dir)
     (stat, out) = commands.getstatusoutput(subcmd)
     stat = 0
-    print out
     os.chdir(oldwd)
 
     if not stat == 0:
-      self.setError("submit command failed (" + subcmd + ")")
+      self.setError("submit command failed (" + out + ")")
     else:
       self.next = self._doNothing
       self.state = "submitted"
-
+      self.Log.write("job \"" + self.jobname + "\" submitted")
     return self.state
 
-    
+  def setSGEjobid(self, jobid):
+    self.Log.write("SGE set job id to " + str(jobid))
+    self.jobid = jobid
+
   def setSGEstat(self, str):
+    if self.state == "error":
+      return
+      
     if str == "queued":
       self.next = self._doNothing
       self.state = str
@@ -260,20 +290,24 @@ class Simulation(object):
 
   def _postproc(self):
     if self.state == "run":
-      print "postproc!"
-      #check for new files
-    else if self.state == "finished":
+      pass
+    elif self.state == "finished":
+      self.Log.write("SGE reported finished state, was job " + str(self.id))
       self.next = self._doNothing
     else:
-      self.setError("tried to posrproc from a non-submitted state")
+      self.setError("tried to postproc from a non-submitted state")
     return self.state
 
   def _finalize(self):
+    print self.state
     if not self.state == "finished":
-      self.setError("tried to posrproc from a non-submitted state")
-      return self.state
+      self.setError("tried to finalize from non-finished state")
+    else:
+      self.next = self._doNothing
+      self.state = "finalized"
+      self.Log.write("finalized simulation")
 
-
+    return self.state
 
   def _findBodies(self):
     nan = float('nan')
@@ -305,6 +339,8 @@ class Simulation(object):
       for impbd in impacand:
         if abs((impbd.h - tarbd.h)/tarbd.h) < toler:
           pairs.append( (tarbd, impbd) )
+    
+    self.Log.write("found " + str(len(pairs)) + " matching body pairs")
 
     if len(pairs) == 0:
       pairs.append( (None, None) )
