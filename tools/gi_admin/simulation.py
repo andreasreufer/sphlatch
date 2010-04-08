@@ -72,10 +72,11 @@ class Simulation(object):
     self.dir = resolvePath(ssbdir + "sim_" + params.key) + "/"
     
     if path.exists(self.dir):
-      self.Log = Logger(self.dir + "logfile.txt")
+      self.Log = Logger(self.dir + "setup.log")
     
     self.jobid = 0
 
+    self.state = "unknown"
     self.getState()
 
   def setError(self, str=None):
@@ -125,7 +126,7 @@ class Simulation(object):
     # if it does not yet exist, make dir
     if not path.exists(self.dir):
       os.mkdir(self.dir)
-      self.Log = Logger(self.dir + "logfile.txt")
+      self.Log = Logger(self.dir + "setup.log")
 
     # copy files
     auxf = self.params.cfg["AUXFILES"].split()
