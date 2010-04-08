@@ -1,5 +1,6 @@
 # definition of 
 SIMSETBDIR="./test001"
+SIMSETNAME="test001"
 BODIESDB="./bodies"
 LOGFILE="simset.log"
 
@@ -18,9 +19,9 @@ SRCDIR="~/repos/sphlatch/apps/simple_sph"
 MAKETARG="simple_sph_GHUa__"
 BINARY="simple_sph_GHUa__"
 
-SUBCMD=""
-RUNARGS="16"
+SUBCMD="qsubPSMP $NOCPUS $SIMNAME $BINARY initial.h5part $SAVETIME $STOPTIME $RUNARGS"
 NOCPUS="8"
+RUNARGS="16"
 
 RELSEP="3.0"
 GRAVCONST="6.67429e-8"

@@ -14,10 +14,7 @@ lem = 3.40000e41 # Canup (2001) value
 
 rad2deg = 360/(2.*pi)
 
-# input: 
-
 class GiantImpact(object):
-
   def __init__(self, mtar, mimp, Rtar, Rimp, G):
     nan = float('nan')
     self.mtar = mtar
@@ -42,7 +39,6 @@ class GiantImpact(object):
     impa = arcsin( L0 / Lgraz )
 
     return self.getInitVimpAlpha(vimp, impa, relsep)
-
 
   def getInitVimpAlpha(self, vimp, impa, relsep):
     rimp = self.rimp
@@ -95,7 +91,6 @@ class GiantImpact(object):
           (1./3.)*pow(tan(thetaimp / 2.),3.)) / k2)
       t0   = abs(0.5*(tan(theta0   / 2.) + \
           (1./3.)*pow(tan(theta0   / 2.),3.)) / k2)
-
 
     r0vect = array([\
         -r0 * cos( pi/2. - thetaimp + theta0 ),\

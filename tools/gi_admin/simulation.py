@@ -9,10 +9,10 @@ import shutil
 from numpy import sqrt, sin, cos, arccos, log, abs, tan, arctan2, pi, zeros
 from body import BodyFile
 from setup_gi import GiantImpact
-    
 import pdb
 
-(unprepared, prepared, queued, run, failed, finished, error) = range(7)
+
+
 rad2deg = 360./(2.*pi)
 deg2rad = 1./rad2deg
 
@@ -36,9 +36,9 @@ class Logger(object):
     self.logfile.close()
 
   def write(self, str):
-    self.logfile.write(time.ctime() + ":   " + str + "\n")
-    self.logfile.flush()
-
+    if len(str) > 0:
+      self.logfile.write(time.ctime() + ":   " + str + "\n")
+      self.logfile.flush()
 
 
 class SimParams(object):
@@ -71,32 +71,49 @@ class Simulation(object):
     self.params = params
     ssbdir = resolvePath(params.cfg["SIMSETBDIR"]) + "/"
     self.dir = resolvePath(ssbdir + "sim_" + params.key) + "/"
-    self.state = unprepared
+    
+    self.jobid = 0
 
-   #(unprepared, prepared, queued, run, failed, finished, error) = range(8)
+    self.state = "unprepared"
+    self.next = self._prepare
+
+  def setError(self, str=None):
+    if not str == None and hasattr(self, "Log"):
+      self.Log.write("error: " + str)
+    self.state = "error"
+    self.next = self._doNothing
+    return self.state
+
   def getState(self):
+    if self.state == "error":
+      return self.state
+
     if not path.exists(self.dir):
-      self.state = unprepared
+      self.state = "unprepared"
+      self.next = self._prepare
       return self.state
     else:
-
       neededfiles = self.params.cfg["AUXFILES"].split()
       neededfiles.append(self.params.cfg["BINARY"])
       neededfiles.append("initial.h5part")
 
       for file in neededfiles:
         if not os.path.exists(self.dir + os.path.split(file)[1]):
+          self.state = "unprepared"
+          self.next = self._prepare
           return self.state
-
       # so everything's ready
-      if jobid == 0:
-        self.state = prepared
-        return self.state
-      #else:
-      #FIXME
+      if self.jobid == 0:
+        self.state = "prepared" 
+        self.next = self._submit
+      return self.state
 
-  def openTasks(self):
-    return Task(self.prepare)
+    self.state = "unknown"
+    self.next = self._doNothing
+    return self.state
+
+  def _doNothing(self):
+    return self.state
 
   def _prepare(self):
     # if it does not yet exist, make dir
@@ -171,12 +188,11 @@ class Simulation(object):
       targ = self.params.cfg["MAKETARG"]
       oldwd = os.getcwd()
       os.chdir(srcdir)
-      (stat, out) = commands.getstatusoutput("make " + targ)
+      #(stat, out) = commands.getstatusoutput("make " + targ)
       os.chdir(oldwd)
       self.params.cfg["BINFILE"] = \
           resolvePath(srcdir + self.params.cfg["BINARY"])
     binf = self.params.cfg["BINFILE"]
-    print binf
     cmds.append("cp -Rpv " + binf + " " + self.dir)
 
     # now execute the commands
@@ -184,21 +200,80 @@ class Simulation(object):
       (stat, out) = commands.getstatusoutput(cmd)
       self.Log.write(out)
       if not stat == 0:
-        self.Log.write("error when executing \"" + cmd + \
-            " setting state to error")
-        self.state = error
-        return
+        self.setError(cmd + " failed")
+        return self.state
 
-  def _run(self):
-    # check if everything's there
+    self.next = self._submit
+    self.state = "prepared"
+    return self.state
+
+  def _submit(self):
+    if not self.getState() == "prepared":
+      self.setError("tried to submit from a non-prepared state")
+      return self.state
     
-    pass
+    subcmd = self.params.cfg["SUBCMD"]
+    nocpus = self.params.cfg["NOCPUS"]
+    binary = self.params.cfg["BINARY"]
+    runarg = self.params.cfg["RUNARGS"]
+    sstnam = self.params.cfg["SIMSETNAME"]
+    
+    stoptime = 86400
+    savetime = 3600
 
-  def _archive(self):
-    pass
+    subcmd = subcmd.replace('$NOCPUS' , str(nocpus))
+    subcmd = subcmd.replace('$SIMNAME', sstnam + "_" + self.params.key)
+    subcmd = subcmd.replace('$BINARY' , binary)
+    
+    subcmd = subcmd.replace('$SAVETIME' , str(savetime))
+    subcmd = subcmd.replace('$STOPTIME' , str(stoptime))
+    subcmd = subcmd.replace('$RUNARGS' ,  runarg)
 
-  def _getKey(self):
-    return params.key
+    oldwd = os.getcwd()
+    os.chdir(self.dir)
+    (stat, out) = commands.getstatusoutput(subcmd)
+    stat = 0
+    print out
+    os.chdir(oldwd)
+
+    if not stat == 0:
+      self.setError("submit command failed (" + subcmd + ")")
+    else:
+      self.next = self._doNothing
+      self.state = "submitted"
+
+    return self.state
+
+    
+  def setSGEstat(self, str):
+    if str == "queued":
+      self.next = self._doNothing
+      self.state = str
+
+    if str == "run":
+      self.next = self._postproc
+      self.state = str
+
+    if str == "finished":
+      self.next = self._finalize
+      self.state = str
+
+  def _postproc(self):
+    if self.state == "run":
+      print "postproc!"
+      #check for new files
+    else if self.state == "finished":
+      self.next = self._doNothing
+    else:
+      self.setError("tried to posrproc from a non-submitted state")
+    return self.state
+
+  def _finalize(self):
+    if not self.state == "finished":
+      self.setError("tried to posrproc from a non-submitted state")
+      return self.state
+
+
 
   def _findBodies(self):
     nan = float('nan')
