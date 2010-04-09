@@ -86,11 +86,16 @@ class GiantImpact(object):
           (sqrt(e*e-1.) - (e - 1.)*tan( theta0 / 2. )) ) ) / k2
     else:
       k2 = sqrt( mu / ( 8. * rperih*rperih*rperih) )
-
       timp = abs(0.5*(tan(thetaimp / 2.) + \
           (1./3.)*pow(tan(thetaimp / 2.),3.)) / k2)
       t0   = abs(0.5*(tan(theta0   / 2.) + \
           (1./3.)*pow(tan(theta0   / 2.),3.)) / k2)
+      print thetaimp, theta0
+
+    # in case rperih = 0., the whole timing business goes awfully wrong
+    # a = - G * m_red * r(t)^-2
+    # d^2 r / dt^2 = - G*m_red*r^-2
+    # r = e 
 
     r0vect = array([\
         -r0 * cos( pi/2. - thetaimp + theta0 ),\
