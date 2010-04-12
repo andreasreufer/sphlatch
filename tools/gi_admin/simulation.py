@@ -56,13 +56,6 @@ class SimParams(object):
       + 'impa%04.1f' % impa + '_' \
       + 'vimp%04.1f' % vimprel
 
-class Task(object):
-  def __init__(self, callfunc):
-    self.callfunc = callfunc
-
-  def __run__(self):
-    self.callfunc()
-
 
 class Simulation(object):
   # noCPUs, 

@@ -2,23 +2,48 @@ import time
 import commands
 
 class SGEquery(object):
-  def __init__(self):
+  def __init__(self, notolderthan=10):
     self.jobslist = {}
     self.timestamp = 0
+    self.notolderthan = notolderthan
 
-  def getJobs(self,notolderthan=0):
+  def getJobs(self,notolderthan=None):
+    if notolderthan == None:
+      notolderthan = self.notolderthan
     if self.timestamp < ( time.time() - notolderthan):
       self._refreshData()
     return self.jobslist
   
   def getFullname(self, jobid):
     (stat, out) = commands.getstatusoutput("qstat -j " + str(jobid))
-    if not stat == 0:
-      return None
+    if stat == 0:
+      for line in out.splitlines():
+        if line.count("job_name:"):
+          return line.split()[1]
+    else:
+      (stat, out) = commands.getstatusoutput("qacct -j " + str(jobid))
+      if stat == 0:
+        for line in out.splitlines():
+          if line.count("jobname"):
+            return line.split()[1]
+    
+    return None
 
-    for line in out.splitlines():
-      if line.count("job_name:"):
-        return line.split()[1]
+
+
+  def delJobID(self, jobid):
+    (stat, out) = commands.getstatusoutput("qdel -j " + str(jobid))
+    return stat
+
+
+  def delJobName(self, jobname):
+    sgejobs = getJobs() 
+    for sgejob in sgejobs:
+      (name, user, state) = sgejob
+      if name == jobname:
+        (stat, out) = commands.getstatusoutput("qdel -j " + str(jobid))
+        return
+
 
   def _refreshData(self):
     jobslist = {}
