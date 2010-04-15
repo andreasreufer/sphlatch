@@ -27,7 +27,7 @@ class bcolors:
 class SimAdmin(object):
   
   def __init__(self, cfgfile):
-    self._simset = SimSet("t0_config.sh")
+    self._simset = SimSet(cfgfile)
     self._sgeqry = SGEquery()
 
     self._sims = self._simset.sims
@@ -46,27 +46,39 @@ class SimAdmin(object):
   def doTasks(self):
     pass
 
+  def getJobs(self, state):
+    sims = []
+    for key in self._sims:
+      sim = self._sims[key]
+      if sim.state == state:
+        sims.append(sim)
+    return sims
+
   def showAll(self):
     for key in self._sims:
       sim = self._sims[key]
-      col = bcolors.black
+      print key + "   " + self._colorState(sim.state)
 
-      if sim.state == "error":
-        col = bcolors.lred
-      elif sim.state == "run":
-        col = bcolors.lgren
-      elif sim.state == "unprepared":
-        col = bcolors.cyan
-      elif sim.state == "prepared":
-        col = bcolors.purple
-      elif sim.state == "submitted":
-        col = bcolors.brown
-      elif sim.state == "queued":
-        col = bcolors.blue
-      elif sim.state == "finished":
-        col = bcolors.lgrey
+  def _colorState(self, state):
+    col = bcolors.black
+    if state == "error":
+      col = bcolors.lred
+    elif state == "run":
+      col = bcolors.lgren
+    elif state == "unprepared":
+      col = bcolors.cyan
+    elif state == "prepared":
+      col = bcolors.purple
+    elif state == "submitted":
+      col = bcolors.brown
+    elif state == "queued":
+      col = bcolors.blue
+    elif state == "finished":
+      col = bcolors.lgrey
+    elif state == "failed":
+      col = bcolors.red
+    return col + state + bcolors.black
 
-      print key + "    " + col + sim.state + bcolors.black
 
   def _updateSGE(self):
     ssname = self._simset.simsetcfg["SIMSETNAME"]
