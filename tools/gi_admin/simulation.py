@@ -71,6 +71,7 @@ class Simulation(object):
 
     self.state = "unknown"
     self.getState()
+    self._setOrbit()
 
   def setError(self, str=None):
     if not str == None and hasattr(self, "Log"):
@@ -114,7 +115,32 @@ class Simulation(object):
 
   def _doNothing(self):
     return self.state
+  
+  def _setOrbit(self):
+    # find fitting bodies
+    (self.tarb, self.impb) = self._findBodies()
 
+    mtar = self.tarb.m
+    mimp = self.impb.m
+    Rtar = self.tarb.r
+    Rimp = self.impb.r
+    
+    G = float(self.params.cfg["GRAVCONST"])
+    relsep = float(self.params.cfg["RELSEP"])
+    
+    # get giant impact
+    gi = GiantImpact(mtar, mimp, Rtar, Rimp, G)
+    vimp = self.params.vimprel * gi.vesc
+    impa = self.params.impa * deg2rad
+
+    (self.r0tar, self.r0imp, self.v0tar, self.v0imp, self.t0, self.gilogstr) = \
+        gi.getInitVimpAlpha(vimp, impa, relsep)
+
+    self.tscl = (Rtar + Rimp)/gi.vesc
+    self.vimp = vimp
+    self.G    = G
+
+  
   def _prepare(self):
     # if it does not yet exist, make dir
     if not path.exists(self.dir):
@@ -132,32 +158,18 @@ class Simulation(object):
     if path.exists(self.dir + "initial.h5part"):
       os.remove(self.dir + "initial.h5part")
 
-    # prepare bodies:
-    #  find fitting bodies
-    (self.tarb, self.impb) = self._findBodies()
-    
     # get orbit
-    mtar = self.tarb.m
-    mimp = self.impb.m
-    Rtar = self.tarb.r
-    Rimp = self.impb.r
-
-    G = float(self.params.cfg["GRAVCONST"])
-    relsep = float(self.params.cfg["RELSEP"])
-
-    gi = GiantImpact(mtar, mimp, Rtar, Rimp, G)
-    vimp = self.params.vimprel * gi.vesc
-    impa = self.params.impa * deg2rad
-    tscl = (Rtar + Rimp)/gi.vesc
-
-    (r0tar, r0imp, v0tar, v0imp, t0, logstr) = \
-        gi.getInitVimpAlpha(vimp, impa, relsep)
     gilog = open(self.dir + "gi_setup.log", "w")
-    print >>gilog, logstr
+    print >>gilog, self.gilogstr
     gilog.close()
     self.Log.write("giant impact calculated")
 
     # displace bodies
+    r0tar = self.r0tar
+    r0imp = self.r0imp
+    v0tar = self.v0tar
+    v0imp = self.v0imp
+
     cmds = []
     cmds.append("cp -Rpv " + self.tarb.file + " " + self.dir + "tarb.h5part")
     cmds.append("h5part_displace -i " + self.dir + "tarb.h5part " +\
@@ -177,7 +189,7 @@ class Simulation(object):
     attrvals = self.params.cfg["ATTRVALS"].split()
 
     attrkeys.extend(["time", "gravconst", "tscal"])
-    attrvals.extend([str(t0), str(G), str(tscl)])
+    attrvals.extend([str(self.t0), str(self.G), str(self.tscl)])
 
     for key,val in zip(attrkeys, attrvals):
       cmds.append("h5part_writeattr -i " + self.dir + "initial.h5part " +\
@@ -223,20 +235,13 @@ class Simulation(object):
 
     self.jobname = sstnam + "_" + self.params.key
   
-    cmd = "h5part_readattr -i " + self.dir + "initial.h5part -k tscal"
-    (stat, out) = commands.getstatusoutput(cmd)
-    if not stat == 0:
-      self.setError(cmd + " failed")
-      return self.state
+    nodumps = float( self.params.cfg["NODUMPS"] )
+    k       = float( self.params.cfg["TSCALK"] )
 
-    # FIXME: doesn't belong here
-    nodumps = 50
-    k = 75.
-
-    tscal = float( out.split()[1] )
-    stoptime = tscal * k
+    stoptime = self.tscal * k
     savetime = round( stoptime / (60.*nodumps) ) * 60.
-    self.Log.write("tscal = %9.3e" % tscal)
+
+    self.Log.write("tscal = %9.3e" % self.tscal)
     self.Log.write("tstop = %9.3e" % stoptime)
 
     subcmd = subcmd.replace('$NOCPUS' , str(nocpus))
