@@ -66,7 +66,9 @@ class Simulation(object):
     
     if path.exists(self.dir):
       self.Log = Logger(self.dir + "setup.log")
-    
+    else:
+      self.Log = Logger("/dev/null")
+
     self.jobid = 0
 
     self.state = "unknown"
@@ -133,14 +135,19 @@ class Simulation(object):
     vimp = self.params.vimprel * gi.vesc
     impa = self.params.impa * deg2rad
 
-    (self.r0tar, self.r0imp, self.v0tar, self.v0imp, self.t0, self.gilogstr) = \
+    (self.r0tar, self.r0imp, self.v0tar, self.v0imp, t0, self.gilogstr) = \
         gi.getInitVimpAlpha(vimp, impa, relsep)
 
-    self.tscl = (Rtar + Rimp)/gi.vesc
+    tscal = (Rtar + Rimp)/gi.vesc
+    self.tscl = tscal
     self.vimp = vimp
     self.G    = G
+    
+    self.tstop = tscal * float(self.params.cfg["TSCALKSTOP"])
+    self.tdump = tscal * float(self.params.cfg["TSCALKDUMP"])
+    self.tanim = tscal * float(self.params.cfg["TSCALKANIM"])
+    self.t0 = t0 - ( t0 % self.tdump )
 
-  
   def _prepare(self):
     # if it does not yet exist, make dir
     if not path.exists(self.dir):
