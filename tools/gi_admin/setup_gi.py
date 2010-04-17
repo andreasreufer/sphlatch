@@ -90,7 +90,6 @@ class GiantImpact(object):
           (1./3.)*pow(tan(thetaimp / 2.),3.)) / k2)
       t0   = abs(0.5*(tan(theta0   / 2.) + \
           (1./3.)*pow(tan(theta0   / 2.),3.)) / k2)
-      print thetaimp, theta0
 
     # in case rperih = 0., the whole timing business goes awfully wrong
     # a = - G * m_red * r(t)^-2

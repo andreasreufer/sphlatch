@@ -148,6 +148,20 @@ class Simulation(object):
     self.tanim = tscal * float(self.params.cfg["TSCALKANIM"])
     self.t0 = t0 - ( t0 % self.tdump )
 
+
+  def _findDumps(self):
+    dumps = []
+    for file in os.listdir(self.dir):
+      if file[0:4] == "dump" and file[-6:] == "h5part":
+        cmd = "h5part_readattr -k time -i " + self.dir + file
+        print cmd
+        (stat, out) = commands.getstatusoutput(cmd)
+        time = float("nan")
+        if stat == 0:
+          time = float(out.split()[1])
+        dumps.append((self.dir + file, time))
+    return dumps
+
   def _prepare(self):
     # if it does not yet exist, make dir
     if not path.exists(self.dir):
@@ -294,7 +308,9 @@ class Simulation(object):
 
   def _postproc(self):
     if self.state == "run":
+
       pass
+
     elif self.state == "finished":
       self.Log.write("SGE reported finished state, was job " + str(self.id))
       self.next = self._doNothing
