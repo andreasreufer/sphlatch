@@ -70,10 +70,11 @@ class Simulation(object):
       self.Log = Logger("/dev/null")
 
     self.jobid = 0
+    self.nodumps = 0
 
     self.state = "unknown"
-    self.getState()
     self._setOrbit()
+    self.getState()
 
   def setError(self, str=None):
     if not str == None and hasattr(self, "Log"):
@@ -100,12 +101,27 @@ class Simulation(object):
           self.state = "unprepared"
           self.next = self._prepare
           return self.state
+      
+      dumps = self._findDumps()
+      self.nodumps = len(dumps)
+
       # so everything's ready
       if self.jobid == 0:
-        self.state = "prepared" 
-        self.next = self._submit
+        if self.nodumps == 0:
+          self.state = "prepared" 
+          self.next = self._submit
+        elif self.nodumps == self.totdumps:
+          self.state = "finished"
+          self.next = self._doNothing
+        else:
+          self.state = "partial"
+          self.next = self._doNothing
+      else:
+        self.state = "run"
+        self.next = self._postproc
       return self.state
-
+    
+    
     self.state = "unknown"
     self.next = self._doNothing
     return self.state
@@ -148,18 +164,20 @@ class Simulation(object):
     self.tanim = tscal * float(self.params.cfg["TSCALKANIM"])
     self.t0 = t0 - ( t0 % self.tdump )
 
+    self.totdumps = int( ( self.tstop - self.t0 ) / self.tdump )
+
 
   def _findDumps(self):
     dumps = []
     for file in os.listdir(self.dir):
       if file[0:4] == "dump" and file[-6:] == "h5part":
         cmd = "h5part_readattr -k time -i " + self.dir + file
-        print cmd
         (stat, out) = commands.getstatusoutput(cmd)
         time = float("nan")
         if stat == 0:
           time = float(out.split()[1])
         dumps.append((self.dir + file, time))
+    dumps.sort(key=lambda dmp: dmp[1])
     return dumps
 
   def _prepare(self):
@@ -256,21 +274,15 @@ class Simulation(object):
 
     self.jobname = sstnam + "_" + self.params.key
   
-    nodumps = float( self.params.cfg["NODUMPS"] )
-    k       = float( self.params.cfg["TSCALK"] )
-
-    stoptime = self.tscal * k
-    savetime = round( stoptime / (60.*nodumps) ) * 60.
-
     self.Log.write("tscal = %9.3e" % self.tscal)
-    self.Log.write("tstop = %9.3e" % stoptime)
+    self.Log.write("tstop = %9.3e" % self.tstop)
 
     subcmd = subcmd.replace('$NOCPUS' , str(nocpus))
     subcmd = subcmd.replace('$SIMNAME', self.jobname)
     subcmd = subcmd.replace('$BINARY' , binary)
     
-    subcmd = subcmd.replace('$SAVETIME' , str(savetime))
-    subcmd = subcmd.replace('$STOPTIME' , str(stoptime))
+    subcmd = subcmd.replace('$SAVETIME' , self.tanim)
+    subcmd = subcmd.replace('$STOPTIME' , self.tstop)
     subcmd = subcmd.replace('$RUNARGS' ,  runarg)
 
     oldwd = os.getcwd()
@@ -287,7 +299,6 @@ class Simulation(object):
     return self.state
 
   def setSGEjobid(self, jobid):
-    self.Log.write("SGE set job id to " + str(jobid))
     self.jobid = jobid
 
   def setSGEstat(self, str):
@@ -319,7 +330,6 @@ class Simulation(object):
     return self.state
 
   def _finalize(self):
-    print self.state
     if not self.state == "finished":
       self.setError("tried to finalize from non-finished state")
     else:
@@ -360,8 +370,6 @@ class Simulation(object):
         if abs((impbd.h - tarbd.h)/tarbd.h) < toler:
           pairs.append( (tarbd, impbd) )
     
-    self.Log.write("found " + str(len(pairs)) + " matching body pairs")
-
     if len(pairs) == 0:
       pairs.append( (None, None) )
     else:

@@ -57,9 +57,11 @@ class SimAdmin(object):
   def showAll(self):
     for key in self._sims:
       sim = self._sims[key]
-      print key + "   " + self._colorState(sim.state)
+      print key + "   " + self._colorState(sim.state) + "   " +\
+          "(%3i/" % sim.nodumps + "%3i)" % sim.totdumps
+      
 
-  def _colorState(self, state):
+  def _colorState(self, state, width=10):
     col = bcolors.black
     if state == "error":
       col = bcolors.lred
@@ -77,7 +79,9 @@ class SimAdmin(object):
       col = bcolors.lgrey
     elif state == "failed":
       col = bcolors.red
-    return col + state + bcolors.black
+    elif state == "partial":
+      col = bcolors.lpurpl
+    return col + "{0:{1}}".format(state, width) + bcolors.black
 
 
   def _updateSGE(self):
