@@ -53,17 +53,31 @@ class GiantImpact(object):
     Lgraz = vimp*mimp*rimp
     L0    = bscal*Lgraz
     betaimp = (pi/2.)-impa
-
+    
     vinf = sqrt( vimp*vimp - vesc*vesc )
     
     e = sqrt((k1-1.)*(k1-1.)*cos(betaimp)*cos(betaimp) \
         + sin(betaimp)*sin(betaimp))
     thetaimp = arctan2(k1*sin(betaimp)*cos(betaimp), \
         k1*cos(betaimp)*cos(betaimp) - 1.)
-
+    
     # store as common
     self.e = e
     self.thetaimp = thetaimp
+
+
+    logstr = "#  parameters:\n" +\
+        "# vinf   = %12.6e  cm/s  " % vinf + "\n" +\
+        "# vesc   = %12.6e  cm/s  " % vesc + "\n" +\
+        "# L0     = %12.6e gcm^2/s" % L0   + "\n" +\
+        "# Lgraz  = %12.6e gcm^2/s" % Lgraz + "\n" +\
+        "# gamma  = %12.6f        " % (mimp / mtar) + "\n" +\
+        "# bscal  = %12.6f        " % bscal + "\n" +\
+        "# e      = %12.6f        " % e     + "\n" +\
+        "#" + "\n"
+
+    if 
+      return (r0tar, r0imp, v0tar, v0imp, timp - t0, logstr)
 
     rperih = rimp *( 1. + e*cos(thetaimp) ) / ( 1. + e )
     vperih = sqrt( vinf*vinf + ( 2.*mu / rperih ) )
@@ -91,15 +105,6 @@ class GiantImpact(object):
       t0   = abs(0.5*(tan(theta0   / 2.) + \
           (1./3.)*pow(tan(theta0   / 2.),3.)) / k2)
 
-    print t0
-    #a = rperih / ( e - 1. )
-    #print e-1., sqrt( mu / (a*a*a) ), sqrt( mu / ( 8. * rperih*rperih*rperih) )
-
-    # in case rperih = 0., the whole timing business goes awfully wrong
-    # a = - G * m_red * r(t)^-2
-    # d^2 r / dt^2 = - G*m_red*r^-2
-    # r = e 
-
     r0vect = array([\
         -r0 * cos( pi/2. - thetaimp + theta0 ),\
         r0 * sin( pi/2. - thetaimp + theta0 ),\
@@ -110,21 +115,7 @@ class GiantImpact(object):
         v0 * sin( theta0 - thetaimp - beta0 ),\
         0.])
 
-    r0tar = -( mimp / mtot )*r0vect
-    r0imp =  ( mtar / mtot )*r0vect
-
-    v0tar = -( mimp / mtot )*v0vect
-    v0imp =  ( mtar / mtot )*v0vect
-
-    logstr = "#  parameters:\n" +\
-        "# vinf   = %12.6e  cm/s  " % vinf + "\n" +\
-        "# vesc   = %12.6e  cm/s  " % vesc + "\n" +\
-        "# L0     = %12.6e gcm^2/s" % L0   + "\n" +\
-        "# Lgraz  = %12.6e gcm^2/s" % Lgraz + "\n" +\
-        "# gamma  = %12.6f        " % (mimp / mtar) + "\n" +\
-        "# bscal  = %12.6f        " % bscal + "\n" +\
-        "# e      = %12.6f        " % e     + "\n" +\
-        "#" + "\n" +\
+    logstr += \
         "#  perihelon:" + "\n" +\
         "# r      = %12.6e cm   " % rperih + "\n" +\
         "# v      = %12.6e cm/s " % vperih + "\n" +\
@@ -145,7 +136,17 @@ class GiantImpact(object):
         "# theta  = %12.6f deg (true anomaly) " % (theta0*rad2deg) + "\n" +\
         "# beta   = %12.6f deg (impact angle) " % (beta0*rad2deg) + "\n" +\
         "# t      = %12.6f s    " % ( timp - t0 ) + "\n" +\
-        "#" + "\n" +\
+        "#" + "\n"
+    
+    
+    r0tar = -( mimp / mtot )*r0vect
+    r0imp =  ( mtar / mtot )*r0vect
+
+    v0tar = -( mimp / mtot )*v0vect
+    v0imp =  ( mtar / mtot )*v0vect
+    
+    
+    logstr += \
         "# r0tar   = " + str(r0tar) + " cm" + "\n" +\
         "# r0imp   = " + str(r0imp) + " cm" + "\n" +\
         "# v0tar   = " + str(v0tar) + " cm/s" + "\n" +\

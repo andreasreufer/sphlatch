@@ -329,9 +329,9 @@ class Simulation(object):
       self.state = str
 
   def _postproc(self):
-    if self.state == "run":
-
-      pass
+    if self.state == "run" or self.state == "partial":
+      self._findDumps()
+      self._findClumps()
 
     elif self.state == "finished":
       self.Log.write("SGE reported finished state, was job " + str(self.id))
