@@ -12,7 +12,6 @@ from setup_gi import GiantImpact
 import pdb
 
 
-
 rad2deg = 360./(2.*pi)
 deg2rad = 1./rad2deg
 
@@ -102,8 +101,7 @@ class Simulation(object):
           self.next = self._prepare
           return self.state
       
-      dumps = self._findDumps()
-      self.nodumps = len(dumps)
+      self._findDumps()
 
       # so everything's ready
       if self.jobid == 0:
@@ -155,6 +153,7 @@ class Simulation(object):
         gi.getInitVimpAlpha(vimp, impa, relsep)
 
     tscal = (Rtar + Rimp)/gi.vesc
+    self.gi = gi
     self.tscl = tscal
     self.vimp = vimp
     self.G    = G
@@ -168,17 +167,29 @@ class Simulation(object):
 
 
   def _findDumps(self):
-    dumps = []
+    dumps = {}
+    dumpdbfile = self.dir + "dumps"
+    dumps = shelve.open(dumpdbfile)
+    
     for file in os.listdir(self.dir):
       if file[0:4] == "dump" and file[-6:] == "h5part":
-        cmd = "h5part_readattr -k time -i " + self.dir + file
-        (stat, out) = commands.getstatusoutput(cmd)
-        time = float("nan")
-        if stat == 0:
-          time = float(out.split()[1])
-        dumps.append((self.dir + file, time))
-    dumps.sort(key=lambda dmp: dmp[1])
-    return dumps
+        if not dumps.has_key(file):
+          cmd = "h5part_readattr -k time -i " + self.dir + file
+          (stat, out) = commands.getstatusoutput(cmd)
+          time = float("nan")
+          if stat == 0:
+            time = float(out.split()[1])
+          dumps[file] = time
+  
+    self.dumps = []
+    for key in dumps.keys():
+      self.dumps.append( (key, dumps[key]) )
+    self.nodumps = len(self.dumps)
+    
+    dumps.sync()
+    dumps.close()
+
+    self.dumps.sort(key=lambda dmp: dmp[1])
 
   def _prepare(self):
     # if it does not yet exist, make dir

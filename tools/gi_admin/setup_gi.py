@@ -74,7 +74,7 @@ class GiantImpact(object):
     theta0 = arccos( ( rperih*(1. + e ) - r0 ) / ( e * r0 ) )
     beta0  = arccos( L0 / ( r0*v0*mimp ) )
 
-    if e > 1.:
+    if e > 1.001:
       a = rperih / ( e - 1. )
       k2 = sqrt( mu / (a*a*a) )
       timp = ( (e*sqrt(e*e-1.)*sin(thetaimp))/(1. + e*cos(thetaimp) ) \
@@ -90,6 +90,10 @@ class GiantImpact(object):
           (1./3.)*pow(tan(thetaimp / 2.),3.)) / k2)
       t0   = abs(0.5*(tan(theta0   / 2.) + \
           (1./3.)*pow(tan(theta0   / 2.),3.)) / k2)
+
+    print t0
+    #a = rperih / ( e - 1. )
+    #print e-1., sqrt( mu / (a*a*a) ), sqrt( mu / ( 8. * rperih*rperih*rperih) )
 
     # in case rperih = 0., the whole timing business goes awfully wrong
     # a = - G * m_red * r(t)^-2
