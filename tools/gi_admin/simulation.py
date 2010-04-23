@@ -161,6 +161,8 @@ class Simulation(object):
     self.tstop = tscal * float(self.params.cfg["TSCALKSTOP"])
     self.tdump = tscal * float(self.params.cfg["TSCALKDUMP"])
     self.tanim = tscal * float(self.params.cfg["TSCALKANIM"])
+    
+    # FIXME: dangerous, as positions and velocities are not adapted
     self.t0 = t0 - ( t0 % self.tdump )
 
     self.totdumps = int( ( self.tstop - self.t0 ) / self.tdump )
@@ -336,8 +338,11 @@ class Simulation(object):
     elif self.state == "finished":
       self.Log.write("SGE reported finished state, was job " + str(self.id))
       self.next = self._doNothing
+    
     else:
       self.setError("tried to postproc from a non-submitted state")
+    
+    
     return self.state
 
   def _finalize(self):
@@ -388,6 +393,21 @@ class Simulation(object):
       pairs.sort(key=lambda bod: bod[0].h)
     
     return pairs[0]
+
+
+  def _findClumps(self):
+    minrho = float(self.params.cfg["CLUMPMINRHO"])
+    hsep   = float(self.params.cfg["CLUMPHSEP"])
+    simdir  = self.dir
+    clpdir  = simdir + "clumps/"
+
+    if not os.path.exists(clpdir):
+      os.mkdir(clpdir)
+
+    for (dumpfile, dumptime) in self.dumps:
+      if not os.path.exists(clpdir + dumpfile):
+        cmd = "clump_finder " + simdir + dumpfile + " " + clpdir + dumpfile + " " + str(minrho) + " " + str(hsep)
+        (stat, out) = commands.getstatusoutput(cmd)
 
 
 class SimParams(object):
