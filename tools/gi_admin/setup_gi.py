@@ -60,11 +60,12 @@ class GiantImpact(object):
         + sin(betaimp)*sin(betaimp))
     thetaimp = arctan2(k1*sin(betaimp)*cos(betaimp), \
         k1*cos(betaimp)*cos(betaimp) - 1.)
+    r0 = relsep*rimp
+    v0 = sqrt( vinf*vinf + ( 2.*mu / r0 ) )
     
     # store as common
     self.e = e
     self.thetaimp = thetaimp
-
 
     logstr = "#  parameters:\n" +\
         "# vinf   = %12.6e  cm/s  " % vinf + "\n" +\
@@ -75,68 +76,84 @@ class GiantImpact(object):
         "# bscal  = %12.6f        " % bscal + "\n" +\
         "# e      = %12.6f        " % e     + "\n" +\
         "#" + "\n"
+    
+    r0vect = array([0., 0., 0.])
+    v0vect = array([0., 0., 0.])
+    tinit = 0.
 
-    if 
-      return (r0tar, r0imp, v0tar, v0imp, timp - t0, logstr)
+    # impact angle is >0., so we get a proper orbit
+    if impa > 0.:
+      rperih = rimp *( 1. + e*cos(thetaimp) ) / ( 1. + e )
+      vperih = sqrt( vinf*vinf + ( 2.*mu / rperih ) )
 
-    rperih = rimp *( 1. + e*cos(thetaimp) ) / ( 1. + e )
-    vperih = sqrt( vinf*vinf + ( 2.*mu / rperih ) )
-
-    # determine true anomaly theta0 for r0
-    r0 = relsep*rimp
-    v0 = sqrt( vinf*vinf + ( 2.*mu / r0 ) )
-    theta0 = arccos( ( rperih*(1. + e ) - r0 ) / ( e * r0 ) )
-    beta0  = arccos( L0 / ( r0*v0*mimp ) )
-
-    if e > 1.001:
-      a = rperih / ( e - 1. )
-      k2 = sqrt( mu / (a*a*a) )
-      timp = ( (e*sqrt(e*e-1.)*sin(thetaimp))/(1. + e*cos(thetaimp) ) \
-          - log( (sqrt(e*e-1.) + (e - 1.)*tan( thetaimp / 2. ))/      \
-          (sqrt(e*e-1.) - (e - 1.)*tan( thetaimp / 2. )) ) ) / k2
+      # determine true anomaly theta0 for r0
+      theta0 = arccos( ( rperih*(1. + e ) - r0 ) / ( e * r0 ) )
+      beta0  = arccos( L0 / ( r0*v0*mimp ) )
   
-      t0 = ( (e*sqrt(e*e-1.)*sin(theta0))/(1. + e*cos(theta0) ) \
-          - log( (sqrt(e*e-1.) + (e - 1.)*tan( theta0 / 2. ))/  \
-          (sqrt(e*e-1.) - (e - 1.)*tan( theta0 / 2. )) ) ) / k2
+      if e > 1.001:
+        a = rperih / ( e - 1. )
+        k2 = sqrt( mu / (a*a*a) )
+        timp = ( (e*sqrt(e*e-1.)*sin(thetaimp))/(1. + e*cos(thetaimp) ) \
+            - log( (sqrt(e*e-1.) + (e - 1.)*tan( thetaimp / 2. ))/      \
+            (sqrt(e*e-1.) - (e - 1.)*tan( thetaimp / 2. )) ) ) / k2
+    
+        t0 = ( (e*sqrt(e*e-1.)*sin(theta0))/(1. + e*cos(theta0) ) \
+            - log( (sqrt(e*e-1.) + (e - 1.)*tan( theta0 / 2. ))/  \
+            (sqrt(e*e-1.) - (e - 1.)*tan( theta0 / 2. )) ) ) / k2
+      else:
+        k2 = sqrt( mu / ( 8. * rperih*rperih*rperih) )
+        timp = abs(0.5*(tan(thetaimp / 2.) + \
+            (1./3.)*pow(tan(thetaimp / 2.),3.)) / k2)
+        t0   = abs(0.5*(tan(theta0   / 2.) + \
+            (1./3.)*pow(tan(theta0   / 2.),3.)) / k2)
+
+      r0vect[0] = -r0 * cos( pi/2. - thetaimp + theta0 )
+      r0vect[1] =  r0 * sin( pi/2. - thetaimp + theta0 )
+  
+      v0vect[0] = -v0 * cos( theta0 - thetaimp - beta0 )
+      v0vect[1] = -v0 * sin( theta0 - thetaimp - beta0 )
+      
+      tinit = timp - t0
+  
+      logstr += \
+          "#  perihelon:" + "\n" +\
+          "# r      = %12.6e cm   " % rperih + "\n" +\
+          "# v      = %12.6e cm/s " % vperih + "\n" +\
+          "# theta  = %12.6f deg (true anomaly) " % 0. + "\n" +\
+          "# t      = %12.6f s    " % ( timp ) + "\n" +\
+          "#" + "\n" +\
+          "#  impact:" + "\n" +\
+          "# r      = %12.6e cm   " % rimp   + "\n" +\
+          "# v      = %12.6e cm/s " % vimp   + "\n" +\
+          "# theta  = %12.6f deg (true anomaly) " % (thetaimp*rad2deg) + "\n" +\
+          "# beta   = %12.6f deg (impact angle) " % (betaimp*rad2deg) + "\n" +\
+          "# t      = %12.6f s    " % 0. + "\n" +\
+          "#" + "\n" +\
+          "#  initial setup:" + "\n" +\
+          "# r      = %12.6f rimp " % relsep + "\n" +\
+          "# r      = %12.6e cm   " % r0 + "\n" +\
+          "# v      = %12.6e cm/s " % v0 + "\n" +\
+          "# theta  = %12.6f deg (true anomaly) " % (theta0*rad2deg) + "\n" +\
+          "# beta   = %12.6f deg (impact angle) " % (beta0*rad2deg) + "\n" +\
+          "# t      = %12.6f s    " % ( timp - t0 ) + "\n" +\
+          "#" + "\n"
+    
     else:
-      k2 = sqrt( mu / ( 8. * rperih*rperih*rperih) )
-      timp = abs(0.5*(tan(thetaimp / 2.) + \
-          (1./3.)*pow(tan(thetaimp / 2.),3.)) / k2)
-      t0   = abs(0.5*(tan(theta0   / 2.) + \
-          (1./3.)*pow(tan(theta0   / 2.),3.)) / k2)
+    # impact angle is 0., so we get a free fall
+      r0vect[1] = r0
+      v0vect[1] = v0
 
-    r0vect = array([\
-        -r0 * cos( pi/2. - thetaimp + theta0 ),\
-        r0 * sin( pi/2. - thetaimp + theta0 ),\
-        0.])
-
-    v0vect = array([\
-        -v0 * cos( theta0 - thetaimp - beta0 ),\
-        v0 * sin( theta0 - thetaimp - beta0 ),\
-        0.])
-
-    logstr += \
-        "#  perihelon:" + "\n" +\
-        "# r      = %12.6e cm   " % rperih + "\n" +\
-        "# v      = %12.6e cm/s " % vperih + "\n" +\
-        "# theta  = %12.6f deg (true anomaly) " % 0. + "\n" +\
-        "# t      = %12.6f s    " % ( timp ) + "\n" +\
-        "#" + "\n" +\
-        "#  impact:" + "\n" +\
-        "# r      = %12.6e cm   " % rimp   + "\n" +\
-        "# v      = %12.6e cm/s " % vimp   + "\n" +\
-        "# theta  = %12.6f deg (true anomaly) " % (thetaimp*rad2deg) + "\n" +\
-        "# beta   = %12.6f deg (impact angle) " % (betaimp*rad2deg) + "\n" +\
-        "# t      = %12.6f s    " % 0. + "\n" +\
-        "#" + "\n" +\
-        "#  initial setup:" + "\n" +\
-        "# r      = %12.6f rimp " % relsep + "\n" +\
-        "# r      = %12.6e cm   " % r0 + "\n" +\
-        "# v      = %12.6e cm/s " % v0 + "\n" +\
-        "# theta  = %12.6f deg (true anomaly) " % (theta0*rad2deg) + "\n" +\
-        "# beta   = %12.6f deg (impact angle) " % (beta0*rad2deg) + "\n" +\
-        "# t      = %12.6f s    " % ( timp - t0 ) + "\n" +\
-        "#" + "\n"
+      rscal = rimp / r0
+      mu = self.mu
+      tinit = -sqrt(r0*r0*r0/(2.*mu))*(sqrt(rscal*(1.-rscal)) + arccos(rscal))
+      
+      logstr += \
+          "#  initial setup:" + "\n" +\
+          "# r      = %12.6f rimp " % relsep + "\n" +\
+          "# r      = %12.6e cm   " % r0 + "\n" +\
+          "# v      = %12.6e cm/s " % v0 + "\n" +\
+          "# t      = %12.6f s    " % tinit + "\n" +\
+          "#" + "\n"
     
     
     r0tar = -( mimp / mtot )*r0vect
@@ -153,7 +170,7 @@ class GiantImpact(object):
         "# v0imp   = " + str(v0imp) + " cm/s" + "\n" +\
         "#" + "\n"
 
-    return (r0tar, r0imp, v0tar, v0imp, timp - t0, logstr)
+    return (r0tar, r0imp, v0tar, v0imp, tinit, logstr)
 
   def getOrbit(self):
     pass
