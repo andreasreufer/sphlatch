@@ -8,12 +8,9 @@ import pylab as pl
 import sys
 import fewbody
 
-<<<<<<< HEAD
-=======
 #pl.rc('text', usetex=True)
 pl.rc('text.latex', preamble = '\usepackage{amssymb}, \usepackage{wasysym}')
 
->>>>>>> sacerdos/develop
 execfile("config.sh")
 
 Mearth = 5.9736e27
@@ -35,12 +32,8 @@ cmap[1,4] = 0.90
 cmap[1,5] = 0.10
 
 
-#def plottext():
-
-#def plotdump():
-
 dumph = pt.openFile(sys.argv[1], "r")
-dump  = dumph.root.current;
+dump  = dumph.root.current
 
 attrlist = dump._v_attrs
 attrnams = attrlist._v_attrnames
@@ -52,6 +45,8 @@ if attrnams.__contains__("time"):
 G = 6.67428e-8
 if attrnams.__contains__("gravconst"):
   G    = attrlist["gravconst"]
+
+# clumps stuff
 
 print "load clumps ...        "
 cpos = {}
@@ -93,9 +88,10 @@ a = pl.axes( [0.0, 0.0, 1.0, 1.0], axisbg='k')
 print "plotting points ...   "
 a.scatter( pos[sidx,2], pos[sidx,0], ptsize, color[sidx], lw=0)
 
+# clumps stuff
+
 print "integrate clumps ...   "
 clumps.integrate(dt, ds)
-
 
 print "plotting clumps with trajectories ... "
 for i in range(clumps.noc):
@@ -103,14 +99,7 @@ for i in range(clumps.noc):
   a.add_patch( mp.patches.Circle((curtraj[0,2], curtraj[0,0]), radius=clumps.rc[i], ec='yellow', fc='none', lw=0.3, alpha=0.3) )
   a.add_patch( mp.patches.Circle((curtraj[-1,2], curtraj[-1,0]), radius=clumps.rc[i], ec='green', fc='none', lw=0.3, alpha=0.6) )
   a.plot( curtraj[:,2], curtraj[:,0], color='white', lw=0.3, alpha=0.3)
-<<<<<<< HEAD
   a.text( curtraj[0,2], curtraj[0,0], '$\mathrm{'+ '%1.4f' % ( clumps.m[i] / Mearth ) +' M_{E}}$', size=4, color='yellow')
-
-=======
-  a.text( curtraj[0,2], curtraj[0,0], '$\mathrm{'+ '%1.4f' % ( clumps.m[i] / Mearth ) +' M_{earth}}$', size=3, color='yellow')
-  
->>>>>>> sacerdos/develop
-
 
 a.axis("scaled")
 a.axis([-8.e9, 4.e9, -5.e9, 3.e9])

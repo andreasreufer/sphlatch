@@ -401,6 +401,8 @@ class Simulation(object):
     simdir  = self.dir
     clpdir  = simdir + "clumps/"
 
+    self.clpdir = clpdir
+
     if not os.path.exists(clpdir):
       os.mkdir(clpdir)
 
@@ -408,6 +410,27 @@ class Simulation(object):
       if not os.path.exists(clpdir + dumpfile):
         cmd = "clump_finder " + simdir + dumpfile + " " + clpdir + dumpfile + " " + str(minrho) + " " + str(hsep)
         (stat, out) = commands.getstatusoutput(cmd)
+  
+  def _clumpsExtent(self):
+    import tables as pt
+    clpdir  = self.dir + "clumps/"
+
+    inf = float("inf")
+    clpmin = np.array([ inf,  inf,  inf])
+    clpmax = np.array([-inf, -inf, -inf])
+
+    for file in os.listdir(clpdir):
+      clpsh = pt.openFile(clpdir + file, "r")
+      clps  = clpsh.root.current
+      for clppos in clps.pos[:]:
+        clpmin = np.minimum( clpmin, clppos )
+        clpmax = np.maximum( clpmax, clppos )
+      clpsh.close()
+
+    self.clpmin = clpmin
+    self.clpmax = clpmax
+
+    return (clpmin, clpmax) 
 
 
 class SimParams(object):
