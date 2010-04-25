@@ -11,6 +11,10 @@ import fewbody
 #pl.rc('text', usetex=True)
 pl.rc('text.latex', preamble = '\usepackage{amssymb}, \usepackage{wasysym}')
 
+# the plot dimensions
+xinch = 3
+yinch = 2
+
 # define the X/Y axes of the plot as dimension numbers
 X = 1
 Y = 0
@@ -18,7 +22,6 @@ Z = 2
 
 Mearth = 5.9736e27
 Mmin = 1.e-4*Mearth
-dt = 0.5*3600
 ds = 5.e7
 ptsize = 0.10
 
@@ -36,11 +39,11 @@ cmap[1,5] = 0.10
 
 
 class GIplot(object):
-  def __init__(self, pfile, cfile):
+  def __init__(self, pfile, cfile, log=sys.stdout):
     self.pfile = pfile
     self.cfile = cfile
 
-    pl.figure( figsize=(3, 2) )
+    pl.figure( figsize=(xinch, yinch) )
     self.a = pl.axes( [0.0, 0.0, 1.0, 1.0], axisbg='k')
 
     #dumph = pt.openFile(sys.argv[1], "r")
@@ -59,23 +62,23 @@ class GIplot(object):
       self.G    = attrlist["gravconst"]
     dumph.close()
     
-    print "load clumps ...        "
+    #print "load clumps ...        "
     self.cpos = {}
     clmph = pt.openFile(cfile, "r")
     self.clumps = fewbody.FewBodies( clmph.root.current, self.G, Mmin)
-    print "keep ",self.clumps.rc.shape[0]," clumps"
+    #print "keep ",self.clumps.rc.shape[0]," clumps"
     cdump = clmph.root.current
     for i in range(cdump.id.shape[0]):
       self.cpos[int(cdump.id[i])] = cdump.pos[i,:]
     clmph.close()
 
-  def plotClumps(self):
+  def plotClumps(self, dt):
     clumps = self.clumps
 
-    print "integrate clumps ...   "
+    #print "integrate clumps ...   "
     clumps.integrate(dt, ds)
     
-    print "plotting clumps with trajectories ... "
+    #print "plotting clumps with trajectories ... "
     for i in range(clumps.noc):
       curtraj = clumps.traj[i]
       self.a.add_patch( mp.patches.Circle((curtraj[0,X], curtraj[0,Y]), radius=clumps.rc[i], ec='yellow', fc='none', lw=0.3, alpha=0.3) )
@@ -90,7 +93,7 @@ class GIplot(object):
     dumph = pt.openFile(self.pfile, "r")
     dump  = dumph.root.current
     
-    print "selecting particles ..."
+    #print "selecting particles ..."
     h = dump.h
     cid = dump.clumpid
     nop = dump.pos.shape[0]
@@ -104,26 +107,34 @@ class GIplot(object):
         filt[i] = ( ( zrel > zmin ) & ( zrel < zmax ) )
         #filt[i] = ( ( dump.pos[i,Z] > ymin ) & ( dump.pos[i,Z] < ymax ) )
 
-    print "filtering particles ..."
+    #print "filtering particles ..."
     pos = dump.pos[:,:].compress(filt, axis=0)[:,:]
     mat = dump.mat[:,0].compress(filt)[:]
     bod = np.int32( (dump.id[:].compress(filt)[:] > 2.e6) )
     dumph.close()
 
-    print "z-sorting points ...   "
+    #print "z-sorting points ...   "
     color = cmap[bod, mat]
     sidx = pos[:,Z].argsort()
     
-    print "plotting points ...   "
+    #print "plotting points ...   "
     self.a.scatter( pos[sidx,X], pos[sidx,Y], ptsize, color[sidx], lw=0)
 
   
   def storePlot(self, file, ax):
+    xcen = ( ax[0] + ax[1] ) / 2.
+    xscl = ( ax[1] - ax[0] ) / xinch
+    ycen = ( ax[2] + ax[3] ) / 2.
+    yscl = ( ax[3] - ax[2] ) / yinch
+
+    scl = max( xscl, yscl )
+    corrax = [ xcen - 0.5*scl*xinch, xcen + 0.5*scl*xinch, \
+        ycen - 0.5*scl*yinch, ycen + 0.5*scl*yinch ]
+
     self.a.axis("scaled")
-    self.a.axis([-8.e9, 4.e9, -5.e9, 3.e9])
+    self.a.axis(corrax)
 
     pl.rc('savefig', dpi=400)
-    #pl.savefig(sys.argv[3])
     pl.savefig(file)
 
 

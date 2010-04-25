@@ -432,6 +432,8 @@ class Simulation(object):
 
     return (clpmin, clpmax) 
 
+  def _makePlot(self, 
+
 
 class SimParams(object):
   def __init__(self, mimp, mtar, impa, vimprel, cfg):
