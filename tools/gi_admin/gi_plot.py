@@ -57,8 +57,8 @@ class GIplotConfig(object):
     self.clpc_lw = 0.3
     self.clpc_al = 0.3
 
-    self.clp_txtc = 'yellow'
-    self.clp_txts = 4
+    self.clpc_txtc = 'yellow'
+    self.clpc_txts = 4
 
     self.clpp_ec = 'green'
     self.clpp_fc = 'none'
@@ -69,7 +69,7 @@ class GIplotConfig(object):
 
 
 class GIplot(object):
-  def __init__(self, pfile, cfile, log=sys.stdout, cfg=GIplotConfig):
+  def __init__(self, pfile, cfile, log=sys.stdout, cfg=GIplotConfig()):
     self.pfile = pfile
     self.cfile = cfile
     self.cfg = cfg
@@ -113,19 +113,20 @@ class GIplot(object):
     #print "plotting clumps with trajectories ... "
     for i in range(clumps.noc):
       curtraj = clumps.traj[i]
-      self.a.add_patch( mp.patches.Circle((curtraj[0,X], curtraj[0,Y]), \
+      self.a.add_patch( mp.patches.Circle((curtraj[0,cfg.X], curtraj[0,cfg.Y]),\
           radius=clumps.rc[i], ec=cfg.clpc_ec, fc=cfg.clpc_fc, \
           lw=cfg.clpc_lw, alpha=cfg.clpc_al) )
       
-      self.a.text( curtraj[0,X], curtraj[0,Y], \
-          '$\mathrm{'+ '%1.4f' % ( clumps.m[i] / Mearth ) +' M_{E}}$', \
+      self.a.text( curtraj[0,cfg.X], curtraj[0,cfg.Y], \
+          '$\mathrm{'+ '%1.4f' % ( clumps.m[i] / cfg.Mearth ) +' M_{E}}$', \
           size=cfg.clpc_txts, color=cfg.clpc_txtc)
     
       if cfg.plottraj:
-        self.a.add_patch( mp.patches.Circle((curtraj[-1,X], curtraj[-1,Y]), \
+        self.a.add_patch( \
+            mp.patches.Circle((curtraj[-1,cfg.X], curtraj[-1,cfg.Y]), \
             radius=clumps.rc[i], ec=cfg.clpp_ec, fc=cfg.clpp_fc, \
             lw=cfg.clpp_lw, alpha=cfg.clpp_al) )
-        self.a.plot( curtraj[:,X], curtraj[:,Y], color=cfg.clpt_fc, \
+        self.a.plot( curtraj[:,cfg.X], curtraj[:,cfg.Y], color=cfg.clpt_fc, \
             lw=cfg.clpt_lw, alpha=cfg.clpt_al)
 
 
@@ -146,8 +147,8 @@ class GIplot(object):
         filt[i] = True
       else:
         cidi = int( dump.clumpid[i,:] )
-        zrel = dump.pos[i,Z] - cpos[cidi][Z]
-        filt[i] = ( ( zrel > zmin ) & ( zrel < zmax ) )
+        zrel = dump.pos[i,cfg.Z] - cpos[cidi][cfg.Z]
+        filt[i] = ( ( zrel > cfg.zmin ) & ( zrel < cfg.zmax ) )
         #filt[i] = ( ( dump.pos[i,Z] > ymin ) & ( dump.pos[i,Z] < ymax ) )
 
     #print "filtering particles ..."
@@ -157,28 +158,29 @@ class GIplot(object):
     dumph.close()
 
     #print "z-sorting points ...   "
-    color = cmap[bod, mat]
-    sidx = pos[:,Z].argsort()
+    color = cfg.cmap[bod, mat]
+    sidx = pos[:,cfg.Z].argsort()
     
     #print "plotting points ...   "
-    self.a.scatter( pos[sidx,X], pos[sidx,Y], cfg.ptsize, color[sidx], lw=0)
-    pl.clim(0.0, 1.0)
+    self.a.scatter( pos[sidx,cfg.X], pos[sidx,cfg.Y], cfg.ptsize, \
+        color[sidx], lw=0, vmin=0., vmax=1.)
 
   
   def storePlot(self, file, ax):
+    cfg = self.cfg
     xcen = ( ax[0] + ax[1] ) / 2.
-    xscl = ( ax[1] - ax[0] ) / xinch
+    xscl = ( ax[1] - ax[0] ) / cfg.xinch
     ycen = ( ax[2] + ax[3] ) / 2.
-    yscl = ( ax[3] - ax[2] ) / yinch
+    yscl = ( ax[3] - ax[2] ) / cfg.yinch
 
     scl = max( xscl, yscl )
-    corrax = [ xcen - 0.5*scl*xinch, xcen + 0.5*scl*xinch, \
-        ycen - 0.5*scl*yinch, ycen + 0.5*scl*yinch ]
+    corrax = [ xcen - 0.5*scl*cfg.xinch, xcen + 0.5*scl*cfg.xinch, \
+        ycen - 0.5*scl*cfg.yinch, ycen + 0.5*scl*cfg.yinch ]
 
     self.a.axis("scaled")
     self.a.axis(corrax)
 
-    pl.rc('savefig', dpi=self.cfg.dpi)
+    pl.rc('savefig', dpi=cfg.dpi)
     pl.savefig(file)
 
 
