@@ -1,25 +1,6 @@
 import numpy as np
 
 class FewBodies(object):
-  pos = []
-  vel = []
-  m = []
-  acc = []
-  __oacc = []
-  d = []
-  rc = []
-  traj = []
-
-  Mm = 0.
-  Mpos = []
-  Mvel = []
-
-  iM = []
-  noc = 0
-
-  G = 0.
-  t = 0.
-
   def __init__(self, parts, G, mmin):
     
     self.G = G
@@ -42,10 +23,11 @@ class FewBodies(object):
 
     self.Mpos = self.pos[iM, :]
     self.Mvel = self.vel[iM, :]
-    
+  
+    self.traj = []
     for i in range(self.noc):
       self.traj.append( np.array( [ self.pos[i,:] ] ) )
-
+    
   def forces(self):
     self.acc = np.zeros( self.pos.shape )
     for i in range(self.noc):
