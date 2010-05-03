@@ -161,6 +161,8 @@ class Simulation(object):
     self.tstop = tscal * float(self.params.cfg["TSCALKSTOP"])
     self.tdump = tscal * float(self.params.cfg["TSCALKDUMP"])
     self.tanim = tscal * float(self.params.cfg["TSCALKANIM"])
+
+    self.t0 = t0
     
     self.totdumps = int( ( self.tstop - self.t0 ) / self.tdump )
 
@@ -284,15 +286,15 @@ class Simulation(object):
 
     self.jobname = sstnam + "_" + self.params.key
   
-    self.Log.write("tscal = %9.3e" % self.tscal)
+    self.Log.write("tscal = %9.3e" % self.tscl)
     self.Log.write("tstop = %9.3e" % self.tstop)
 
     subcmd = subcmd.replace('$NOCPUS' , str(nocpus))
     subcmd = subcmd.replace('$SIMNAME', self.jobname)
     subcmd = subcmd.replace('$BINARY' , binary)
     
-    subcmd = subcmd.replace('$SAVETIME' , self.tanim)
-    subcmd = subcmd.replace('$STOPTIME' , self.tstop)
+    subcmd = subcmd.replace('$SAVETIME' , str(self.tanim))
+    subcmd = subcmd.replace('$STOPTIME' , str(self.tstop))
     subcmd = subcmd.replace('$RUNARGS' ,  runarg)
 
     oldwd = os.getcwd()
