@@ -162,9 +162,6 @@ class Simulation(object):
     self.tdump = tscal * float(self.params.cfg["TSCALKDUMP"])
     self.tanim = tscal * float(self.params.cfg["TSCALKANIM"])
     
-    # FIXME: dangerous, as positions and velocities are not adapted
-    self.t0 = t0 - ( t0 % self.tdump )
-
     self.totdumps = int( ( self.tstop - self.t0 ) / self.tdump )
 
 

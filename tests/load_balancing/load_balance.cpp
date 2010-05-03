@@ -310,41 +310,6 @@ void derive()
       setDhDt(parts[i]);
 #endif
 
-#ifdef SPHLATCH_FRICTION
-   const fType fricCoeff = 1. / parts.attributes["frictime"];
-   for (size_t i = 0; i < nop; i++)
-      parts[i].acc -= parts[i].vel * fricCoeff;
-   Logger.stream << "friction (t_fric = " << 1. / fricCoeff << ")";
-   Logger.flushStream();
-#endif
-
-#ifdef SPHLATCH_KEEPENERGYPROFILE
-   vect3dT com;
-   com = 0., 0., 0.;
-   fType   totM = 0.;
-   for (size_t i = 0; i < nop; i++)
-   {
-      com  += parts[i].pos * parts[i].m;
-      totM += parts[i].m;
-   }
-   com /= totM;
-
-   Logger.stream << "center of mass: ["
-                 << com[0] << ","
-                 << com[1] << ","
-                 << com[2] << "]";
-   Logger.flushStream();
-
-   const fType thermFricCoeff = 1. / parts.attributes["frictime"];
-   for (size_t i = 0; i < nop; i++)
-   {
-      const vect3dT rveci  = parts[i].pos - com;
-      const fType   ri     = sqrt(dot(rveci, rveci));
-      const fType   utheoi = energyLUT(ri);
-
-      parts[i].dudt -= (parts[i].u - utheoi) * thermFricCoeff;
-   }
-#endif
 
    costT costWorker(&Tree);
 #pragma omp parallel for firstprivate(costWorker)
@@ -356,14 +321,14 @@ void derive()
    Logger << "Tree.clear()";
 }
 
-fType timestep(const fType _stepTime, const fType _nextTime)
+fType timestep(const fType _stepTime)
 {
    logT& Logger(logT::instance());
 
    const fType courant = parts.attributes["courant"];
    const fType time    = parts.attributes["time"];
 
-   fType dtSave = _nextTime - time;
+   fType dtSave = (floor((time / _stepTime) + 1.e-6) + 1.) * _stepTime - time;
    fType dtA    = finf;
    fType dtCFL  = finf;
 
@@ -529,14 +494,12 @@ int main(int argc, char* argv[])
    parts.doublePrecOut();
    parts.saveHDF5("bootstrap.h5part");
 
-   fType nextTime = (floor(time/stepTime)+1.) * stepTime;
    // start the loop
-
    while (time < stopTime)
    {
       derive();
 
-      const fType dt = timestep(stepTime, nextTime);
+      const fType dt = timestep(stepTime);
 
       for (size_t i = 0; i < nop; i++)
          parts[i].predict(dt);
@@ -553,7 +516,8 @@ int main(int argc, char* argv[])
       sstr << "corrected (t = " << time << ")";
       Logger.finishStep(sstr.str());
 
-      if (fabs(nextTime - time) < 1.e-9)
+      const fType dumpTime = (floor((time / stepTime) + 1.e-9)) * stepTime;
+      if (fabs(dumpTime - time) < 1.e-9)
       {
          std::stringstream dumpStr, stepStr, timeStr;
 
@@ -577,8 +541,6 @@ int main(int argc, char* argv[])
 
          Logger.stream << "write " << dumpStr.str();
          Logger.flushStream();
-         
-         nextTime += stepTime;
       }
    }
 
