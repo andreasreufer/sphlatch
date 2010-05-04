@@ -33,6 +33,14 @@ using namespace sphlatch;
 
 int main(int argc, char* argv[])
 {
+   typedef sphlatch::fType fType;
+   typedef sphlatch::identType identType;
+   typedef sphlatch::valvectType valvectType;
+   typedef sphlatch::idvectRefType idvectRefType;
+   typedef sphlatch::valvectType valvectType;
+   typedef sphlatch::matrixRefType matrixRefType;
+   typedef sphlatch::quantsType quantsType;
+
   //MPI::Init(argc, argv);
 
   po::options_description Options("Global Options");

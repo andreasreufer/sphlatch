@@ -28,6 +28,8 @@ using namespace sphlatch;
 
 int main(int argc, char* argv[])
 {
+  typedef sphlatch::fType fType;
+  typedef sphlatch::quantsType quantsType;
 
   po::options_description Options("Global Options");
 
