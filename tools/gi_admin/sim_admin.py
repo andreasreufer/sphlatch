@@ -2,8 +2,9 @@
 
 import getpass
 
-from simulation import SimSet
+from simulation import SimSet, SimParams
 from sge_query import SGEquery
+
 
 class bcolors:
       black  = '\033[0;30m'
@@ -54,12 +55,24 @@ class SimAdmin(object):
         sims.append(sim)
     return sims
 
-  def showAll(self):
-    for key in self._sims:
-      sim = self._sims[key]
-      print key + "   " + self._colorState(sim.state) + "   " +\
+  def getSims(self, filt=None):
+    if filt==None:
+      nan = float('nan')
+      filt = SimParams(nan, nan, nan, nan)
+    
+    filtSims = []
+    for sim in self._sims.values():
+      if sim.params.isSimilar(filt, 0.01):
+        filtSims.append(sim)
+    return filtSims
+
+  def showState(self, filt=None):
+    showSims = self.getSims(filt)
+    showSims.sort(key=lambda Simulation: Simulation.params.key)
+    for sim in showSims:
+      print sim.params.key + "   " + self._colorState(sim.state) + "   " +\
           "(%3i/" % sim.nodumps + "%3i)" % sim.totdumps
-      
+
 
   def _colorState(self, state, width=10):
     col = bcolors.black

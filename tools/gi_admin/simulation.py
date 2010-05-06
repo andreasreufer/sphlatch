@@ -39,28 +39,15 @@ class Logger(object):
       self.logfile.write(time.ctime() + ":   " + str + "\n")
       self.logfile.flush()
 
-class SimParams(object):
-  def __init__(self, mimp, mtar, impa, vimprel, cfg):
-    self.mimp = mimp
-    self.mtar = mtar
-    self.impa = impa
-    self.vimprel = vimprel
-
-    self.cfg = cfg
-
-    self.temp = float(cfg["TEMP"])
-
-    self.key = 'mtar%07.3f' % mtar + '_' \
-      + 'mimp%07.3f' % mimp + '_' \
-      + 'impa%04.1f' % impa + '_' \
-      + 'vimp%04.1f' % vimprel
-
 
 class Simulation(object):
   # noCPUs, 
-  def __init__(self,params):
+  def __init__(self,params,cfg):
     self.params = params
-    ssbdir = resolvePath(params.cfg["SIMSETBDIR"]) + "/"
+    self.cfg    = cfg
+    self.params.temp = float(cfg["TEMP"])
+
+    ssbdir = resolvePath(cfg["SIMSETBDIR"]) + "/"
     self.dir = resolvePath(ssbdir + "sim_" + params.key) + "/"
     
     if path.exists(self.dir):
@@ -91,8 +78,8 @@ class Simulation(object):
       self.next = self._prepare
       return self.state
     else:
-      neededfiles = self.params.cfg["AUXFILES"].split()
-      neededfiles.append(self.params.cfg["BINARY"])
+      neededfiles = self.cfg["AUXFILES"].split()
+      neededfiles.append(self.cfg["BINARY"])
       neededfiles.append("initial.h5part")
 
       for file in neededfiles:
@@ -141,8 +128,8 @@ class Simulation(object):
     Rtar = self.tarb.r
     Rimp = self.impb.r
     
-    G = float(self.params.cfg["GRAVCONST"])
-    relsep = float(self.params.cfg["RELSEP"])
+    G = float(self.cfg["GRAVCONST"])
+    relsep = float(self.cfg["RELSEP"])
     
     # get giant impact
     gi = GiantImpact(mtar, mimp, Rtar, Rimp, G)
@@ -158,9 +145,9 @@ class Simulation(object):
     self.vimp = vimp
     self.G    = G
     
-    self.tstop = tscal * float(self.params.cfg["TSCALKSTOP"])
-    self.tdump = tscal * float(self.params.cfg["TSCALKDUMP"])
-    self.tanim = tscal * float(self.params.cfg["TSCALKANIM"])
+    self.tstop = tscal * float(self.cfg["TSCALKSTOP"])
+    self.tdump = tscal * float(self.cfg["TSCALKDUMP"])
+    self.tanim = tscal * float(self.cfg["TSCALKANIM"])
 
     self.t0 = t0
     
@@ -199,7 +186,7 @@ class Simulation(object):
       self.Log = Logger(self.dir + "setup.log")
 
     # copy files
-    auxf = self.params.cfg["AUXFILES"].split()
+    auxf = self.cfg["AUXFILES"].split()
     
     for file in auxf:
       shutil.copy2(resolvePath(file), self.dir)
@@ -236,8 +223,8 @@ class Simulation(object):
     cmds.append("rm " + self.dir + "tarb.h5part " + self.dir + "impb.h5part")
     
     # write attributes (gravconst, attrs)
-    attrkeys = self.params.cfg["ATTRKEYS"].split()
-    attrvals = self.params.cfg["ATTRVALS"].split()
+    attrkeys = self.cfg["ATTRKEYS"].split()
+    attrvals = self.cfg["ATTRVALS"].split()
 
     attrkeys.extend(["time", "gravconst", "tscal"])
     attrvals.extend([str(self.t0), str(self.G), str(self.tscl)])
@@ -247,17 +234,17 @@ class Simulation(object):
           " -k " + key + " -v " + val)
 
     # prepare and copy binary
-    if not self.params.cfg.has_key("BINFILE"):
-      srcdir = resolvePath(self.params.cfg["SRCDIR"]) + "/"
-      targ = self.params.cfg["MAKETARG"]
+    if not self.cfg.has_key("BINFILE"):
+      srcdir = resolvePath(self.cfg["SRCDIR"]) + "/"
+      targ = self.cfg["MAKETARG"]
       oldwd = os.getcwd()
       os.chdir(srcdir)
       (stat, out) = commands.getstatusoutput("make " + targ)
       os.chdir(oldwd)
       self.Log.write("binary compiled")
-      self.params.cfg["BINFILE"] = \
-          resolvePath(srcdir + self.params.cfg["BINARY"])
-    binf = self.params.cfg["BINFILE"]
+      self.cfg["BINFILE"] = \
+          resolvePath(srcdir + self.cfg["BINARY"])
+    binf = self.cfg["BINFILE"]
     cmds.append("cp -Rpv " + binf + " " + self.dir)
 
     # now execute the commands
@@ -278,11 +265,11 @@ class Simulation(object):
       self.setError("tried to submit from a non-prepared state")
       return self.state
     
-    subcmd = self.params.cfg["SUBCMD"]
-    nocpus = self.params.cfg["NOCPUS"]
-    binary = self.params.cfg["BINARY"]
-    runarg = self.params.cfg["RUNARGS"]
-    sstnam = self.params.cfg["SIMSETNAME"]
+    subcmd = self.cfg["SUBCMD"]
+    nocpus = self.cfg["NOCPUS"]
+    binary = self.cfg["BINARY"]
+    runarg = self.cfg["RUNARGS"]
+    sstnam = self.cfg["SIMSETNAME"]
 
     self.jobname = sstnam + "_" + self.params.key
   
@@ -357,8 +344,8 @@ class Simulation(object):
   def _findBodies(self):
     nan = float('nan')
 
-    toler = float(self.params.cfg["BODTOLERANCE"])
-    boddb = shelve.open(resolvePath(self.params.cfg["BODIESDB"]))
+    toler = float(self.cfg["BODTOLERANCE"])
+    boddb = shelve.open(resolvePath(self.cfg["BODIESDB"]))
 
     # find target candidates
     targtmpl = BodyFile("", Me*self.params.mtar, nan, \
@@ -395,8 +382,8 @@ class Simulation(object):
 
 
   def _findClumps(self):
-    minrho = float(self.params.cfg["CLUMPMINRHO"])
-    hsep   = float(self.params.cfg["CLUMPHSEP"])
+    minrho = float(self.cfg["CLUMPMINRHO"])
+    hsep   = float(self.cfg["CLUMPHSEP"])
     simdir  = self.dir
     clpdir  = simdir + "clumps/"
 
@@ -433,20 +420,24 @@ class Simulation(object):
 
 
 class SimParams(object):
-  def __init__(self, mimp, mtar, impa, vimprel, cfg):
+  def __init__(self, mimp, mtar, impa, vimprel):
     self.mimp = mimp
     self.mtar = mtar
     self.impa = impa
     self.vimprel = vimprel
 
-    self.cfg = cfg
-
-    self.temp = float(cfg["TEMP"])
-
     self.key = 'mtar%07.3f' % mtar + '_' \
       + 'mimp%07.3f' % mimp + '_' \
       + 'impa%04.1f' % impa + '_' \
       + 'vimp%04.1f' % vimprel
+  
+  def isSimilar(self, par, tol):
+    fitmimp = not abs( (self.mimp - par.mimp ) / self.mimp ) > tol
+    fitmtar = not abs( (self.mtar - par.mtar ) / self.mtar ) > tol
+    fitimpa = not abs( (self.impa - par.impa ) / self.impa ) > tol
+    fitvimp = not abs( (self.vimprel - par.vimprel ) / self.vimprel ) > tol
+    return fitmimp and fitmtar and fitimpa and fitvimp
+  
 
 
 class SimSet(object):
@@ -482,9 +473,9 @@ class SimSet(object):
         for vimprel in vimprela:
           for impa in impaa:
             if ( eval(cond) ):
-              simpar = SimParams(mimp, mtar, impa, vimprel, self.simsetcfg)
+              simpar = SimParams(mimp, mtar, impa, vimprel)
               if not self.sims.has_key(simpar.key):
-                self.sims[simpar.key] = Simulation( simpar )
+                self.sims[simpar.key] = Simulation( simpar, self.simsetcfg)
 
 
   def __del__(self):
