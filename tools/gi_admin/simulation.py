@@ -162,12 +162,13 @@ class Simulation(object):
     for file in os.listdir(self.dir):
       if file[0:4] == "dump" and file[-6:] == "h5part":
         if not dumps.has_key(file):
-          cmd = "h5part_readattr -k time -i " + self.dir + file
-          (stat, out) = commands.getstatusoutput(cmd)
-          time = float("nan")
-          if stat == 0:
-            time = float(out.split()[1])
-          dumps[file] = time
+          #cmd = "h5part_readattr -k time -i " + self.dir + file
+          #(stat, out) = commands.getstatusoutput(cmd)
+          #time = float("nan")
+          #if stat == 0:
+          #  time = float(out.split()[1])
+          #dumps[file] = time
+
   
     self.dumps = []
     for key in dumps.keys():
@@ -437,7 +438,6 @@ class SimParams(object):
     fitimpa = not abs( (self.impa - par.impa ) / self.impa ) > tol
     fitvimp = not abs( (self.vimprel - par.vimprel ) / self.vimprel ) > tol
     return fitmimp and fitmtar and fitimpa and fitvimp
-  
 
 
 class SimSet(object):
