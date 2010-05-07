@@ -76,6 +76,12 @@ class GIplotConfig(object):
     self.time_sc = 0.000277777777
     self.time_txts = 4
 
+    self.parm_fc = 'white'
+    self.parm_vc = [0.8, 0.8]
+    self.parm_txts = 4
+    self.copy_vc = [0.6, 0.1]
+    self.copy_txt = '$\mathrm{Andreas Reufer, University of Bern}$'
+
     self.idfilt = 2.e6
 
     self.imgext = ".png"
@@ -123,6 +129,28 @@ class GIplot(object):
     timetxt = '$t = %6.2f' % (time*cfg.time_sc) + ' ' + cfg.time_ut + '$'
     self.norma.text( cfg.time_vc[0], cfg.time_vc[1], timetxt, \
         color=cfg.time_fc, size=cfg.time_txts)
+
+  def plotDumpTime(self):
+    cfg    = self.cfg
+    timetxt = '$t = %6.2f' % (self.time*cfg.time_sc) + ' ' + cfg.time_ut + '$'
+    self.norma.text( cfg.time_vc[0], cfg.time_vc[1], timetxt, \
+        color=cfg.time_fc, size=cfg.time_txts)
+
+  def plotSimParams(self, params):
+    cfg    = self.cfg
+    pos = cfg.parm_vc
+    col = cfg.parm_fc
+    siz = cfg.parm_txts
+
+    
+    parmtxt = '$ haba haba2 haba3 $'
+    self.norma.text( pos[0], pos[1], parmtxt, \
+        color=cfg.parm_fc, size=cfg.parm_txts )
+    
+    poscopy = cfg.copy_vc
+    self.norma.text( poscopy[0], poscopy[1], cfg.copy_txt, \
+        color=cfg.parm_fc, size=cfg.parm_txts )
+
 
   def plotClumps(self, dt):
     cfg    = self.cfg
@@ -207,7 +235,6 @@ class GIplot(object):
     self.norma.plot( [cfg.scal_vc[0], cfg.scal_vc[2]], \
         [cfg.scal_vc[1], cfg.scal_vc[3]], lw=.3, color=cfg.scal_fc )
     
-    self.norma.axis("scaled")
     self.norma.axis([0., 1., 0., 1.])
     
     scldst = cfg.scal_vc[2] - cfg.scal_vc[0]

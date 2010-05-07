@@ -6,7 +6,7 @@ import shelve
 from gi_plot import GIplotConfig, GIplot
 
 class GIvizTask(object):
-  def __init__(self, pfile, cfile, ifile, plotcfg, ax, tscl):
+  def __init__(self, pfile, cfile, ifile, plotcfg, ax, tscl, params):
     self.pfile = pfile
     self.cfile = cfile
     self.ifile = ifile
@@ -14,10 +14,13 @@ class GIvizTask(object):
     self.plotcfg = plotcfg
     self.ax      = ax
     self.tscl    = tscl
+    self.params  = params
 
   def execute(self):
     gipl = GIplot(self.pfile, self.cfile)
     gipl.plotParticles()
+    gipl.plotDumpTime()
+    #gipl.plotSimParams(self.params)
     gipl.plotClumps(self.tscl)
     gipl.storePlot(self.ifile, self.ax)
 
@@ -66,7 +69,8 @@ class GIviz(object):
 
       if path.exists(pfile) and path.exists(cfile) and not path.exists(ifile):
         open(ifile,'w').close()
-        tasks[key] = GIvizTask(pfile, cfile, ifile, self.plotcfg, ax, sim.tscl)
+        tasks[key] = GIvizTask(pfile, cfile, ifile, \
+            self.plotcfg, ax, sim.tscl, sim.params)
 
 
   def plotJobScript(self, tasks, jobname):
