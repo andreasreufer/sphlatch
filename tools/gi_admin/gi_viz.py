@@ -69,7 +69,7 @@ class GIviz(object):
         tasks[key] = GIvizTask(pfile, cfile, ifile, self.plotcfg, ax, sim.tscl)
 
 
-def plotJobScript(self, tasks, jobname):
+  def plotJobScript(self, tasks, jobname):
     ascdir = os.path.abspath( self.scdir ) + "/"
     drvname = ascdir + jobname + "_driver.sh"
     excname = ascdir + jobname + "_exec.py"
@@ -94,7 +94,7 @@ def plotJobScript(self, tasks, jobname):
     drvstr = "#!/bin/bash \n"
     for tkey in tasks.keys():
       taskdb[tkey] = tasks[tkey]
-      drvstr += "ipython " + excname + " " + tkey + "\n"
+      drvstr += "python " + excname + " " + tkey + "\n"
     taskdb.close()
 
     drvstr += "rm " + sdbname + "\n"
