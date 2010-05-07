@@ -73,9 +73,6 @@ class GIviz(object):
         open(ifile,'w').close()
         tasks[key] = GIvizTask(pfile, cfile, ifile, \
             self.plotcfg, ax, sim.tscl, sim.params)
-        print pfile
-        print cfile
-        print ifile
 
 
   def plotJobScript(self, tasks, jobname):
@@ -115,7 +112,7 @@ class GIviz(object):
         taskno = 0
         drvstr += drvfoot
     
-        self.submitJob(drvname, drvname, jobname)
+        self.submitJob(drvstr, drvname, jobname)
 
         drvstr = drvhead
         drvno += 1
@@ -124,7 +121,7 @@ class GIviz(object):
         
     drvstr += drvfoot
         
-    self.submitJob(drvname, drvname, jobname)
+    self.submitJob(drvstr, drvname, jobname)
     
     #drvstr += "rm " + sdbname + "\n"
     #drvstr += "rm " + excname + "\n"
@@ -137,14 +134,15 @@ class GIviz(object):
     os.chmod(scriptname, stat.S_IRWXU)
 
     jobsubstr = self.cfg["JOBSUBMIT"]
+
     jobsubstr = jobsubstr.replace("$JOBNAME", "viz_" + jobname)
     jobsubstr = jobsubstr.replace("$JOBCMD",  scriptname)
-    jobsubstr += scriptname
     
     print jobsubstr
     oldwd = os.getcwd()
     os.chdir(self.scdir)
     (exstat, out) = commands.getstatusoutput(jobsubstr)
     os.chdir(oldwd)
+
 
 
