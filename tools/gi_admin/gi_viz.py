@@ -2,6 +2,7 @@ import os
 import os.path as path
 import stat
 import shelve
+import commands
 
 from gi_plot import GIplotConfig, GIplot
 
@@ -32,14 +33,14 @@ class GIviz(object):
       execfile(cfgfile, self.cfg)
       print cfgfile + " loaded"
     
-    self.dir = self.cfg["VIZDIR"] + "/"
+    self.dir = os.path.abspath( self.cfg["VIZDIR"] ) + "/"
     if not path.exists(self.dir):
       os.mkdir(self.dir)
 
-    self.scdir = self.cfg["VIZSCRATCHDIR"] + "/"
+    self.scdir = os.path.abspath( self.cfg["VIZSCRATCHDIR"] ) + "/"
     if not path.exists(self.scdir):
       os.mkdir(self.scdir)
-
+    
     self.plotcfg = plotcfg
     self.tasksperjob = self.cfg["TASKSPERJOB"]
 
@@ -72,10 +73,13 @@ class GIviz(object):
         open(ifile,'w').close()
         tasks[key] = GIvizTask(pfile, cfile, ifile, \
             self.plotcfg, ax, sim.tscl, sim.params)
+        print pfile
+        print cfile
+        print ifile
 
 
   def plotJobScript(self, tasks, jobname):
-    ascdir = os.path.abspath( self.scdir ) + "/"
+    ascdir = self.scdir
     excname = ascdir + jobname + "_exec.py"
     sdbname = ascdir + jobname
     
@@ -110,29 +114,37 @@ class GIviz(object):
       if taskno > self.tasksperjob:
         taskno = 0
         drvstr += drvfoot
-        drvfile = open(drvname,"w")
-        print >>drvfile, drvstr
-        print drvstr
-        drvfile.close()
-        
-        os.chmod(drvname, stat.S_IRWXU)
-        
+    
+        self.submitJob(drvname, drvname, jobname)
+
         drvstr = drvhead
         drvno += 1
         drvname = ascdir + jobname + "driver" + ("%04d" % drvno ) + ".sh"
     taskdb.close()
         
     drvstr += drvfoot
-    drvfile = open(drvname,"w")
-    print >>drvfile, drvstr
-    print drvstr
-    drvfile.close()
-    os.chmod(drvname, stat.S_IRWXU)
-
-
+        
+    self.submitJob(drvname, drvname, jobname)
+    
     #drvstr += "rm " + sdbname + "\n"
     #drvstr += "rm " + excname + "\n"
     drvstr += "rm " + drvname + "\n"
 
+  def submitJob(self, scriptstr, scriptname, jobname):
+    script = open(scriptname,"w")
+    print >>script, scriptstr
+    script.close()
+    os.chmod(scriptname, stat.S_IRWXU)
+
+    jobsubstr = self.cfg["JOBSUBMIT"]
+    jobsubstr = jobsubstr.replace("$JOBNAME", "viz_" + jobname)
+    jobsubstr = jobsubstr.replace("$JOBCMD",  scriptname)
+    jobsubstr += scriptname
+    
+    print jobsubstr
+    oldwd = os.getcwd()
+    os.chdir(self.scdir)
+    (exstat, out) = commands.getstatusoutput(jobsubstr)
+    os.chdir(oldwd)
 
 
