@@ -41,6 +41,7 @@ class GIviz(object):
       os.mkdir(self.scdir)
 
     self.plotcfg = plotcfg
+    self.tasksperjob = self.cfg["TASKSPERJOB"]
 
   def vizSim(self, sim, ax=[0., 0., 1., 1.]):
     scdir = self.scdir
@@ -75,7 +76,6 @@ class GIviz(object):
 
   def plotJobScript(self, tasks, jobname):
     ascdir = os.path.abspath( self.scdir ) + "/"
-    drvname = ascdir + jobname + "_driver.sh"
     excname = ascdir + jobname + "_exec.py"
     sdbname = ascdir + jobname
     
@@ -93,21 +93,46 @@ class GIviz(object):
     excfile.close()
     os.chmod(excname, stat.S_IRWXU)
 
+    drvno   = 0
+    taskno  = 0
+    drvname = ascdir + jobname + "_driver" + ("%04d" % drvno ) + ".sh"
+    drvhead = "#!/bin/bash \n"
+    drvfoot = "rm " + drvname + "\n"
+    drvstr  = drvhead
+
     taskdb = shelve.open(sdbname)
     taskdb.clear()
-    drvstr = "#!/bin/bash \n"
     for tkey in tasks.keys():
       taskdb[tkey] = tasks[tkey]
+
       drvstr += "python " + excname + " " + tkey + "\n"
+      taskno += 1
+      if taskno > self.tasksperjob:
+        taskno = 0
+        drvstr += drvfoot
+        drvfile = open(drvname,"w")
+        print >>drvfile, drvstr
+        print drvstr
+        drvfile.close()
+        
+        os.chmod(drvname, stat.S_IRWXU)
+        
+        drvstr = drvhead
+        drvno += 1
+        drvname = ascdir + jobname + "driver" + ("%04d" % drvno ) + ".sh"
     taskdb.close()
-
-    drvstr += "rm " + sdbname + "\n"
-    drvstr += "rm " + excname + "\n"
-    drvstr += "rm " + drvname + "\n"
-
+        
+    drvstr += drvfoot
     drvfile = open(drvname,"w")
     print >>drvfile, drvstr
+    print drvstr
     drvfile.close()
     os.chmod(drvname, stat.S_IRWXU)
+
+
+    #drvstr += "rm " + sdbname + "\n"
+    #drvstr += "rm " + excname + "\n"
+    drvstr += "rm " + drvname + "\n"
+
 
 
