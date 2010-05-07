@@ -1,5 +1,4 @@
-#!/usr/bin/env ipython
-
+#!/usr/bin/env python
 import sys
 import tables as pt
 import numpy as np
@@ -78,6 +77,8 @@ class GIplotConfig(object):
     self.time_txts = 4
 
     self.idfilt = 2.e6
+
+    self.imgext = ".png"
 
 
 class GIplot(object):
@@ -219,6 +220,8 @@ class GIplot(object):
 
     plt.rc('savefig', dpi=400)
     plt.savefig(file)
+
+
 
 
 
