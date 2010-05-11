@@ -111,7 +111,7 @@ class GiantImpact(object):
       r0vect[1] =  r0 * sin( pi/2. - thetaimp + theta0 )
   
       v0vect[0] = -v0 * cos( theta0 - thetaimp - beta0 )
-      v0vect[1] = -v0 * sin( theta0 - thetaimp - beta0 )
+      v0vect[1] =  v0 * sin( theta0 - thetaimp - beta0 )
       
       tinit = timp - t0
   
