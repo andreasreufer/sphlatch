@@ -88,6 +88,7 @@ class Simulation(object):
           self.next = self._prepare
           return self.state
       
+      print "find dumps for ",self.params.key
       self._findDumps()
 
       # so everything's ready
