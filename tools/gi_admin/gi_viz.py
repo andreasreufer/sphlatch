@@ -3,6 +3,9 @@ import os.path as path
 import stat
 import shelve
 import commands
+import sys
+import shutil
+import tempfile
 
 from gi_plot import GIplotConfig, GIplot
 
@@ -51,6 +54,45 @@ class GIviz(object):
     tasks = {}
     self.addPlotTasks(tasks, sim, ax)
     self.plotJobScript(tasks, simkey)
+
+  def vizAnim(self, sim):
+    idir  = self.dir + sim.params.key + "/"
+    iext  = self.plotcfg.imgext
+    animext = ".mp4"
+    adir = self.dir + "videos/"
+    afile = adir + sim.params.key + animext
+    ffmpegargs = '-b 20000k'
+
+    def isimg(str):
+      return os.path.splitext(str)[1] == iext
+
+    imglist = filter( isimg, os.listdir( idir ) )
+    imglist.sort()
+      
+    tmpdir = tempfile.mkdtemp( dir=idir )
+
+    count = 0
+    for img in imglist:
+      os.symlink( idir + img, tmpdir + "/img" + '%06d' % count + iext )
+      count += 1
+
+    if not path.exists(adir):
+      os.mkdir(adir)
+
+    if path.exists(afile):
+      os.remove(afile)
+
+    cmd =  "ffmpeg -i " + tmpdir + "/img%06d" + iext + " " +\
+        ffmpegargs + " " + afile
+    print cmd
+    (exstat, out) = commands.getstatusoutput(cmd)
+
+    count = 0
+    for img in imglist:
+      os.remove(tmpdir + "/img" + '%06d' % count + iext)
+      count += 1
+
+    os.removedirs(tmpdir)
 
 
   def addPlotTasks(self, tasks, sim, ax=[0., 0., 1., 1.]):
