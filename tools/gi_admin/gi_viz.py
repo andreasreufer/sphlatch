@@ -187,4 +187,12 @@ class GIviz(object):
     os.chdir(oldwd)
 
 
+  def clearScratch(self):
+    filelist = os.listdir( self.scdir )
+    filelist.sort()
+
+    for file in filelist:
+      os.remove(self.scdir + file)
+
+
 
