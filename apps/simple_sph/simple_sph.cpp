@@ -445,10 +445,10 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   if (not ((argc == 4) || (argc == 5)))
+   if (not ((argc == 5) || (argc == 6)))
    {
       std::cerr <<
-      "usage: simple_sph_XXXXXX <inputdump> <saveStepTime> <stopTime> (<numthreads>)\n";
+      "usage: simple_sph_XXXXXX <inputdump> <saveStepTime> <stopTime> <dumpPrefix> (<numthreads>)\n";
       return(1);
    }
 
@@ -463,9 +463,11 @@ int main(int argc, char* argv[])
    fType stopTime;
    stopStr >> stopTime;
 
-   if (argc == 5)
+   std::string dumpPrefix = argv[4];
+
+   if (argc == 6)
    {
-      std::istringstream threadStr(argv[4]);
+      std::istringstream threadStr(argv[5]);
       int numThreads;
       threadStr >> numThreads;
       omp_set_num_threads(numThreads);
@@ -526,9 +528,6 @@ int main(int argc, char* argv[])
 
    Logger.finishStep("bootstrapped integrator");
 
-   parts.doublePrecOut();
-   parts.saveHDF5("bootstrap.h5part");
-
    fType nextTime = (floor(time/stepTime)+1.) * stepTime;
    // start the loop
 
@@ -557,7 +556,7 @@ int main(int argc, char* argv[])
       {
          std::stringstream dumpStr, stepStr, timeStr;
 
-         dumpStr << "dump";
+         dumpStr << dumpPrefix;
 
          stepStr << step;
          // pad step number to 7 digits
@@ -573,6 +572,7 @@ int main(int argc, char* argv[])
          dumpStr << timeStr.str();
          dumpStr << ".h5part";
 
+         parts.doublePrecOut();
          parts.saveHDF5(dumpStr.str());
 
          Logger.stream << "write " << dumpStr.str();
