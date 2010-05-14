@@ -3,6 +3,9 @@ import os.path as path
 import stat
 import shelve
 import commands
+import sys
+import shutil
+import tempfile
 
 from gi_plot import GIplotConfig, GIplot
 
@@ -52,6 +55,45 @@ class GIviz(object):
     self.addPlotTasks(tasks, sim, ax)
     self.plotJobScript(tasks, simkey)
 
+  def vizAnim(self, sim):
+    idir  = self.dir + sim.params.key + "/"
+    iext  = self.plotcfg.imgext
+    animext = ".mp4"
+    adir = self.dir + "videos/"
+    afile = adir + sim.params.key + animext
+    ffmpegargs = '-b 20000k'
+
+    def isimg(str):
+      return os.path.splitext(str)[1] == iext
+
+    imglist = filter( isimg, os.listdir( idir ) )
+    imglist.sort()
+      
+    tmpdir = tempfile.mkdtemp( dir=idir )
+
+    count = 0
+    for img in imglist:
+      os.symlink( idir + img, tmpdir + "/img" + '%06d' % count + iext )
+      count += 1
+
+    if not path.exists(adir):
+      os.mkdir(adir)
+
+    if path.exists(afile):
+      os.remove(afile)
+
+    cmd =  "ffmpeg -i " + tmpdir + "/img%06d" + iext + " " +\
+        ffmpegargs + " " + afile
+    print cmd
+    (exstat, out) = commands.getstatusoutput(cmd)
+
+    count = 0
+    for img in imglist:
+      os.remove(tmpdir + "/img" + '%06d' % count + iext)
+      count += 1
+
+    os.removedirs(tmpdir)
+
 
   def addPlotTasks(self, tasks, sim, ax=[0., 0., 1., 1.]):
     dumps = sim.dumps
@@ -73,9 +115,6 @@ class GIviz(object):
         open(ifile,'w').close()
         tasks[key] = GIvizTask(pfile, cfile, ifile, \
             self.plotcfg, ax, sim.tscl, sim.params)
-        print pfile
-        print cfile
-        print ifile
 
 
   def plotJobScript(self, tasks, jobname):
@@ -115,7 +154,7 @@ class GIviz(object):
         taskno = 0
         drvstr += drvfoot
     
-        self.submitJob(drvname, drvname, jobname)
+        self.submitJob(drvstr, drvname, jobname)
 
         drvstr = drvhead
         drvno += 1
@@ -124,7 +163,7 @@ class GIviz(object):
         
     drvstr += drvfoot
         
-    self.submitJob(drvname, drvname, jobname)
+    self.submitJob(drvstr, drvname, jobname)
     
     #drvstr += "rm " + sdbname + "\n"
     #drvstr += "rm " + excname + "\n"
@@ -137,14 +176,23 @@ class GIviz(object):
     os.chmod(scriptname, stat.S_IRWXU)
 
     jobsubstr = self.cfg["JOBSUBMIT"]
+
     jobsubstr = jobsubstr.replace("$JOBNAME", "viz_" + jobname)
     jobsubstr = jobsubstr.replace("$JOBCMD",  scriptname)
-    jobsubstr += scriptname
     
     print jobsubstr
     oldwd = os.getcwd()
     os.chdir(self.scdir)
     (exstat, out) = commands.getstatusoutput(jobsubstr)
     os.chdir(oldwd)
+
+
+  def clearScratch(self):
+    filelist = os.listdir( self.scdir )
+    filelist.sort()
+
+    for file in filelist:
+      os.remove(self.scdir + file)
+
 
 

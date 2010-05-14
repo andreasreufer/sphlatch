@@ -62,12 +62,12 @@ class SGEquery(object):
           state = "queued"
         jobslist[int(id)] = (name, user, state)
   
-    (stat, finishedraw) = commands.getstatusoutput("qstat -g d -s z")
-    if stat != 0:
-      return unknown
-    for line in finishedraw.splitlines()[2:]:
-      (id, prio, name, user, statestr, date, qtime, slots) = line.split()
-      jobslist[int(id)] = (name, user, "finished")
+    #(stat, finishedraw) = commands.getstatusoutput("qstat -g d -s z")
+    #if stat != 0:
+    #  return unknown
+    #for line in finishedraw.splitlines()[2:]:
+    #  (id, prio, name, user, statestr, date, qtime, slots) = line.split()
+    #  jobslist[int(id)] = (name, user, "finished")
   
     self.timestamp = time.time()
     self.jobslist = jobslist

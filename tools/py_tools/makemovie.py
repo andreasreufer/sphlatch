@@ -15,6 +15,7 @@ out = sys.argv[3]
 frg = '-b 20000k'
 
 filelist = filter( isimg, os.listdir( dir ) )
+filelist.sort()
 
 tmpdir = tempfile.mkdtemp( dir=dir )
 
