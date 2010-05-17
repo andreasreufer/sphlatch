@@ -168,8 +168,7 @@ class Simulation(object):
           time = float("nan")
           if stat == 0:
             time = float(out.split()[1])
-          dumps[file] = time
-
+            dumps[file] = time
   
     self.dumps = []
     for key in dumps.keys():
@@ -179,7 +178,30 @@ class Simulation(object):
     dumps.sync()
     dumps.close()
 
-    self.dumps.sort(key=lambda dmp: dmp[1])
+    self.dumps.sort(key=lambda dmp: dmp[0])
+
+
+  def _delAnimDumps(self):
+    dumps = self.dumps
+    tanim = self.tanim
+    tdump = self.tdump
+    delta = 5.e-3
+    
+    os.remove(self.dir + "dumps")
+    self._findDumps()
+    
+    for (dfile, dtime) in self.dumps:
+      ranim = dtime / tanim
+      rdump = dtime / tdump
+
+      deltaanim = abs( ranim - round(ranim) )
+      deltadump = abs( rdump - round(rdump) )
+
+      if deltaanim < delta and deltadump > delta:
+        print "delete  ", dfile, dtime
+        os.remove(self.dir + dfile)
+
+
 
   def _prepare(self):
     # if it does not yet exist, make dir
