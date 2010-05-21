@@ -141,7 +141,7 @@ class GiantImpact(object):
     else:
     # impact angle is 0., so we get a free fall
       r0vect[1] = r0
-      v0vect[1] = v0
+      v0vect[1] = -v0
 
       rscal = rimp / r0
       mu = self.mu
