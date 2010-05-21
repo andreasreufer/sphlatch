@@ -156,7 +156,6 @@ class Simulation(object):
 
 
   def _findDumps(self):
-    dumps = {}
     dumpdbfile = self.dir + "dumps"
     dumps = shelve.open(dumpdbfile)
     
@@ -200,7 +199,6 @@ class Simulation(object):
       if deltaanim < delta and deltadump > delta:
         print "delete  ", dfile, dtime
         os.remove(self.dir + dfile)
-
 
 
   def _prepare(self):
@@ -320,6 +318,28 @@ class Simulation(object):
       self.state = "submitted"
       self.Log.write("job \"" + self.jobname + "\" submitted")
     return self.state
+
+  def _abort(self):
+    if not self.jobid == 0:
+      delcmd = self.cfg["DELCMD"]
+      delcmd = delcmd.replace('$JOBID', str(self.jobid))
+      (dstat, dout) = commands.getstatusoutput(delcmd)
+      print dout
+
+  def _del(self):
+    if not self.state == "run":
+      for root, dirs, files in os.walk(self.dir, topdown=False):
+        for fname in files:
+          os.remove(os.path.join(root, fname))
+        for dname in dirs:
+          os.rmdir(os.path.join(root, dname))
+      os.rmdir(self.dir)
+      self.state = "unprepared"
+      self.next = self._prepare
+
+
+  def _continue(self):
+    pass
 
   def setSGEjobid(self, jobid):
     self.jobid = jobid
