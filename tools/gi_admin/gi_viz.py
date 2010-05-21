@@ -158,15 +158,13 @@ class GIviz(object):
 
         drvstr = drvhead
         drvno += 1
-        drvname = ascdir + jobname + "driver" + ("%04d" % drvno ) + ".sh"
+        drvname = ascdir + jobname + "_driver" + ("%04d" % drvno ) + ".sh"
     taskdb.close()
         
     drvstr += drvfoot
         
     self.submitJob(drvstr, drvname, jobname)
     
-    #drvstr += "rm " + sdbname + "\n"
-    #drvstr += "rm " + excname + "\n"
     drvstr += "rm " + drvname + "\n"
 
   def submitJob(self, scriptstr, scriptname, jobname):
