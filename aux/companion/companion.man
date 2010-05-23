@@ -1,0 +1,108 @@
+.TH companion n "August 23, 2004" "Ver: 1.0"
+.SH NAME
+companion \- Finds gravitationally bound systems in simulation data.
+.SH SYNOPSIS
+companion [-H [-z \fIcutoff\fP] [-g \fIindex\fP [-a]]|-t] [-c|-m|-s]
+[-C|-M|-S] [ -f \fIfiletype\fP ] [ -e \fIcutoff\fP ] [ -E \fIcutoff\fP
+] [ -h \fIcutoff\fP ] [ -q \fIcutoff\fP ] [ -o \fIangle\fP ] [ -x
+\fIindex\fP ] file [ file ... ]
+.SH DESCRIPTION
+Companion is designed to locate instantaneously bound systems in
+simulation data and report these in an easy-to-read way.  For a
+complete description of the theory behind the code, see "Leinhardt,
+Z.M., Richardson, D.C., 2004. TITLE GOES HERE.  Icarus, in press."
+Without -H specified (hierarchical search), two output files are
+created, whose names are based on the input filename(s), but with
+extensions ".pr" and ".ana".  The former output file is in
+human-readable format; the latter, though still a text file, is
+intended for easy parsing by scripts.  With -H, output is to a file
+with extension ".hier".
+.SH OPTIONS
+.IP -H
+Enable hierarchical search for systems.  The -z, -g, and -a options
+only apply if -H is also specified.  -H and -t cannot be used
+together.
+.IP "-z \fIcutoff\fP"
+Apply a filter that excludes binaries when either binary is itself a
+binary and its orbit comes within the semimajor axis of the other (if
+\fIcutoff\fP is zero) or within a fixed distance (if \fIcutoff\fP is
+non-zero; use negative values for units of semimajor axis, otherwise
+units are in output units).  This option is like the -q option except
+the objects involved may already be binaries or more complex systems.
+Only applies to the -H option.
+.IP "-g \fIindex\fP"
+Extract hierarchical system \fIindex\fP (index numbers are listed in
+the hierarchical output).  Output has extension ".hext" and uses the
+same format as the input file (see -f option).  Filters are ignored
+unless -a is also specified.  Only applies to the -H option.  Also see
+the -x option.
+.IP -a
+When extracting a hierarchical system (see -g option), apply any
+user-specified filters as well.  Only applies to the -g option.
+.IP -t
+Create tipsy-style output vector consisting of a single column whose
+starting value is the number of particles N and the next N values are
+the most negative binding energies found for each particle in order of
+input (or zero if the particle is not bound to any other particle).
+Intended for use with the "tipsy" visualization package (see
+http://www-hpcc.astro.washington.edu/tools/tipsy/tipsy.html).  Cannot
+be used with the -H option.
+.IP -c
+Indicates input units are in cgs (this is the default).
+.IP -m
+Indicates input units are in mks.
+.IP -s
+Indicates input units are such that the gravitation constant G is
+unity.
+.IP -C
+Specifies cgs output units (this is the default).
+.IP -M
+Specifies mks output units.
+.IP -S
+Specifies output units such that the gravitation constant G is unity.
+.IP "-f \fIfiletype\fP"
+Set input file format to \fIfiletype\fP.  Allowed values of
+\fIfiletype\fP are "txt" (for plain text) and "bin" (for binary).  In
+both cases, the order of data should be mass, radius, x position, y
+position, z position, x velocity, y velocity, and z velocity, for each
+particle in turn.  For "txt", fields must be separated by whitespace;
+for "bin", all values must be 32-bit double precision floats.
+.IP "-e \fIcutoff\fP"
+Apply a filter that removes any binary whose eccentricity exceeds
+\fIcutoff\fP.
+.IP "-E \fIcutoff\fP"
+Apply a filter that removes any binary whose binding energy exceeds
+\fIcutoff\fP, in output units.  Recall that bound systems have
+negative binding energy.
+.IP "-h \fIcutoff\fP"
+Apply a filter that removes any binary whose semimajor axis exceeds
+\fIcutoff\fP Hill radii.  This option is intended to remove binaries
+in a tidal field exerted by a central body.  The user will be prompted
+to supply the mass of the central body (in solar masses) and the mean
+distance of the binary from the central body (in AU).
+.IP "-q \fIcutoff\fP"
+Apply a filter that removes any binary whose close approach distance
+comes within the sum of the radii of the two components (if
+\fIcutoff\fP is zero; this effectively removes binaries whose
+components are on a collision trajectory) or within a fixed distance 
+(if \fIcutoff\fP is nonzero; use negative values for units of the
+radius of the primary, otherwise units are in output units).  Also see
+the -z option for hierarchical output.
+.IP "-o \fIangle\fP"
+Set the critical opening angle for the tree walk to \fIangle\fP (in
+radians; default 0.5).
+.IP "-x \fIindex\fP"
+Extract systems whose primary matches \fIindex\fP (where the input
+particles are taken to have indices from 0 to N - 1, where N is the
+number of particles).  Output has extension ".ext" and uses the same
+format as the input file (see -f option).  Filters are ignored.  Also
+see the -g option for hierarchical output.
+.SH COPYRIGHT
+Companion is Copyright (C) 2004 by Z. M. Leinhardt and
+D. C. Richardson and is distributed under the terms and conditions of
+the GNU Public License, without any warranty (expressed or implied).
+.SH AUTHORS
+Z. M. Leinhardt and D. C. Richardson, University of Maryland.
+.SH BUGS
+All bug reports, comments, praise, and criticism should be e-mailed to
+zoe@astro.umd.edu

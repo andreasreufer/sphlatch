@@ -1,0 +1,14 @@
+companion.c
+===========
+
+Copyright (C) 2004 by Z. M. Leinhardt & D. C. Richardson.
+Distributed under the terms of the GNU Public License.
+NO WARRANTY.
+
+To install, edit the Makefile as required (default is to use the gcc
+compiler, which is assumed to be in your search path), then make.
+
+If desired, move the exectuable and man page to suitable locations.
+
+Questions?  Ask zoe at astro.umd.edu or see the Icarus article!
+
