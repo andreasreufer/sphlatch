@@ -39,8 +39,13 @@ private:
 
    vect3dT  acc, ppos;
    nodePtrT recCurPartPtr;
+#ifdef SPHLATCH_GRAVITY_POTENTIAL
+   fType pot;
+#endif
 
+   fType splineOSmoR1(const fType _r, const fType _h);
    fType splineOSmoR3(const fType _r, const fType _h);
+
 
 protected:
    const fType G;
@@ -73,7 +78,10 @@ void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
    nodePtrT const curPartPtr = _part;
 
    ppos = _part->pos;
-   acc  = 0, 0, 0;
+   acc  = 0., 0., 0.;
+#ifdef SPHLATCH_GRAVITY_POTENTIAL
+   pot  = 0.;
+#endif
 
    ///
    /// the complete tree walk
@@ -105,6 +113,12 @@ void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
    } while (curPtr != NULL);
 
    static_cast<_partT*>(_part->partPtr)->acc += G * acc;
+
+   // add potential
+#ifdef SPHLATCH_GRAVITY_POTENTIAL
+   static_cast<_partT*>(_part->partPtr)->pot = G * pot;
+#endif
+
 }
 
 template<typename _macT, typename _partT>
@@ -179,6 +193,16 @@ void GravityWorker<_macT, _partT>::interactPartPart()
    acc[0] -= mOr3 * rx;
    acc[1] -= mOr3 * ry;
    acc[2] -= mOr3 * rz;
+
+#ifdef SPHLATCH_GRAVITY_POTENTIAL
+ #ifdef SPHLATCH_GRAVITY_SPLINESMOOTHING
+   pot -= m * splineOSmoR1(r, h);
+ #elif SPHLATCH_GRAVITY_EPSSMOOTHING
+   pot -= m / re;
+ #else
+   pot -= m / r;
+ #endif
+#endif
 }
 
 template<typename _macT, typename _partT>
@@ -199,6 +223,9 @@ void GravityWorker<_macT, _partT>::interactPartCell()
    acc[0] -= m * Or3 * rx;
    acc[1] -= m * Or3 * ry;
    acc[2] -= m * Or3 * rz;
+#ifdef SPHLATCH_GRAVITY_POTENTIAL
+   pot -= m / r;
+#endif
 
    const fType Or5 = Or3 / rr;
    const fType Or7 = Or5 / rr;
@@ -223,6 +250,10 @@ void GravityWorker<_macT, _partT>::interactPartCell()
    acc[0] += (Or5) * (q1jrj) - (Or7) * (2.5 * qijrirj * rx);
    acc[1] += (Or5) * (q2jrj) - (Or7) * (2.5 * qijrirj * ry);
    acc[2] += (Or5) * (q3jrj) - (Or7) * (2.5 * qijrirj * rz);
+
+#ifdef SPHLATCH_GRAVITY_POTENTIAL
+   pot -= 0.5*(Or5)*qijrirj;
+#endif
 }
 
 ///
@@ -259,6 +290,36 @@ fType GravityWorker<_macT, _partT>::splineOSmoR3(const fType _r, const fType _h)
                 - (6. / 5.) * u * u
                 + (1. / 2.) * u * u * u
                 ));
+   }
+}
+
+template<typename _macT, typename _partT>
+fType GravityWorker<_macT, _partT>::splineOSmoR1(const fType _r, const fType _h)
+{
+   const fType u = _r / _h;
+
+   if (u >= 2.)
+   {
+      return(1. / _r);
+   }
+   else
+   if (u > 1.)
+   {
+      return((-1. / (15. * _r))
+             - (1. / _h) * (-(8. / 5.)
+                            + (4. / 3.) * u * u
+                            - u * u * u
+                            + 0.3 * u * u * u * u
+                            - (1. / 30.) * u * u * u * u * u)
+             );
+   }
+   else
+   {
+      return(-(2. / _h) * ((1. / 3.) * u * u
+                           - (3. / 20.) * u * u * u * u
+                           + (1. / 20.) * u * u * u * u * u)
+             + (7. / (5. * _h))
+             );
    }
 }
 

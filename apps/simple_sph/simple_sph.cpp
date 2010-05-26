@@ -167,6 +167,9 @@ public:
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
       vars.push_back(storeVar(dhdt, "dhdt"));
 #endif
+#ifdef SPHLATCH_GRAVITY_POTENTIAL
+      vars.push_back(storeVar(pot, "pot"));
+#endif
 
       vars.push_back(storeVar(cost, "cost"));
       return(vars);

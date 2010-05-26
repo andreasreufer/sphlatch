@@ -27,6 +27,9 @@ public:
 
    idType id;
    fType  cost;
+#ifdef SPHLATCH_GRAVITY_POTENTIAL
+   fType pot;
+#endif
 
 #ifdef SPHLATCH_PADD64
 private:
@@ -43,7 +46,7 @@ class treePart : public treeGhost { };
 /// moving ghost particle class
 ///
 class movingGhost {
-  public:
+public:
    vect3dT vel;
 };
 
@@ -51,7 +54,7 @@ class movingGhost {
 /// moving resident particle class
 ///
 class movingPart : public movingGhost {
-  public:
+public:
    vect3dT acc;
 };
 };

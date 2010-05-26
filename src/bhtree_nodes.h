@@ -123,7 +123,6 @@ public:
 ///
 class quadrupoleCellNode : public monopoleCellNode {
 public:
-
    union
    {
       // gravitational quadrupole moments
