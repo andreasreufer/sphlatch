@@ -124,7 +124,22 @@ public:
 class quadrupoleCellNode : public monopoleCellNode {
 public:
 
-   fType      q11, q22, q33, q12, q13, q23;
+   union
+   {
+      // gravitational quadrupole moments
+      struct
+      {
+         fType q11, q22, q33, q12, q13, q23;
+      };
+
+      // alternative payload for binary search
+      struct
+      {
+         fType vx, vy, vz;
+         fType vesc;
+      };
+   };
+
    countsType noParts;
 
    quadrupoleCellNode() { }
@@ -146,7 +161,7 @@ private:
 ///
 class costzoneCellNode : public quadrupoleCellNode {
 public:
-   
+
    ///
    /// first and last nodes of CZ cell subtree
    /// (chldFrst is always the same as next)
@@ -159,7 +174,7 @@ public:
    fType relCost;
    fType compTime;
 
-   typedef blitz::TinyVector<fType, 6> costHistT;
+   typedef blitz::TinyVector<fType, 6>   costHistT;
    costHistT relCostOld;
 
    ///
