@@ -19,6 +19,7 @@
 
 #include "bhtree.cpp"
 #include "bhtree_worker_neighfunc.cpp"
+#include "bhtree_worker_grav.cpp"
 
 namespace sphlatch {
 template<typename _partT>
@@ -98,22 +99,21 @@ template<typename _partT>
 class Clumps : public ParticleSet<Clump<_partT> >
 {
 public:
-   typedef _partT                partT;
-   typedef ParticleSet<_partT>   partSetT;
-   typedef std::list<_partT*>    partPtrLT;
+   typedef _partT                        partT;
+   typedef ParticleSet<_partT>           partSetT;
+   typedef std::list<_partT*>            partPtrLT;
 
-   typedef BHTree                treeT;
+   typedef BHTree                        treeT;
 
-   typedef Clump<_partT>         clumpT;
-   typedef ParticleSet<clumpT>   parentT;
+   typedef Clump<_partT>                 clumpT;
+   typedef ParticleSet<clumpT>           parentT;
+
+   typedef fixThetaMAC                   macT;
+   typedef GravityWorker<macT, _partT>   gravT;
+
 
 public:
-   Clumps()
-   {
-      nextFreeId = 1;
-      //treeT& Tree(treeT::instance());
-   }
-
+   Clumps() { nextFreeId = 1; }
    ~Clumps() { }
 
    void getClumpsFOF(partSetT& _parts, const fType _rhoMin, const fType _hMult);
@@ -128,6 +128,17 @@ private:
 
    void FOF(partSetT& _parts, const fType _rhoMin, const fType _hMult);
    void potSearch(partSetT& _parts);
+
+   class lowerPot
+   {
+     public:
+       bool operator()(_partT* _p1, _partT* _p2)
+       {
+         return (_p1->pot < _p2->pot);
+       }
+   };
+
+   bool compPotential(_partT* _low, _partT* _high);
 
    treeT Tree;
 
@@ -166,28 +177,27 @@ cType Clumps<_partT>::mergeClumps(const cType cida, const cType cidb,
 
 template<typename _partT>
 void Clumps<_partT>::getClumpsPot(ParticleSet<_partT>& _parts)
-{ 
-  prepareTree(_parts);
-  //FOF(_parts, _rhoMin, _hMult);
-  finalize(_parts);
+{
+   prepareTree(_parts);
+   potSearch(_parts);
+   //FOF(_parts, _rhoMin, _hMult);
+   finalize(_parts);
 }
 
 template<typename _partT>
 void Clumps<_partT>::getClumpsFOF(ParticleSet<_partT>& _parts,
                                   const fType          _rhoMin,
                                   const fType          _hMult)
-{ 
-  prepareTree(_parts);
-  FOF(_parts, _rhoMin, _hMult);
-  finalize(_parts);
+{
+   prepareTree(_parts);
+   FOF(_parts, _rhoMin, _hMult);
+   finalize(_parts);
 }
 
 template<typename _partT>
 void Clumps<_partT>::prepareTree(ParticleSet<_partT>& _parts)
 {
    parentT::step = _parts.step;
-
-   treeT& Tree(treeT::instance());
 
    const size_t nop       = _parts.getNop();
    const fType  costppart = 1. / nop;
@@ -212,8 +222,8 @@ void Clumps<_partT>::FOF(ParticleSet<_partT>& _parts,
                          const fType          _rhoMin,
                          const fType          _hMult)
 {
-   const size_t nop       = _parts.getNop();
-   
+   const size_t nop = _parts.getNop();
+
    NeighFindWorker<_partT> NFW(&Tree);
    for (size_t i = 0; i < nop; i++)
    {
@@ -336,26 +346,46 @@ void Clumps<_partT>::FOF(ParticleSet<_partT>& _parts,
          { }
       }
    }
-   
+
    Tree.clear();
 }
-
 
 template<typename _partT>
 void Clumps<_partT>::potSearch(ParticleSet<_partT>& _parts)
 {
-   const size_t nop       = _parts.getNop();
+   const size_t nop = _parts.getNop();
+   const fType  G   = _parts.attributes["gravconst"];
+
+   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
+   const int           noCZbottomLoc = CZbottomLoc.size();
    
-   //NeighFindWorker<_partT> NFW(&Tree);
-   //for (size_t i = 0; i < nop; i++)
+   gravT gravWorker(&Tree, G);
+#pragma omp parallel for firstprivate(gravWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      gravWorker.calcGravity(CZbottomLoc[i]);
 
+   NeighFindWorker<_partT> NFW(&Tree);
+
+   partPtrLT potRanked;
+
+   for (size_t i = 0; i < nop; i++)
+      potRanked.push_back(&(_parts[i]));
+
+
+   std::cout << potRanked.size() << "\n";
+   lowerPot potSorter;
+   potRanked.sort(potSorter);
+      
+   typename partPtrLT::const_iterator pItr;
+      
+   for (pItr = potRanked.begin(); pItr != potRanked.end(); pItr++)
+     std::cout << (*pItr)->pot << "\n";
 }
-
 
 template<typename _partT>
 void Clumps<_partT>::finalize(ParticleSet<_partT>& _parts)
 {
-   const size_t nop       = _parts.getNop();
+   const size_t nop = _parts.getNop();
 
    // search for all clump ids
    std::set<cType> clumpIDs;

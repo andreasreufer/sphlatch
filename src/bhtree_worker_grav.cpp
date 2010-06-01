@@ -114,7 +114,6 @@ void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
 
    static_cast<_partT*>(_part->partPtr)->acc += G * acc;
 
-   // add potential
 #ifdef SPHLATCH_GRAVITY_POTENTIAL
    static_cast<_partT*>(_part->partPtr)->pot = G * pot;
 #endif
