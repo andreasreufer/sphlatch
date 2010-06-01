@@ -84,6 +84,7 @@ int main(int argc, char* argv[])
    std::string inFilename = argv[1];
    std::string clFilename = argv[2];
 
+#ifdef CLUMPFIND_FOF
    std::istringstream rhoStr(argv[3]);
    fType minRho;
    rhoStr >> minRho;
@@ -91,11 +92,18 @@ int main(int argc, char* argv[])
    std::istringstream hMultStr(argv[4]);
    fType hMult;
    hMultStr >> hMult;
+#endif
 
 
+#ifdef CLUMPFIND_FOF
    if (argc == 6)
    {
       std::istringstream threadStr(argv[5]);
+#else
+   if (argc == 4)
+   {
+      std::istringstream threadStr(argv[3]);
+#endif
       int numThreads;
       threadStr >> numThreads;
       omp_set_num_threads(numThreads);
@@ -104,8 +112,13 @@ int main(int argc, char* argv[])
 
    // load the particles
    parts.loadHDF5(inFilename);
-   clumps.getClumps(parts, minRho, hMult);
+#ifdef CLUMPFIND_FOF
+   clumps.getClumpsFOF(parts, minRho, hMult);
+#else
+   clumps.getClumpsPot(parts);
+#endif
    parts.saveHDF5(inFilename);
+
 
    std::cerr << clumps.getNop() << " clump(s) found!\n";
    clumps.doublePrecOut();

@@ -49,7 +49,7 @@ public:
       typename partPtrLT::const_iterator pItr;
       m   = 0.;
       pos = 0., 0., 0.;
-      V = 0.;
+      V   = 0.;
 
       for (pItr = pList.begin(); pItr != pList.end(); pItr++)
       {
@@ -57,11 +57,11 @@ public:
          m   += mi;
          P   += mi * (*pItr)->vel;
          pos += mi * (*pItr)->pos;
-         V  += mi / (*pItr)->rho;
+         V   += mi / (*pItr)->rho;
       }
       pos /= m;
       vel  = P / m;
-      rc = pow( 0.75*V / M_PI, 1./3. );
+      rc   = pow(0.75 * V / M_PI, 1. / 3.);
 
       L = 0., 0., 0.;
       for (pItr = pList.begin(); pItr != pList.end(); pItr++)
@@ -83,7 +83,7 @@ public:
 
       vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(rc, "rc"));
-      
+
       vars.push_back(storeVar(id, "id"));
 
       return(vars);
@@ -95,7 +95,7 @@ private:
 
 
 template<typename _partT>
-class Clumps : public ParticleSet< Clump<_partT> >
+class Clumps : public ParticleSet<Clump<_partT> >
 {
 public:
    typedef _partT                partT;
@@ -105,16 +105,33 @@ public:
    typedef BHTree                treeT;
 
    typedef Clump<_partT>         clumpT;
-   typedef ParticleSet<clumpT>     parentT;
+   typedef ParticleSet<clumpT>   parentT;
 
 public:
-   Clumps() { }
+   Clumps()
+   {
+      nextFreeId = 1;
+      //treeT& Tree(treeT::instance());
+   }
+
    ~Clumps() { }
 
-   void getClumps(partSetT& _parts, const fType _rhoMin, const fType _hMult);
+   void getClumpsFOF(partSetT& _parts, const fType _rhoMin, const fType _hMult);
+   void getClumpsPot(partSetT& _parts);
 
 private:
+
    cType mergeClumps(const cType cida, const cType cidb, partSetT& _parts);
+
+   void prepareTree(partSetT& _parts);
+   void finalize(partSetT& _parts);
+
+   void FOF(partSetT& _parts, const fType _rhoMin, const fType _hMult);
+   void potSearch(partSetT& _parts);
+
+   treeT Tree;
+
+   cType nextFreeId;
 };
 
 template<typename _partT>
@@ -148,12 +165,28 @@ cType Clumps<_partT>::mergeClumps(const cType cida, const cType cidb,
 }
 
 template<typename _partT>
-void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
-                               const fType          _rhoMin,
-                               const fType          _hMult)
+void Clumps<_partT>::getClumpsPot(ParticleSet<_partT>& _parts)
+{ 
+  prepareTree(_parts);
+  //FOF(_parts, _rhoMin, _hMult);
+  finalize(_parts);
+}
+
+template<typename _partT>
+void Clumps<_partT>::getClumpsFOF(ParticleSet<_partT>& _parts,
+                                  const fType          _rhoMin,
+                                  const fType          _hMult)
+{ 
+  prepareTree(_parts);
+  FOF(_parts, _rhoMin, _hMult);
+  finalize(_parts);
+}
+
+template<typename _partT>
+void Clumps<_partT>::prepareTree(ParticleSet<_partT>& _parts)
 {
-  parentT::step = _parts.step;
-   
+   parentT::step = _parts.step;
+
    treeT& Tree(treeT::instance());
 
    const size_t nop       = _parts.getNop();
@@ -171,8 +204,16 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
    for (size_t i = 0; i < nop; i++)
       _parts[i].clumpid = CLUMPNOTSET;
 
-   cType nextFreeId = 1;
+   nextFreeId = 1;
+}
 
+template<typename _partT>
+void Clumps<_partT>::FOF(ParticleSet<_partT>& _parts,
+                         const fType          _rhoMin,
+                         const fType          _hMult)
+{
+   const size_t nop       = _parts.getNop();
+   
    NeighFindWorker<_partT> NFW(&Tree);
    for (size_t i = 0; i < nop; i++)
    {
@@ -192,8 +233,8 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
          if ((_parts[i].clumpid == CLUMPNONE) ||
              (_parts[i].clumpid == CLUMPNOTSET))
          {
-            const fType srad = _hMult * cPart->h;
-            partPtrLT neighs = NFW(cPart, srad);
+            const fType srad   = _hMult * cPart->h;
+            partPtrLT   neighs = NFW(cPart, srad);
 
             std::set<cType> neighClumps;
             typename partPtrLT::iterator nitr;
@@ -295,7 +336,26 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
          { }
       }
    }
+   
    Tree.clear();
+}
+
+
+template<typename _partT>
+void Clumps<_partT>::potSearch(ParticleSet<_partT>& _parts)
+{
+   const size_t nop       = _parts.getNop();
+   
+   //NeighFindWorker<_partT> NFW(&Tree);
+   //for (size_t i = 0; i < nop; i++)
+
+}
+
+
+template<typename _partT>
+void Clumps<_partT>::finalize(ParticleSet<_partT>& _parts)
+{
+   const size_t nop       = _parts.getNop();
 
    // search for all clump ids
    std::set<cType> clumpIDs;
@@ -303,7 +363,6 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
    for (size_t i = 0; i < nop; i++)
       if (_parts[i].clumpid > 0)
          clumpIDs.insert(_parts[i].clumpid);
-
 
    const size_t noc = clumpIDs.size();
    parentT::resize(noc);
