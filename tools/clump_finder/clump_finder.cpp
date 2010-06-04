@@ -48,7 +48,6 @@ public:
       vars.push_back(storeVar(id, "id"));
       
       vars.push_back(storeVar(rho, "rho"));
-
       return(vars);
    }
 
@@ -56,6 +55,10 @@ public:
    {
       ioVarLT vars;
       vars.push_back(storeVar(clumpid, "clumpid"));
+#ifdef CLUMPFIND_FOF
+#else
+      vars.push_back(storeVar(pot, "pot"));
+#endif
       return vars;
    }
 };
@@ -74,10 +77,17 @@ clumpsT clumps;
 
 int main(int argc, char* argv[])
 {
+#ifdef CLUMPFIND_FOF
    if (not ((argc == 5) || (argc == 6)))
    {
       std::cerr <<
       "usage: clump_finder <inputdump> <clumpsfile> <minrho> <hmult> (<numthreads>)\n";
+#else
+   if (not ((argc == 3) || (argc == 4)))
+   {
+      std::cerr <<
+      "usage: clump_finder <inputdump> <clumpsfile> (<numthreads>)\n";
+#endif
       return(1);
    }
 

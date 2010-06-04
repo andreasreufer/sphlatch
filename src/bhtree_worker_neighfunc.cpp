@@ -184,9 +184,10 @@ public:
    std::list<PPtrD> neighList;
 };
 
+
 template<typename _partT>
-class SmoLenFindWorker : 
-  public NeighWorker<NeighDistListFunc<_partT> , _partT> {
+class SmoLenFindWorker :
+   public NeighWorker<NeighDistListFunc<_partT> , _partT> {
 public:
    typedef NeighWorker<NeighDistListFunc<_partT> , _partT>   parentT;
    typedef typename NeighDistListFunc<_partT>::PPtrD         pptrDT;
@@ -218,7 +219,7 @@ public:
             const size_t noneigh = partPtr->noneigh;
             const fType  smass   = static_cast<fType>(noneigh);
             const fType  srad    = BHTreeWorker::maxMassEncloseRad(pnod, smass);
-            
+
             assert(noneigh > 0);
 
             // clear the neighbour list and start the search
@@ -234,11 +235,11 @@ public:
                partPtr->h = sqrt((*(neighList.end())).rr) / mult;
             else
             {
-              typename pptrDLT::const_iterator nitr = neighList.begin();
-              for (size_t i = 0; i < noneigh; i++)
-                nitr++;
+               typename pptrDLT::const_iterator nitr = neighList.begin();
+               for (size_t i = 0; i < noneigh; i++)
+                  nitr++;
 
-              partPtr->h = sqrt( (*nitr).rr ) / mult;
+               partPtr->h = sqrt((*nitr).rr) / mult;
             }
          }
          curPart = curPart->next;
@@ -248,7 +249,37 @@ public:
 protected:
    const fType mult;
 };
-};
 
+
+template<typename _partT>
+class NeighFindSortedWorker :
+   public NeighWorker<NeighDistListFunc<_partT> , _partT> {
+public:
+   typedef NeighWorker<NeighDistListFunc<_partT> , _partT>   parentT;
+   typedef typename NeighDistListFunc<_partT>::PPtrD         pptrDT;
+   typedef typename NeighDistListFunc<_partT>::PPtrDsorter   pptrDsortT;
+   typedef typename std::list<pptrDT>                        pptrDLT;
+
+   NeighFindSortedWorker(const BHTreeWorker::treePtrT _treePtr) :
+      NeighWorker<NeighDistListFunc<_partT> , _partT>(_treePtr) { }
+   NeighFindSortedWorker(const NeighFindSortedWorker& _SLFwork) :
+      NeighWorker<NeighDistListFunc<_partT> , _partT>(_SLFwork) { }
+   ~NeighFindSortedWorker() { }
+
+   pptrDLT operator()(const _partT* _part, const fType _srad)
+   {
+      parentT::Func.neighList.clear();
+      parentT::neighExecFunc(_part->treeNode, _srad);
+
+
+      // sort the list according to the distance
+      pptrDLT&   neighList(parentT::Func.neighList);
+      pptrDsortT neighSorter;
+      neighList.sort(neighSorter);
+
+      return(parentT::Func.neighList);
+   }
+};
+};
 
 #endif

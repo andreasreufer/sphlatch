@@ -11,6 +11,7 @@
  */
 
 #include <list>
+#include <algorithm>
 
 #include "typedefs.h"
 #include "particle_set.cpp"
@@ -33,7 +34,7 @@ public:
    vect3dT P;
    fType   m, rc, V;
 
-   cType id;
+   cType id, nop;
 
    void addParticle(_partT* _partPtr)
    {
@@ -64,12 +65,14 @@ public:
       vel  = P / m;
       rc   = pow(0.75 * V / M_PI, 1. / 3.);
 
-      L = 0., 0., 0.;
+      L   = 0., 0., 0.;
+      nop = 0;
       for (pItr = pList.begin(); pItr != pList.end(); pItr++)
       {
          const fType   mi   = (*pItr)->m;
          const vect3dT rvec = (*pItr)->pos - pos;
          L += mi * cross(rvec, (*pItr)->vel);
+         nop++;
       }
    }
 
@@ -86,6 +89,7 @@ public:
       vars.push_back(storeVar(rc, "rc"));
 
       vars.push_back(storeVar(id, "id"));
+      vars.push_back(storeVar(nop, "nop"));
 
       return(vars);
    }
@@ -116,29 +120,50 @@ public:
    Clumps() { nextFreeId = 1; }
    ~Clumps() { }
 
-   void getClumpsFOF(partSetT& _parts, const fType _rhoMin, const fType _hMult);
+   void getClumpsFOF(partSetT& _parts, const fType _rhoMin,
+                     const fType _hMult);
    void getClumpsPot(partSetT& _parts);
 
 private:
 
    cType mergeClumps(const cType cida, const cType cidb, partSetT& _parts);
 
-   void prepareTree(partSetT& _parts);
-   void finalize(partSetT& _parts);
+   void prepareSearch(partSetT& _parts);
+
+   void collectClumps(ParticleSet<_partT>& _parts, const fType _minMass);
 
    void FOF(partSetT& _parts, const fType _rhoMin, const fType _hMult);
    void potSearch(partSetT& _parts);
 
    class lowerPot
    {
-     public:
-       bool operator()(_partT* _p1, _partT* _p2)
-       {
-         return (_p1->pot < _p2->pot);
-       }
+public:
+      bool operator()(_partT* _p1, _partT* _p2)
+      {
+         return(_p1->pot < _p2->pot);
+      }
    };
 
-   bool compPotential(_partT* _low, _partT* _high);
+public:
+   class SimpleClump {
+public:
+      /*bool operator()(SimpleClump& _c1, SimpleClump& _c2)
+      {
+         return(_c1.m < _c2.m);
+      }*/
+   
+      bool operator<(SimpleClump& _rhs)
+      {
+         return(m < _rhs.m);
+      }
+
+      cType id;
+      fType m;
+   };
+
+   /*class SimpleClumpSorter {
+   };*/
+
 
    treeT Tree;
 
@@ -178,10 +203,13 @@ cType Clumps<_partT>::mergeClumps(const cType cida, const cType cidb,
 template<typename _partT>
 void Clumps<_partT>::getClumpsPot(ParticleSet<_partT>& _parts)
 {
-   prepareTree(_parts);
+   prepareSearch(_parts);
    potSearch(_parts);
-   //FOF(_parts, _rhoMin, _hMult);
-   finalize(_parts);
+   //finalize(_parts);
+   //
+
+   const fType minMass = 1.1926e+24;
+   collectClumps(_parts, minMass);
 }
 
 template<typename _partT>
@@ -189,13 +217,13 @@ void Clumps<_partT>::getClumpsFOF(ParticleSet<_partT>& _parts,
                                   const fType          _rhoMin,
                                   const fType          _hMult)
 {
-   prepareTree(_parts);
+   prepareSearch(_parts);
    FOF(_parts, _rhoMin, _hMult);
-   finalize(_parts);
+   //finalize(_parts);
 }
 
 template<typename _partT>
-void Clumps<_partT>::prepareTree(ParticleSet<_partT>& _parts)
+void Clumps<_partT>::prepareSearch(ParticleSet<_partT>& _parts)
 {
    parentT::step = _parts.step;
 
@@ -358,13 +386,17 @@ void Clumps<_partT>::potSearch(ParticleSet<_partT>& _parts)
 
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
-   
+
    gravT gravWorker(&Tree, G);
+
 #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
 
-   NeighFindWorker<_partT> NFW(&Tree);
+   //NeighFindWorker<_partT> NFW(&Tree);
+   typedef NeighFindSortedWorker<_partT>                     NFSWT;
+   typedef typename NeighFindSortedWorker<_partT>::pptrDLT   partPtrDLT;
+   NFSWT NFSW(&Tree);
 
    partPtrLT potRanked;
 
@@ -375,26 +407,133 @@ void Clumps<_partT>::potSearch(ParticleSet<_partT>& _parts)
    std::cout << potRanked.size() << "\n";
    lowerPot potSorter;
    potRanked.sort(potSorter);
-      
-   typename partPtrLT::const_iterator pItr;
-      
+
+   //typename partPtrLT::iterator pItr, nItr;
+   typename partPtrLT::iterator pItr;
+   typename partPtrDLT::iterator nItr;
+
+   nextFreeId = 1;
+   cType cID = nextFreeId;
+
    for (pItr = potRanked.begin(); pItr != potRanked.end(); pItr++)
-     std::cout << (*pItr)->pot << "\n";
+   {
+      partT       * cPart = *pItr;
+      const fType cPot    = cPart->pot;
+      const fType srad    = 2. * cPart->h;
+
+      partPtrDLT neighs = NFSW(cPart, srad);
+
+
+      if (neighs.size() == 0)
+      {
+         cPart->clumpid = CLUMPNONE;
+         continue;
+      }
+
+      if (cPart->clumpid == CLUMPNOTSET)
+      {
+         cID            = nextFreeId;
+         cPart->clumpid = cID;
+         nextFreeId++;
+      }
+      else
+         cID = cPart->clumpid;
+
+      fType maxPot = -fTypeInf;
+      for (nItr = neighs.begin(); nItr != neighs.end(); nItr++)
+      {
+         const fType nPot = (*nItr).ptr->pot;
+
+         if (nPot < maxPot)
+            break;
+
+         if (nPot > cPot)
+         {
+            (*nItr).ptr->clumpid = cID;
+            if (nPot > maxPot)
+               maxPot = nPot;
+         }
+      }
+   }
 }
 
 template<typename _partT>
-void Clumps<_partT>::finalize(ParticleSet<_partT>& _parts)
+void Clumps<_partT>::collectClumps(ParticleSet<_partT>& _parts,
+                                   const fType          _minMass)
 {
    const size_t nop = _parts.getNop();
+   const size_t noc = nextFreeId;
 
-   // search for all clump ids
-   std::set<cType> clumpIDs;
+   std::vector<SimpleClump> massRanked(noc);
+
+   for (size_t i = 0; i < noc; i++)
+   {
+      massRanked[i].m  = 0.;
+      massRanked[i].id = i;
+   }
 
    for (size_t i = 0; i < nop; i++)
-      if (_parts[i].clumpid > 0)
-         clumpIDs.insert(_parts[i].clumpid);
+   {
+      const size_t cID = _parts[i].clumpid;
+      assert(cID < noc);
 
-   const size_t noc = clumpIDs.size();
+      massRanked[cID].m += _parts[i].m;
+   }
+
+   std::sort(massRanked.begin(), massRanked.end());
+   //massRanked.sort();
+
+   std::cout << "mass ranked     max: " << massRanked[0].m << "\n";
+
+   std::vector<size_t> oldID2newID(noc);
+   for (size_t i = 0; i < noc; i++)
+   {
+      oldID2newID[massRanked[i].id] = i;
+   }
+
+   for (size_t i = 0; i < nop; i++)
+   {
+      const size_t oldID = _parts[i].clumpid;
+      _parts[i].clumpid = oldID2newID[oldID];
+   }
+
+   size_t maxId = 0;
+   for (size_t i = 0; i < noc; i++)
+   {
+      if (massRanked[i].m < _minMass)
+         break;
+      maxId = i;
+   }
+
+   std::cout << "maxId: " << maxId << "\n";
+
+   const size_t fnoc = maxId + 1;
+
+   parentT::resize(fnoc);
+
+   for (size_t i = 0; i < nop; i++)
+   {
+      if (static_cast<size_t>(_parts[i].clumpid) > maxId)
+         _parts[i].clumpid = CLUMPNONE;
+      else
+      {
+         clumpT& curClump(parentT::operator[](i));
+         curClump.addParticle(&(_parts[i]));
+      }
+   }
+   
+   for (size_t i = 0; i < noc; i++)
+   {
+      clumpT& curClump(parentT::operator[](i));
+      curClump.calcProperties();
+   }
+}
+
+/*template<typename _partT>
+   void Clumps<_partT>::calcClumps(ParticleSet<_partT>& _parts)
+   {
+   const size_t nop = _parts.getNop();
+
    parentT::resize(noc);
 
    std::set<cType>::const_iterator cidItr = clumpIDs.begin();
@@ -413,8 +552,8 @@ void Clumps<_partT>::finalize(ParticleSet<_partT>& _parts)
 
       cidItr++;
    }
-
    return;
+   }*/
 }
-}
+
 #endif
