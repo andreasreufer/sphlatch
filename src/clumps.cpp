@@ -147,23 +147,18 @@ public:
 public:
    class SimpleClump {
 public:
-      /*bool operator()(SimpleClump& _c1, SimpleClump& _c2)
-      {
-         return(_c1.m < _c2.m);
-      }*/
-   
-      bool operator<(SimpleClump& _rhs)
-      {
-         return(m < _rhs.m);
-      }
 
       cType id;
       fType m;
    };
 
-   /*class SimpleClumpSorter {
-   };*/
-
+   class SimpleClumpCompMass {
+public:
+      bool operator()(const SimpleClump& _c1, const SimpleClump& _c2)
+      {
+         return(_c1.m > _c2.m);
+      }
+   };
 
    treeT Tree;
 
@@ -208,7 +203,7 @@ void Clumps<_partT>::getClumpsPot(ParticleSet<_partT>& _parts)
    //finalize(_parts);
    //
 
-   const fType minMass = 1.1926e+24;
+   const fType minMass = 1.1926e+23;
    collectClumps(_parts, minMass);
 }
 
@@ -474,86 +469,69 @@ void Clumps<_partT>::collectClumps(ParticleSet<_partT>& _parts,
 
    for (size_t i = 0; i < nop; i++)
    {
+      if (_parts[i].clumpid < CLUMPNONE)
+         _parts[i].clumpid = CLUMPNONE;
       const size_t cID = _parts[i].clumpid;
       assert(cID < noc);
-
       massRanked[cID].m += _parts[i].m;
    }
 
-   std::sort(massRanked.begin(), massRanked.end());
-   //massRanked.sort();
+   std::sort(massRanked.begin(), massRanked.end(), SimpleClumpCompMass());
 
    std::cout << "mass ranked     max: " << massRanked[0].m << "\n";
 
-   std::vector<size_t> oldID2newID(noc);
+   std::vector<size_t> massRankedInv(noc);
+   for (size_t i = 0; i < noc; i++)
+      massRankedInv[massRanked[i].id] = i;
+
+
+   size_t maxID = 0;
    for (size_t i = 0; i < noc; i++)
    {
-      oldID2newID[massRanked[i].id] = i;
+      if (massRanked[i].m < _minMass)
+      {
+         std::cout << massRanked[i].m << " ";
+         break;
+      }
+      maxID = i;
    }
+   std::cout << "maxID " << maxID << "\n";
 
    for (size_t i = 0; i < nop; i++)
    {
       const size_t oldID = _parts[i].clumpid;
-      _parts[i].clumpid = oldID2newID[oldID];
+      const size_t newID = massRankedInv[oldID];
+
+      if (newID <= maxID)
+         _parts[i].clumpid = newID;
+      else
+         _parts[i].clumpid = CLUMPNONE;
    }
 
-   size_t maxId = 0;
-   for (size_t i = 0; i < noc; i++)
-   {
-      if (massRanked[i].m < _minMass)
-         break;
-      maxId = i;
-   }
+   std::cout << "mapped new IDs\n";
 
-   std::cout << "maxId: " << maxId << "\n";
-
-   const size_t fnoc = maxId + 1;
+   const size_t fnoc = maxID + 1;
 
    parentT::resize(fnoc);
 
    for (size_t i = 0; i < nop; i++)
    {
-      if (static_cast<size_t>(_parts[i].clumpid) > maxId)
-         _parts[i].clumpid = CLUMPNONE;
-      else
-      {
-         clumpT& curClump(parentT::operator[](i));
-         curClump.addParticle(&(_parts[i]));
-      }
+      clumpT& curClump(parentT::operator[](_parts[i].clumpid));
+      curClump.addParticle(&(_parts[i]));
    }
-   
-   for (size_t i = 0; i < noc; i++)
+   std::cout << "added parts   \n";
+
+
+   for (size_t i = 0; i < fnoc; i++)
    {
       clumpT& curClump(parentT::operator[](i));
       curClump.calcProperties();
    }
+   std::cout << "calc props    \n";
+
+   return;
 }
 
-/*template<typename _partT>
-   void Clumps<_partT>::calcClumps(ParticleSet<_partT>& _parts)
-   {
-   const size_t nop = _parts.getNop();
-
-   parentT::resize(noc);
-
-   std::set<cType>::const_iterator cidItr = clumpIDs.begin();
-
-   for (size_t i = 0; i < noc; i++)
-   {
-      clumpT&     curClump(parentT::operator[](i));
-      const cType cid = *cidItr;
-      curClump.id = cid;
-
-      for (size_t j = 0; j < nop; j++)
-         if (_parts[j].clumpid == cid)
-            curClump.addParticle(&(_parts[j]));
-
-      curClump.calcProperties();
-
-      cidItr++;
-   }
-   return;
-   }*/
 }
 
 #endif
