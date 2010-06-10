@@ -68,7 +68,7 @@ typedef particle   partT;
 #include "particle_set.cpp"
 typedef sphlatch::ParticleSet<partT>           partSetT;
 
-#include "clumps.cpp"
+#include "clump_finder.cpp"
 typedef sphlatch::Clumps<partT> clumpsT;
 
 // particles are global
