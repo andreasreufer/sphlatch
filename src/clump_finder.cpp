@@ -69,17 +69,9 @@ public:
       }
    };
 
+   class higherClumpMass {
 public:
-   class SimpleClump {
-public:
-
-      cType id;
-      fType m;
-   };
-
-   class SimpleClumpCompMass {
-public:
-      bool operator()(const SimpleClump& _c1, const SimpleClump& _c2)
+      bool operator()(const clumpT& _c1, const clumpT& _c2)
       {
          return(_c1.m > _c2.m);
       }
@@ -124,9 +116,8 @@ template<typename _partT>
 void Clumps<_partT>::getClumpsPot(ParticleSet<_partT>& _parts)
 {
    prepareSearch(_parts);
-   potSearchOld(_parts);
-   //finalize(_parts);
-   //
+   
+   potSearch(_parts);
 
    const fType minMass = 1.1926e+23;
    collectClumps(_parts, minMass);
@@ -138,8 +129,11 @@ void Clumps<_partT>::getClumpsFOF(ParticleSet<_partT>& _parts,
                                   const fType          _hMult)
 {
    prepareSearch(_parts);
+   
    FOF(_parts, _rhoMin, _hMult);
-   //finalize(_parts);
+   
+   const fType minMass = 1.1926e+23;
+   collectClumps(_parts, minMass);
 }
 
 template<typename _partT>
@@ -312,15 +306,9 @@ void Clumps<_partT>::potSearch(ParticleSet<_partT>& _parts)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcGravity(CZbottomLoc[i]);
 
-   //NeighFindWorker<_partT> NFW(&Tree);
-   typedef NeighFindSortedWorker<_partT>                     NFSWT;
-   typedef typename NeighFindSortedWorker<_partT>::pptrDLT   partPtrDLT;
-   NFSWT NFSW(&Tree);
-
    partPtrLT unbdParts;
    for (size_t i = 0; i < nop; i++)
       unbdParts.push_back(&(_parts[i]));
-
 
    lowerPot potSorter;
    unbdParts.sort(potSorter);
@@ -328,12 +316,11 @@ void Clumps<_partT>::potSearch(ParticleSet<_partT>& _parts)
    typename partPtrLT::iterator pItr, nItr, onItr;
 
    nextFreeId = 1;
-   cType cID = nextFreeId;
 
    pItr = unbdParts.begin();
    while (pItr != unbdParts.end())
    {
-      const partT* cp = *pItr;
+      partT* cp = *pItr;
 
       Clump<_partT> cclmp;
       cclmp.addParticle(cp);
@@ -349,7 +336,7 @@ void Clumps<_partT>::potSearch(ParticleSet<_partT>& _parts)
          noFound = 0;
          while (nItr != unbdParts.end())
          {
-            if (cclmp.totEnery(*nItr, G) < 0.)
+            if (cclmp.totEnergy(*nItr, G) < 0.)
             {
                cclmp.addParticle(*nItr);
                noFound++;
@@ -358,15 +345,20 @@ void Clumps<_partT>::potSearch(ParticleSet<_partT>& _parts)
                unbdParts.erase(onItr);
             }
             else
-            {
                nItr++;
-            }
          }
       } while (noFound > 0);
 
       // clump is finished now
+      if (cclmp.nop > 1)
+      {
+         cclmp.assignID(nextFreeId);
+         nextFreeId++;
+         std::cout << "assigned ID " << nextFreeId << "\n";
+      }
 
-      // if not, let the particle be and iterate
+
+      cclmp.clear();
       pItr++;
    }
 }
@@ -455,24 +447,19 @@ void Clumps<_partT>::collectClumps(ParticleSet<_partT>& _parts,
    const size_t nop = _parts.getNop();
    const size_t noc = nextFreeId;
 
-   std::vector<SimpleClump> massRanked(noc);
-
-   for (size_t i = 0; i < noc; i++)
-   {
-      massRanked[i].m  = 0.;
-      massRanked[i].id = i;
-   }
+   std::vector<clumpT> massRanked(noc);
 
    for (size_t i = 0; i < nop; i++)
    {
       if (_parts[i].clumpid < CLUMPNONE)
          _parts[i].clumpid = CLUMPNONE;
+
       const size_t cID = _parts[i].clumpid;
       assert(cID < noc);
-      massRanked[cID].m += _parts[i].m;
+      massRanked[cID].addParticle(&_parts[i]);
    }
 
-   std::sort(massRanked.begin(), massRanked.end(), SimpleClumpCompMass());
+   std::sort(massRanked.begin(), massRanked.end(), higherClumpMass());
 
    std::cout << "mass ranked     max: " << massRanked[0].m << "\n";
 
@@ -504,8 +491,6 @@ void Clumps<_partT>::collectClumps(ParticleSet<_partT>& _parts,
          _parts[i].clumpid = CLUMPNONE;
    }
 
-   std::cout << "mapped new IDs\n";
-
    const size_t fnoc = maxID + 1;
 
    parentT::resize(fnoc);
@@ -522,7 +507,10 @@ void Clumps<_partT>::collectClumps(ParticleSet<_partT>& _parts,
    {
       clumpT& curClump(parentT::operator[](i));
       curClump.calcProperties();
+      curClump.calcAngularMom();
+      curClump.assignID(i + 1);
    }
+
    std::cout << "calc props    \n";
 
    return;

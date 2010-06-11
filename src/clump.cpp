@@ -31,9 +31,26 @@ public:
 
    Clump()
    {
+      clear();
+   }
+
+   ~Clump() { }
+
+   void clear()
+   {
+      id  = -1;
       m   = 0.;
       rc  = 0.;
       rho = 0.;
+
+      pos = 0., 0., 0.;
+      vel = 0., 0., 0.;
+      P   = 0., 0., 0.;
+      L   = 0., 0., 0.;
+
+      nop = 0;
+
+      pList.clear();
    }
 
    void addParticle(_partT* _pPtr)
@@ -99,6 +116,14 @@ public:
       rc = pow(0.75 * m / (M_PI * rho), 1. / 3.);
    }
 
+   void assignID(const cType _id)
+   {
+      typename partPtrLT::iterator pItr;
+      for (pItr = pList.begin(); pItr != pList.end(); pItr++)
+         (*pItr)->clumpid = _id;
+      id = _id;
+   }
+
    void calcAngularMom()
    {
       typename partPtrLT::const_iterator pItr;
@@ -124,6 +149,7 @@ public:
 
       vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(rc, "rc"));
+      vars.push_back(storeVar(rho, "rho"));
 
       vars.push_back(storeVar(id, "id"));
       vars.push_back(storeVar(nop, "nop"));
