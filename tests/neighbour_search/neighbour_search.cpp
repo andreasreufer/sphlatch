@@ -267,8 +267,8 @@ int main(int argc, char* argv[])
     {
       curIndex = BarnesHutTree.particleOrder[i];
       //curIndex = i;
-      //BarnesHutTree.calcGravity(*(partProxies[curIndex]));
-      BarnesHutTree.calcGravity(i);
+      //BarnesHutTree.calcAcc(*(partProxies[curIndex]));
+      BarnesHutTree.calcAcc(i);
     }
   logFile << std::fixed << std::right << std::setw(15) << std::setprecision(6)
           << MPI_Wtime() - stepStartTime << "    calculated gravity\n" << std::flush;

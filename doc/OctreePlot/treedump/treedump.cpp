@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
 	for (size_t i = 0; i < NPARTS; i++) {
         if ( ( ( RANK == 0 ) && Data(i, knack::X) < 0.50 ) ||
              ( ( RANK == 1 ) && Data(i, knack::X) > 0.50 ) ) {
-            BarnesHutTree.calcGravity(*(DataProxies[i]) );
+            BarnesHutTree.calcAcc(*(DataProxies[i]) );
         }
 		//++show_progress;
 	}

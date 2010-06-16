@@ -18,7 +18,7 @@ typedef sphlatch::box3dT    box3dT;
 const fType finf = sphlatch::fTypeInf;
 
 #include "bhtree.cpp"
-typedef sphlatch::BHTree   treeT;
+typedef sphlatch::BHTree    treeT;
 
 ///
 /// define the particle we are using
@@ -46,7 +46,7 @@ public:
       vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(h, "h"));
       vars.push_back(storeVar(id, "id"));
-      
+
       vars.push_back(storeVar(rho, "rho"));
       return(vars);
    }
@@ -54,66 +54,49 @@ public:
    ioVarLT getSaveVars()
    {
       ioVarLT vars;
+
       vars.push_back(storeVar(clumpid, "clumpid"));
 #ifdef CLUMPFIND_FOF
 #else
       vars.push_back(storeVar(pot, "pot"));
 #endif
-      return vars;
+      return(vars);
    }
 };
 
-typedef particle   partT;
+typedef particle                               partT;
 
 #include "particle_set.cpp"
 typedef sphlatch::ParticleSet<partT>           partSetT;
 
 #include "clump_finder.cpp"
-typedef sphlatch::Clumps<partT> clumpsT;
+typedef sphlatch::Clumps<partT>                clumpsT;
+
+#include "bhtree.cpp"
+#include "bhtree_worker_grav.cpp"
+typedef sphlatch::BHTree                       treeT;
+typedef sphlatch::fixThetaMAC                  macT;
+typedef sphlatch::GravityWorker<macT, partT>   gravT;
 
 // particles are global
 partSetT parts;
-clumpsT clumps;
+clumpsT  clumps;
 
 int main(int argc, char* argv[])
 {
-#ifdef CLUMPFIND_FOF
    if (not ((argc == 5) || (argc == 6)))
    {
       std::cerr <<
       "usage: clump_finder <inputdump> <clumpsfile> <minrho> <hmult> (<numthreads>)\n";
-#else
-   if (not ((argc == 3) || (argc == 4)))
-   {
-      std::cerr <<
-      "usage: clump_finder <inputdump> <clumpsfile> (<numthreads>)\n";
-#endif
       return(1);
    }
 
    std::string inFilename = argv[1];
    std::string clFilename = argv[2];
 
-#ifdef CLUMPFIND_FOF
-   std::istringstream rhoStr(argv[3]);
-   fType minRho;
-   rhoStr >> minRho;
-   
-   std::istringstream hMultStr(argv[4]);
-   fType hMult;
-   hMultStr >> hMult;
-#endif
-
-
-#ifdef CLUMPFIND_FOF
-   if (argc == 6)
-   {
-      std::istringstream threadStr(argv[5]);
-#else
    if (argc == 4)
    {
       std::istringstream threadStr(argv[3]);
-#endif
       int numThreads;
       threadStr >> numThreads;
       omp_set_num_threads(numThreads);
@@ -122,11 +105,24 @@ int main(int argc, char* argv[])
 
    // load the particles
    parts.loadHDF5(inFilename);
-#ifdef CLUMPFIND_FOF
-   clumps.getClumpsFOF(parts, minRho, hMult);
-#else
+
+   const size_t nop       = parts.getNop();
+   const fType  costppart = 1. / nop;
+
+   Tree.setExtent(_parts.getBox() * 1.1);
+
+   for (size_t i = 0; i < nop; i++)
+   {
+      parts[i].cost = costppart;
+      Tree.insertPart(parts[i]);
+   }
+   Tree.update(0.8, 1.2);
+
+#pragma omp parallel for firstprivate(gravWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      gravWorker.calcAcc(CZbottomLoc[i]);
+
    clumps.getClumpsPot(parts);
-#endif
    parts.saveHDF5(inFilename);
 
 

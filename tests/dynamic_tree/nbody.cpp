@@ -154,9 +154,9 @@ int main(int argc, char* argv[])
    start = omp_get_wtime();
 #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
-      gravWorker.calcGravity(CZbottomLoc[i]);
+      gravWorker.calcAcc(CZbottomLoc[i]);
 
-   std::cout << "calcGravity()    " << omp_get_wtime() - start << "s\n";
+   std::cout << "calcAcc()    " << omp_get_wtime() - start << "s\n";
 
    densSumT densWorker(&Tree);
    start = omp_get_wtime();
@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
       partsBF[i].acc     = cacc;
       partsBF[i].noneigh = non;
    }
-   std::cout << "calcGravity() BF " << omp_get_wtime() - start << "s\n";
+   std::cout << "calcAcc() BF " << omp_get_wtime() - start << "s\n";
    partsBF.saveHDF5("out_bf.h5part");
 
    std::cout << "brute force: " << partsBF[9].acc << "\n";

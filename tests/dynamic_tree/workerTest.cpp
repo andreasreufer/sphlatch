@@ -162,7 +162,7 @@ int main(int argc, char* argv[])
    start = omp_get_wtime();
 #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
-      gravWorker.calcGravity(CZbottomLoc[i]);
+      gravWorker.calcAcc(CZbottomLoc[i]);
 
    std::cout << "gravity finished " << omp_get_wtime() - start << "s\n";
 

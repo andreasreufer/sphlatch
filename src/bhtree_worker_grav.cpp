@@ -22,37 +22,41 @@ public:
    GravityWorker(const GravityWorker& _gw) : BHTreeWorker(_gw), G(_gw.G) { }
    ~GravityWorker() { }
 
-   void calcGravity(const czllPtrT _czll);
-   void calcGravPart(const pnodPtrT _part);
-
+   void calcAcc(const czllPtrT _czll);
+   void calcPot(const czllPtrT _czll);
+   
+   void calcAccPart(const pnodPtrT _part);
+   void calcPotPart(const pnodPtrT _part);
+   void calcAccPartRec(const pnodPtrT _part);
+   
    typedef sphlatch::Timer   timerT;
 
 private:
    _macT  MAC;
    timerT Timer;
 
-   void calcGravPartAlt(const pnodPtrT _part);
-   void calcGravRec();
+   void calcAccRec();
 
-   void interactPartCell();
-   void interactPartPart();
+   void accPC();
+   void accPP();
+   
+   void potPC();
+   void potPP();
 
    vect3dT  acc, ppos;
-   nodePtrT recCurPartPtr;
-#ifdef SPHLATCH_GRAVITY_POTENTIAL
    fType pot;
-#endif
+   nodePtrT recCurPartPtr;
 
    fType splineOSmoR1(const fType _r, const fType _h);
    fType splineOSmoR3(const fType _r, const fType _h);
-
 
 protected:
    const fType G;
 };
 
+
 template<typename _macT, typename _partT>
-void GravityWorker<_macT, _partT>::calcGravity(const czllPtrT _czll)
+void GravityWorker<_macT, _partT>::calcAcc(const czllPtrT _czll)
 {
    nodePtrT       curPart  = _czll->chldFrst;
    const nodePtrT stopChld = _czll->chldLast->next;
@@ -65,23 +69,43 @@ void GravityWorker<_macT, _partT>::calcGravity(const czllPtrT _czll)
    while (curPart != stopChld)
    {
       if (curPart->isParticle)
-         calcGravPart(static_cast<pnodPtrT>(curPart));
+         calcAccPart(static_cast<pnodPtrT>(curPart));
       curPart = curPart->next;
    }
    const double compTime = Timer.getRoundTime();
    _czll->compTime += static_cast<fType>(compTime);
 }
 
+
 template<typename _macT, typename _partT>
-void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
+void GravityWorker<_macT, _partT>::calcPot(const czllPtrT _czll)
+{
+   nodePtrT       curPart  = _czll->chldFrst;
+   const nodePtrT stopChld = _czll->chldLast->next;
+
+   // an empty CZ cell may have an chldFrst pointing to NULL
+   if (curPart == NULL)
+      return;
+
+   Timer.start();
+   while (curPart != stopChld)
+   {
+      if (curPart->isParticle)
+         calcPotPart(static_cast<pnodPtrT>(curPart));
+      curPart = curPart->next;
+   }
+   const double compTime = Timer.getRoundTime();
+   _czll->compTime += static_cast<fType>(compTime);
+}
+
+
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::calcAccPart(const pnodPtrT _part)
 {
    nodePtrT const curPartPtr = _part;
 
    ppos = _part->pos;
    acc  = 0., 0., 0.;
-#ifdef SPHLATCH_GRAVITY_POTENTIAL
-   pot  = 0.;
-#endif
 
    ///
    /// the complete tree walk
@@ -94,7 +118,7 @@ void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
          if (MAC(static_cast<qcllPtrT>(curPtr),
                  static_cast<pnodPtrT>(curPartPtr)))
          {
-            interactPartCell();
+            accPC();
             goSkip();
          }
          else
@@ -106,22 +130,59 @@ void GravityWorker<_macT, _partT>::calcGravPart(const pnodPtrT _part)
       {
          if (curPtr != curPartPtr)
          {
-            interactPartPart();
+            accPP();
          }
          goNext();
       }
    } while (curPtr != NULL);
 
    static_cast<_partT*>(_part->partPtr)->acc += G * acc;
-
-#ifdef SPHLATCH_GRAVITY_POTENTIAL
-   static_cast<_partT*>(_part->partPtr)->pot = G * pot;
-#endif
-
 }
 
+  
 template<typename _macT, typename _partT>
-void GravityWorker<_macT, _partT>::calcGravPartAlt(const pnodPtrT _part)
+void GravityWorker<_macT, _partT>::calcPotPart(const pnodPtrT _part)
+{
+   nodePtrT const curPartPtr = _part;
+
+   ppos = _part->pos;
+   pot  = 0.;
+
+   ///
+   /// the complete tree walk
+   ///
+   goRoot();
+   do
+   {
+      if (not curPtr->isParticle)
+      {
+         if (MAC(static_cast<qcllPtrT>(curPtr),
+                 static_cast<pnodPtrT>(curPartPtr)))
+         {
+            potPC();
+            goSkip();
+         }
+         else
+         {
+            goNext();
+         }
+      }
+      else
+      {
+         if (curPtr != curPartPtr)
+         {
+            potPP();
+         }
+         goNext();
+      }
+   } while (curPtr != NULL);
+
+   static_cast<_partT*>(_part->partPtr)->pot = G * pot;
+}
+
+
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::calcAccPartRec(const pnodPtrT _part)
 {
    ppos          = _part->pos;
    acc           = 0, 0, 0;
@@ -130,25 +191,26 @@ void GravityWorker<_macT, _partT>::calcGravPartAlt(const pnodPtrT _part)
    /// the complete tree walk
    ///
    goRoot();
-   calcGravRec();
+   calcAccRec();
 
    static_cast<_partT*>(_part->partPtr)->acc += G * acc;
 }
 
+
 template<typename _macT, typename _partT>
-void GravityWorker<_macT, _partT>::calcGravRec()
+void GravityWorker<_macT, _partT>::calcAccRec()
 {
    if (curPtr->isParticle)
    {
       if (curPtr != recCurPartPtr)
-         interactPartPart();
+         accPP();
    }
    else
    {
       if (MAC(static_cast<qcllPtrT>(curPtr),
               static_cast<pnodPtrT>(recCurPartPtr)))
       {
-         interactPartCell();
+         accPC();
       }
       else
       {
@@ -157,7 +219,7 @@ void GravityWorker<_macT, _partT>::calcGravRec()
             if (static_cast<gcllPtrT>(curPtr)->child[i] != NULL)
             {
                goChild(i);
-               calcGravRec();
+               calcAccRec();
                goUp();
             }
          }
@@ -166,7 +228,7 @@ void GravityWorker<_macT, _partT>::calcGravRec()
 }
 
 template<typename _macT, typename _partT>
-void GravityWorker<_macT, _partT>::interactPartPart()
+void GravityWorker<_macT, _partT>::accPP()
 {
    //FIXME: try using blitz++ functions
    const fType rx = ppos[0] - static_cast<pnodPtrT>(curPtr)->pos[0];
@@ -192,8 +254,29 @@ void GravityWorker<_macT, _partT>::interactPartPart()
    acc[0] -= mOr3 * rx;
    acc[1] -= mOr3 * ry;
    acc[2] -= mOr3 * rz;
+}
 
-#ifdef SPHLATCH_GRAVITY_POTENTIAL
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::potPP()
+{
+   //FIXME: try using blitz++ functions
+   const fType rx = ppos[0] - static_cast<pnodPtrT>(curPtr)->pos[0];
+   const fType ry = ppos[1] - static_cast<pnodPtrT>(curPtr)->pos[1];
+   const fType rz = ppos[2] - static_cast<pnodPtrT>(curPtr)->pos[2];
+   
+   const fType m  = static_cast<pnodPtrT>(curPtr)->m;
+   const fType rr = rx * rx + ry * ry + rz * rz;
+   const fType r  = sqrt(rr);
+
+#ifdef SPHLATCH_GRAVITY_SPLINESMOOTHING
+   const fType h =
+      static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr)->h;
+#elif SPHLATCH_GRAVITY_EPSSMOOTHING
+   const fType eps =
+      static_cast<_partT*>(static_cast<pnodPtrT>(curPtr)->partPtr)->eps;
+   const fType re   = r + eps;
+#endif
+
  #ifdef SPHLATCH_GRAVITY_SPLINESMOOTHING
    pot -= m * splineOSmoR1(r, h);
  #elif SPHLATCH_GRAVITY_EPSSMOOTHING
@@ -201,11 +284,10 @@ void GravityWorker<_macT, _partT>::interactPartPart()
  #else
    pot -= m / r;
  #endif
-#endif
 }
 
 template<typename _macT, typename _partT>
-void GravityWorker<_macT, _partT>::interactPartCell()
+void GravityWorker<_macT, _partT>::accPC()
 {
    //FIXME: check if fetching those values again is less costly
    const fType rx = MAC.rx;
@@ -222,9 +304,6 @@ void GravityWorker<_macT, _partT>::interactPartCell()
    acc[0] -= m * Or3 * rx;
    acc[1] -= m * Or3 * ry;
    acc[2] -= m * Or3 * rz;
-#ifdef SPHLATCH_GRAVITY_POTENTIAL
-   pot -= m / r;
-#endif
 
    const fType Or5 = Or3 / rr;
    const fType Or7 = Or5 / rr;
@@ -249,11 +328,42 @@ void GravityWorker<_macT, _partT>::interactPartCell()
    acc[0] += (Or5) * (q1jrj) - (Or7) * (2.5 * qijrirj * rx);
    acc[1] += (Or5) * (q2jrj) - (Or7) * (2.5 * qijrirj * ry);
    acc[2] += (Or5) * (q3jrj) - (Or7) * (2.5 * qijrirj * rz);
-
-#ifdef SPHLATCH_GRAVITY_POTENTIAL
-   pot -= 0.5*(Or5)*qijrirj;
-#endif
 }
+
+
+template<typename _macT, typename _partT>
+void GravityWorker<_macT, _partT>::potPC()
+{
+   const fType rx = MAC.rx;
+   const fType ry = MAC.ry;
+   const fType rz = MAC.rz;
+
+   const fType rr = MAC.rr;
+   const fType r  = sqrt(rr);
+
+   const fType Or5 = 1. / (r * rr * rr);
+
+   const fType m = static_cast<qcllPtrT>(curPtr)->m;
+
+   pot -= m / r;
+
+   const fType q11 = static_cast<qcllPtrT>(curPtr)->q11;
+   const fType q22 = static_cast<qcllPtrT>(curPtr)->q22;
+   const fType q33 = static_cast<qcllPtrT>(curPtr)->q33;
+   const fType q12 = static_cast<qcllPtrT>(curPtr)->q12;
+   const fType q13 = static_cast<qcllPtrT>(curPtr)->q13;
+   const fType q23 = static_cast<qcllPtrT>(curPtr)->q23;
+
+   const fType qijrirj = q11 * rx * rx +
+                         q22 * ry * ry +
+                         q33 * rz * rz +
+                         2. * q12 * rx * ry +
+                         2. * q13 * rx * rz +
+                         2. * q23 * ry * rz;
+
+   pot -= 0.5*(Or5)*qijrirj;
+}
+
 
 ///
 /// gravitational spline softening for B Spline kernel from

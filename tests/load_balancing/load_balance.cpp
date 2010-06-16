@@ -266,8 +266,8 @@ void derive()
    gravT       gravWorker(&Tree, G);
  #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
-      gravWorker.calcGravity(CZbottomLoc[i]);
-   Logger << "Tree.calcGravity()";
+      gravWorker.calcAcc(CZbottomLoc[i]);
+   Logger << "Tree.calcAcc()";
 #endif
 
    densSumT densWorker(&Tree);

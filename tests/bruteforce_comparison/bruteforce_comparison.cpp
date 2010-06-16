@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
   TimeStart = microsec_clock::local_time();
   for (size_t i = 0; i < noParts; i++)
     {
-      BarnesHutTree.calcGravity(*(partProxies[i]));
+      BarnesHutTree.calcAcc(*(partProxies[i]));
       ++show_progress;
     }
   TimeStop = microsec_clock::local_time();

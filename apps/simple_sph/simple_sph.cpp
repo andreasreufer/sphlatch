@@ -218,7 +218,7 @@ typedef sphlatch::IdealGas<partT>                eosT;
 #endif
 
 #ifdef SPHLATCH_KEEPENERGYPROFILE
-#include "lookup_table1D.cpp"
+ #include "lookup_table1D.cpp"
 typedef sphlatch::InterpolateLinear              intplT;
 typedef sphlatch::LookupTable1D<intplT>          engLUT;
 
@@ -269,8 +269,8 @@ void derive()
    gravT       gravWorker(&Tree, G);
  #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
-      gravWorker.calcGravity(CZbottomLoc[i]);
-   Logger << "Tree.calcGravity()";
+      gravWorker.calcAcc(CZbottomLoc[i]);
+   Logger << "Tree.calcAcc()";
 #endif
 
    densSumT densWorker(&Tree);
@@ -324,7 +324,7 @@ void derive()
 #ifdef SPHLATCH_KEEPENERGYPROFILE
    vect3dT com;
    com = 0., 0., 0.;
-   fType   totM = 0.;
+   fType totM = 0.;
    for (size_t i = 0; i < nop; i++)
    {
       com  += parts[i].pos * parts[i].m;
@@ -531,7 +531,7 @@ int main(int argc, char* argv[])
 
    Logger.finishStep("bootstrapped integrator");
 
-   fType nextTime = (floor(time/stepTime)+1.) * stepTime;
+   fType nextTime = (floor(time / stepTime) + 1.) * stepTime;
    // start the loop
 
    while (time < stopTime)
@@ -575,12 +575,24 @@ int main(int argc, char* argv[])
          dumpStr << timeStr.str();
          dumpStr << ".h5part";
 
+#ifdef SPHLATCH_GRAVITY
+         treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
+         const int           noCZbottomLoc = CZbottomLoc.size();
+
+         const fType G = parts.attributes["gravconst"];
+         gravT       gravWorker(&Tree, G);
+ #pragma omp parallel for firstprivate(gravWorker)
+         for (int i = 0; i < noCZbottomLoc; i++)
+            gravWorker.calcPot(CZbottomLoc[i]);
+         Logger << "Tree.calcPot()";
+#endif
+
          parts.doublePrecOut();
          parts.saveHDF5(dumpStr.str());
 
          Logger.stream << "write " << dumpStr.str();
          Logger.flushStream();
-         
+
          nextTime += stepTime;
       }
    }

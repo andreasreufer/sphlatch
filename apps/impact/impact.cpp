@@ -779,7 +779,7 @@ void derivate()
   for (size_t k = 0; k < noParts; k++)
     {
       const size_t i = Tree.particleOrder[k];
-      Tree.calcGravity(i);
+      Tree.calcAcc(i);
     }
   Logger << "gravity calculated";
 #endif
