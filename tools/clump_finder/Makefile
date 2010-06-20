@@ -1,4 +1,4 @@
-all: find_clumps_friends find_clumps_potential
+all: find_clumps
 
 find_clumps:
 	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \

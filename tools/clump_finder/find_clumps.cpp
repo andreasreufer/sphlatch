@@ -17,9 +17,6 @@ typedef sphlatch::box3dT    box3dT;
 
 const fType finf = sphlatch::fTypeInf;
 
-#include "bhtree.cpp"
-typedef sphlatch::BHTree    treeT;
-
 ///
 /// define the particle we are using
 ///
@@ -56,10 +53,7 @@ public:
       ioVarLT vars;
 
       vars.push_back(storeVar(clumpid, "clumpid"));
-#ifdef CLUMPFIND_FOF
-#else
       vars.push_back(storeVar(pot, "pot"));
-#endif
       return(vars);
    }
 };
@@ -84,32 +78,39 @@ clumpsT  clumps;
 
 int main(int argc, char* argv[])
 {
-   if (not ((argc == 5) || (argc == 6)))
+   if (not ((argc == 4) || (argc == 5)))
    {
       std::cerr <<
-      "usage: clump_finder <inputdump> <clumpsfile> <minrho> <hmult> (<numthreads>)\n";
+      "usage: clump_finder <inputdump> <clumpsfile> <minmass> (<numthreads>)\n";
       return(1);
    }
 
    std::string inFilename = argv[1];
    std::string clFilename = argv[2];
+   
+   std::istringstream mMassStr(argv[3]);
+   fType minMass;
+   mMassStr >> minMass;
 
-   if (argc == 4)
+   if (argc == 5)
    {
-      std::istringstream threadStr(argv[3]);
+      std::istringstream threadStr(argv[4]);
       int numThreads;
       threadStr >> numThreads;
       omp_set_num_threads(numThreads);
    }
-
 
    // load the particles
    parts.loadHDF5(inFilename);
 
    const size_t nop       = parts.getNop();
    const fType  costppart = 1. / nop;
+   const fType  G         = parts.attributes["gravconst"];
 
-   Tree.setExtent(_parts.getBox() * 1.1);
+   treeT& Tree(treeT::instance());
+   gravT  gravWorker(&Tree, G);
+
+   Tree.setExtent(parts.getBox() * 1.1);
 
    for (size_t i = 0; i < nop; i++)
    {
@@ -118,15 +119,17 @@ int main(int argc, char* argv[])
    }
    Tree.update(0.8, 1.2);
 
+   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
+   const int           noCZbottomLoc = CZbottomLoc.size();
+
 #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
-      gravWorker.calcAcc(CZbottomLoc[i]);
+      gravWorker.calcPot(CZbottomLoc[i]);
 
-   clumps.getClumpsPot(parts);
+   clumps.getClumps(parts, minMass);
+   std::cerr << clumps.getNop()-1 << " clump(s) found!\n";
+
    parts.saveHDF5(inFilename);
-
-
-   std::cerr << clumps.getNop() << " clump(s) found!\n";
    clumps.doublePrecOut();
    clumps.saveHDF5(clFilename);
 

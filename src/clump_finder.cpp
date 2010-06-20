@@ -41,7 +41,7 @@ public:
    Clumps() : clumps(parentT::parts) { nextFreeId = 1; }
    ~Clumps() { }
 
-   void getClumps(partSetT& _parts);
+   void getClumps(partSetT& _parts, const fType _minMass);
 
 private:
 
@@ -64,8 +64,6 @@ public:
       }
    };
 
-   treeT Tree;
-
    cType nextFreeId;
 };
 
@@ -74,18 +72,11 @@ template<typename _partT>
 void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
                                const fType          _minMass)
 {
-   const size_t        nop           = _parts.getNop();
-   const fType         G             = _parts.attributes["gravconst"];
-   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
-   const int           noCZbottomLoc = CZbottomLoc.size();
-
-   gravT gravWorker(&Tree, G);
-
-#pragma omp parallel for firstprivate(gravWorker)
-   for (int i = 0; i < noCZbottomLoc; i++)
-      gravWorker.calcAcc(CZbottomLoc[i]);
+   const size_t nop = _parts.getNop();
+   const fType  G   = _parts.attributes["gravconst"];
 
    partPtrLT unbdParts;
+
    for (size_t i = 0; i < nop; i++)
       unbdParts.push_back(&(_parts[i]));
 
@@ -98,6 +89,7 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
 
    pItr = unbdParts.begin();
 
+   clumpLT clist;
    while (pItr != unbdParts.end())
    {
       partT* cp = *pItr;
@@ -116,8 +108,11 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
          noFound = 0;
          while (nItr != unbdParts.end())
          {
-            if (cclmp.totEnergy(*nItr, G) < 0.)
+            const fType totE = cclmp.totEnergy(*nItr, G);
+            //if (cclmp.totEnergy(*nItr, G) < 0.)
+            if (totE < 0.)
             {
+               //std::cout << totE << "\n";
                cclmp.addParticle(*nItr);
                noFound++;
                onItr = nItr;
@@ -133,14 +128,55 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
       if (cclmp.nop > 1)
       {
          cclmp.assignID(nextFreeId);
+         clist.push_back(cclmp);
          nextFreeId++;
-         std::cout << "assigned ID " << nextFreeId << "\n";
       }
-
 
       cclmp.clear();
       pItr++;
    }
+
+   higherClumpMass massSorter;
+   clist.sort(massSorter);
+
+   clumpLT clist_final;
+
+   cType cId = 1;
+   for (typename clumpLT::iterator cItr = clist.begin();
+       cItr != clist.end();
+       cItr++)
+     if ((*cItr).m > _minMass)
+     {
+       (*cItr).assignID(cId);
+       clist_final.push_back( *cItr );
+       cId++;
+     }
+     else
+       (*cItr).assignID(CLUMPNONE);
+   
+   parentT::resize(cId);
+   const size_t noc = parentT::getNop();
+   
+   clumpT& noneClump(clumps[0]);
+   noneClump.assignID(CLUMPNONE);
+
+   for (size_t i = 0; i < nop; i++)
+   {
+     if (_parts[i].clumpid == CLUMPNONE)
+       noneClump.addParticle(&_parts[i]);
+   }
+   
+   size_t cidx = 1;
+   for (typename clumpLT::iterator cItr = clist_final.begin(); 
+       cItr != clist_final.end();
+        cItr++)
+   {
+     clumps[cidx] = *cItr;
+     cidx++;
+   }
+
+   for (size_t i = 0; i < noc; i++)
+     clumps[i].calcAngularMom();
 }
 }
 
