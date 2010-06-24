@@ -225,6 +225,10 @@ typedef sphlatch::LookupTable1D<intplT>          engLUT;
 engLUT energyLUT("profile1D.hdf5", "r", "u");
 #endif
 
+#ifdef SPHLATCH_FINDCLUMPS
+
+#endif
+
 // particles are global
 partSetT parts;
 
@@ -442,6 +446,9 @@ fType timestep(const fType _stepTime, const fType _nextTime)
    return(dt);
 }
 
+
+void ()
+
 int main(int argc, char* argv[])
 {
 #ifdef SPHLATCH_MPI
@@ -557,6 +564,8 @@ int main(int argc, char* argv[])
 
       if (fabs(nextTime - time) < 1.e-9)
       {
+          // tree, parts, dumpStr, 
+          // <saveDump>
          std::stringstream dumpStr, stepStr, timeStr;
 
          dumpStr << dumpPrefix;
@@ -592,6 +601,7 @@ int main(int argc, char* argv[])
 
          Logger.stream << "write " << dumpStr.str();
          Logger.flushStream();
+         // 
 
          nextTime += stepTime;
       }

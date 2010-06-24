@@ -72,6 +72,8 @@ template<typename _partT>
 void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
                                const fType          _minMass)
 {
+   parentT::step = _parts.step;
+
    const size_t nop = _parts.getNop();
    const fType  G   = _parts.attributes["gravconst"];
 
@@ -86,7 +88,7 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
    typename partPtrLT::iterator pItr, nItr, onItr;
 
    nextFreeId = 1;
-
+   
    pItr = unbdParts.begin();
 
    clumpLT clist;
@@ -109,10 +111,8 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
          while (nItr != unbdParts.end())
          {
             const fType totE = cclmp.totEnergy(*nItr, G);
-            //if (cclmp.totEnergy(*nItr, G) < 0.)
             if (totE < 0.)
             {
-               //std::cout << totE << "\n";
                cclmp.addParticle(*nItr);
                noFound++;
                onItr = nItr;
