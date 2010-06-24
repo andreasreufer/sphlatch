@@ -11,22 +11,6 @@
 #include "typedefs.h"
 typedef sphlatch::fType   fType;
 
-/*#include "bhtree.cpp"
-   typedef sphlatch::BHTree     treeT;
-
-   typedef sphlatch::pnodT      pnodT;
-   typedef sphlatch::pnodPtrT   pnodPtrT;
-
-   typedef sphlatch::nodeT      nodeT;
-   typedef sphlatch::nodePtrT   nodePtrT;
-
-   typedef sphlatch::gcllT      gcllT;
-   typedef sphlatch::gcllPtrT   gcllPtrT;
-
-   typedef sphlatch::czllT      czllT;
-   typedef sphlatch::czllPtrT   czllPtrT;*/
-
-
 #include "bhtree_particle.h"
 #include "sph_fluid_particle.h"
 #include "io_particle.h"
@@ -87,8 +71,6 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   const fType  costMin = 1.0e4, costMax = 1.5e4;
-   
    partSetT particles;
 
    double start;
@@ -98,8 +80,17 @@ int main(int argc, char* argv[])
    
    
    start = omp_get_wtime();
+   std::cout << particles.step << "\n";
    particles.saveHDF5("out.h5part");
    std::cout << "particles stored " << omp_get_wtime() - start << "s\n";
+
+   particles.step = 42;
+   std::cout << particles.step << "\n";
+   particles.saveHDF5("multistep.h5part");
+   
+   particles.step = 43;
+   std::cout << particles.step << "\n";
+   particles.saveHDF5("multistep.h5part");
 
 
 #ifdef SPHLATCH_MPI
