@@ -446,8 +446,9 @@ fType timestep(const fType _stepTime, const fType _nextTime)
    return(dt);
 }
 
-
-void ()
+void save(std::string _dumpPrefix)
+{
+}
 
 int main(int argc, char* argv[])
 {
@@ -564,7 +565,7 @@ int main(int argc, char* argv[])
 
       if (fabs(nextTime - time) < 1.e-9)
       {
-          // tree, parts, dumpStr, 
+          // argc, argv
           // <saveDump>
          std::stringstream dumpStr, stepStr, timeStr;
 
@@ -601,7 +602,7 @@ int main(int argc, char* argv[])
 
          Logger.stream << "write " << dumpStr.str();
          Logger.flushStream();
-         // 
+         // </savedump>
 
          nextTime += stepTime;
       }

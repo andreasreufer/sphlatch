@@ -72,7 +72,8 @@ template<typename _partT>
 void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
                                const fType          _minMass)
 {
-   parentT::step = _parts.step;
+   parentT::step       = _parts.step;
+   parentT::attributes = _parts.attributes;
 
    const size_t nop = _parts.getNop();
    const fType  G   = _parts.attributes["gravconst"];
@@ -88,7 +89,7 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
    typename partPtrLT::iterator pItr, nItr, onItr;
 
    nextFreeId = 1;
-   
+
    pItr = unbdParts.begin();
 
    clumpLT clist;
@@ -143,40 +144,40 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
 
    cType cId = 1;
    for (typename clumpLT::iterator cItr = clist.begin();
-       cItr != clist.end();
-       cItr++)
-     if ((*cItr).m > _minMass)
-     {
-       (*cItr).assignID(cId);
-       clist_final.push_back( *cItr );
-       cId++;
-     }
-     else
-       (*cItr).assignID(CLUMPNONE);
-   
+        cItr != clist.end();
+        cItr++)
+      if ((*cItr).m > _minMass)
+      {
+         (*cItr).assignID(cId);
+         clist_final.push_back(*cItr);
+         cId++;
+      }
+      else
+         (*cItr).assignID(CLUMPNONE);
+
    parentT::resize(cId);
    const size_t noc = parentT::getNop();
-   
+
    clumpT& noneClump(clumps[0]);
    noneClump.assignID(CLUMPNONE);
 
    for (size_t i = 0; i < nop; i++)
    {
-     if (_parts[i].clumpid == CLUMPNONE)
-       noneClump.addParticle(&_parts[i]);
+      if (_parts[i].clumpid == CLUMPNONE)
+         noneClump.addParticle(&_parts[i]);
    }
-   
+
    size_t cidx = 1;
-   for (typename clumpLT::iterator cItr = clist_final.begin(); 
-       cItr != clist_final.end();
+   for (typename clumpLT::iterator cItr = clist_final.begin();
+        cItr != clist_final.end();
         cItr++)
    {
-     clumps[cidx] = *cItr;
-     cidx++;
+      clumps[cidx] = *cItr;
+      cidx++;
    }
 
    for (size_t i = 0; i < noc; i++)
-     clumps[i].calcAngularMom();
+      clumps[i].calcAngularMom();
 }
 }
 
