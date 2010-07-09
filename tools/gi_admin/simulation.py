@@ -9,8 +9,9 @@ import shutil
 from numpy import sqrt, sin, cos, arccos, log, abs, tan, arctan2, pi, zeros
 from body import BodyFile
 from setup_gi import GiantImpact
-import pdb
+from h5part import H5PartDump
 
+import pdb
 
 rad2deg = 360./(2.*pi)
 deg2rad = 1./rad2deg
@@ -424,7 +425,7 @@ class Simulation(object):
     
     return pairs[0]
 
-
+  # change
   def _findClumps(self):
     minrho = float(self.cfg["CLUMPMINRHO"])
     hsep   = float(self.cfg["CLUMPHSEP"])
@@ -441,6 +442,7 @@ class Simulation(object):
         cmd = "clump_finder " + simdir + dumpfile + " " + clpdir + dumpfile + " " + str(minrho) + " " + str(hsep)
         (stat, out) = commands.getstatusoutput(cmd)
   
+  # change that
   def _clumpsExtent(self):
     import tables as pt
     clpdir  = self.dir + "clumps/"
@@ -461,6 +463,8 @@ class Simulation(object):
     self.clpmax = clpmax
 
     return (clpmin, clpmax) 
+
+  #def _getClumpsState(self):
 
 
 class SimParams(object):
