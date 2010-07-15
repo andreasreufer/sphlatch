@@ -16,7 +16,7 @@ oname = sys.argv[2]
 key   = sys.argv[3]
 
 clumps = SimClumps(iname)
-clmpmasses = clumps.clmpmasses
+clmpmasses = clumps.m
 maxnoc     = clumps.maxnoc
 
 fig = plt.figure()

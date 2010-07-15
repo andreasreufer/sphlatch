@@ -36,7 +36,6 @@
  #endif
 #endif
 
-
 #include "typedefs.h"
 typedef sphlatch::fType     fType;
 typedef sphlatch::cType     cType;
@@ -60,6 +59,10 @@ typedef sphlatch::BHTree   treeT;
 #include "io_particle.h"
 #include "integrator_predcorr.cpp"
 
+#ifdef SPHLATCH_FIND_CLUMPS
+#include "clump_particle.h"
+#endif
+
 class particle :
    public sphlatch::treePart,
    public sphlatch::movingPart,
@@ -71,6 +74,9 @@ class particle :
 #endif
 #ifdef SPHLATCH_ANEOS
    , public sphlatch::ANEOSPart
+#endif
+#ifdef SPHLATCH_FIND_CLUMPS
+   , public sphlatch::clumpPart
 #endif
 {
 public:
@@ -167,8 +173,11 @@ public:
 #ifdef SPHLATCH_TIMEDEP_SMOOTHING
       vars.push_back(storeVar(dhdt, "dhdt"));
 #endif
-#ifdef SPHLATCH_GRAVITY_POTENTIAL
+#ifdef SPHLATCH_GRAVITY
       vars.push_back(storeVar(pot, "pot"));
+#endif
+#ifdef SPHLATCH_FIND_CLUMPS
+      vars.push_back(storeVar(clumpid, "clumpid"));
 #endif
 
       vars.push_back(storeVar(cost, "cost"));
@@ -225,13 +234,13 @@ typedef sphlatch::LookupTable1D<intplT>          engLUT;
 engLUT energyLUT("profile1D.hdf5", "r", "u");
 #endif
 
-#ifdef SPHLATCH_FINDCLUMPS
-
+#ifdef SPHLATCH_FIND_CLUMPS
+#include "clump_finder.cpp"
+typedef sphlatch::Clumps<partT>                clumpsT;
 #endif
 
 // particles are global
 partSetT parts;
-
 
 
 void derive()
@@ -448,6 +457,88 @@ fType timestep(const fType _stepTime, const fType _nextTime)
 
 void save(std::string _dumpPrefix)
 {
+   std::stringstream dumpStr, stepStr, timeStr;
+
+   logT& Logger(logT::instance());
+   
+   const fType time = parts.attributes["time"];
+   const cType step = parts.step;
+   
+   const size_t nop = parts.getNop();
+
+   // create the dump filename
+   dumpStr << _dumpPrefix;
+
+   stepStr << step;
+   // pad step number to 7 digits
+   for (size_t i = stepStr.str().size(); i < 7; i++)
+      dumpStr << "0";
+   dumpStr << stepStr.str();
+
+   dumpStr << "_T";
+   timeStr << std::setprecision(4) << std::scientific << time;
+   // pad time string to 11 digits
+   for (size_t i = timeStr.str().size(); i < 11; i++)
+      dumpStr << "0";
+   dumpStr << timeStr.str();
+   dumpStr << ".h5part";
+
+#ifdef SPHLATCH_GRAVITY
+   treeT& Tree(treeT::instance());
+   Tree.setExtent(parts.getBox() * 1.1);
+   
+   const fType  costppart = 1. / nop;
+   for (size_t i = 0; i < nop; i++)
+   {
+      parts[i].cost = costppart;
+      Tree.insertPart(parts[i]);
+   }
+   Logger << "created tree";
+
+   Tree.update(0.8, 1.2);
+   
+   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
+   const int           noCZbottomLoc = CZbottomLoc.size();
+
+   const fType G = parts.attributes["gravconst"];
+   gravT       gravWorker(&Tree, G);
+ #pragma omp parallel for firstprivate(gravWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      gravWorker.calcPot(CZbottomLoc[i]);
+   Logger << "Tree.calcPot()";
+
+ #ifdef SPHLATCH_FIND_CLUMPS
+   // set the minimal clump mass to 10 of the lightest particles
+   fType pMinMass = 0.;
+   for (size_t i = 0; i < nop; i++)
+      pMinMass = parts[i].m > pMinMass ? parts[i].m : pMinMass;
+   const fType cMinMass = 10. * pMinMass;
+
+   clumpsT  clumps;
+   clumps.getClumps(parts, cMinMass);
+   clumps.doublePrecOut();
+   clumps.saveHDF5("clumps.h5part");
+
+   Logger.stream << "found " << clumps.getNop() - 1 << " clump(s) with m > "
+                 << cMinMass;
+   Logger.flushStream();
+   
+   costT costWorker(&Tree);
+#pragma omp parallel for firstprivate(costWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      costWorker(CZbottomLoc[i]);
+   Logger << "Tree.costWorker()";
+   
+   Tree.clear();
+   Logger << "Tree.clear()";
+ #endif
+#endif
+
+   parts.doublePrecOut();
+   parts.saveHDF5(dumpStr.str());
+
+   Logger.stream << "write " << dumpStr.str();
+   Logger.flushStream();
 }
 
 int main(int argc, char* argv[])
@@ -565,45 +656,7 @@ int main(int argc, char* argv[])
 
       if (fabs(nextTime - time) < 1.e-9)
       {
-          // argc, argv
-          // <saveDump>
-         std::stringstream dumpStr, stepStr, timeStr;
-
-         dumpStr << dumpPrefix;
-
-         stepStr << step;
-         // pad step number to 7 digits
-         for (size_t i = stepStr.str().size(); i < 7; i++)
-            dumpStr << "0";
-         dumpStr << stepStr.str();
-
-         dumpStr << "_T";
-         timeStr << std::setprecision(4) << std::scientific << time;
-         // pad time string to 11 digits
-         for (size_t i = timeStr.str().size(); i < 11; i++)
-            dumpStr << "0";
-         dumpStr << timeStr.str();
-         dumpStr << ".h5part";
-
-#ifdef SPHLATCH_GRAVITY
-         treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
-         const int           noCZbottomLoc = CZbottomLoc.size();
-
-         const fType G = parts.attributes["gravconst"];
-         gravT       gravWorker(&Tree, G);
- #pragma omp parallel for firstprivate(gravWorker)
-         for (int i = 0; i < noCZbottomLoc; i++)
-            gravWorker.calcPot(CZbottomLoc[i]);
-         Logger << "Tree.calcPot()";
-#endif
-
-         parts.doublePrecOut();
-         parts.saveHDF5(dumpStr.str());
-
-         Logger.stream << "write " << dumpStr.str();
-         Logger.flushStream();
-         // </savedump>
-
+         save(dumpPrefix);
          nextTime += stepTime;
       }
    }
