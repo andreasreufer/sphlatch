@@ -519,9 +519,21 @@ void save(std::string _dumpPrefix)
    clumps.doublePrecOut();
    clumps.saveHDF5("clumps.h5part");
 
-   Logger.stream << "found " << clumps.getNop() - 1 << " clump(s) with m > "
+   const size_t noc = clumps.getNop();
+
+   Logger.stream << "found " << noc - 1 << " clump(s) with m > "
                  << cMinMass;
    Logger.flushStream();
+   
+   std::fstream cfile;
+   cfile.open("clumps.txt", std::ios::app | std::ios::out);
+   cfile << std::setw(18) << std::setprecision(6) << time << "   ";
+   for (size_t i = 0; i < noc; i++)
+     cfile << clumps[i].m << " ";
+   for (size_t i = noc; i < 10; i++)
+     cfile << 0. << " ";
+   cfile << "\n";
+   cfile.close();
    
    costT costWorker(&Tree);
 #pragma omp parallel for firstprivate(costWorker)
@@ -613,13 +625,14 @@ int main(int argc, char* argv[])
 
    // load the particles
    parts.loadHDF5(inFilename);
-   Logger << "loaded particles";
+   const size_t nop = parts.getNop();
+
+   Logger.stream << "loaded " << nop << " particles";
+   Logger.flushStream();
 
    fType& time(parts.attributes["time"]);
    cType& step(parts.step);
    treeT& Tree(treeT::instance());
-
-   const size_t nop = parts.getNop();
 
    parts[0].noneighOpt = 50;
 
