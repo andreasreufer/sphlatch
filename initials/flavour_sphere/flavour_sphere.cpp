@@ -54,8 +54,10 @@ class particle :
    {
       ioVarLT vars;
       
+      vars.push_back(storeVar(pos, "pos"));
       vars.push_back(storeVar(mat, "mat"));
       vars.push_back(storeVar(u, "u"));
+      vars.push_back(storeVar(h, "h"));
       vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(noneigh, "noneigh"));
       vars.push_back(storeVar(cost, "cost"));
