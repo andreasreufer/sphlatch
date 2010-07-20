@@ -527,7 +527,8 @@ void save(std::string _dumpPrefix)
    
    std::fstream cfile;
    cfile.open("clumps.txt", std::ios::app | std::ios::out);
-   cfile << std::setw(18) << std::setprecision(6) << time << "   ";
+   cfile << std::setw(18) << std::setprecision(6) << std::scientific;
+   cfile << time << "   ";
    for (size_t i = 0; i < noc; i++)
      cfile << clumps[i].m << " ";
    for (size_t i = noc; i < 10; i++)

@@ -49,7 +49,7 @@ class Simulation(object):
     self.params.temp = float(cfg["TEMP"])
 
     ssbdir = resolvePath(cfg["SIMSETBDIR"]) + "/"
-    self.dir = resolvePath(ssbdir + "sim_" + params.key) + "/"
+    self.dir = resolvePath(ssbdir + params.key) + "/"
     
     if path.exists(self.dir):
       self.Log = Logger(self.dir + "setup.log")

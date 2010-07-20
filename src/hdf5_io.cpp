@@ -28,6 +28,8 @@ public:
    void loadPrimitive(std::string _name, valvectType& _v);
    void savePrimitive(std::string _name, valvectType& _v);
 
+   fType loadAttribute(std::string _name);
+
    void singlePrecOut();
    void doublePrecOut();
 
@@ -40,19 +42,17 @@ private:
                 const size_t _m,
                 const void   * _data);
 
-   void loadRaw(std::string  _name,
-                hid_t        _group,
-                hid_t        _mtype,
-                void         * _data);
+   void loadRaw(std::string _name,
+                hid_t       _group,
+                hid_t       _mtype,
+                void        * _data);
+
 
    bool objExist(hid_t _fh, std::string _op);
 
    hid_t fpl, fh, apl, rgrp;
 
    hid_t h5mITYPE, h5mFTYPE, h5fITYPE, h5fFTYPE;
-
-   /*  loadAttribute(std::string _name, std::string _inputFile);
-    */
 };
 
 HDF5File::HDF5File(std::string _file)
@@ -91,14 +91,14 @@ HDF5File::~HDF5File()
 
 void HDF5File::loadPrimitive(std::string _name, valvectType& _v)
 {
-  loadRaw(_name, rgrp, h5mFTYPE, &_v(0));
+   loadRaw(_name, rgrp, h5mFTYPE, &_v(0));
 }
 
 void HDF5File::savePrimitive(std::string _name, valvectType& _v)
 {
-  saveRaw(_name, rgrp, h5mFTYPE, h5fFTYPE, _v.size(), 1, &_v(0));
+   saveRaw(_name, rgrp, h5mFTYPE, h5fFTYPE, _v.size(), 1, &_v(0));
 }
-   
+
 void HDF5File::saveRaw(std::string  _name,
                        hid_t        _group,
                        hid_t        _mtype,
@@ -110,6 +110,7 @@ void HDF5File::saveRaw(std::string  _name,
    hsize_t dimsm[2], dimsf[2], offs[2];
 
    size_t nodims = 1;
+
    if (_m > 1)
       nodims = 2;
 
@@ -146,17 +147,17 @@ void HDF5File::saveRaw(std::string  _name,
    H5Sclose(fspc);
 }
 
-void HDF5File::loadRaw(std::string  _name,
-                       hid_t        _group,
-                       hid_t        _mtype,
-                       void         * _data)
+void HDF5File::loadRaw(std::string _name,
+                       hid_t       _group,
+                       hid_t       _mtype,
+                       void        * _data)
 {
    hsize_t dimsm[2], dimsf[2], offs[2];
 
    /// offset
    offs[0] = 0;
    offs[1] = 0;
-   
+
    dimsf[0] = 0;
    dimsf[1] = 0;
 
@@ -180,6 +181,16 @@ void HDF5File::loadRaw(std::string  _name,
    H5Sclose(mspc);
    H5Sclose(fspc);
    H5Dclose(cuds);
+}
+
+fType HDF5File::loadAttribute(std::string _aid)
+{
+   fType buff;
+   hid_t cattr = H5Aopen(rgrp, _aid.c_str(), H5P_DEFAULT);
+   H5Aread(cattr, h5mFTYPE , &buff);
+   H5Aclose(cattr);
+   
+   return(buff);
 }
 
 bool HDF5File::objExist(hid_t _fh, std::string _op)
@@ -217,12 +228,12 @@ void HDF5File::getDims(std::string _name, size_t& _nx, size_t& _ny)
 
 void HDF5File::singlePrecOut()
 {
-  h5fFTYPE = H5T_IEEE_F32LE;
+   h5fFTYPE = H5T_IEEE_F32LE;
 }
 
 void HDF5File::doublePrecOut()
 {
-  h5fFTYPE = H5T_IEEE_F64LE;
+   h5fFTYPE = H5T_IEEE_F64LE;
 }
 
 /*
