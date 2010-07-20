@@ -27,10 +27,4 @@ class H5PartDump(object):
         stpnam.append(node._v_pathname)
     return stpnam
 
-  def getAttrKeys(self):
-    pass
-
-  def getAttr(self,key):
-    pass
-
 
