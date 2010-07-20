@@ -1,3 +1,6 @@
 all:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o flavour_sphere flavour_sphere.cpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	  -lhdf5 -lz -I../../src \
+	  -fopenmp \
+	  -o flavour_sphere flavour_sphere.cpp
 	

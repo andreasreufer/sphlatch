@@ -1,260 +1,205 @@
-//#define SPHLATCH_CARTESIAN_XYZ
-//#define SPHLATCH_CARTESIAN_YZX
-//#define SPHLATCH_CARTESIAN_ZXY
-#define SPHLATCH_HILBERT3D
+#include <iostream>
+#include <sstream>
+#include <vector>
 
-// uncomment for single-precision calculation
 //#define SPHLATCH_SINGLEPREC
 
-// enable parallel version
-#define SPHLATCH_PARALLEL
-
-//#define SPHLATCH_RANKSPACESERIALIZE
-
-// enable checking of bounds for the neighbour lists
-#define SPHLATCH_CHECKNONEIGHBOURS
-
-#include <cstdlib>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <string>
-
-#include <boost/program_options/option.hpp>
-#include <boost/program_options/cmdline.hpp>
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/positional_options.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/assign/std/vector.hpp>
-
-namespace po = boost::program_options;
+#include <omp.h>
+#define SPHLATCH_OPENMP
+#define SPHLATCH_HDF5
+#define SPHLATCH_NONEIGH
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
-typedef sphlatch::identType identType;
-typedef sphlatch::valvectType valvectType;
+typedef sphlatch::fType     fType;
+typedef sphlatch::cType     cType;
+typedef sphlatch::vect3dT   vect3dT;
+typedef sphlatch::box3dT    box3dT;
 
-typedef sphlatch::valvectRefType valvectRefType;
-typedef sphlatch::idvectRefType idvectRefType;
-typedef sphlatch::matrixRefType matrixRefType;
+const fType finf = sphlatch::fTypeInf;
 
-#include "particle_manager.h"
-typedef sphlatch::ParticleManager part_type;
+#include "bhtree.cpp"
+typedef sphlatch::BHTree   treeT;
 
-#include "io_manager.h"
-typedef sphlatch::IOManager io_type;
+///
+/// define the particle we are using
+///
+#include "bhtree_particle.h"
+#include "sph_fluid_particle.h"
+#include "io_particle.h"
 
-#include "communication_manager.h"
-typedef sphlatch::CommunicationManager comm_type;
-
-#include "costzone.h"
-typedef sphlatch::CostZone costzone_type;
-
-#include "rankspace.h"
-typedef sphlatch::Rankspace neighsearch_type;
-
-#include "lookup_table1D.h"
-typedef sphlatch::LookupTable1D<sphlatch::InterpolateStepwise> lut_type;
-
-using namespace boost::assign;
-using namespace sphlatch::vectindices;
-
-void nsearch()
+class particle :
+   public sphlatch::treePart,
+   public sphlatch::movingPart,
+   public sphlatch::SPHfluidPart,
+   public sphlatch::energyPart,
+   public sphlatch::IOPart,
+   public sphlatch::ANEOSPart
 {
-  part_type& PartManager(part_type::instance());
-  comm_type& CommManager(comm_type::instance());
+  public:
+   ioVarLT getLoadVars()
+   {
+      ioVarLT vars;
 
-  matrixRefType pos(PartManager.pos);
+      vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(id, "id"));
 
-  valvectRefType m(PartManager.m);
-  valvectRefType h(PartManager.h);
+      vars.push_back(storeVar(u, "u"));
+      return(vars);
+   }
 
-  idvectRefType id(PartManager.id);
-  idvectRefType noneigh(PartManager.noneigh);
+   ioVarLT getSaveVars()
+   {
+      ioVarLT vars;
+      
+      vars.push_back(storeVar(mat, "mat"));
+      vars.push_back(storeVar(u, "u"));
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(noneigh, "noneigh"));
+      vars.push_back(storeVar(cost, "cost"));
+      return(vars);
+   }
+};
 
-  const size_t noParts = PartManager.getNoLocalParts();
+typedef particle   partT;
 
-  /// send ghosts to other domains
-  CommManager.sendGhosts(pos);
-  CommManager.sendGhosts(id);
-  CommManager.sendGhosts(m);
-  CommManager.sendGhosts(h);
+#include "particle_set.cpp"
+typedef sphlatch::ParticleSet<partT>           partSetT;
 
-  ///
-  /// define neighbour search algorithm
-  ///
-  neighsearch_type Nsearch;
-  Nsearch.prepare();
-  Nsearch.neighbourList.resize(1024);
-  Nsearch.neighDistList.resize(1024);
+#include "sph_algorithms.cpp"
+#include "sph_kernels.cpp"
+#include "bhtree_worker_sphsum.cpp"
 
-  ///
-  /// just search the neighbours
-  ///
-  for (size_t k = 0; k < noParts; k++)
-    {
-      ///
-      /// find neighbours
-      ///
-      const size_t i = k;
-      const valueType hi = h(i);
-      const valueType srchRad = 2. * hi;
-      Nsearch.findNeighbours(i, srchRad);
+typedef sphlatch::CubicSpline3D                  krnlT;
 
-      const size_t noNeighs = Nsearch.neighbourList[0];
+typedef sphlatch::densSum<partT, krnlT>          densT;
+typedef sphlatch::SPHsumWorker<densT, partT>     densSumT;
 
-      ///
-      /// store the number of neighbours
-      ///
-      noneigh(i) = noNeighs;
-    }
-}
+#include "bhtree_worker_cost.cpp"
+typedef sphlatch::CostWorker<partT>              costT;
+
+
+#include "lookup_table1D.cpp"
+typedef sphlatch::InterpolateLinear              intplT;
+typedef sphlatch::LookupTable1D<intplT>          LUT1DlinT;
+
+
+// particles are global
+partSetT parts;
+
 
 int main(int argc, char* argv[])
 {
-  MPI::Init(argc, argv);
+#ifdef SPHLATCH_MPI
+   MPI::Init(argc, argv);
+#endif
 
-  po::options_description Options("Global Options");
-  Options.add_options()
-  ("help,h", "Produces this Help")
-  ("output-file,o", po::value<std::string>(), "output  file")
-  ("profile-file,p", po::value<std::string>(), "profile file")
-  ("input-file,i", po::value<std::string>(), "input   file");
-
-  po::variables_map VMap;
-  po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
-  po::notify(VMap);
-
-  if (VMap.count("help"))
-    {
-      std::cerr << Options << std::endl;
-      return EXIT_FAILURE;
-    }
-
-  if (!VMap.count("output-file") ||
-      !VMap.count("profile-file") ||
-      !VMap.count("input-file"))
-    {
-      std::cerr << Options << std::endl;
-      return EXIT_FAILURE;
-    }
-
-  io_type&        IOManager(io_type::instance());
-  part_type&      PartManager(part_type::instance());
-  comm_type&      CommManager(comm_type::instance());
-  costzone_type&  CostZone(costzone_type::instance());
-
-  matrixRefType pos(PartManager.pos);
-  matrixRefType vel(PartManager.vel);
-  valvectRefType m(PartManager.m);
-  valvectRefType h(PartManager.h);
-  valvectRefType u(PartManager.u);
-  valvectRefType rho(PartManager.rho);
-
-  idvectRefType id(PartManager.id);
-  idvectRefType noneigh(PartManager.noneigh);
-  idvectRefType mat(PartManager.mat);
-
-  PartManager.useBasicSPH();
-  PartManager.useEnergy();
-  PartManager.useTimedepEnergy();
-  PartManager.useMaterials();
-
-  ///
-  /// load particles
-  ///
-  std::string inputFilename = VMap["input-file"].as<std::string>();
-  IOManager.loadDump(inputFilename);
-  std::cerr << " read particle positions from: " << inputFilename << "\n";
-
-  ///
-  /// exchange particle data
-  ///
-  CostZone.createDomainPartsIndex();
-  CommManager.exchange(CostZone.domainPartsIndex,
-                       CostZone.getNoGhosts());
-  CommManager.sendGhostsPrepare(CostZone.createDomainGhostIndex());
-
-  ///
-  /// load profile
-  ///
-  std::string profileFilename = VMap["profile-file"].as<std::string>();
-  valvectType rProf;
-  IOManager.loadPrimitive(rProf, "r", profileFilename);
-  valvectType uProf;
-  IOManager.loadPrimitive(uProf, "u", profileFilename);
-  valvectType rhoProf;
-  IOManager.loadPrimitive(rhoProf, "rho", profileFilename);
-  valvectType matProf;
-  IOManager.loadPrimitive(matProf, "mat", profileFilename);
-  std::cerr << " read profile from:            " << profileFilename << "\n";
-
-  ///
-  /// scale position, specific volume and smoothing length
-  ///
-  const size_t noCells = rProf.size();
-  const valueType rScale = rProf(noCells - 1);
-  const valueType volScale = pow(rScale, 3.);
-
-  const size_t noParts = PartManager.getNoLocalParts();
-  for (size_t k = 0; k < noParts; k++)
-    {
-      pos(k, X) *= rScale;
-      pos(k, Y) *= rScale;
-      pos(k, Z) *= rScale;
-
-      h(k) *= rScale;
-      m(k) *= volScale;
-    }
+   if (not (argc == 3 ) )
+   {
+      std::cerr <<
+      "usage: flavour_sphere <dump> <profile>\n";
+      return(1);
+   }
 
 
-  ///
-  /// set mass by looking up the density and multiplying
-  /// it with the particle volume stored in the mass variable
-  ///
-  lut_type rhoLUT(rProf, rhoProf);
-  lut_type uLUT(rProf, uProf);
-  lut_type matLUT(rProf, matProf);
+   std::string dname = argv[1];
+   std::string pname = argv[2];
 
-  for (size_t k = 0; k < noParts; k++)
-    {
-      const valueType curRad = sqrt(pos(k, X) * pos(k, X) +
-                                    pos(k, Y) * pos(k, Y) +
-                                    pos(k, Z) * pos(k, Z));
+   // load the particles
+   parts.loadHDF5(dname);
+   const size_t nop = parts.getNop();
 
-      const valueType curRho = rhoLUT(curRad);
-      m(k) *= curRho;
-      rho(k) = curRho;
-      u(k) = uLUT(curRad);
-      mat(k) = lrint( matLUT(curRad) );
-    }
+   std::cout << "loaded " << nop << "\n";
   
-  
-  sphlatch::quantsType saveQuants;
+   LUT1DlinT rhoLUT(pname, "r", "rho");
+   LUT1DlinT engLUT(pname, "r", "u");
+   LUT1DlinT matLUT(pname, "r", "mat");
 
-  std::cerr << " search neighbours ...\n";
-  nsearch();
-  saveQuants.ints += &noneigh;
+   std::cout << "1D profile " << pname << " loaded" << "\n";
+   
+   const fType rScale = rhoLUT.getXmax();
+   const fType vScale = rScale*rScale*rScale;
+   std::cout << " rScale: " << rScale << "\n";
 
-  saveQuants.vects += &pos, &vel;
-  saveQuants.scalars += &m, &rho, &h, &u;
-  saveQuants.ints += &id, &mat;
+   // find the center of mass
+   vect3dT com;
+   com = 0., 0., 0.;
+   fType totM = 0.;
+   for (size_t i = 0; i < nop; i++)
+   {
+      parts[i].pos *= rScale;
+      parts[i].h *= rScale;
+      parts[i].m *= vScale;
 
-  PartManager.step = 0;
-  PartManager.attributes["time"] = 0.;
-  PartManager.attributes["gravconst"] =
-    IOManager.loadAttribute("gravconst", profileFilename);
-  PartManager.attributes["umin"] =
-    IOManager.loadAttribute("umin", profileFilename);
+      com  += parts[i].pos * parts[i].m;
+      totM += parts[i].m;
+   }
+   com /= totM;
 
-  std::string outputFilename = VMap["output-file"].as<std::string>();
-  std::cerr << " -> " << outputFilename << "\n";
-  IOManager.saveDump(outputFilename, saveQuants);
-  std::cerr << "particles saved ... \n";
+   std::cout << "center of mass: ["
+                 << com[0] << ","
+                 << com[1] << ","
+                 << com[2] << "]\n";
 
-  MPI::Finalize();
-  return EXIT_SUCCESS;
+   // scale positions, specific volume and smoothing length 
+   totM = 0.;
+   for (size_t i = 0; i < nop; i++)
+   {
+      const vect3dT rveci  = parts[i].pos - com;
+      const fType   ri     = sqrt(dot(rveci, rveci));
+      
+      const fType rhoi = rhoLUT(ri);
+      parts[i].m *= rhoi;
+      parts[i].rho = rhoi;
+
+      parts[i].u = engLUT(ri);
+      parts[i].mat = lrint( matLUT(ri) );
+
+      totM += parts[i].m;
+   }
+   std::cout << " total mass: " << totM << "\n";
+
+   treeT& Tree(treeT::instance());
+
+   const fType  costppart = 1. / nop;
+
+   Tree.setExtent(parts.getBox() * 1.1);
+   for (size_t i = 0; i < nop; i++)
+   {
+      parts[i].cost = costppart;
+      Tree.insertPart(parts[i]);
+   }
+   std::cout << "created tree\n";
+
+   Tree.update(0.8, 1.2);
+   treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
+   const int           noCZbottomLoc = CZbottomLoc.size();
+
+   std::cout << "Tree.update() -> " << noCZbottomLoc << " CZ cells\n";
+
+   densSumT densWorker(&Tree);
+#pragma omp parallel for firstprivate(densWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      densWorker(CZbottomLoc[i]);
+   std::cout << "Tree.densWorker()\n";
+
+   costT costWorker(&Tree);
+#pragma omp parallel for firstprivate(costWorker)
+   for (int i = 0; i < noCZbottomLoc; i++)
+      costWorker(CZbottomLoc[i]);
+   std::cout << "Tree.costWorker()\n";
+
+   Tree.clear();
+   std::cout << "Tree.clear()\n";
+
+   parts.doublePrecOut();
+   parts.saveHDF5(dname);
+   std::cout << "stored dump\n";
+
+#ifdef SPHLATCH_MPI
+   MPI::Finalize();
+#endif
+   return(0);
 }
-

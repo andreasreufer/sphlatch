@@ -64,6 +64,17 @@ public:
    }
 #endif
 
+public:
+   fType getXmax()
+   {
+     return xMax;
+   }
+   
+   fType getXmin()
+   {
+     return xMin;
+   }
+
    ~LookupTable1D()
    { }
 
