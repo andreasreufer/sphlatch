@@ -477,7 +477,7 @@ class SimParams(object):
     self.key = 'mtar%07.3f' % mtar + '_' \
       + 'mimp%07.3f' % mimp + '_' \
       + 'impa%04.1f' % impa + '_' \
-      + 'vimp%04.1f' % vimprel
+      + 'vimp%04.2f' % vimprel
   
   def isSimilar(self, par, tol):
     fitmimp = not abs( (self.mimp - par.mimp ) / self.mimp ) > tol
