@@ -18,7 +18,7 @@ typedef sphlatch::box3dT    box3dT;
 const fType finf = sphlatch::fTypeInf;
 
 #include "bhtree.cpp"
-typedef sphlatch::BHTree   treeT;
+typedef sphlatch::BHTree    treeT;
 
 ///
 /// define the particle we are using
@@ -35,7 +35,7 @@ class particle :
    public sphlatch::IOPart,
    public sphlatch::ANEOSPart
 {
-  public:
+public:
    ioVarLT getLoadVars()
    {
       ioVarLT vars;
@@ -53,7 +53,7 @@ class particle :
    ioVarLT getSaveVars()
    {
       ioVarLT vars;
-      
+
       vars.push_back(storeVar(pos, "pos"));
       vars.push_back(storeVar(mat, "mat"));
       vars.push_back(storeVar(u, "u"));
@@ -65,27 +65,30 @@ class particle :
    }
 };
 
-typedef particle   partT;
+typedef particle                       partT;
 
 #include "particle_set.cpp"
-typedef sphlatch::ParticleSet<partT>           partSetT;
+typedef sphlatch::ParticleSet<partT>   partSetT;
 
 #include "sph_algorithms.cpp"
 #include "sph_kernels.cpp"
 #include "bhtree_worker_sphsum.cpp"
 
-typedef sphlatch::CubicSpline3D                  krnlT;
+typedef sphlatch::CubicSpline3D                krnlT;
 
-typedef sphlatch::densSum<partT, krnlT>          densT;
-typedef sphlatch::SPHsumWorker<densT, partT>     densSumT;
+typedef sphlatch::densSum<partT, krnlT>        densT;
+typedef sphlatch::SPHsumWorker<densT, partT>   densSumT;
 
 #include "bhtree_worker_cost.cpp"
-typedef sphlatch::CostWorker<partT>              costT;
+typedef sphlatch::CostWorker<partT>            costT;
 
 
 #include "lookup_table1D.cpp"
-typedef sphlatch::InterpolateLinear              intplT;
-typedef sphlatch::LookupTable1D<intplT>          LUT1DlinT;
+typedef sphlatch::InterpolateLinear            intplT;
+typedef sphlatch::LookupTable1D<intplT>        LUT1DlinT;
+
+#include "hdf5_io.cpp"
+typedef sphlatch::HDF5File                     H5FT;
 
 
 // particles are global
@@ -98,7 +101,7 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   if (not (argc == 3 ) )
+   if (not (argc == 3))
    {
       std::cerr <<
       "usage: flavour_sphere <dump> <profile>\n";
@@ -114,15 +117,15 @@ int main(int argc, char* argv[])
    const size_t nop = parts.getNop();
 
    std::cout << "loaded " << nop << "\n";
-  
+
    LUT1DlinT rhoLUT(pname, "r", "rho");
    LUT1DlinT engLUT(pname, "r", "u");
    LUT1DlinT matLUT(pname, "r", "mat");
 
    std::cout << "1D profile " << pname << " loaded" << "\n";
-   
+
    const fType rScale = rhoLUT.getXmax();
-   const fType vScale = rScale*rScale*rScale;
+   const fType vScale = rScale * rScale * rScale;
    std::cout << " rScale: " << rScale << "\n";
 
    // find the center of mass
@@ -132,8 +135,8 @@ int main(int argc, char* argv[])
    for (size_t i = 0; i < nop; i++)
    {
       parts[i].pos *= rScale;
-      parts[i].h *= rScale;
-      parts[i].m *= vScale;
+      parts[i].h   *= rScale;
+      parts[i].m   *= vScale;
 
       com  += parts[i].pos * parts[i].m;
       totM += parts[i].m;
@@ -141,23 +144,23 @@ int main(int argc, char* argv[])
    com /= totM;
 
    std::cout << "center of mass: ["
-                 << com[0] << ","
-                 << com[1] << ","
-                 << com[2] << "]\n";
+             << com[0] << ","
+             << com[1] << ","
+             << com[2] << "]\n";
 
-   // scale positions, specific volume and smoothing length 
+   // scale positions, specific volume and smoothing length
    totM = 0.;
    for (size_t i = 0; i < nop; i++)
    {
-      const vect3dT rveci  = parts[i].pos - com;
-      const fType   ri     = sqrt(dot(rveci, rveci));
-      
+      const vect3dT rveci = parts[i].pos - com;
+      const fType   ri    = sqrt(dot(rveci, rveci));
+
       const fType rhoi = rhoLUT(ri);
-      parts[i].m *= rhoi;
+      parts[i].m  *= rhoi;
       parts[i].rho = rhoi;
 
-      parts[i].u = engLUT(ri);
-      parts[i].mat = lrint( matLUT(ri) );
+      parts[i].u   = engLUT(ri);
+      parts[i].mat = lrint(matLUT(ri));
 
       totM += parts[i].m;
    }
@@ -165,7 +168,7 @@ int main(int argc, char* argv[])
 
    treeT& Tree(treeT::instance());
 
-   const fType  costppart = 1. / nop;
+   const fType costppart = 1. / nop;
 
    Tree.setExtent(parts.getBox() * 1.1);
    for (size_t i = 0; i < nop; i++)
@@ -195,6 +198,14 @@ int main(int argc, char* argv[])
 
    Tree.clear();
    std::cout << "Tree.clear()\n";
+
+   // store some important attributes
+   H5FT profile(pname);
+   parts.attributes["G"]    = profile.loadAttribute("gravconst");
+   parts.attributes["umin"] = profile.loadAttribute("umin");
+   
+   parts.attributes["courant"] = 0.3;
+   parts.attributes["time"] = 0.;
 
    parts.doublePrecOut();
    parts.saveHDF5(dname);
