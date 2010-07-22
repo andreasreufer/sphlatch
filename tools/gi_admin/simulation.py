@@ -46,9 +46,9 @@ class Simulation(object):
   def __init__(self,params,cfg):
     self.params = params
     self.cfg    = cfg
-    self.params.temp = float(cfg["TEMP"])
+    self.params.temp = cfg.T
 
-    ssbdir = resolvePath(cfg["SIMSETBDIR"]) + "/"
+    ssbdir = resolvePath(cfg.dir) + "/"
     self.dir = resolvePath(ssbdir + params.key) + "/"
     
     if path.exists(self.dir):
@@ -79,8 +79,8 @@ class Simulation(object):
       self.next = self._prepare
       return self.state
     else:
-      neededfiles = self.cfg["AUXFILES"].split()
-      neededfiles.append(self.cfg["BINARY"])
+      neededfiles = self.cfg.auxfiles.split()
+      neededfiles.append(self.cfg.binary)
       neededfiles.append("initial.h5part")
 
       for file in neededfiles:
@@ -130,8 +130,8 @@ class Simulation(object):
     Rtar = self.tarb.r
     Rimp = self.impb.r
     
-    G = float(self.cfg["GRAVCONST"])
-    relsep = float(self.cfg["RELSEP"])
+    G = self.cfg.G
+    relsep = self.cfg.relsep
     
     # get giant impact
     gi = GiantImpact(mtar, mimp, Rtar, Rimp, G)
@@ -147,9 +147,9 @@ class Simulation(object):
     self.vimp = vimp
     self.G    = G
     
-    self.tstop = tscal * float(self.cfg["TSCALKSTOP"])
-    self.tdump = tscal * float(self.cfg["TSCALKDUMP"])
-    self.tanim = tscal * float(self.cfg["TSCALKANIM"])
+    self.tstop = tscal * self.cfg.tscalmax
+    self.tdump = tscal * self.cfg.tscaldump
+    self.tanim = tscal * self.cfg.tscalanim
 
     self.t0 = t0
     
@@ -209,7 +209,7 @@ class Simulation(object):
       self.Log = Logger(self.dir + "setup.log")
 
     # copy files
-    auxf = self.cfg["AUXFILES"].split()
+    auxf = self.cfg.auxfiles.split()
     
     for file in auxf:
       shutil.copy2(resolvePath(file), self.dir)
@@ -246,29 +246,24 @@ class Simulation(object):
     cmds.append("rm " + self.dir + "tarb.h5part " + self.dir + "impb.h5part")
     
     # write attributes (gravconst, attrs)
-    attrkeys = self.cfg["ATTRKEYS"].split()
-    attrvals = self.cfg["ATTRVALS"].split()
+    attrs = self.cfg.attr
+    attrs.append( ("time",      self.t0   ) )
+    attrs.append( ("gravconst", self.G    ) )
+    attrs.append( ("tscal",     self.tscl ) )
 
-    attrkeys.extend(["time", "gravconst", "tscal"])
-    attrvals.extend([str(self.t0), str(self.G), str(self.tscl)])
-
-    for key,val in zip(attrkeys, attrvals):
+    for (key,val) in attrs:
       cmds.append("h5part_writeattr -i " + self.dir + "initial.h5part " +\
           " -k " + key + " -v " + val)
 
     # prepare and copy binary
-    if not self.cfg.has_key("BINFILE"):
-      srcdir = resolvePath(self.cfg["SRCDIR"]) + "/"
-      targ = self.cfg["MAKETARG"]
+    binfile = resolvePath( self.cfg.srcdir ) + "/" + self.cfg.binary
+    if not self.path.exists(binfile):
       oldwd = os.getcwd()
-      os.chdir(srcdir)
-      (stat, out) = commands.getstatusoutput("make " + targ)
+      os.chdir(self.cfg.srcdir)
+      (stat, out) = commands.getstatusoutput("make " + self.cfg.maketarg)
       os.chdir(oldwd)
       self.Log.write("binary compiled")
-      self.cfg["BINFILE"] = \
-          resolvePath(srcdir + self.cfg["BINARY"])
-    binf = self.cfg["BINFILE"]
-    cmds.append("cp -Rpv " + binf + " " + self.dir)
+    cmds.append("cp -Rpv " + binfile + " " + self.dir)
 
     # now execute the commands
     for cmd in cmds:
@@ -288,11 +283,11 @@ class Simulation(object):
       self.setError("tried to submit from a non-prepared state")
       return self.state
     
-    subcmd = self.cfg["SUBCMD"]
-    nocpus = self.cfg["NOCPUS"]
-    binary = self.cfg["BINARY"]
-    runarg = self.cfg["RUNARGS"]
-    sstnam = self.cfg["SIMSETNAME"]
+    subcmd = self.cfg.subcmd
+    nocpus = self.cfg.nocpus
+    binary = self.cfg.binary
+    runarg = self.cfg.runargs
+    sstnam = self.cfg.name
 
     self.jobname = sstnam + "_" + self.params.key
   
@@ -322,7 +317,7 @@ class Simulation(object):
 
   def _abort(self):
     if not self.jobid == 0:
-      delcmd = self.cfg["DELCMD"]
+      delcmd = self.cfg.delcmd
       delcmd = delcmd.replace('$JOBID', str(self.jobid))
       (dstat, dout) = commands.getstatusoutput(delcmd)
       print dout
@@ -388,9 +383,8 @@ class Simulation(object):
 
   def _findBodies(self):
     nan = float('nan')
-
-    toler = float(self.cfg["BODTOLERANCE"])
-    boddb = shelve.open(resolvePath(self.cfg["BODIESDB"]))
+    toler = self.cfg.bodtol
+    boddb = shelve.open(resolvePath(self.cfg.bodiesdb))
 
     # find target candidates
     targtmpl = BodyFile("", Me*self.params.mtar, nan, \
@@ -425,23 +419,6 @@ class Simulation(object):
     
     return pairs[0]
 
-  # change
-  def _findClumps(self):
-    minrho = float(self.cfg["CLUMPMINRHO"])
-    hsep   = float(self.cfg["CLUMPHSEP"])
-    simdir  = self.dir
-    clpdir  = simdir + "clumps/"
-
-    self.clpdir = clpdir
-
-    if not os.path.exists(clpdir):
-      os.mkdir(clpdir)
-
-    for (dumpfile, dumptime) in self.dumps:
-      if not os.path.exists(clpdir + dumpfile):
-        cmd = "clump_finder " + simdir + dumpfile + " " + clpdir + dumpfile + " " + str(minrho) + " " + str(hsep)
-        (stat, out) = commands.getstatusoutput(cmd)
-  
   # change that
   def _clumpsExtent(self):
     import tables as pt
@@ -467,7 +444,7 @@ class Simulation(object):
   #def _getClumpsState(self):
 
 
-class SimParams(object):
+class SimParam(object):
   def __init__(self, mimp, mtar, impa, vimprel):
     self.mimp = mimp
     self.mtar = mtar
@@ -489,29 +466,19 @@ class SimParams(object):
 
 class SimSet(object):
   sims = {}
-  def __init__(self, cfgfile):
-    self.simsetcfg = {}
+  def __init__(self, cfg):
+    self.cfg = cfg
     
-    if path.exists(cfgfile):
-      execfile(cfgfile, self.simsetcfg)
-      print cfgfile + " loaded"
-    else:
-      print cfgfile + " not found!   exiting ..."
-    
-    bdir = self.simsetcfg["SIMSETBDIR"]
+    bdir = self.cfg.dir
     if not path.exists(bdir):
       os.mkdir(bdir)
 
-    logfile = self.simsetcfg["LOGFILE"]
-    self.Log = Logger(logfile)
-    self.Log.write("new SimSet")
-    
-    mtara = np.array( self.simsetcfg["MTAR"].split(), dtype=float)
-    mimpa = np.array( self.simsetcfg["MIMP"].split(), dtype=float)
-    vimprela = np.array( self.simsetcfg["VIMPREL"].split(), dtype=float)
-    impaa = np.array( self.simsetcfg["IMPA"].split(), dtype=float)
+    mtara = self.cfg.mtar
+    mimpa = self.cfg.mimp
+    vimprela = self.cfg.vimp
+    impaa = self.cfg.impa
 
-    cond = self.simsetcfg["SIMCOND"]
+    cond = self.cfg.paramcond
     if len(cond) < 1:
       cond = "True"
 
@@ -520,11 +487,41 @@ class SimSet(object):
         for vimprel in vimprela:
           for impa in impaa:
             if ( eval(cond) ):
-              simpar = SimParams(mimp, mtar, impa, vimprel)
+              simpar = SimParam(mimp, mtar, impa, vimprel)
               if not self.sims.has_key(simpar.key):
-                self.sims[simpar.key] = Simulation( simpar, self.simsetcfg)
+                self.sims[simpar.key] = Simulation( simpar, self.cfg)
 
 
-  def __del__(self):
-    pass
+class SimSetConfig(object):
+  def __init__(self):
+    self.dir = ""
+    self.name = ""
+    self.bodiesdb = ""
+
+    self.G = G
+    self.T = 0.
+    self.mimp = np.array([])
+    self.mtar = np.array([])
+    self.vimp = np.array([])
+    self.impa = np.array([])
+    self.paramcond = "(mimp <= mtar)"
+
+    self.bodtol = 0.1
+    self.relsep = 3.0
+
+    self.attr = []
+    self.auxfiles = ""
+    self.srcdir   = ""
+    self.maketarg = ""
+    self.binary   = ""
+
+    self.subcmd  = ""
+    self.delcmd  = ""
+    self.nocpus  = ""
+    self.runarg  = ""
+
+    self.tscalmin  = 10.0
+    self.tscalmax  = 100.
+    self.tscaldump = 1.0
+    self.tscalanim = 0.1
 

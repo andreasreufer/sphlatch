@@ -2,9 +2,8 @@
 
 import getpass
 
-from simulation import SimSet, SimParams
+from simulation import SimSet, SimParam, SimSetConfig
 from sge_query import SGEquery
-
 
 class bcolors:
       black  = '\033[0;30m'
@@ -26,9 +25,8 @@ class bcolors:
       white  = '\033[1;37m'
 
 class SimAdmin(object):
-  
-  def __init__(self, cfgfile):
-    self._simset = SimSet(cfgfile)
+  def __init__(self, ssetcfg):
+    self._simset = SimSet(ssetcfg)
     self._sgeqry = SGEquery()
 
     self._sims = self._simset.sims
@@ -58,7 +56,7 @@ class SimAdmin(object):
   def getSims(self, filt=None):
     if filt==None:
       nan = float('nan')
-      filt = SimParams(nan, nan, nan, nan)
+      filt = SimParam(nan, nan, nan, nan)
     
     filtSims = []
     for sim in self._sims.values():
@@ -98,7 +96,7 @@ class SimAdmin(object):
 
 
   def _updateSGE(self):
-    ssname = self._simset.simsetcfg["SIMSETNAME"]
+    ssname = self._simset.cfg.name
     sgejobs = self._sgeqry.getJobs()
 
     for id in sgejobs:
