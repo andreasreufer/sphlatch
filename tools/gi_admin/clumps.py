@@ -43,14 +43,16 @@ class SimClumps(object):
     # interpolate at full steps
     dmdt = np.zeros([nos,maxnoc])
     dmdt[1:-1,:] = 0.5*(dmdth[1:,:] + dmdth[0:-1,:])
+    dmdt[0,:] = dmdt[1,:]
+    dmdt[-1,:] = dmdt[-2,:]
+
+    dnoc = noc[1:] - noc[:-1]
+    dnoc[-1
 
     self.dmdt = dmdt
-    self.dnoc = noc[1:] - noc[:-1]
-
+    
   def __del__(self):
     pass
-
-  
 
   def bodiesBound(self,nob):
     pass
@@ -60,6 +62,10 @@ class SimClumps(object):
   
   def __getStepNum(self,sname):
     return int(sname.replace("/Step#",""))
+
+  def dmdtAboveTau(self,tau):
+    return ( abs( (self.m / self.dmdt) ) > tau )
+
 
 
 

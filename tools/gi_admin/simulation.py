@@ -10,6 +10,7 @@ from numpy import sqrt, sin, cos, arccos, log, abs, tan, arctan2, pi, zeros
 from body import BodyFile
 from setup_gi import GiantImpact
 from h5part import H5PartDump
+from clumps import SimClumps
 
 import pdb
 
@@ -368,7 +369,6 @@ class Simulation(object):
     else:
       self.setError("tried to postproc from a non-submitted state")
     
-    
     return self.state
 
   def _finalize(self):
@@ -441,7 +441,11 @@ class Simulation(object):
 
     return (clpmin, clpmax) 
 
-  #def _getClumpsState(self):
+  def _getClumpsState(self):
+    if path.exists(self.dir + "clumps.h5part"):
+      clmps = SimClumps(self.dir + "clumps.h5part")
+      self.clmps = clmps
+    
 
 
 class SimParam(object):
