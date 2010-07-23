@@ -161,15 +161,15 @@ class Simulation(object):
     dumpdbfile = self.dir + "dumps"
     dumps = shelve.open(dumpdbfile)
     
-    for file in os.listdir(self.dir):
-      if file[0:4] == "dump" and file[-6:] == "h5part":
-        if not dumps.has_key(file):
-          cmd = "h5part_readattr -k time -i " + self.dir + file
-          (stat, out) = commands.getstatusoutput(cmd)
-          time = float("nan")
-          if stat == 0:
-            time = float(out.split()[1])
-            dumps[file] = time
+    #for file in os.listdir(self.dir):
+    #  if file[0:4] == "dump" and file[-6:] == "h5part":
+    #    if not dumps.has_key(file):
+    #      cmd = "h5part_readattr -k time -i " + self.dir + file
+    #      (stat, out) = commands.getstatusoutput(cmd)
+    #      time = float("nan")
+    #      if stat == 0:
+    #        time = float(out.split()[1])
+    #        dumps[file] = time
   
     self.dumps = []
     for key in dumps.keys():
@@ -254,11 +254,11 @@ class Simulation(object):
 
     for (key,val) in attrs:
       cmds.append("h5part_writeattr -i " + self.dir + "initial.h5part " +\
-          " -k " + key + " -v " + val)
+          " -k " + key + " -v " + str(val))
 
     # prepare and copy binary
     binfile = resolvePath( self.cfg.srcdir ) + "/" + self.cfg.binary
-    if not self.path.exists(binfile):
+    if not path.exists(binfile):
       oldwd = os.getcwd()
       os.chdir(self.cfg.srcdir)
       (stat, out) = commands.getstatusoutput("make " + self.cfg.maketarg)
