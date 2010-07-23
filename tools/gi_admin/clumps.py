@@ -87,7 +87,7 @@ class SimClumps(object):
     mvar  = np.sqrt( np.var( self.m[-nop-1:-1,:] , axis=0) )
     return (mmean, mvar)
 
-  def plot(self,pname,cfg):
+  def plot(self,pname,cfg,tit):
     fig = plt.figure()
     fig.clear()
     ax = plt.axes()
@@ -105,10 +105,13 @@ class SimClumps(object):
 
     if cfg.plotesc:
       ax.semilogy(self.t, self.m[:,0] / ME, 'r-')
-      annstr += "esc. " + ( "%.3e" % (mmean[cuc] / ME) ) + " +/- " \
-          +  ( "%.3e" % (mvar[cuc] / ME) ) + " Me\n"
+      annstr += "esc. " + ( "%.3e" % (mmean[0] / ME) ) + " +/- " \
+          +  ( "%.3e" % (mvar[0] / ME) ) + " Me\n"
 
     ax.text(0.5, 0.4, annstr, transform = ax.transAxes)
     ax.set_ylim(cfg.mmin, cfg.mmax)
+    ax.set_title(tit)
+    ax.set_xlabel("time [s]")
+    ax.set_ylabel("clump mass [Me]")
     fig.savefig(pname)
 

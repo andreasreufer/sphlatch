@@ -444,7 +444,7 @@ class Simulation(object):
   def _plotClumps(self):
     if path.exists(self.dir + "clumps.h5part"):
       clmps = SimClumps(self.dir + "clumps.h5part")
-      clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf )
+      clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf, self.params.key)
 
 
 class SimParam(object):
