@@ -10,7 +10,7 @@ from numpy import sqrt, sin, cos, arccos, log, abs, tan, arctan2, pi, zeros
 from body import BodyFile
 from setup_gi import GiantImpact
 from h5part import H5PartDump
-from clumps import SimClumps
+from clumps import SimClumps, ClumpsPlotConfig
 
 import pdb
 
@@ -441,11 +441,10 @@ class Simulation(object):
 
     return (clpmin, clpmax) 
 
-  def _getClumpsState(self):
+  def _plotClumps(self):
     if path.exists(self.dir + "clumps.h5part"):
       clmps = SimClumps(self.dir + "clumps.h5part")
-      self.clmps = clmps
-    
+      clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf )
 
 
 class SimParam(object):
@@ -528,4 +527,6 @@ class SimSetConfig(object):
     self.tscalmax  = 100.
     self.tscaldump = 1.0
     self.tscalanim = 0.1
+
+    self.cpconf = ClumpsPlotConfig()
 

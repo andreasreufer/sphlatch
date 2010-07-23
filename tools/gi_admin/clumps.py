@@ -3,6 +3,22 @@
 from h5part import H5PartDump
 import numpy as np
 
+import matplotlib as mp
+#mp.use('Agg')
+import matplotlib.pyplot as plt
+
+class ClumpsPlotConfig(object):
+  def __init__(self):
+    self.mmin = 0.0008
+    self.mmax = 2.0
+
+    self.ME = 5.97360e27
+
+    self.noplotclumps = 2
+    self.avgpts = 10
+    self.plotesc = True
+
+
 class SimClumps(object):
   def __init__(self,fname):
     dump = H5PartDump(fname)
@@ -47,7 +63,6 @@ class SimClumps(object):
     dmdt[-1,:] = dmdt[-2,:]
 
     dnoc = noc[1:] - noc[:-1]
-    dnoc[-1
 
     self.dmdt = dmdt
     
@@ -63,9 +78,37 @@ class SimClumps(object):
   def __getStepNum(self,sname):
     return int(sname.replace("/Step#",""))
 
-  def dmdtAboveTau(self,tau):
-    return ( abs( (self.m / self.dmdt) ) > tau )
+  def dmdtAboveTau(self,tau, mmin):
+    taum = abs( (self.m / self.dmdt) )
+    return ( np.isnan(taum) | (taum > tau) | (self.m < mmin) )
 
+  def _getMeanMasses(self,nop):
+    mmean = np.mean( self.m[-nop-1:-1,:] , axis=0)
+    mvar  = np.sqrt( np.var( self.m[-nop-1:-1,:] , axis=0) )
+    return (mmean, mvar)
 
+  def plot(self,pname,cfg):
+    fig = plt.figure()
+    fig.clear()
+    ax = plt.axes()
+    
+    nopc = cfg.noplotclumps
+    ME   = cfg.ME
+    
+    (mmean, mvar) = self._getMeanMasses(cfg.avgpts)
 
+    annstr = ""
+    for cuc in range(1,nopc+1):
+      ax.semilogy(self.t, self.m[:,cuc] / ME, '-',ms=1.0)
+      annstr += str(cuc) + ".   " + ( "%.3e" % (mmean[cuc] / ME) ) + " +/- " \
+          +  ( "%.3e" % (mvar[cuc] / ME) ) + " Me\n"
+
+    if cfg.plotesc:
+      ax.semilogy(self.t, self.m[:,0] / ME, 'r-')
+      annstr += "esc. " + ( "%.3e" % (mmean[cuc] / ME) ) + " +/- " \
+          +  ( "%.3e" % (mvar[cuc] / ME) ) + " Me\n"
+
+    ax.text(0.5, 0.4, annstr, transform = ax.transAxes)
+    ax.set_ylim(cfg.mmin, cfg.mmax)
+    fig.savefig(pname)
 
