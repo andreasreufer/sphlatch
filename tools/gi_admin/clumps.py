@@ -45,12 +45,12 @@ class SimClumps(object):
       m[cs,0:cnoc] = step.m[:,0]
       t[cs] = float( step._v_attrs["time"] )
       noc[cs] = cnoc - 1
-      
       cs += 1
 
     self.t      = t
     self.m      = m
     self.noc    = noc
+    self.nos    = nos
     self.maxnoc = maxnoc
 
     # get the mass derivative at half steps
@@ -83,6 +83,8 @@ class SimClumps(object):
     return ( np.isnan(taum) | (taum > tau) | (self.m < mmin) )
 
   def _getMeanMasses(self,nop):
+    if nop > self.nos:
+       nop = nos
     mmean = np.mean( self.m[-nop-1:-1,:] , axis=0)
     mvar  = np.sqrt( np.var( self.m[-nop-1:-1,:] , axis=0) )
     return (mmean, mvar)
