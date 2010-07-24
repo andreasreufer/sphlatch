@@ -11,10 +11,12 @@ class ClumpsPlotConfig(object):
   def __init__(self):
     self.mmin = 0.0008
     self.mmax = 2.0
+    self.tmin = -1.e4
+    self.tmax =  1.e5
 
     self.ME = 5.97360e27
 
-    self.noplotclumps = 2
+    self.noplotclumps = 8
     self.avgpts = 10
     self.plotesc = True
 
@@ -84,7 +86,7 @@ class SimClumps(object):
 
   def _getMeanMasses(self,nop):
     if nop > self.nos:
-       nop = nos
+       nop = self.nos
     mmean = np.mean( self.m[-nop-1:-1,:] , axis=0)
     mvar  = np.sqrt( np.var( self.m[-nop-1:-1,:] , axis=0) )
     return (mmean, mvar)
@@ -94,7 +96,7 @@ class SimClumps(object):
     fig.clear()
     ax = plt.axes()
     
-    nopc = cfg.noplotclumps
+    nopc = min( cfg.noplotclumps, self.noc ) 
     ME   = cfg.ME
     
     (mmean, mvar) = self._getMeanMasses(cfg.avgpts)
@@ -112,6 +114,7 @@ class SimClumps(object):
 
     ax.text(0.5, 0.4, annstr, transform = ax.transAxes)
     ax.set_ylim(cfg.mmin, cfg.mmax)
+    ax.set_xlim(cfg.tmin, cfg.tmax)
     ax.set_title(tit)
     ax.set_xlabel("time [s]")
     ax.set_ylabel("clump mass [Me]")
