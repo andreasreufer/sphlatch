@@ -96,7 +96,7 @@ class SimClumps(object):
     fig.clear()
     ax = plt.axes()
     
-    nopc = min( cfg.noplotclumps, self.noc ) 
+    nopc = min( cfg.noplotclumps, self.maxnoc ) 
     ME   = cfg.ME
     
     (mmean, mvar) = self._getMeanMasses(cfg.avgpts)
