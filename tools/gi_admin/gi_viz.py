@@ -9,14 +9,22 @@ import tempfile
 
 from gi_plot import GIplotConfig, GIplot
 
+class GIvizConfig(object):
+  def __init__(self):
+    self.dir = ""
+    self.scdir = "./scdir"
+    self.tasksperjob = 50
+    self.subcmd = "qsub -cwd -l qname=all.q -N $JOBNAME -b n $JOBCMD"
+
+
+
 class GIvizTask(object):
-  def __init__(self, pfile, cfile, ifile, plotcfg, ax, tscl, params):
+  def __init__(self, pfile, cfile, ifile, plotcfg, ax, params):
     self.pfile = pfile
     self.cfile = cfile
     self.ifile = ifile
 
     self.plotcfg = plotcfg
-    self.ax      = ax
     self.tscl    = tscl
     self.params  = params
 
@@ -30,22 +38,18 @@ class GIvizTask(object):
 
 
 class GIviz(object):
-  def __init__(self, cfgfile, plotcfg):
-    self.cfg = {}
-    if path.exists(cfgfile):
-      execfile(cfgfile, self.cfg)
-      print cfgfile + " loaded"
+  def __init__(self, cfg, plotcfg):
+    self.cfg = cfg
     
-    self.dir = os.path.abspath( self.cfg["VIZDIR"] ) + "/"
+    self.dir = os.path.abspath( self.cfg.dir ) + "/"
     if not path.exists(self.dir):
       os.mkdir(self.dir)
 
-    self.scdir = os.path.abspath( self.cfg["VIZSCRATCHDIR"] ) + "/"
+    self.scdir = os.path.abspath( self.cfg.scdir ) + "/"
     if not path.exists(self.scdir):
       os.mkdir(self.scdir)
     
     self.plotcfg = plotcfg
-    self.tasksperjob = self.cfg["TASKSPERJOB"]
 
   def vizSim(self, sim, ax=[0., 0., 1., 1.]):
     scdir = self.scdir
@@ -150,7 +154,7 @@ class GIviz(object):
 
       drvstr += "python " + excname + " " + tkey + "\n"
       taskno += 1
-      if taskno > self.tasksperjob:
+      if taskno > self.cfg.tasksperjob:
         taskno = 0
         drvstr += drvfoot
     

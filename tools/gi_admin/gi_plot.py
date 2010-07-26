@@ -88,7 +88,7 @@ class GIplotConfig(object):
 
 
 class GIplot(object):
-  def __init__(self, pfile, cfile, log=sys.stdout, cfg=GIplotConfig()):
+  def __init__(self, pfile, cfile, cfg=GIplotConfig()):
     self.pfile = pfile
     self.cfile = cfile
     self.cfg = cfg
@@ -201,6 +201,7 @@ class GIplot(object):
         cidi = int( dump.clumpid[i,:] )
         zrel = dump.pos[i,cfg.Z] - cpos[cidi][cfg.Z]
         filt[i] = ( ( zrel > cfg.zmin ) & ( zrel < cfg.zmax ) )
+        
         #filt[i] = ( ( dump.pos[i,Z] > ymin ) & ( dump.pos[i,Z] < ymax ) )
 
     #print "filtering particles ..."
