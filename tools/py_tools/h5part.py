@@ -9,6 +9,11 @@ class H5PartDump(object):
   def __del__(self):
     self.pth.close()
 
+  def forEachStep(self,func):
+    for grp in self.pth.walkGroups():
+      if "Step" in grp._v_pathname:
+        func(grp)
+
   def getStep(self,sname="/current"):
     pth = self.pth
 

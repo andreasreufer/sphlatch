@@ -22,38 +22,43 @@ class ClumpsPlotConfig(object):
 
 
 class SimClumps(object):
+  def _countStepsClumps(self, step):
+    self.nos += 1
+    self.maxnoc = max(self.maxnoc, step.m.shape[0])
+  
+  def _getMasses(self, step):
+    i = self.snames.index(step._v_pathname)
+    cnoc = step.m.shape[0]
+    self.m[i,0:cnoc] = step.m[:,0]
+    self.t[i] = float( step._v_attrs["time"] )
+    self.noc[i] = cnoc - 1
+
+
+
   def __init__(self,fname):
     dump = H5PartDump(fname)
     
+    self.nos = 0
+    self.maxnoc = 0
+    dump.forEachStep(self._countStepsClumps)
+    
     snames = dump.getStepNames()
     snames.sort(key=self.__getStepNum)
+    self.snames = snames
     
-    nos = len(snames)
-    maxnoc = 0
-    
-    for sname in snames:
-      step = dump.getStep(sname)
-      maxnoc = max(maxnoc,step.m.shape[0])
+    nos = self.nos
+    maxnoc = self.maxnoc
 
-    m = np.zeros([nos,maxnoc])
-    t = np.zeros([nos,1])
-    noc = np.zeros([nos])
 
-    cs = 0
-    for sname in snames:
-      step = dump.getStep(sname)
-      # number of clumps + escaping matter
-      cnoc = step.m.shape[0]
-      m[cs,0:cnoc] = step.m[:,0]
-      t[cs] = float( step._v_attrs["time"] )
-      noc[cs] = cnoc - 1
-      cs += 1
+    self.m   = np.zeros([nos,maxnoc])
+    self.t   = np.zeros([nos,1])
+    self.noc = np.zeros([nos])
 
-    self.t      = t
-    self.m      = m
-    self.noc    = noc
-    self.nos    = nos
-    self.maxnoc = maxnoc
+    dump.forEachStep(self._getMasses)
+
+    m = self.m
+    t = self.t
+    noc = self.noc
 
     # get the mass derivative at half steps
     dmdth = ( m[1:,:] - m[0:-1,:] ) / ( t[1:] - t[0:-1] )
@@ -67,6 +72,7 @@ class SimClumps(object):
     dnoc = noc[1:] - noc[:-1]
 
     self.dmdt = dmdt
+    self.dnoc = dnoc
     
   def __del__(self):
     pass
