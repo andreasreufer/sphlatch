@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 
 class ClumpsPlotConfig(object):
   def __init__(self):
-    self.mmin = 0.0008
-    self.mmax = 2.0
+    self.mmin = 0.00009
+    self.mmax = 2.5
     self.tmin = -1.e4
     self.tmax =  1.e5
 
@@ -33,8 +33,6 @@ class SimClumps(object):
     self.t[i] = float( step._v_attrs["time"] )
     self.noc[i] = cnoc - 1
 
-
-
   def __init__(self,fname):
     dump = H5PartDump(fname)
     
@@ -48,7 +46,6 @@ class SimClumps(object):
     
     nos = self.nos
     maxnoc = self.maxnoc
-
 
     self.m   = np.zeros([nos,maxnoc])
     self.t   = np.zeros([nos,1])
@@ -86,9 +83,12 @@ class SimClumps(object):
   def __getStepNum(self,sname):
     return int(sname.replace("/Step#",""))
 
-  def dmdtAboveTau(self,tau, mmin):
-    taum = abs( (self.m / self.dmdt) )
-    return ( np.isnan(taum) | (taum > tau) | (self.m < mmin) )
+  def dmdtTau(self):
+    return abs(self.m / self.dmdt) 
+
+  #def dmdtAboveTau(self,tau, mmin):
+  #  taum = abs( (self.m / self.dmdt) )
+  #  return ( np.isnan(taum) | (taum > tau) | (self.m < mmin) )
 
   def _getMeanMasses(self,nop):
     if nop > self.nos:
@@ -102,7 +102,7 @@ class SimClumps(object):
     fig.clear()
     ax = plt.axes()
     
-    nopc = min( cfg.noplotclumps, self.maxnoc ) 
+    nopc = min( cfg.noplotclumps, self.maxnoc - 1) 
     ME   = cfg.ME
     
     (mmean, mvar) = self._getMeanMasses(cfg.avgpts)

@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
 class BodyFile(object):
-  def __init__(self, file, m, r, T, h, attrs):
+  def __init__(self, file, m, r, T, h, nop, attrs):
     self.file = file
     
     self.m = m
     self.T = T
     self.h = h
     
+    self.nop = nop
     self.r = r
     self.attrs = attrs
 

@@ -156,6 +156,9 @@ class Simulation(object):
     
     self.totdumps = int( ( self.tstop - self.t0 ) / self.tdump )
 
+    self.mtot = mtar + mimp
+    self.nop  = self.tarb.nop + self.impb.nop
+
 
   def _findDumps(self):
     dumpdbfile = self.dir + "dumps"
@@ -388,7 +391,7 @@ class Simulation(object):
 
     # find target candidates
     targtmpl = BodyFile("", Me*self.params.mtar, nan, \
-        self.params.temp, nan, {})
+        self.params.temp, nan, nan, {})
     targcand = []
     for key in boddb.keys():
       if boddb[key].isSimilar(targtmpl, toler):
@@ -396,7 +399,7 @@ class Simulation(object):
 
     # find impactor candidates
     impatmpl = BodyFile("", Me*self.params.mimp, nan, \
-        self.params.temp, nan, {})
+        self.params.temp, nan, nan, {})
     impacand = []
     for key in boddb.keys():
       if boddb[key].isSimilar(impatmpl, toler):
@@ -443,8 +446,16 @@ class Simulation(object):
 
   def _plotClumps(self):
     if path.exists(self.dir + "clumps.h5part"):
+      print self.params.key
       clmps = SimClumps(self.dir + "clumps.h5part")
       clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf, self.params.key)
+
+  def _loadClumps(self):
+    if path.exists(self.dir + "clumps.h5part"):
+      self.clmps = SimClumps(self.dir + "clumps.h5part")
+      self.mpp = self.mtot / self.nop
+      self.clmps.dnopdtscl = self.clmps.dmdt * self.tscl / self.mpp
+
 
 
 class SimParam(object):
