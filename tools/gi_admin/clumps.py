@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 class ClumpsPlotConfig(object):
   def __init__(self):
-    self.mmin = 0.00009
+    self.mmin = 0.9e-5
     self.mmax = 2.5
     self.tmin = -1.e4
     self.tmax =  1.e5
@@ -124,5 +124,25 @@ class SimClumps(object):
     ax.set_title(tit)
     ax.set_xlabel("time [s]")
     ax.set_ylabel("clump mass [Me]")
+    fig.savefig(pname)
+
+  def plotdnop(self,pname,cfg,tit):
+    fig = plt.figure()
+    fig.clear()
+    ax = plt.axes()
+   
+    #nopc = min( cfg.noplotclumps, self.maxnoc - 1) 
+    nopc = min( 4, self.maxnoc - 1) 
+    for cuc in range(1,nopc+1):
+      ax.semilogy(self.t, self.dnopdtscl[:,cuc], '-',ms=1.0)
+    
+    #if cfg.plotesc:
+    #  ax.semilogy(self.t, self.dnopdtscl[:,0], 'r-')
+
+    ax.set_xlim(cfg.tmin, cfg.tmax)
+    ax.set_ylim(0.9, 4.e5)
+    ax.set_title(tit)
+    ax.set_xlabel("time [s]")
+    ax.set_ylabel("no parts change per tscl [nop / tscl]")
     fig.savefig(pname)
 

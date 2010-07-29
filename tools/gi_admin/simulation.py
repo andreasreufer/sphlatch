@@ -444,17 +444,24 @@ class Simulation(object):
 
     return (clpmin, clpmax) 
 
-  def _plotClumps(self):
-    if path.exists(self.dir + "clumps.h5part"):
-      print self.params.key
-      clmps = SimClumps(self.dir + "clumps.h5part")
-      clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf, self.params.key)
+  #def _plotClumps(self):
+  #  if path.exists(self.dir + "clumps.h5part"):
+  #    print self.params.key
+  #    clmps = SimClumps(self.dir + "clumps.h5part")
+  #    clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf, self.params.key)
 
   def _loadClumps(self):
     if path.exists(self.dir + "clumps.h5part"):
       self.clmps = SimClumps(self.dir + "clumps.h5part")
       self.mpp = self.mtot / self.nop
       self.clmps.dnopdtscl = self.clmps.dmdt * self.tscl / self.mpp
+      
+      self.clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf, self.params.key)
+      self.clmps.plotdnop(self.dir + "clumps_dnop.pdf", self.cfg.cpconf, self.params.key)
+
+  #def _plotClumps(self):
+  #  self.clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf, self.params.key)
+  #  self.clmps.plotdnop(self.dir + "clumps_dnop.pdf", self.cfg.cpconf, self.params.key)
 
 
 
