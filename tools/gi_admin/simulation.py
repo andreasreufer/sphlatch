@@ -142,15 +142,15 @@ class Simulation(object):
     (self.r0tar, self.r0imp, self.v0tar, self.v0imp, t0, self.gilogstr) = \
         gi.getInitVimpAlpha(vimp, impa, relsep)
 
-    tscal = (Rtar + Rimp)/gi.vesc
+    tcol = 2*(Rtar + Rimp)/gi.vesc
     self.gi = gi
-    self.tscl = tscal
+    self.tcol = tcol
     self.vimp = vimp
     self.G    = G
     
-    self.tstop = tscal * self.cfg.tscalmax
-    self.tdump = tscal * self.cfg.tscaldump
-    self.tanim = tscal * self.cfg.tscalanim
+    self.tstop = tcol * self.cfg.tcolmax
+    self.tdump = tcol * self.cfg.tcoldump
+    self.tanim = tcol * self.cfg.tcolanim
 
     self.t0 = t0
     
@@ -253,7 +253,7 @@ class Simulation(object):
     attrs = self.cfg.attr
     attrs.append( ("time",      self.t0   ) )
     attrs.append( ("gravconst", self.G    ) )
-    attrs.append( ("tscal",     self.tscl ) )
+    attrs.append( ("tcol",     self.tcol ) )
 
     for (key,val) in attrs:
       cmds.append("h5part_writeattr -i " + self.dir + "initial.h5part " +\
@@ -295,7 +295,7 @@ class Simulation(object):
 
     self.jobname = sstnam + "_" + self.params.key
   
-    self.Log.write("tscal = %9.3e" % self.tscl)
+    self.Log.write("tcol = %9.3e" % self.tcol)
     self.Log.write("tstop = %9.3e" % self.tstop)
 
     subcmd = subcmd.replace('$NOCPUS' , str(nocpus))
@@ -444,24 +444,11 @@ class Simulation(object):
 
     return (clpmin, clpmax) 
 
-  #def _plotClumps(self):
-  #  if path.exists(self.dir + "clumps.h5part"):
-  #    print self.params.key
-  #    clmps = SimClumps(self.dir + "clumps.h5part")
-  #    clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf, self.params.key)
-
   def _loadClumps(self):
     if path.exists(self.dir + "clumps.h5part"):
       self.clmps = SimClumps(self.dir + "clumps.h5part")
-      self.mpp = self.mtot / self.nop
-      self.clmps.dnopdtscl = self.clmps.dmdt * self.tscl / self.mpp
-      
-      self.clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf, self.params.key)
-      self.clmps.plotdnop(self.dir + "clumps_dnop.pdf", self.cfg.cpconf, self.params.key)
+      self.clmps.plotMass(self.dir + "clumps.pdf", self.cfg.cpconf, self)
 
-  #def _plotClumps(self):
-  #  self.clmps.plot(self.dir + "clumps.pdf", self.cfg.cpconf, self.params.key)
-  #  self.clmps.plotdnop(self.dir + "clumps_dnop.pdf", self.cfg.cpconf, self.params.key)
 
 
 
@@ -541,10 +528,14 @@ class SimSetConfig(object):
     self.nocpus  = ""
     self.runarg  = ""
 
-    self.tscalmin  = 10.0
-    self.tscalmax  = 100.
-    self.tscaldump = 1.0
-    self.tscalanim = 0.1
+    self.tcolmin  =   5.0
+    self.tcolmax  =  50.
+    self.tcoldump =   0.5
+    self.tcolanim =   0.05
+    
+    self.stopnoclumps     =   2
+    self.stopdnopdtcol    =  50
+    self.stopdnopdtcolesc =  50
 
     self.cpconf = ClumpsPlotConfig()
 

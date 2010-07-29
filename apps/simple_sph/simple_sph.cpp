@@ -612,6 +612,9 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_ANEOS
                  << "     ANEOS\n"
 #endif
+#ifdef SPHLATCH_NONEGPRESS
+                 << "     no negative pressure\n"
+#endif
 #ifdef SPHLATCH_INTEGRATERHO
                  << "     integrated density\n"
 #endif
