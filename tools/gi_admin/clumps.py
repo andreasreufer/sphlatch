@@ -140,7 +140,7 @@ class SimClumps(object):
           +  ( "%.3e" % (mvar[cuc] / ME) ) + " Me\n"
 
     if cfg.plotesc:
-      ax1.semilogy(self.t / tcol, self.m[:,0] / ME, 'r-')
+      ax1.semilogy(self.t / tcol, self.m[:,0] / ME, 'k:')
       annstr += "esc. " + ( "%.3e" % (mmean[0] / ME) ) + " +/- " \
           +  ( "%.3e" % (mvar[0] / ME) ) + " Me\n"
 
@@ -152,12 +152,13 @@ class SimClumps(object):
     ax1.set_xlabel("time [tcol]     tcol = " + str(tcol) + "s")
     ax1.set_ylabel("clump mass [Me]")
     
+    nopc = min( 3, self.maxnoc - 1) 
     ax2 = plt.subplot(212)
     for cuc in range(1,nopc+1):
       ax2.semilogy(self.t / tcol, self.dnopdtcol[:,cuc], '-',ms=1.0)
     
     if cfg.plotesc:
-      ax2.semilogy(self.t / tcol, self.dnopdtcol[:,0], 'r-')
+      ax2.semilogy(self.t / tcol, self.dnopdtcol[:,0], 'k:')
     
     ax2.set_xlim(cfg.tmin, cfg.tmax)
     ax2.set_ylim(0.9, 1.1*sim.nop)

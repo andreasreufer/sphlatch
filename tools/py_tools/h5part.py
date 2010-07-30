@@ -32,4 +32,11 @@ class H5PartDump(object):
         stpnam.append(node._v_pathname)
     return stpnam
 
+  def getAttr(self,sname,attrkey):
+    step = self.getStep(sname)
+    if not step == []:
+      if step._v_attrs._v_attrnames.count(attrkey) > 0:
+        return float(step._v_attrs[attrkey])
+    
+    return float('nan')
 

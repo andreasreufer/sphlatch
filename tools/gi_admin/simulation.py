@@ -142,7 +142,7 @@ class Simulation(object):
     (self.r0tar, self.r0imp, self.v0tar, self.v0imp, t0, self.gilogstr) = \
         gi.getInitVimpAlpha(vimp, impa, relsep)
 
-    tcol = 2*(Rtar + Rimp)/gi.vesc
+    tcol = 2*(Rtar + Rimp)/vimp
     self.gi = gi
     self.tcol = tcol
     self.vimp = vimp
