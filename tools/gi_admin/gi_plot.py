@@ -23,18 +23,11 @@ def plotGrid(norma, physa, plt, pdump, cdump, cfg):
   physa.grid(True, lw=0.1, color='darkgrey')
     
 def plotSimParams(norma, physa, plt, pdump, cdump, cfg):
-  cfg.vimp = 1.50
-  cfg.mtar = 1.00
-  cfg.mimp = 0.10
-  cfg.impa = 45.0
-  cfg.T    = 1500
-
   paramstxt = '$m_T =' + ("%3.2f" % cfg.mtar) + r' M_E, ' +\
       'm_I = ' + ("%3.2f" % cfg.mimp) + 'M_E, ' +\
       r'v_{imp} = ' + ("%3.2f" % cfg.vimp) + r'v_{esc}, ' +\
       ("%2.0f" % cfg.impa) + r'^\circ, '+\
       'T = ' + ("%4.0f" % cfg.T ) + 'K$'
-  print paramstxt
 
   norma.text( cfg.parm_vc[0], cfg.parm_vc[1], paramstxt, \
       color=cfg.parm_fc, size=cfg.parm_txts )
@@ -310,9 +303,6 @@ class GIplot(object):
     nax.text( cfg.scal_vc[0], cfg.scal_vc[1] + 0.01, scltxt, \
         color=cfg.scal_fc, size=cfg.scal_txts)
 
-    print scltxt
-    print timetxt
-    
     #print "parameters and copyright ..."
     self.norma.text( cfg.parm_vc[0], cfg.parm_vc[1], cfg.parm_txt, \
         color=cfg.parm_fc, size=cfg.parm_txts )
