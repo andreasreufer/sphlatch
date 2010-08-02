@@ -7,7 +7,6 @@ mp.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
 import matplotlib.mpl    as mpl
-import pylab             as pl
 
 from fewbody import FewBodies
 from h5part import H5PartDump
@@ -17,18 +16,11 @@ mp.rc('text.latex', preamble = '\usepackage{amssymb}, \usepackage{wasysym}')
 
 eVinK = 11604.505
 
-def postPlotClim(norma, physa, plt, pdump, cdump, cfg):
-  #plt.gci().set_clim(0.5, 4.0)
-  #cb1 = mpl.colorbar.ColorbarBase(physa, orientation='horizontal')
-  #pl.colorbar(cax=physa)
+def plotDummy(norma, physa, plt, pdump, cdump, cfg):
   pass
 
-def auxPlotDummy(norma, physa, plt, pdump, cdump, cfg):
-  pass
-
-def auxPlotGrid(norma, physa, plt, pdump, cdump, cfg):
-  physa.grid(True, lw=0.2, color='grey')
-  pass
+def plotGrid(norma, physa, plt, pdump, cdump, cfg):
+  physa.grid(True, lw=0.1, color='darkgrey')
 
 def cnameToRGB(str):
   col.cnames[str]
@@ -141,8 +133,8 @@ class GIplotConfig(object):
 
     self.imgext = ".png"
 
-    self.prePlot = auxPlotDummy
-    self.postPlot = auxPlotDummy
+    self.prePlot = plotGrid
+    self.postPlot = plotDummy
 
 
 class GIplot(object):
@@ -176,8 +168,6 @@ class GIplot(object):
     pax = self.physa
     nax = self.norma
     
-    print cfg.iname
-
     #print "loading particles ..."
     pdumpf = H5PartDump(pfile)
     sname = (pdumpf.getStepNames())[0]
@@ -272,8 +262,6 @@ class GIplot(object):
     self.sidx = sidx
     self.pos  = pos
 
-    print (pos[sidx,cfg.Z])[0], (pos[sidx,cfg.Z])[-1]
-
     #fig.colorbar(sct, orientation='horizontal',ticks=[0., 0.25, 0.50, 0.75],shrink=0.5)
 
     pax.axis("scaled")
@@ -313,6 +301,7 @@ class GIplot(object):
     #print "save figure     ...   "
     plt.rc('savefig', dpi=self.cfg.dpi)
     plt.savefig(ifile)
+
   
 
 
