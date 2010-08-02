@@ -6,12 +6,29 @@ import matplotlib as mp
 mp.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
+import matplotlib.mpl    as mpl
+import pylab             as pl
 
 from fewbody import FewBodies
 from h5part import H5PartDump
 
 #mp.rc('text', usetex=True)
 mp.rc('text.latex', preamble = '\usepackage{amssymb}, \usepackage{wasysym}')
+
+eVinK = 11604.505
+
+def postPlotClim(norma, physa, plt, pdump, cdump, cfg):
+  #plt.gci().set_clim(0.5, 4.0)
+  #cb1 = mpl.colorbar.ColorbarBase(physa, orientation='horizontal')
+  #pl.colorbar(cax=physa)
+  pass
+
+def auxPlotDummy(norma, physa, plt, pdump, cdump, cfg):
+  pass
+
+def auxPlotGrid(norma, physa, plt, pdump, cdump, cfg):
+  physa.grid(True, lw=0.2, color='grey')
+  pass
 
 def cnameToRGB(str):
   col.cnames[str]
@@ -30,9 +47,28 @@ def colorBodyAndMat(pdump, cdump, filt, cfg):
   bod = np.int32( (pdump.id[:].compress(filt)[:] > cfg.idfilt) )
 
   color = cmap[bod, mat]
-  ptsize = cfg.ptsize
+  pt2size = cfg.pt2size
 
-  return (color, ptsize)
+  return (color, pt2size)
+
+def colorTemp(pdump, cdump, filt, cfg):
+  T = (pdump.T[:,0] * eVinK)
+  Tmin = cfg.Tmin
+  Tmax = cfg.Tmax
+
+  color = (T - Tmin) / (Tmax - Tmin)
+  pt2size = cfg.pt2size
+  return (color, pt2size)
+
+def colorDens(pdump, cdump, filt, cfg):
+  rho = (pdump.rho[:,0])
+  rhomin = cfg.rhomin
+  rhomax = cfg.rhomax
+
+  color = (rho - rhomin) / (rhomax - rhomin)
+  #color = rho
+  pt2size = cfg.pt2size
+  return (color, pt2size)
 
 
 class GIplotConfig(object):
@@ -42,7 +78,6 @@ class GIplotConfig(object):
     self.yinch = 2
     self.dpi = 400
 
-    # 
     self.ax = [-1.0e10, 1.0e10, -1.5e10, 1.5e10]
 
     # define the X/Y axes of the plot as dimension numbers
@@ -50,14 +85,12 @@ class GIplotConfig(object):
     self.Y = 0
     self.Z = 2
 
-    # FIXME: find this value automatically
-    self.zmin = -7.e7
-    self.zmax =  7.e7
+    self.filt = "negzonly"
 
     self.ds = 5.e7
-    self.ptsize = 0.05
+    self.pt2size = 4.00
 
-    self.axisbg = "k"
+    self.axisbg = "black"
 
     self.plotclmp = True
     self.plottraj = False
@@ -67,22 +100,22 @@ class GIplotConfig(object):
     self.G    = 6.67428e-8
 
     self.Mearth = 5.9736e27
-    self.Mmin    = 0.e-0*self.Mearth
+    self.Mmin    = -float('inf')
     self.MminLbl = 5.e-3*self.Mearth
 
     self.colorFunc = colorBodyAndMat
 
-    self.clpc_ec = 'yellowgreen'
+    self.clpc_ec = 'white'
     self.clpc_fc = 'none'
-    self.clpc_lw = 0.3
+    self.clpc_lw = 0.2
     self.clpc_al = 0.3
 
-    self.clpp_ec = 'yellowgreen'
+    self.clpp_ec = 'white'
     self.clpp_fc = 'none'
-    self.clpp_lw = 0.3
+    self.clpp_lw = 0.2
     self.clpp_al = 0.6
     
-    self.clpc_txtc = 'yellowgreen'
+    self.clpc_txtc = 'white'
     self.clpc_txts = 4
 
     self.scal_fc = 'white'
@@ -108,6 +141,9 @@ class GIplotConfig(object):
 
     self.imgext = ".png"
 
+    self.prePlot = auxPlotDummy
+    self.postPlot = auxPlotDummy
+
 
 class GIplot(object):
   def __init__(self, cfg=GIplotConfig()):
@@ -132,7 +168,6 @@ class GIplot(object):
 
     self.scl = scl
     self.corrax = corrax
-
   
   def plotParticles(self,pfile,cfile, ifile):
     fig = self.fig
@@ -140,19 +175,21 @@ class GIplot(object):
     cfg = self.cfg
     pax = self.physa
     nax = self.norma
+    
+    print cfg.iname
 
-    print "loading particles ..."
+    #print "loading particles ..."
     pdumpf = H5PartDump(pfile)
     sname = (pdumpf.getStepNames())[0]
 
     pdump = pdumpf.getStep(sname)
     nop = (pdump.m.shape)[0]
 
-    print "load time and G ..."
+    #print "load time and G ..."
     G     = pdumpf.getAttr(sname,"gravconst")
     time  = pdumpf.getAttr(sname,"time")
-
-    print "loading clumps ..."
+    
+    #print "loading clumps ..."
     cdumpf = H5PartDump(cfile)
     cdump = cdumpf.getStep(sname)
     noc = (cdump.m.shape)[0]
@@ -162,33 +199,50 @@ class GIplot(object):
     for i in range(noc):
       cposz[ int(cdump.id[i]) ] = cdump.pos[i,cfg.Z]
 
-    print "selecting particles ..."
+    #print "selecting particles ..."
     h = pdump.h
     cid = pdump.clumpid
+    
+    hmed = np.median(h)
+    self.hmed = hmed
 
-    filt = np.zeros(nop, dtype=np.bool)
-    for i in range(nop):
-      cidi = int( pdump.clumpid[i,:] )
-      if (cidi == 0 or cidi >= noc):
-        filt[i] = True
-      else:
+    # auto determine the scatter ptsize^2 (no idea why we need a 0.01 fudge)
+    cfg.pt2size = 0.01*np.power( hmed*cfg.dpi / self.scl , 2.)
+
+    filt = np.ones(nop, dtype=np.bool)
+    if cfg.filt == "negzonly":
+      filt = pdump.pos[:,cfg.Z] < 0.
+    
+    if cfg.filt == "clumpcut":
+      for i in range(nop):
         cidi = int( pdump.clumpid[i,:] )
-        zrel = pdump.pos[i,cfg.Z] - cposz[cidi]
-        filt[i] = ( ( zrel > cfg.zmin ) & ( zrel < cfg.zmax ) )
+        if (cidi == 0 or cidi >= noc):
+          filt[i] = True
+        else:
+          cidi = int( pdump.clumpid[i,:] )
+          zrel = pdump.pos[i,cfg.Z] - cposz[cidi]
+          filt[i] = ( ( zrel > -hmed ) & ( zrel < hmed ) )
+    
+    if cfg.filt == "slice":
+      filt = ( pdump.pos[:,cfg.Z] > -hmed ) & ( pdump.pos[:,cfg.Z] <  hmed )
+
         
-    print "filtering particles ..."
+    #print "filtering particles ..."
     pos = pdump.pos[:,:].compress(filt, axis=0)[:,:]
     mat = pdump.mat[:,0].compress(filt)[:]
     bod = np.int32( (pdump.id[:].compress(filt)[:] > cfg.idfilt) )
 
-    print "z-sorting points ...   "
+    #print "z-sorting points ...   "
     sidx = pos[:,cfg.Z].argsort()
     
     if cfg.plottraj:
-      print "integrate clumps ...   "
+      #print "integrate clumps ...   "
       clumps.integrate(dt, cfg.ds)
+
+    #print "pre-plot ... "
+    cfg.prePlot(self.norma, self.physa, plt, pdump, cdump, cfg)
     
-    print "plotting clumps with trajectories ... "
+    #print "plotting clumps with trajectories ... "
     for i in range(1,noc):
       curtraj = clumps.traj[i]
       pax.add_patch( mp.patches.Circle((curtraj[0,cfg.X], curtraj[0,cfg.Y]),\
@@ -208,27 +262,31 @@ class GIplot(object):
         pax.plot( curtraj[:,cfg.X], curtraj[:,cfg.Y], color=cfg.clpt_fc, \
             lw=cfg.clpt_lw, alpha=cfg.clpt_al)
 
-    print "get point colors and size"
-    (pcol, ptsize) = cfg.colorFunc(pdump, cdump, filt, cfg)
+    #print "get point colors and size"
+    (pcol, pt2size) = cfg.colorFunc(pdump, cdump, filt, cfg)
     
-    print "plotting points ...   "
-#    pax.scatter( pos[sidx,cfg.X], pos[sidx,cfg.Y], cfg.ptsize, \
-#        color[sidx], lw=0, vmin=0., vmax=1.)
-    
-    pax.scatter( pos[sidx,cfg.X], pos[sidx,cfg.Y], ptsize, \
+    #print "plotting points ...   "
+    sct = pax.scatter( pos[sidx,cfg.X], pos[sidx,cfg.Y], pt2size, \
         pcol[sidx,:], lw=0, vmin=0., vmax=1.)
+
+    self.sidx = sidx
+    self.pos  = pos
+
+    print (pos[sidx,cfg.Z])[0], (pos[sidx,cfg.Z])[-1]
+
+    #fig.colorbar(sct, orientation='horizontal',ticks=[0., 0.25, 0.50, 0.75],shrink=0.5)
 
     pax.axis("scaled")
     pax.axis(self.corrax)
    
     # plot a scale
-    print "plot a scale    ...   "
+    #print "plot a scale    ...   "
     nax.plot( [cfg.scal_vc[0], cfg.scal_vc[2]], \
         [cfg.scal_vc[1], cfg.scal_vc[3]], lw=.3, color=cfg.scal_fc )
     
     nax.axis([0., 1., 0., 1.])
     
-    print "plot time ..."
+    #print "plot time ..."
     timetxt = '$t = %6.2f' % (time*cfg.time_sc) + ' ' + cfg.time_ut + '$'
     nax.text( cfg.time_vc[0], cfg.time_vc[1], timetxt, \
         color=cfg.time_fc, size=cfg.time_txts)
@@ -247,9 +305,12 @@ class GIplot(object):
     
     self.norma.text( cfg.copy_vc[0], cfg.copy_vc[1], cfg.copy_txt, \
         color=cfg.parm_fc, size=cfg.parm_txts )
+    
+    #print "post plot stuff ..."
+    cfg.postPlot(self.norma, self.physa, plt, pdump, cdump, cfg)
 
     # save the figure
-    print "save figure     ...   "
+    #print "save figure     ...   "
     plt.rc('savefig', dpi=self.cfg.dpi)
     plt.savefig(ifile)
   
