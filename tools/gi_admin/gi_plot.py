@@ -21,6 +21,23 @@ def plotDummy(norma, physa, plt, pdump, cdump, cfg):
 
 def plotGrid(norma, physa, plt, pdump, cdump, cfg):
   physa.grid(True, lw=0.1, color='darkgrey')
+    
+def plotSimParams(norma, physa, plt, pdump, cdump, cfg):
+  cfg.vimp = 1.50
+  cfg.mtar = 1.00
+  cfg.mimp = 0.10
+  cfg.impa = 45.0
+  cfg.T    = 1500
+
+  paramstxt = '$m_T =' + ("%3.2f" % cfg.mtar) + r' M_E, ' +\
+      'm_I = ' + ("%3.2f" % cfg.mimp) + 'M_E, ' +\
+      r'v_{imp} = ' + ("%3.2f" % cfg.vimp) + r'v_{esc}, ' +\
+      ("%2.0f" % cfg.impa) + r'^\circ, '+\
+      'T = ' + ("%4.0f" % cfg.T ) + 'K$'
+  print paramstxt
+
+  norma.text( cfg.parm_vc[0], cfg.parm_vc[1], paramstxt, \
+      color=cfg.parm_fc, size=cfg.parm_txts )
 
 def cnameToRGB(str):
   col.cnames[str]
@@ -58,7 +75,6 @@ def colorDens(pdump, cdump, filt, cfg):
   rhomax = cfg.rhomax
 
   color = (rho - rhomin) / (rhomax - rhomin)
-  #color = rho
   pt2size = cfg.pt2size
   return (color, pt2size)
 
@@ -66,8 +82,8 @@ def colorDens(pdump, cdump, filt, cfg):
 class GIplotConfig(object):
   def __init__(self):
     # the plot dimensions
-    self.xinch = 3
-    self.yinch = 2
+    self.xinch = 3.2
+    self.yinch = 1.8
     self.dpi = 400
 
     self.ax = [-1.0e10, 1.0e10, -1.5e10, 1.5e10]
@@ -77,7 +93,7 @@ class GIplotConfig(object):
     self.Y = 0
     self.Z = 2
 
-    self.filt = "negzonly"
+    self.filt = "clumpnegz"
 
     self.ds = 5.e7
     self.pt2size = 4.00
@@ -123,7 +139,7 @@ class GIplotConfig(object):
     self.time_txts = 4
 
     self.parm_fc = 'white'
-    self.parm_vc = [0.8, 0.8]
+    self.parm_vc = [0.5, 0.8]
     self.parm_txts = 4
     self.parm_txt = ""
     self.copy_vc = [0.6, 0.1]
@@ -196,8 +212,8 @@ class GIplot(object):
     hmed = np.median(h)
     self.hmed = hmed
 
-    # auto determine the scatter ptsize^2 (no idea why we need a 0.01 fudge)
-    cfg.pt2size = 0.01*np.power( hmed*cfg.dpi / self.scl , 2.)
+    # auto determine the scatter ptsize^2 (no idea why we need a fudge factor)
+    cfg.pt2size = 0.008*np.power( hmed*cfg.dpi / self.scl , 2.)
 
     filt = np.ones(nop, dtype=np.bool)
     if cfg.filt == "negzonly":
@@ -212,6 +228,15 @@ class GIplot(object):
           cidi = int( pdump.clumpid[i,:] )
           zrel = pdump.pos[i,cfg.Z] - cposz[cidi]
           filt[i] = ( ( zrel > -hmed ) & ( zrel < hmed ) )
+    
+    if cfg.filt == "clumpnegz":
+      for i in range(nop):
+        cidi = int( pdump.clumpid[i,:] )
+        if (cidi == 0 or cidi >= noc):
+          filt[i] = True
+        else:
+          cidi = int( pdump.clumpid[i,:] )
+          filt[i] = ( pdump.pos[i,cfg.Z] < cposz[cidi] )
     
     if cfg.filt == "slice":
       filt = ( pdump.pos[:,cfg.Z] > -hmed ) & ( pdump.pos[:,cfg.Z] <  hmed )
@@ -262,8 +287,6 @@ class GIplot(object):
     self.sidx = sidx
     self.pos  = pos
 
-    #fig.colorbar(sct, orientation='horizontal',ticks=[0., 0.25, 0.50, 0.75],shrink=0.5)
-
     pax.axis("scaled")
     pax.axis(self.corrax)
    
@@ -286,6 +309,9 @@ class GIplot(object):
     scltxt = scltxt.replace('e+', '*10^{')
     nax.text( cfg.scal_vc[0], cfg.scal_vc[1] + 0.01, scltxt, \
         color=cfg.scal_fc, size=cfg.scal_txts)
+
+    print scltxt
+    print timetxt
     
     #print "parameters and copyright ..."
     self.norma.text( cfg.parm_vc[0], cfg.parm_vc[1], cfg.parm_txt, \
