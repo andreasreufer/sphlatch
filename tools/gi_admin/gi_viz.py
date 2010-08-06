@@ -11,7 +11,6 @@ from gi_plot import GIplotConfig, GIplot
 
 class GIvizConfig(object):
   def __init__(self):
-    self.dir = ""
     self.scdir = "./scdir"
     self.tasksperjob = 50
     self.subcmd = "qsub -cwd -l qname=all.q -N $JOBNAME -b n $JOBCMD"
@@ -25,32 +24,39 @@ class GIvizTask(object):
     self.plotcfg = plotcfg
 
   def execute(self):
-    gipl = GIplot(plotcfg)
-    gipl.plotParticles(pname, cname, ifile)
+    gipl = GIplot(self.plotcfg)
+    gipl.plotParticles(self.pfile, self.cfile, self.ifile)
 
 
 class GIviz(object):
   def __init__(self, cfg, plotcfg):
-    self.cfg = cfg
+    self.cfg     = cfg
+    self.plotcfg = plotcfg
     
-    self.dir = os.path.abspath( self.cfg.dir ) + "/"
+    self.dir = os.path.abspath( self.plotcfg.imgdir ) + "/"
     if not path.exists(self.dir):
       os.mkdir(self.dir)
 
-    self.scdir = os.path.abspath( self.cfg.scdir ) + "/"
+    self.scdir = os.path.abspath( self.dir + "/" + self.cfg.scdir ) + "/"
     if not path.exists(self.scdir):
       os.mkdir(self.scdir)
     
   def vizSim(self, sim):
     scdir = self.scdir
     simkey = sim.params.key
-    
+
+    self.plotcfg.mtar = sim.params.mtar
+    self.plotcfg.mimp = sim.params.mimp
+    self.plotcfg.impa = sim.params.impa
+    self.plotcfg.vimp = sim.params.vimprel
+    self.plotcfg.T    = sim.params.temp
+        
     tasks = {}
     self.addPlotTasks(tasks, sim)
     self.plotJobScript(tasks, simkey)
 
   def animSim(self, sim):
-    idir  = self.dir + sim.params.key + "/"
+    idir  = self.plotcfg.imgdir + sim.params.key + "/"
     iext  = self.plotcfg.imgext
     animext = ".mp4"
     adir = self.dir + "videos/"
@@ -95,7 +101,7 @@ class GIviz(object):
       (dfile, dtime) = dumprec
       dprfx = dfile.replace('.h5part','')
       pfile = sim.dir + dfile
-      cfile = "clumps.h5part"
+      cfile = sim.dir + "clumps.h5part"
 
       key = sim.params.key + "_" + dprfx
 
@@ -108,7 +114,6 @@ class GIviz(object):
       if path.exists(pfile) and path.exists(cfile) and not path.exists(ifile):
         open(ifile,'w').close()
         tasks[key] = GIvizTask(pfile, cfile, ifile, self.plotcfg)
-        print "new plot task",pfile, cfile, ifile
   
   def plotJobScript(self, tasks, jobname):
     ascdir = self.scdir
@@ -165,7 +170,7 @@ class GIviz(object):
     script.close()
     os.chmod(scriptname, stat.S_IRWXU)
 
-    jobsubstr = self.cfg["JOBSUBMIT"]
+    jobsubstr = self.cfg.subcmd
 
     jobsubstr = jobsubstr.replace("$JOBNAME", "viz_" + jobname)
     jobsubstr = jobsubstr.replace("$JOBCMD",  scriptname)

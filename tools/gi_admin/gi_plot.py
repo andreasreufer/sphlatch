@@ -170,6 +170,7 @@ class GIplotConfig(object):
 
     self.idfilt = 2.e6
 
+    self.imgdir = "giplot"
     self.imgext = ".png"
 
     self.prePlot = plotGrid
