@@ -83,15 +83,15 @@ class Simulation(object):
       neededfiles = self.cfg.auxfiles.split()
       neededfiles.append(self.cfg.binary)
       neededfiles.append("initial.h5part")
+      
+      print "find dumps for ",self.params.key
+      self._findDumps()
 
       for file in neededfiles:
         if not os.path.exists(self.dir + os.path.split(file)[1]):
           self.state = "unprepared"
           self.next = self._prepare
           return self.state
-      
-      print "find dumps for ",self.params.key
-      self._findDumps()
 
       # so everything's ready
       if self.jobid == 0:
@@ -164,6 +164,7 @@ class Simulation(object):
     dumpdbfile = self.dir + "dumps"
     dumps = shelve.open(dumpdbfile)
     
+    # old version which gets time as a HDF5 attribute
     #for file in os.listdir(self.dir):
     #  if file[0:4] == "dump" and file[-6:] == "h5part":
     #    if not dumps.has_key(file):
@@ -173,6 +174,10 @@ class Simulation(object):
     #      if stat == 0:
     #        time = float(out.split()[1])
     #        dumps[file] = time
+    
+    for file in os.listdir(self.dir):
+      if file[0:4] == "dump" and file[-6:] == "h5part":
+        dumps[file] = float(file[13:24])
   
     self.dumps = []
     for key in dumps.keys():

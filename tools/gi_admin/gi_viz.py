@@ -16,25 +16,17 @@ class GIvizConfig(object):
     self.tasksperjob = 50
     self.subcmd = "qsub -cwd -l qname=all.q -N $JOBNAME -b n $JOBCMD"
 
-
-
 class GIvizTask(object):
-  def __init__(self, pfile, cfile, ifile, plotcfg, ax, params):
+  def __init__(self, pfile, cfile, ifile, plotcfg):
     self.pfile = pfile
     self.cfile = cfile
     self.ifile = ifile
 
     self.plotcfg = plotcfg
-    self.tscl    = tscl
-    self.params  = params
 
   def execute(self):
-    gipl = GIplot(self.pfile, self.cfile)
-    gipl.plotParticles()
-    gipl.plotDumpTime()
-    #gipl.plotSimParams(self.params)
-    gipl.plotClumps(self.tscl)
-    gipl.storePlot(self.ifile, self.ax)
+    gipl = GIplot(plotcfg)
+    gipl.plotParticles(pname, cname, ifile)
 
 
 class GIviz(object):
@@ -49,17 +41,15 @@ class GIviz(object):
     if not path.exists(self.scdir):
       os.mkdir(self.scdir)
     
-    self.plotcfg = plotcfg
-
-  def vizSim(self, sim, ax=[0., 0., 1., 1.]):
+  def vizSim(self, sim):
     scdir = self.scdir
     simkey = sim.params.key
     
     tasks = {}
-    self.addPlotTasks(tasks, sim, ax)
+    self.addPlotTasks(tasks, sim)
     self.plotJobScript(tasks, simkey)
 
-  def vizAnim(self, sim):
+  def animSim(self, sim):
     idir  = self.dir + sim.params.key + "/"
     iext  = self.plotcfg.imgext
     animext = ".mp4"
@@ -99,13 +89,13 @@ class GIviz(object):
     os.removedirs(tmpdir)
 
 
-  def addPlotTasks(self, tasks, sim, ax=[0., 0., 1., 1.]):
+  def addPlotTasks(self, tasks, sim):
     dumps = sim.dumps
     for dumprec in dumps:
       (dfile, dtime) = dumprec
       dprfx = dfile.replace('.h5part','')
       pfile = sim.dir + dfile
-      cfile = sim.dir + "clumps/" + dfile
+      cfile = "clumps.h5part"
 
       key = sim.params.key + "_" + dprfx
 
@@ -117,10 +107,9 @@ class GIviz(object):
 
       if path.exists(pfile) and path.exists(cfile) and not path.exists(ifile):
         open(ifile,'w').close()
-        tasks[key] = GIvizTask(pfile, cfile, ifile, \
-            self.plotcfg, ax, sim.tscl, sim.params)
-
-
+        tasks[key] = GIvizTask(pfile, cfile, ifile, self.plotcfg)
+        print "new plot task",pfile, cfile, ifile
+  
   def plotJobScript(self, tasks, jobname):
     ascdir = self.scdir
     excname = ascdir + jobname + "_exec.py"
@@ -183,9 +172,9 @@ class GIviz(object):
     
     print jobsubstr
     oldwd = os.getcwd()
-    os.chdir(self.scdir)
-    (exstat, out) = commands.getstatusoutput(jobsubstr)
-    os.chdir(oldwd)
+    #os.chdir(self.scdir)
+    #(exstat, out) = commands.getstatusoutput(jobsubstr)
+    #os.chdir(oldwd)
 
 
   def clearScratch(self):

@@ -33,8 +33,13 @@ def plotSimParams(norma, physa, plt, pdump, cdump, cfg):
       color=cfg.parm_fc, size=cfg.parm_txts )
 
 def cnameToRGB(str):
-  col.cnames[str]
   return np.array( col.hex2color( col.cnames[str] ) )
+
+def cnameToRGBA(str, alpha=1.0):
+  rgba = np.zeros(4)
+  rgba[0:3] = np.array( col.hex2color( col.cnames[str] ) )
+  rgba[3] = alpha
+  return rgba
 
 def colorBodyAndMat(pdump, cdump, filt, cfg):
   cmap = np.zeros((2,6,3))
@@ -71,6 +76,30 @@ def colorDens(pdump, cdump, filt, cfg):
   pt2size = cfg.pt2size
   return (color, pt2size)
 
+def colorClumps(pdump, cdump, filt, cfg):
+  cid = pdump.clumpid[:,0].compress(filt)[:]
+
+  maxnoc = 10
+  maxcid = maxnoc - 1
+  cid[cid > maxcid] = maxcid
+  
+  cmap = np.zeros((maxnoc,4))
+
+  cmap[0] = cnameToRGBA("lime") # escaping stuff
+  cmap[1] = cnameToRGBA("red") #
+  cmap[2] = cnameToRGBA("blue") # 
+  cmap[3] = cnameToRGBA("yellow") # 
+  cmap[4] = cnameToRGBA("orchid") # 
+  cmap[5] = cnameToRGBA("aqua") # 
+  cmap[6] = cnameToRGBA("orange") # 
+  cmap[7] = cnameToRGBA("royalblue") # 
+  cmap[8] = cnameToRGBA("fuchsia") # 
+  cmap[9] = cnameToRGBA("darkgrey") # beyond maximum clump number
+
+  color = cmap[cid]
+  pt2size = cfg.pt2size
+  return (color, pt2size)
+
 
 class GIplotConfig(object):
   def __init__(self):
@@ -102,6 +131,7 @@ class GIplotConfig(object):
 
     self.Mearth = 5.9736e27
     self.Mmin    = -float('inf')
+    self.MminPlt = 1.e-4*self.Mearth
     self.MminLbl = 5.e-3*self.Mearth
 
     self.colorFunc = colorBodyAndMat
@@ -253,22 +283,23 @@ class GIplot(object):
     #print "plotting clumps with trajectories ... "
     for i in range(1,noc):
       curtraj = clumps.traj[i]
-      pax.add_patch( mp.patches.Circle((curtraj[0,cfg.X], curtraj[0,cfg.Y]),\
+      if ( clumps.m[i] > cfg.MminPlt ):
+        pax.add_patch( mp.patches.Circle((curtraj[0,cfg.X], curtraj[0,cfg.Y]),\
           radius=clumps.rc[i], ec=cfg.clpc_ec, fc=cfg.clpc_fc, \
           lw=cfg.clpc_lw, alpha=cfg.clpc_al) )
     
-      if ( clumps.m[i] > cfg.MminLbl ):
-        pax.text( curtraj[0,cfg.X], curtraj[0,cfg.Y], \
-            '$\mathrm{'+ '%1.4f' % ( clumps.m[i] / cfg.Mearth ) +' M_{E}}$', \
-            size=cfg.clpc_txts, color=cfg.clpc_txtc)
+        if ( clumps.m[i] > cfg.MminLbl ):
+          pax.text( curtraj[0,cfg.X], curtraj[0,cfg.Y], \
+              '$\mathrm{'+ '%1.4f' % ( clumps.m[i] / cfg.Mearth ) +' M_{E}}$', \
+              size=cfg.clpc_txts, color=cfg.clpc_txtc)
     
-      if cfg.plottraj:
-        pax.add_patch( \
-            mp.patches.Circle((curtraj[-1,cfg.X], curtraj[-1,cfg.Y]), \
-            radius=clumps.rc[i], ec=cfg.clpp_ec, fc=cfg.clpp_fc, \
-            lw=cfg.clpp_lw, alpha=cfg.clpp_al) )
-        pax.plot( curtraj[:,cfg.X], curtraj[:,cfg.Y], color=cfg.clpt_fc, \
-            lw=cfg.clpt_lw, alpha=cfg.clpt_al)
+        if cfg.plottraj:
+          pax.add_patch( \
+              mp.patches.Circle((curtraj[-1,cfg.X], curtraj[-1,cfg.Y]), \
+              radius=clumps.rc[i], ec=cfg.clpp_ec, fc=cfg.clpp_fc, \
+              lw=cfg.clpp_lw, alpha=cfg.clpp_al) )
+          pax.plot( curtraj[:,cfg.X], curtraj[:,cfg.Y], color=cfg.clpt_fc, \
+              lw=cfg.clpt_lw, alpha=cfg.clpt_al)
 
     #print "get point colors and size"
     (pcol, pt2size) = cfg.colorFunc(pdump, cdump, filt, cfg)
@@ -277,8 +308,8 @@ class GIplot(object):
     sct = pax.scatter( pos[sidx,cfg.X], pos[sidx,cfg.Y], pt2size, \
         pcol[sidx,:], lw=0, vmin=0., vmax=1.)
 
-    self.sidx = sidx
-    self.pos  = pos
+    #self.sidx = sidx
+    #self.pos  = pos
 
     pax.axis("scaled")
     pax.axis(self.corrax)
