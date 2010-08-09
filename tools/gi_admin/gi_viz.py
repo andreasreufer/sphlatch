@@ -175,11 +175,10 @@ class GIviz(object):
     jobsubstr = jobsubstr.replace("$JOBNAME", "viz_" + jobname)
     jobsubstr = jobsubstr.replace("$JOBCMD",  scriptname)
     
-    print jobsubstr
     oldwd = os.getcwd()
-    #os.chdir(self.scdir)
-    #(exstat, out) = commands.getstatusoutput(jobsubstr)
-    #os.chdir(oldwd)
+    os.chdir(self.scdir)
+    (exstat, out) = commands.getstatusoutput(jobsubstr)
+    os.chdir(oldwd)
 
 
   def clearScratch(self):
