@@ -53,7 +53,7 @@ public:
    ANEOS<_partT>()
    {
       std::string matFilename = "aneos.input";
-
+      
       aneosinit_(matFilename.c_str(), matFilename.size());
 
  #ifdef SPHLATCH_LOGGER

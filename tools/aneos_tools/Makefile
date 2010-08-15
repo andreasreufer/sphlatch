@@ -24,8 +24,16 @@ phaseDiagram: libaneos
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
 				      -o aneos_phase_diagram phase_diagram.cpp
 
+phaseDiagramM: libmaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src \
+				      -DSPHLATCH_ANEOS -lgfortran libmaneos.o \
+				      -o Maneos_phase_diagram phase_diagram.cpp
+
 libaneos:
 	$(FC) $(FFLAGS) -c ../../aux/libaneos/libaneos.f -o libaneos.o
+
+libmaneos:
+	$(FC) $(FFLAGS) -c ../../aux/libaneos/libmaneos.f -o libmaneos.o
 
 clean:
 	rm h5part_add_ANEOSout 2>&1 >/dev/null;\
