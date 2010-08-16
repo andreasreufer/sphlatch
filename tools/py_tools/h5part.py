@@ -37,6 +37,9 @@ class H5PartDump(object):
     if not step == []:
       if step._v_attrs._v_attrnames.count(attrkey) > 0:
         return float(step._v_attrs[attrkey])
-    
     return float('nan')
+
+  def getStepFirst(self):
+    return self.getStep( self.getStepNames()[0] )
+    
 

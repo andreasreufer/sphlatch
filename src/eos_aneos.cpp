@@ -198,11 +198,10 @@ public:
          const fType curLogU   = log10(_u);
 
          _P = (*presTables[_mat])(curLogU, curLogRho);
-
- #ifdef SPHLATCH_NONEGPRESS
+#ifdef SPHLATCH_NONEGPRESS
          if (_P < 0.)
             _P = 0.;
- #endif
+#endif
 
          ///
          /// the first table query gives us the indices
@@ -223,20 +222,24 @@ public:
       /// use the slower but more accurate iteration
       ///
       iterate(_rho, _u, _mat, _P, _cs, _T, _phase);
+#ifdef SPHLATCH_NONEGPRESS
+      if (_P < 0.)
+        _P = 0.;
+#endif
    }
 
 private:
    void iterate(const fType _rho, const fType _u, const identType _mat,
                 fType& _P, fType& _cs, fType& _T, identType& _phase)
    {
-      static double curRho, curU, curP, curCs, curT;
+      static double curRho, curU, curP, curCs, curT, curEntr;
       static int    curMat, curPhase;
 
       curRho = static_cast<double>(_rho);
       curU   = static_cast<double>(_u);
       curMat = static_cast<int>(_mat);
 
-      rooten(curRho, curU, curMat, curT, curP, curCs, curPhase);
+      rooten(curRho, curU, curMat, curT, curP, curCs, curPhase, curEntr);
 
       _phase = static_cast<identType>(curPhase);
       _P     = static_cast<fType>(curP);
@@ -440,14 +443,16 @@ private:
 /// internal energy and density
 ///
 /// copied from ParaSPH, 2004 by Bruno Nyffeler & Willy Benz
+/// modified to give back entropy
 ///
    void rooten(const double _rhoi, const double _ui, const int _mati,
-               double& _Ti, double& _pi, double& _csi, int& _kpai) const
+               double& _Ti, double& _pi, double& _csi, int& _kpai, 
+               double& _S) const
    {
       const double  eps   = 1.e-5;
       const double  Tmin  = 1.e-6; // get this as a parameter?
       const int     itmax = 30;
-      static double _S, _CV, _DPDT, _DPDR, _FKROS, _FME, _FMA;
+      static double _CV, _DPDT, _DPDR, _FKROS, _FME, _FMA;
       static double a, b, c, d, e, ei, fa, fb, fc, p, q, r, s, tm, tol1;
 
       // Initial temperature bracket (in eV)

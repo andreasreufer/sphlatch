@@ -16,6 +16,23 @@ mp.rc('text.latex', preamble = '\usepackage{amssymb}, \usepackage{wasysym}')
 
 eVinK = 11604.505
 
+def latexExp10(str):
+  if 'e+' in str:
+    str = str.replace('e+0', 'e+')
+    str = str.replace('e+', '*10^{')
+    str += '}'
+  if 'e-' in str:
+    str = str.replace('e-0', 'e-')
+    str = str.replace('e-', '*10^{')
+    str += '}'
+  return str
+
+def retnullstring(x, pos):
+    return ''
+
+empty_formatter = plt.FuncFormatter(retnullstring)
+
+
 def plotDummy(norma, physa, plt, pdump, cdump, cfg):
   pass
 
@@ -110,6 +127,48 @@ def colorClumps(pdump, cdump, filt, cfg):
   pt2size = cfg.pt2size
   return (color, pt2size)
 
+def colorScalarLinear(pdump, cdump, filt, cfg):
+  sname = cfg.scal_name
+  for lv in pdump._v_leaves.values():
+    if lv._v_name == sname:
+      scal = lv[:,0].compress(filt)[:]
+
+  scalmin = cfg.scal_min
+  scalmax = cfg.scal_max
+  
+  if cfg.cbar_plot:
+    cfg.cbar_ticksx = np.arange(0., 1.00001, 1./(cfg.cbar_noticks-1))
+    cfg.cbar_tickstxt = []
+    for x in  cfg.cbar_ticksx:
+      scalsc = (x*(scalmax-scalmin)+scalmin)*cfg.cbar_sc
+      str    = '$' + latexExp10( cfg.cbar_fmt % scalsc ) + cfg.cbar_ut + '$'
+      cfg.cbar_tickstxt.append(str) 
+  
+  color = (scal - scalmin) / (scalmax - scalmin)
+  pt2size = cfg.pt2size
+  return (color, pt2size)
+
+def colorScalarLog10(pdump, cdump, filt, cfg):
+  sname = cfg.scal_name
+  for lv in pdump._v_leaves.values():
+    if lv._v_name == sname:
+      scal = lv[:,0].compress(filt)[:]
+
+  lscalmin = np.log10(cfg.scal_min)
+  lscalmax = np.log10(cfg.scal_max)
+  scalmin = cfg.scal_min
+   
+  if cfg.cbar_plot:
+    cfg.cbar_ticksx = np.arange(0., 1.00001, 1./(cfg.cbar_noticks-1))
+    cfg.cbar_tickstxt = []
+    for x in  cfg.cbar_ticksx:
+      scalsc = ( scalmin*pow(10., (lscalmax-lscalmin)*x) )*cfg.cbar_sc
+      str    = '$' + latexExp10( cfg.cbar_fmt % scalsc ) + cfg.cbar_ut + '$'
+      cfg.cbar_tickstxt.append(str) 
+  
+  color = (np.log10(scal) - lscalmin) / (lscalmax - lscalmin)
+  pt2size = cfg.pt2size
+  return (color, pt2size)
 
 class GIplotConfig(object):
   def __init__(self):
@@ -159,14 +218,14 @@ class GIplotConfig(object):
     self.clpc_txtc = 'white'
     self.clpc_txts = 4
 
-    self.scal_fc = 'white'
-    self.scal_vc = [0.1, 0.1, 0.3, 0.1]
-    self.scal_ut = 'm'
-    self.scal_sc = 0.01
-    self.scal_txts = 4
+    self.scale_fc = 'white'
+    self.scale_vc = [0.05, 0.06, 0.3, 0.06]
+    self.scale_ut = 'm'
+    self.scale_sc = 0.01
+    self.scale_txts = 4
     
     self.time_fc = 'white'
-    self.time_vc = [0.1, 0.8]
+    self.time_vc = [0.05, 0.8]
     self.time_ut = 'h'
     self.time_sc = 0.000277777777
     self.time_txts = 4
@@ -175,8 +234,19 @@ class GIplotConfig(object):
     self.parm_vc = [0.5, 0.8]
     self.parm_txts = 4
     self.parm_txt = ""
-    self.copy_vc = [0.6, 0.1]
+    self.copy_vc = [0.65, 0.06]
     self.copy_txt = "Andreas Reufer, University of Bern"
+
+    self.cbar_plot        = True
+    self.cbar_fc          = 'white'
+    self.cbar_orientation = 'horizontal'
+    self.cbar_extent      = [0.05, 0.95, 0.5, 0.01]
+    self.cbar_noticks     = 4
+    self.cbar_lw          = 0.1
+    self.cbar_ut          = ' K'
+    self.cbar_sc          = 11604.505
+    self.cbar_txts        = 4
+    self.cbar_fmt         = '%5.0f'
 
     self.idfilt = 2.e6
 
@@ -335,17 +405,14 @@ class GIplot(object):
     sct = pax.scatter( pos[sidx,cfg.X], pos[sidx,cfg.Y], pt2size, \
         pcol[sidx,:], lw=0, vmin=0., vmax=1.)
 
-    #self.sidx = sidx
-    #self.pos  = pos
-
     pax.axis("scaled")
     pax.axis(self.corrax)
    
     # plot a scale
     if cfg.verbose:
       print "plot a scale    ...   "
-    nax.plot( [cfg.scal_vc[0], cfg.scal_vc[2]], \
-        [cfg.scal_vc[1], cfg.scal_vc[3]], lw=.3, color=cfg.scal_fc )
+    nax.plot( [cfg.scale_vc[0], cfg.scale_vc[2]], \
+        [cfg.scale_vc[1], cfg.scale_vc[3]], lw=.3, color=cfg.scale_fc )
     
     nax.axis([0., 1., 0., 1.])
     
@@ -355,13 +422,11 @@ class GIplot(object):
     nax.text( cfg.time_vc[0], cfg.time_vc[1], timetxt, \
         color=cfg.time_fc, size=cfg.time_txts)
     
-    scldst = cfg.scal_vc[2] - cfg.scal_vc[0]
-    scltxt = '$%6.1e' % (scldst*self.scl*cfg.yinch*cfg.scal_sc) \
-        + "} "+ cfg.scal_ut + '$'
-    scltxt = scltxt.replace('e+0', 'e+')
-    scltxt = scltxt.replace('e+', '*10^{')
-    nax.text( cfg.scal_vc[0], cfg.scal_vc[1] + 0.01, scltxt, \
-        color=cfg.scal_fc, size=cfg.scal_txts)
+    scldst = cfg.scale_vc[2] - cfg.scale_vc[0]
+    scltxt = latexExp10( '$%6.1e' % (scldst*self.scl*cfg.yinch*cfg.scale_sc) )\
+        + cfg.scale_ut + '$'
+    nax.text( cfg.scale_vc[0], cfg.scale_vc[1] + 0.01, scltxt, \
+        color=cfg.scale_fc, size=cfg.scale_txts)
 
     if cfg.verbose:
       print "parameters and copyright ..."
@@ -374,6 +439,23 @@ class GIplot(object):
     if cfg.verbose:
       print "post plot stuff ..."
     cfg.postPlot(self.norma, self.physa, plt, pdump, cdump, cfg)
+    
+    if cfg.cbar_plot:
+      if cfg.verbose:
+        print "plot colorbar   ...   "
+      cbax = plt.axes( cfg.cbar_extent, frameon=False)
+      cbar = fig.colorbar(sct, cax=cbax, orientation=cfg.cbar_orientation, \
+          ticks=cfg.cbar_ticksx, drawedges=False)
+
+      cbax.set_xticklabels(cfg.cbar_tickstxt)
+
+      for t in cbax.get_xticklabels():
+        t.set_color("w")
+        t.set_size(cfg.cbar_txts)
+      cbar.outline.set_lw(cfg.cbar_lw)
+    
+      self.cbax = cbax
+      self.cbar = cbar
 
     # save the figure
     if cfg.verbose:
