@@ -37,6 +37,7 @@ ssconf.nocpus  = 4
 ssconf.runargs = "dump 8"
 
 vizcfg = GIvizConfig()
+vizcfg.subcmd = "qsub -M andreas.reufer@space.unibe.ch -b n -cwd -l h_cpu=4:00:00 -l h_vmem=512M -N $JOBNAME $JOBCMD"
 
 axnorm = [-1.6e10, 1.6e10, -0.9e10, 0.9e10]
 axzoom = [-3.2e9 , 3.2e9 , -1.8e9 , 1.8e9 ]
@@ -120,4 +121,10 @@ simsA = simadm.getSims( SimParam(1.0, 1.0, nan, 1.15) )
 def vizSim(sim):
   for viz in GIvizs:
     viz.vizSim(sim)
+
+for sim in sims.values():
+  if sim.nodumps > 0:
+    print sim.params.key, sim.nodumps
+    vizSim(sim)
+
 

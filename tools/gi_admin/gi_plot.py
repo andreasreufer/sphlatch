@@ -59,7 +59,7 @@ def colorBodyAndMat(pdump, cdump, filt, cfg):
   return (color, pt2size)
 
 def colorTemp(pdump, cdump, filt, cfg):
-  T = (pdump.T[:,0] * eVinK)
+  T = (pdump.T[:,0].compress(filt)[:])*eVinK
   Tmin = cfg.Tmin
   Tmax = cfg.Tmax
 
@@ -68,13 +68,23 @@ def colorTemp(pdump, cdump, filt, cfg):
   return (color, pt2size)
 
 def colorDens(pdump, cdump, filt, cfg):
-  rho = (pdump.rho[:,0])
+  rho = (pdump.rho[:,0].compress(filt)[:])
   rhomin = cfg.rhomin
   rhomax = cfg.rhomax
 
   color = (rho - rhomin) / (rhomax - rhomin)
   pt2size = cfg.pt2size
   return (color, pt2size)
+
+def colorPress(pdump, cdump, filt, cfg):
+  p = (pdump.p[:,0].compress(filt)[:])
+  pmin = cfg.pmin
+  pmax = cfg.pmax
+
+  color = (p - pmin) / (pmax - pmin)
+  pt2size = cfg.pt2size
+  return (color, pt2size)
+
 
 def colorClumps(pdump, cdump, filt, cfg):
   cid = pdump.clumpid[:,0].compress(filt)[:]
@@ -175,6 +185,8 @@ class GIplotConfig(object):
 
     self.prePlot = plotGrid
     self.postPlot = plotDummy
+    
+    self.verbose = False
 
 
 class GIplot(object):
@@ -208,18 +220,21 @@ class GIplot(object):
     pax = self.physa
     nax = self.norma
     
-    #print "loading particles ..."
+    if cfg.verbose:
+      print "loading particles ..."
     pdumpf = H5PartDump(pfile)
     sname = (pdumpf.getStepNames())[0]
 
     pdump = pdumpf.getStep(sname)
     nop = (pdump.m.shape)[0]
 
-    #print "load time and G ..."
+    if cfg.verbose:
+      print "load time and G ..."
     G     = pdumpf.getAttr(sname,"gravconst")
     time  = pdumpf.getAttr(sname,"time")
     
-    #print "loading clumps ..."
+    if cfg.verbose:
+      print "loading clumps ..."
     cdumpf = H5PartDump(cfile)
     cdump = cdumpf.getStep(sname)
     noc = (cdump.m.shape)[0]
@@ -229,7 +244,8 @@ class GIplot(object):
     for i in range(noc):
       cposz[ int(cdump.id[i]) ] = cdump.pos[i,cfg.Z]
 
-    #print "selecting particles ..."
+    if cfg.verbose:
+      print "selecting particles ..."
     h = pdump.h
     cid = pdump.clumpid
     
@@ -240,6 +256,9 @@ class GIplot(object):
     cfg.pt2size = 0.008*np.power( hmed*cfg.dpi / self.scl , 2.)
 
     filt = np.ones(nop, dtype=np.bool)
+    if cfg.verbose:
+      print "filter is:",cfg.filt
+
     if cfg.filt == "negzonly":
       filt = pdump.pos[:,cfg.Z] < 0.
     
@@ -266,22 +285,27 @@ class GIplot(object):
       filt = ( pdump.pos[:,cfg.Z] > -hmed ) & ( pdump.pos[:,cfg.Z] <  hmed )
 
         
-    #print "filtering particles ..."
+    if cfg.verbose:
+      print "filtering particles ..."
     pos = pdump.pos[:,:].compress(filt, axis=0)[:,:]
     mat = pdump.mat[:,0].compress(filt)[:]
-    bod = np.int32( (pdump.id[:].compress(filt)[:] > cfg.idfilt) )
+    bod = np.int32( (pdump.id[:,0].compress(filt)[:] > cfg.idfilt) )
 
-    #print "z-sorting points ...   "
+    if cfg.verbose:
+      print "z-sorting points ...   "
     sidx = pos[:,cfg.Z].argsort()
-    
+
     if cfg.plottraj:
-      #print "integrate clumps ...   "
+      if cfg.verbose:
+        print "integrate clumps ...   "
       clumps.integrate(dt, cfg.ds)
 
-    #print "pre-plot ... "
+    if cfg.verbose:
+      print "pre-plot ... "
     cfg.prePlot(self.norma, self.physa, plt, pdump, cdump, cfg)
     
-    #print "plotting clumps with trajectories ... "
+    if cfg.verbose:
+      print "plotting clumps with trajectories ... "
     for i in range(1,noc):
       curtraj = clumps.traj[i]
       if ( clumps.m[i] > cfg.MminPlt ):
@@ -302,10 +326,12 @@ class GIplot(object):
           pax.plot( curtraj[:,cfg.X], curtraj[:,cfg.Y], color=cfg.clpt_fc, \
               lw=cfg.clpt_lw, alpha=cfg.clpt_al)
 
-    #print "get point colors and size"
+    if cfg.verbose:
+      print "get point colors and size"
     (pcol, pt2size) = cfg.colorFunc(pdump, cdump, filt, cfg)
     
-    #print "plotting points ...   "
+    if cfg.verbose:
+      print "plotting points ...   "
     sct = pax.scatter( pos[sidx,cfg.X], pos[sidx,cfg.Y], pt2size, \
         pcol[sidx,:], lw=0, vmin=0., vmax=1.)
 
@@ -316,13 +342,15 @@ class GIplot(object):
     pax.axis(self.corrax)
    
     # plot a scale
-    #print "plot a scale    ...   "
+    if cfg.verbose:
+      print "plot a scale    ...   "
     nax.plot( [cfg.scal_vc[0], cfg.scal_vc[2]], \
         [cfg.scal_vc[1], cfg.scal_vc[3]], lw=.3, color=cfg.scal_fc )
     
     nax.axis([0., 1., 0., 1.])
     
-    #print "plot time ..."
+    if cfg.verbose:
+      print "plot time ..."
     timetxt = '$t = %6.2f' % (time*cfg.time_sc) + ' ' + cfg.time_ut + '$'
     nax.text( cfg.time_vc[0], cfg.time_vc[1], timetxt, \
         color=cfg.time_fc, size=cfg.time_txts)
@@ -335,18 +363,21 @@ class GIplot(object):
     nax.text( cfg.scal_vc[0], cfg.scal_vc[1] + 0.01, scltxt, \
         color=cfg.scal_fc, size=cfg.scal_txts)
 
-    #print "parameters and copyright ..."
+    if cfg.verbose:
+      print "parameters and copyright ..."
     self.norma.text( cfg.parm_vc[0], cfg.parm_vc[1], cfg.parm_txt, \
         color=cfg.parm_fc, size=cfg.parm_txts )
     
     self.norma.text( cfg.copy_vc[0], cfg.copy_vc[1], cfg.copy_txt, \
         color=cfg.parm_fc, size=cfg.parm_txts )
     
-    #print "post plot stuff ..."
+    if cfg.verbose:
+      print "post plot stuff ..."
     cfg.postPlot(self.norma, self.physa, plt, pdump, cdump, cfg)
 
     # save the figure
-    #print "save figure     ...   "
+    if cfg.verbose:
+      print "save figure     ...   "
     plt.rc('savefig', dpi=self.cfg.dpi)
     plt.savefig(ifile)
 

@@ -32,6 +32,8 @@ class GIviz(object):
   def __init__(self, cfg, plotcfg):
     self.cfg     = cfg
     self.plotcfg = plotcfg
+
+    self.tasks = {}
     
     self.dir = os.path.abspath( self.plotcfg.imgdir ) + "/"
     if not path.exists(self.dir):
@@ -51,9 +53,17 @@ class GIviz(object):
     self.plotcfg.vimp = sim.params.vimprel
     self.plotcfg.T    = sim.params.temp
         
-    tasks = {}
-    self.addPlotTasks(tasks, sim)
-    self.plotJobScript(tasks, simkey)
+    self.addPlotTasks(sim)
+    self.plotJobScript(simkey)
+
+  def clearTasks(self):
+    self.tasks = {}
+
+  def runTasksSGE(self):
+    pass
+
+  def runTasksLocal(self):
+    pass
 
   def animSim(self, sim):
     idir  = self.plotcfg.imgdir + sim.params.key + "/"
@@ -91,34 +101,36 @@ class GIviz(object):
     for img in imglist:
       os.remove(tmpdir + "/img" + '%06d' % count + iext)
       count += 1
-
     os.removedirs(tmpdir)
 
-
-  def addPlotTasks(self, tasks, sim):
+  
+  def addPlotTasks(self, sim, dname=""):
     dumps = sim.dumps
     for dumprec in dumps:
       (dfile, dtime) = dumprec
-      dprfx = dfile.replace('.h5part','')
-      pfile = sim.dir + dfile
-      cfile = sim.dir + "clumps.h5part"
+      if dname == "" or dname == dfile:
+        dprfx = dfile.replace('.h5part','')
+        pfile = sim.dir + dfile
+        cfile = sim.dir + "clumps.h5part"
 
-      key = sim.params.key + "_" + dprfx
+        key = sim.params.key + "_" + dprfx
 
-      idir  = self.dir + sim.params.key + "/"
-      ifile = idir + dprfx + self.plotcfg.imgext
+        idir  = self.dir + sim.params.key + "/"
+        ifile = idir + dprfx + self.plotcfg.imgext
+        
+        if not path.exists(idir):
+          os.mkdir(idir)
 
-      if not path.exists(idir):
-        os.mkdir(idir)
-
-      if path.exists(pfile) and path.exists(cfile) and not path.exists(ifile):
-        open(ifile,'w').close()
-        tasks[key] = GIvizTask(pfile, cfile, ifile, self.plotcfg)
+        if path.exists(pfile) and path.exists(cfile) and not path.exists(ifile):
+          open(ifile,'w').close()
+          self.tasks[key] = GIvizTask(pfile, cfile, ifile, self.plotcfg)
+          print "added task", pfile, ifile
   
-  def plotJobScript(self, tasks, jobname):
+  def plotJobScript(self, jobname):
     ascdir = self.scdir
     excname = ascdir + jobname + "_exec.py"
     sdbname = ascdir + jobname
+    tasks = self.tasks
     
     excstr = "#!/usr/bin/env python\n" +\
         "from gi_viz import GIvizTask\n" +\

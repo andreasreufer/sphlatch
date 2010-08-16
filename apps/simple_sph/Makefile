@@ -42,6 +42,19 @@ simple_sph_GHUa__: libaneos
 	   -fopenmp \
 	   -o simple_sph_GHUa__ simple_sph.cpp
 
+simple_sph_GHUAC_: libaneos
+	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	   -lhdf5 -lz -I../../src \
+	   -DSPHLATCH_GRAVITY \
+	   -DSPHLATCH_GRAVITY_POTENTIAL \
+	   -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
+	   -DSPHLATCH_FIND_CLUMPS \
+	   -DSPHLATCH_TIMEDEP_SMOOTHING \
+	   -DSPHLATCH_TIMEDEP_ENERGY \
+	   -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+	   -fopenmp \
+	   -o simple_sph_GHUAC_ simple_sph.cpp
+
 simple_sph_GHUaC_: libaneos
 	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
 	   -lhdf5 -lz -I../../src \

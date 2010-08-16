@@ -1,75 +1,141 @@
-//#define SPHLATCH_PARALLEL
-#include <cstdlib>
 #include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <string>
+#include <sstream>
+#include <vector>
 
-#include <boost/program_options/option.hpp>
-#include <boost/program_options/cmdline.hpp>
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/positional_options.hpp>
+//#define SPHLATCH_SINGLEPREC
 
-#include <boost/assign/std/vector.hpp>
-
-namespace po = boost::program_options;
+#include <omp.h>
+#define SPHLATCH_OPENMP
+#define SPHLATCH_HDF5
+#define SPHLATCH_NONEIGH
 
 #include "typedefs.h"
-typedef sphlatch::fType fType;
 
-#include "old/particle_manager.h"
-typedef sphlatch::ParticleManager part_type;
+typedef sphlatch::attrMT attrMT;
 
-#include "old/io_manager.h"
-typedef sphlatch::IOManager io_type;
+///
+/// define the particle we are using
+///
+#include "bhtree_particle.h"
+#include "sph_fluid_particle.h"
+#include "io_particle.h"
+#include "integrator_predcorr.cpp"
 
-using namespace boost::assign;
-//using namespace sphlatch::vectindices;
+#ifdef SPHLATCH_FIND_CLUMPS
+#include "clump_particle.h"
+#endif
+
+class particle :
+   public sphlatch::treePart,
+   public sphlatch::movingPart,
+   public sphlatch::SPHfluidPart,
+   public sphlatch::energyPart,
+   public sphlatch::IOPart
+#ifdef SPHLATCH_ANEOS
+   , public sphlatch::ANEOSPart
+#endif
+{
+public:
+   ioVarLT getLoadVars()
+   {
+      ioVarLT vars;
+
+      vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(id, "id"));
+
+      vars.push_back(storeVar(u, "u"));
+#ifdef SPHLATCH_ANEOS
+      vars.push_back(storeVar(mat, "mat"));
+#endif
+#ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
+      vars.push_back(storeVar(eps, "eps"));
+#endif
+      return(vars);
+   }
+   
+   ioVarLT getSaveVars()
+   {
+      ioVarLT vars;
+
+      vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
+      vars.push_back(storeVar(id, "id"));
+
+      vars.push_back(storeVar(u, "u"));
+#ifdef SPHLATCH_ANEOS
+      vars.push_back(storeVar(mat, "mat"));
+#endif
+#ifdef SPHLATCH_GRAVITY_EPSSMOOTHING
+      vars.push_back(storeVar(eps, "eps"));
+#endif
+      return(vars);
+   }
+};
+
+typedef particle   partT;
+
+class ghost :
+   public sphlatch::treeGhost,
+   public sphlatch::movingGhost
+{ };
+
+typedef ghost                                  ghstT;
+
+#include "particle_set.cpp"
+typedef sphlatch::ParticleSet<partT>           partSetT;
+
+
 
 int main(int argc, char* argv[])
 {
-  //MPI::Init(argc, argv);
-  po::options_description Options("Global Options");
+#ifdef SPHLATCH_MPI
+   MPI::Init(argc, argv);
+#endif
 
-  Options.add_options() ("help,h", "Produces this Help")
-  ("inputa-file,a", po::value<std::string>(), "input file A")
-  ("inputb-file,b", po::value<std::string>(), "inout file B")
-  ("output-file,o", po::value<std::string>(), "output file");
+   if (not (argc == 4) )
+   {
+      std::cerr << "usage: h5part_combine__ <dumpA> <dumpB> <outputDump>\n";
+      return(1);
+   }
 
-  po::variables_map VMap;
-  po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
-  po::notify(VMap);
+   partSetT partsA, partsB, partsO;
 
-  if (!VMap.count("output-file") || VMap.count("help") ||
-      !VMap.count("inputa-file") || !VMap.count("inputb-file"))
-    {
-      std::cerr << Options << std::endl;
-      return EXIT_FAILURE;
-    }
+   partsA.loadHDF5(argv[1]);
+   partsB.loadHDF5(argv[2]);
 
-  part_type& PartManager(part_type::instance());
-  io_type& IOManager(io_type::instance());
+   const size_t noA = partsA.getNop();
+   const size_t noB = partsB.getNop();
 
-  std::string inputAFileName = VMap["inputa-file"].as<std::string>();
-  std::string inputBFileName = VMap["inputb-file"].as<std::string>();
-  std::string outputFileName = VMap["output-file"].as<std::string>();
+   partsO.resize(noA + noB);
 
+   for (size_t i = 0; i < noA; i++)
+     partsO[i] = partsA[i];
+   
+   attrMT::const_iterator aItr;
+   for (aItr  = partsA.attributes.begin();
+        aItr != partsA.attributes.end();
+        aItr++)
+     partsO.attributes.insert(*aItr);
 
-  using namespace sphlatch;
-  using namespace boost::assign;
+   
+   for (size_t i = 0; i < noB; i++)
+     partsO[i+noB] = partsB[i];
 
+   for (aItr  = partsB.attributes.begin();
+        aItr != partsB.attributes.end();
+        aItr++)
+     partsO.attributes.insert(*aItr);
 
-  quantsType saveQuants = IOManager.getQuants(inputAFileName);
-  PartManager.setUsedQuants( saveQuants );
+   partsO.step = partsA.step;
+   partsO.saveHDF5(argv[3]);
 
-  IOManager.loadDump(inputAFileName);
-  IOManager.loadDump(inputBFileName);
-  IOManager.saveDump(outputFileName, saveQuants);
-
-  //MPI::Finalize();
-  return EXIT_SUCCESS;
+#ifdef SPHLATCH_MPI
+   MPI::Finalize();
+#endif
+   return(0);
 }
-
-
