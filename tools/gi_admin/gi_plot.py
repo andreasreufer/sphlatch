@@ -11,7 +11,6 @@ import matplotlib.mpl    as mpl
 from fewbody import FewBodies
 from h5part import H5PartDump
 
-#mp.rc('text', usetex=True)
 mp.rc('text.latex', preamble = '\usepackage{amssymb}, \usepackage{wasysym}')
 
 eVinK = 11604.505
@@ -47,7 +46,7 @@ def plotSimParams(norma, physa, plt, pdump, cdump, cfg):
       'T = ' + ("%4.0f" % cfg.T ) + 'K$'
 
   norma.text( cfg.parm_vc[0], cfg.parm_vc[1], paramstxt, \
-      color=cfg.parm_fc, size=cfg.parm_txts )
+      color=cfg.txtc, size=cfg.parm_txts )
 
 def cnameToRGB(str):
   return np.array( col.hex2color( col.cnames[str] ) )
@@ -57,6 +56,23 @@ def cnameToRGBA(str, alpha=1.0):
   rgba[0:3] = np.array( col.hex2color( col.cnames[str] ) )
   rgba[3] = alpha
   return rgba
+
+def colorPhaseANEOS(pdump, cdump, filt, cfg):
+  cmap = np.zeros((2,6,3))
+  cmap[0,2] = cnameToRGB("blue")
+  cmap[0,4] = cnameToRGB("red")
+  cmap[0,5] = cnameToRGB("darkgrey")
+  cmap[1,2] = cnameToRGB("aqua")
+  cmap[1,4] = cnameToRGB("orange")
+  cmap[1,5] = cnameToRGB("grey")
+
+  mat = pdump.mat[:,0].compress(filt)[:]
+  bod = np.int32( (pdump.id[:].compress(filt)[:] > cfg.idfilt) )
+
+  color = cmap[bod, mat]
+  pt2size = cfg.pt2size
+
+  return (color, pt2size)
 
 def colorBodyAndMat(pdump, cdump, filt, cfg):
   cmap = np.zeros((2,6,3))
@@ -204,6 +220,9 @@ class GIplotConfig(object):
     self.MminLbl = 5.e-3*self.Mearth
 
     self.colorFunc = colorBodyAndMat
+    self.cmap      = 'jet'
+    
+    self.txtc             = 'white'
 
     self.clpc_ec = 'white'
     self.clpc_fc = 'none'
@@ -215,36 +234,31 @@ class GIplotConfig(object):
     self.clpp_lw = 0.2
     self.clpp_al = 0.6
     
-    self.clpc_txtc = 'white'
     self.clpc_txts = 4
 
-    self.scale_fc = 'white'
     self.scale_vc = [0.05, 0.06, 0.3, 0.06]
     self.scale_ut = 'm'
     self.scale_sc = 0.01
     self.scale_txts = 4
     
-    self.time_fc = 'white'
     self.time_vc = [0.05, 0.8]
     self.time_ut = 'h'
     self.time_sc = 0.000277777777
     self.time_txts = 4
 
-    self.parm_fc = 'white'
     self.parm_vc = [0.5, 0.8]
     self.parm_txts = 4
     self.parm_txt = ""
     self.copy_vc = [0.65, 0.06]
     self.copy_txt = "Andreas Reufer, University of Bern"
 
-    self.cbar_plot        = True
-    self.cbar_fc          = 'white'
+    self.cbar_plot        = False
     self.cbar_orientation = 'horizontal'
     self.cbar_extent      = [0.05, 0.95, 0.5, 0.01]
     self.cbar_noticks     = 4
     self.cbar_lw          = 0.1
-    self.cbar_ut          = ' K'
-    self.cbar_sc          = 11604.505
+    self.cbar_ut          = ''
+    self.cbar_sc          = 1.
     self.cbar_txts        = 4
     self.cbar_fmt         = '%5.0f'
 
@@ -386,7 +400,7 @@ class GIplot(object):
         if ( clumps.m[i] > cfg.MminLbl ):
           pax.text( curtraj[0,cfg.X], curtraj[0,cfg.Y], \
               '$\mathrm{'+ '%1.4f' % ( clumps.m[i] / cfg.Mearth ) +' M_{E}}$', \
-              size=cfg.clpc_txts, color=cfg.clpc_txtc)
+              size=cfg.clpc_txts, color=cfg.txtc)
     
         if cfg.plottraj:
           pax.add_patch( \
@@ -403,7 +417,7 @@ class GIplot(object):
     if cfg.verbose:
       print "plotting points ...   "
     sct = pax.scatter( pos[sidx,cfg.X], pos[sidx,cfg.Y], pt2size, \
-        pcol[sidx,:], lw=0, vmin=0., vmax=1.)
+        pcol[sidx,:], lw=0, vmin=0., vmax=1., cmap=cfg.cmap)
 
     pax.axis("scaled")
     pax.axis(self.corrax)
@@ -412,7 +426,7 @@ class GIplot(object):
     if cfg.verbose:
       print "plot a scale    ...   "
     nax.plot( [cfg.scale_vc[0], cfg.scale_vc[2]], \
-        [cfg.scale_vc[1], cfg.scale_vc[3]], lw=.3, color=cfg.scale_fc )
+        [cfg.scale_vc[1], cfg.scale_vc[3]], lw=.3, color=cfg.txtc )
     
     nax.axis([0., 1., 0., 1.])
     
@@ -420,21 +434,21 @@ class GIplot(object):
       print "plot time ..."
     timetxt = '$t = %6.2f' % (time*cfg.time_sc) + ' ' + cfg.time_ut + '$'
     nax.text( cfg.time_vc[0], cfg.time_vc[1], timetxt, \
-        color=cfg.time_fc, size=cfg.time_txts)
+        color=cfg.txtc, size=cfg.time_txts)
     
     scldst = cfg.scale_vc[2] - cfg.scale_vc[0]
     scltxt = latexExp10( '$%6.1e' % (scldst*self.scl*cfg.yinch*cfg.scale_sc) )\
         + cfg.scale_ut + '$'
     nax.text( cfg.scale_vc[0], cfg.scale_vc[1] + 0.01, scltxt, \
-        color=cfg.scale_fc, size=cfg.scale_txts)
+        color=cfg.txtc, size=cfg.scale_txts)
 
     if cfg.verbose:
       print "parameters and copyright ..."
     self.norma.text( cfg.parm_vc[0], cfg.parm_vc[1], cfg.parm_txt, \
-        color=cfg.parm_fc, size=cfg.parm_txts )
+        color=cfg.txtc, size=cfg.parm_txts )
     
     self.norma.text( cfg.copy_vc[0], cfg.copy_vc[1], cfg.copy_txt, \
-        color=cfg.parm_fc, size=cfg.parm_txts )
+        color=cfg.txtc, size=cfg.parm_txts )
     
     if cfg.verbose:
       print "post plot stuff ..."
@@ -454,9 +468,6 @@ class GIplot(object):
         t.set_size(cfg.cbar_txts)
       cbar.outline.set_lw(cfg.cbar_lw)
     
-      self.cbax = cbax
-      self.cbar = cbar
-
     # save the figure
     if cfg.verbose:
       print "save figure     ...   "
