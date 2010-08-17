@@ -13,7 +13,7 @@ from gi_plot import GIplotConfig, GIplot
 class GIvizConfig(object):
   def __init__(self):
     self.scdir = "./givizscr"
-    self.tasksperjob = 3
+    self.tasksperjob = 50
     self.subcmd = "qsub -cwd -l qname=all.q -N $JOBNAME -b n $JOBCMD"
 
 class GIvizTask(object):
@@ -27,6 +27,15 @@ class GIvizTask(object):
   def execute(self):
     gipl = GIplot(self.plotcfg)
     gipl.plotParticles(self.pfile, self.cfile, self.ifile)
+    
+    if not path.exists(self.ifile):
+      print self.ifile," does not exists!"
+      print os.uname()[1]
+    else:
+      if path.getsize(self.ifile) == 0:
+      print self.ifile," is empty!"
+      print os.uname()[1]
+
 
 
 class GIviz(object):
@@ -48,12 +57,10 @@ class GIviz(object):
       ibdir = pcfg.imgdir
       if not path.exists(ibdir):
         os.mkdir(ibdir)
-        print "make ",ibdir
 
       isdir = ibdir + "/" + skey
       if not path.exists(isdir):
         os.mkdir(isdir)
-        print "make ",isdir
 
       pcfg.mtar = sparm.mtar
       pcfg.mimp = sparm.mimp
@@ -75,7 +82,7 @@ class GIviz(object):
         if path.exists(pfile) and \
             path.exists(cfile) and \
             not path.exists(ifile):
-              #open(ifile,'w').close()
+              open(ifile,'w').close()
               ctask = GIvizTask(pfile, cfile, ifile, pcfg)
               ctask.id = ntid
               self.tasks.append(ctask)
@@ -91,11 +98,12 @@ class GIviz(object):
     tasks = self.tasks
     tasksperjob = self.cfg.tasksperjob
 
+    if len(tasks) == 0:
+      return
+
     jprfx += ( '%06i' % random.randint(0,1000000) ) + "_"
     slvname = self.scdir + jprfx + "shelve"
     drvname = self.scdir + jprfx + "driver.py"
-
-    print slvname, drvname
 
     while len(tasks) > 0:
       cjob.append( tasks.pop() )
@@ -143,6 +151,21 @@ class GIviz(object):
       os.chmod(drvname, stat.S_IRWXU)
   
     # submit the job
+    oldwd = os.getcwd()
+    os.chdir(self.scdir)
+
+    jid = 0
+    for job in jobs:
+      jobname = jprfx + ( "%03i" % jid )
+      jobsubstr = self.cfg.subcmd
+
+      jobsubstr = jobsubstr.replace("$JOBNAME", jobname )
+      jobsubstr = jobsubstr.replace("$JOBCMD",  jobname + ".sh")
+
+      (exstat, out) = commands.getstatusoutput(jobsubstr)
+      print out
+      jid += 1
+    os.chdir(oldwd)
     
 
   def runTasksLocal(self):
