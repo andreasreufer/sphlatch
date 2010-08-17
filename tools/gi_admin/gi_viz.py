@@ -6,13 +6,14 @@ import commands
 import sys
 import shutil
 import tempfile
+import random
 
 from gi_plot import GIplotConfig, GIplot
 
 class GIvizConfig(object):
   def __init__(self):
-    self.scdir = "./scdir"
-    self.tasksperjob = 50
+    self.scdir = "./givizscr"
+    self.tasksperjob = 3
     self.subcmd = "qsub -cwd -l qname=all.q -N $JOBNAME -b n $JOBCMD"
 
 class GIvizTask(object):
@@ -29,41 +30,124 @@ class GIvizTask(object):
 
 
 class GIviz(object):
-  def __init__(self, cfg, plotcfg):
+  def __init__(self, cfg):
     self.cfg     = cfg
-    self.plotcfg = plotcfg
-
-    self.tasks = {}
+    self.tasks = []
     
-    self.dir = os.path.abspath( self.plotcfg.imgdir ) + "/"
-    if not path.exists(self.dir):
-      os.mkdir(self.dir)
-
-    self.scdir = os.path.abspath( self.dir + "/" + self.cfg.scdir ) + "/"
+    self.scdir = os.path.abspath( self.cfg.scdir ) + "/"
     if not path.exists(self.scdir):
       os.mkdir(self.scdir)
     
-  def vizSim(self, sim):
-    scdir = self.scdir
-    simkey = sim.params.key
 
-    self.plotcfg.mtar = sim.params.mtar
-    self.plotcfg.mimp = sim.params.mimp
-    self.plotcfg.impa = sim.params.impa
-    self.plotcfg.vimp = sim.params.vimprel
-    self.plotcfg.T    = sim.params.temp
-        
-    self.addPlotTasks(sim)
-    self.plotJobScript(simkey)
+  def gatherVizTasks(self, sim, plotcfgs):
+    scdir = self.scdir
+    skey  = sim.params.key
+    sparm = sim.params
+
+    for pcfg in plotcfgs:
+      ibdir = pcfg.imgdir
+      if not path.exists(ibdir):
+        os.mkdir(ibdir)
+        print "make ",ibdir
+
+      isdir = ibdir + "/" + skey
+      if not path.exists(isdir):
+        os.mkdir(isdir)
+        print "make ",isdir
+
+      pcfg.mtar = sparm.mtar
+      pcfg.mimp = sparm.mimp
+      pcfg.impa = sparm.impa
+      pcfg.vimp = sparm.vimprel
+      pcfg.T    = sparm.temp
+
+    ntid = len(self.tasks)
+    for drec in sim.dumps:
+      (dfile, dtime) = drec
+      dprfx = dfile.replace('.h5part','')
+      pfile = sim.dir + dfile
+      cfile = sim.dir + "clumps.h5part"
+
+      for pcfg in plotcfgs:
+        idir  = pcfg.imgdir + "/" + skey + "/"
+        ifile = os.path.abspath( idir ) + "/" + dprfx + pcfg.imgext
+
+        if path.exists(pfile) and \
+            path.exists(cfile) and \
+            not path.exists(ifile):
+              #open(ifile,'w').close()
+              ctask = GIvizTask(pfile, cfile, ifile, pcfg)
+              ctask.id = ntid
+              self.tasks.append(ctask)
+              ntid += 1
+
 
   def clearTasks(self):
-    self.tasks = {}
+    self.tasks = []
 
-  def runTasksSGE(self):
-    pass
+  def runTasksSGE(self,jprfx="vizsim_"):
+    jobs = []
+    cjob = []
+    tasks = self.tasks
+    tasksperjob = self.cfg.tasksperjob
+
+    jprfx += ( '%06i' % random.randint(0,1000000) ) + "_"
+    slvname = self.scdir + jprfx + "shelve"
+    drvname = self.scdir + jprfx + "driver.py"
+
+    print slvname, drvname
+
+    while len(tasks) > 0:
+      cjob.append( tasks.pop() )
+      if len(cjob) == tasksperjob:
+        jobs.append( cjob )
+        cjob = []
+
+    if len(cjob) > 0:
+      jobs.append( cjob )
+    
+    taskdb = shelve.open(slvname)
+    taskdb.clear()
+
+    jid  = 0
+    for job in jobs:
+      jobname = self.scdir + jprfx + ( "%03i" % jid ) + '.sh'
+      jobstr = "#!/bin/bash\n"
+
+      for task in job:
+        jobstr += ( drvname + " " + str(task.id) + "\n" )
+        taskdb[str(task.id)] = task
+
+      jobfile = open(jobname,"w")
+      print >>jobfile, jobstr
+      jobfile.close()
+      os.chmod(jobname, stat.S_IRWXU)
+
+      jid += 1
+    
+    taskdb.close()
+    
+    if len(jobs) > 0:
+      drvstr = "#!/usr/bin/env ipython\n" +\
+          "from gi_viz import GIvizTask\n" +\
+          "from gi_plot import GIplot\n" +\
+          "import shelve, sys\n" +\
+          "taskkey = str(sys.argv[1])\n" +\
+          "tasks = shelve.open(\"" + slvname + "\",flag='r')\n" +\
+          "tasks[taskkey].execute()\n" +\
+          "tasks.close()\n"
+
+      drvfile = open(drvname,"w")
+      print >>drvfile, drvstr
+      drvfile.close()
+      os.chmod(drvname, stat.S_IRWXU)
+  
+    # submit the job
+    
 
   def runTasksLocal(self):
-    pass
+    while len(tasks) > 0:
+      ( tasks.pop() ).execute
 
   def animSim(self, sim):
     idir  = self.plotcfg.imgdir + sim.params.key + "/"
@@ -104,77 +188,6 @@ class GIviz(object):
     os.removedirs(tmpdir)
 
   
-  def addPlotTasks(self, sim, dname=""):
-    dumps = sim.dumps
-    for dumprec in dumps:
-      (dfile, dtime) = dumprec
-      if dname == "" or dname == dfile:
-        dprfx = dfile.replace('.h5part','')
-        pfile = sim.dir + dfile
-        cfile = sim.dir + "clumps.h5part"
-
-        key = sim.params.key + "_" + dprfx
-
-        idir  = self.dir + sim.params.key + "/"
-        ifile = idir + dprfx + self.plotcfg.imgext
-        
-        if not path.exists(idir):
-          os.mkdir(idir)
-
-        if path.exists(pfile) and path.exists(cfile) and not path.exists(ifile):
-          open(ifile,'w').close()
-          self.tasks[key] = GIvizTask(pfile, cfile, ifile, self.plotcfg)
-          print "added task", pfile, ifile
-  
-  def plotJobScript(self, jobname):
-    ascdir = self.scdir
-    excname = ascdir + jobname + "_exec.py"
-    sdbname = ascdir + jobname
-    tasks = self.tasks
-    
-    excstr = "#!/usr/bin/env python\n" +\
-        "from gi_viz import GIvizTask\n" +\
-        "from gi_plot import GIplot\n" +\
-        "import shelve, sys\n" +\
-        "taskkey = sys.argv[1]\n" +\
-        "tasks = shelve.open(\"" + sdbname + "\")\n" +\
-        "tasks[taskkey].execute()\n" +\
-        "tasks.close()\n"
-
-    excfile = open(excname,"w")
-    print >>excfile, excstr
-    excfile.close()
-    os.chmod(excname, stat.S_IRWXU)
-
-    drvno   = 0
-    taskno  = 0
-    drvname = ascdir + jobname + "_driver" + ("%04d" % drvno ) + ".sh"
-    drvhead = "#!/bin/bash \n"
-    drvfoot = "rm " + drvname + "\n"
-    drvstr  = drvhead
-
-    taskdb = shelve.open(sdbname)
-    taskdb.clear()
-    for tkey in tasks.keys():
-      taskdb[tkey] = tasks[tkey]
-
-      drvstr += "python " + excname + " " + tkey + "\n"
-      taskno += 1
-      if taskno > self.cfg.tasksperjob:
-        taskno = 0
-        drvstr += drvfoot
-    
-        self.submitJob(drvstr, drvname, jobname)
-
-        drvstr = drvhead
-        drvno += 1
-        drvname = ascdir + jobname + "_driver" + ("%04d" % drvno ) + ".sh"
-    taskdb.close()
-    drvstr += drvfoot
-        
-    self.submitJob(drvstr, drvname, jobname)
-    
-    drvstr += "rm " + drvname + "\n"
 
   def submitJob(self, scriptstr, scriptname, jobname):
     script = open(scriptname,"w")

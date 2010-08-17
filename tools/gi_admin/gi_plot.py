@@ -57,19 +57,17 @@ def cnameToRGBA(str, alpha=1.0):
   rgba[3] = alpha
   return rgba
 
-def colorPhaseANEOS(pdump, cdump, filt, cfg):
+def colorBodyAndPhaseANEOS(pdump, cdump, filt, cfg):
   cmap = np.zeros((2,6,3))
-  cmap[0,2] = cnameToRGB("blue")
-  cmap[0,4] = cnameToRGB("red")
-  cmap[0,5] = cnameToRGB("darkgrey")
-  cmap[1,2] = cnameToRGB("aqua")
-  cmap[1,4] = cnameToRGB("orange")
-  cmap[1,5] = cnameToRGB("grey")
+  cmap[0,1] = cnameToRGB("darkgrey") # body 1 liqid/solid
+  cmap[0,2] = cnameToRGB("red")      # body 1 vapour phase
+  cmap[1,1] = cnameToRGB("grey")     # body 2 liqid/solid
+  cmap[1,2] = cnameToRGB("orange")   # body 2 vapour phase
 
-  mat = pdump.mat[:,0].compress(filt)[:]
+  phase = pdump.phase[:,0].compress(filt)[:]
   bod = np.int32( (pdump.id[:].compress(filt)[:] > cfg.idfilt) )
 
-  color = cmap[bod, mat]
+  color = cmap[bod, phase]
   pt2size = cfg.pt2size
 
   return (color, pt2size)
@@ -241,12 +239,12 @@ class GIplotConfig(object):
     self.scale_sc = 0.01
     self.scale_txts = 4
     
-    self.time_vc = [0.05, 0.8]
+    self.time_vc = [0.05, 0.90]
     self.time_ut = 'h'
     self.time_sc = 0.000277777777
     self.time_txts = 4
 
-    self.parm_vc = [0.5, 0.8]
+    self.parm_vc = [0.5, 0.90]
     self.parm_txts = 4
     self.parm_txt = ""
     self.copy_vc = [0.65, 0.06]
@@ -254,7 +252,7 @@ class GIplotConfig(object):
 
     self.cbar_plot        = False
     self.cbar_orientation = 'horizontal'
-    self.cbar_extent      = [0.05, 0.95, 0.5, 0.01]
+    self.cbar_extent      = [0.05, 0.85, 0.5, 0.01]
     self.cbar_noticks     = 4
     self.cbar_lw          = 0.1
     self.cbar_ut          = ''
@@ -329,7 +327,7 @@ class GIplot(object):
       cposz[ int(cdump.id[i]) ] = cdump.pos[i,cfg.Z]
 
     if cfg.verbose:
-      print "selecting particles ..."
+      print "determine mean h ..."
     h = pdump.h
     cid = pdump.clumpid
     
@@ -341,7 +339,7 @@ class GIplot(object):
 
     filt = np.ones(nop, dtype=np.bool)
     if cfg.verbose:
-      print "filter is:",cfg.filt
+      print "selecting particles, filter is:",cfg.filt
 
     if cfg.filt == "negzonly":
       filt = pdump.pos[:,cfg.Z] < 0.
@@ -441,7 +439,7 @@ class GIplot(object):
         + cfg.scale_ut + '$'
     nax.text( cfg.scale_vc[0], cfg.scale_vc[1] + 0.01, scltxt, \
         color=cfg.txtc, size=cfg.scale_txts)
-
+    
     if cfg.verbose:
       print "parameters and copyright ..."
     self.norma.text( cfg.parm_vc[0], cfg.parm_vc[1], cfg.parm_txt, \
@@ -461,11 +459,17 @@ class GIplot(object):
       cbar = fig.colorbar(sct, cax=cbax, orientation=cfg.cbar_orientation, \
           ticks=cfg.cbar_ticksx, drawedges=False)
 
-      cbax.set_xticklabels(cfg.cbar_tickstxt)
+      if cfg.cbar_orientation == 'horizontal':
+        cbax.set_xticklabels(cfg.cbar_tickstxt)
+        for t in cbax.get_xticklabels():
+          t.set_color(cfg.txtc)
+          t.set_size(cfg.cbar_txts)
+      else:
+        cbax.set_yticklabels(cfg.cbar_tickstxt)
+        for t in cbax.get_yticklabels():
+          t.set_color(cfg.txtc)
+          t.set_size(cfg.cbar_txts)
 
-      for t in cbax.get_xticklabels():
-        t.set_color("w")
-        t.set_size(cfg.cbar_txts)
       cbar.outline.set_lw(cfg.cbar_lw)
     
     # save the figure
