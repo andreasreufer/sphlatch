@@ -8,6 +8,7 @@
 #define SPHLATCH_OPENMP
 #define SPHLATCH_HDF5
 #define SPHLATCH_NONEIGH
+#define SPHLATCH_GRAVITY_POTENTIAL
 
 #include "typedefs.h"
 typedef sphlatch::fType     fType;
@@ -48,6 +49,7 @@ public:
       vars.push_back(storeVar(id, "id"));
       
       vars.push_back(storeVar(rho, "rho"));
+      vars.push_back(storeVar(pot, "pot"));
 
       return(vars);
    }
@@ -63,6 +65,7 @@ public:
       vars.push_back(storeVar(id, "id"));
       
       vars.push_back(storeVar(clumpid, "clumpid"));
+      vars.push_back(storeVar(orbit, "orbit"));
       
       vars.push_back(storeVar(rho, "rho"));
       return vars;
@@ -74,7 +77,7 @@ typedef particle   partT;
 #include "particle_set.cpp"
 typedef sphlatch::ParticleSet<partT>           partSetT;
 
-#include "clumps.cpp"
+#include "clump_finder.cpp"
 typedef sphlatch::Clumps<partT> clumpsT;
 
 // particles are global
@@ -100,14 +103,23 @@ int main(int argc, char* argv[])
       omp_set_num_threads(numThreads);
    }
 
-
    // load the particles
    parts.loadHDF5(inFilename);
-   clumps.getClumps(parts, 1.0, 1.0);
+   const size_t nop = parts.getNop();
+
+   fType pMinMass = 0.;
+   for (size_t i = 0; i < nop; i++)
+      pMinMass = parts[i].m > pMinMass ? parts[i].m : pMinMass;
+      const fType cMinMass = 10. * pMinMass;
+
+   clumps.getClumps(parts, cMinMass);
+
+   clumps[1].getCentralBodyOrbits(0.5, parts.attributes["gravconst"]);
    parts.saveHDF5(inFilename);
 
    clumps.doublePrecOut();
    clumps.saveHDF5("clump.h5part");
+   
 
    return(0);
 }

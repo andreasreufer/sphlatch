@@ -1,138 +1,132 @@
-// uncomment for single-precision calculation
-//#define SPHLATCH_SINGLEPREC
-
-#define SPHLATCH_PARALLEL
-#define SPHLATCH_ANEOS_TABLE
-
 #include <iostream>
 #include <iomanip>
 
+#define SPHLATCH_HDF5
+
 #include "typedefs.h"
 
-#include "particle_manager.h"
-typedef sphlatch::ParticleManager part_type;
+#include "sph_fluid_particle.h"
+class particle :
+  public sphlatch::SPHfluidPart,
+  public sphlatch::energyPart,
+  public sphlatch::ANEOSPart
+{
+  public:
+    int id;
+};
 
-#include "io_manager.h"
-typedef sphlatch::IOManager io_type;
+typedef particle partT;
 
-//#include "eos_idealgas.h"
-//typedef sphlatch::IdealGas eos_type;
+#include "eos_aneos.cpp"
+typedef sphlatch::ANEOS<partT> eosT;
 
-#ifdef SPHLATCH_TILLOTSON
-#include "eos_tillotson.h"
-#define SPHLATCH_EOS_DEFINED
-typedef sphlatch::Tillotson eos_type;
-#endif
-
-#ifdef SPHLATCH_ANEOS
-#include "eos_aneos.h"
-#define SPHLATCH_EOS_DEFINED
-typedef sphlatch::ANEOS eos_type;
-#endif
-
-//#include "eos_mie_grueneisen.h"
-//typedef sphlatch::MieGrueneisen eos_type;
-
-#include "parasph_eos.cc"
-
-using namespace sphlatch::vectindices;
+typedef sphlatch::fType fType;
+typedef sphlatch::iType iType;
 
 int main(int argc, char* argv[])
 {
-  MPI::Init(argc, argv);
+  eosT& EOS(eosT::instance());  
 
-  part_type& PartManager(part_type::instance());
-  io_type& IOManager(io_type::instance());
 
-  PartManager.useBasicSPH();
-  PartManager.useEnergy();
-  PartManager.useMaterials();
+#ifdef SPHLATCH_ANEOS_TABLE  
+  //EOS.storeTableU("aneos_tables.hdf5",1);
+#endif
+  
+  //EOS.rootu(4.0, 1.e10, 4);
+
+  //EOS.rootS(4.0, 3.78352e10, 4);
+  /*EOS.rootS(3.20, 3.00000e11, 4);
+  EOS.rootS(3.32, 3.00000e11, 4);
+  EOS.rootS(3.50, 3.00000e11, 4);
+  EOS.rootS(4.00, 3.00000e11, 4);
+  EOS.rootS(4.50, 3.00000e11, 4);*/
+  fType T, rho, p, u, S, cv, dpdt, dpdr, fkros, cs, fme, fma;
+  iType mat, kpa;
+  
+  const fType eVinK = 11605.;
+  const fType erggeVinJkgK = 1.1605e8;
+
 #ifdef SPHLATCH_ANEOS
-  PartManager.usePhase();
-  PartManager.useTemperature();
+  mat = 2;
+#else
+  mat = 1;
 #endif
 
-  sphlatch::matrixRefType pos(PartManager.pos);
-  sphlatch::valvectRefType rho(PartManager.rho);
-  sphlatch::valvectRefType u(PartManager.u);
-  sphlatch::idvectRefType mat(PartManager.mat);
-  sphlatch::idvectRefType phase(PartManager.phase);
 
-  IOManager.loadDump("initials.h5part");
+  partT part;
+  part.rho = 4.0;
+  part.u   = 1.e10;
+  part.mat = mat;
+  
+  
 
-  eos_type& EOS(eos_type::instance());
 
-  /*eosMat dunite;
-  dunite.rho0 = 3.320e+00;
-  dunite.A = 1.290e+12;
-  dunite.B = 1.290e+12;
-  dunite.a = 0.5;
-  dunite.b = 1.5;
-  dunite.alpha = 5.0;
-  dunite.beta = 5.0;
-  dunite.u0 = 4.870e+12;
-  dunite.Eiv = 4.720e+10;
-  dunite.Ecv = 1.820e+11;
+  const fType pref = 1.e6;
 
-  eosMat iron;
-  iron.rho0 = 7.860e+00;
-  iron.A = 1.280e+12;
-  iron.B = 1.050e+12;
-  iron.a = 0.5;
-  iron.b = 1.5;
-  iron.alpha = 5.0;
-  iron.beta = 5.0;
-  iron.u0 = 9.500e+10;
-  iron.Eiv = 1.420e+10;
-  iron.Ecv = 8.450e+10;
+  for(fType TK = 200.; TK < 50.e3; TK +=  30.)
+  //for(fType TK = 100.; TK < 50.e2; TK +=  10.)
+  {
+    EOS.rootP(TK/eVinK, rho, mat, pref, u, S, cv, dpdt, dpdr, fkros, cs, kpa, fme, fma);
+    //std::cout << TK << " " << rho << " " << u << " " << S/erggeVinJkgK << " " << cs << "\n";
+  }
 
-  sphlatch::fType sP = 0., sCs = 0.;
+  std::cout << "          rho     u           S            p       cs     T\n";
 
-  double pP = 0., pCs = 0., rhom1 = 0., T = 0.;*/
+  fType TK = 1000.;
+  // T,p -> rho, u, S
+  EOS.rootP(TK/eVinK, rho, mat, pref, u, S, cv, dpdt, dpdr, fkros, cs, kpa, fme, fma);
+  std::cout << "rootP:    " << rho << " " << u << " " << S << " " << pref << " " << cs << " " << TK << "\n";
 
-  sphlatch::fType sP = 0., sCs = 0.;
-  const size_t noParts = PartManager.getNoLocalParts();
-  //for (size_t i = 0; i < 1024; i++)
-  for (size_t i = 0; i < noParts; i++)
-    {
-      /*rhom1 = 1. / rho(i);
+  const fType Sref = S;
+  const fType uref = u;
 
-      if (mat(i) == 4)
-        parasphTillotson(rho(i), rhom1, u(i), mat(i),
-                         pP, pCs, T, dunite);
-      else if (mat(i) == 5)
-        parasphTillotson(rho(i), rhom1, u(i), mat(i),
-                         pP, pCs, T, iron);
+  // rho, S -> p, u
+  EOS.rootS(T, rho, mat, p, u, S, cv, dpdt, dpdr, fkros, cs, kpa, fme, fma);
+  std::cout << "rootS:    " << rho << " " << u << " " << S << " " << p << " " << cs << " " << T*eVinK << "\n";
 
-      EOS(i, sP, sCs);
+#ifdef SPHLATCH_ANEOS_TABLE  
+  EOS.loadTableS("aneos_tables.hdf5",mat);
+  std::cout << "loaded table!\n";
+#endif
+  
+  u = uref;
+  
+  // rho, S -> p, u
+  EOS.tableS(T, rho, mat, p, u, S, cv, dpdt, dpdr, fkros, cs, kpa, fme, fma);
+  std::cout << "tableS:   " << rho << " " << u << " " << S << " " << p << " " << cs << " " << T*eVinK << "\n";
 
-      std::cout << i << "   "
-                << pos(i, X) << "   "
-                << pos(i, Y) << "   "
-                << pos(i, Z) << "   "
-                << mat(i) << "   " //  5
-                << u(i) << "   "
-                << rho(i) << "   "
-                << pP << "   "     //  8
-                << pCs << "   "    //  9
-                << sP << "   "     // 10
-                << sCs << "   "    // 11
-                << pP - sP << "    " // 12
-                << pCs - sCs << "  " // 13
-                << phase(i) << "\n"; // 14*/
-     
-      mat(i) = 4;
-      
-      rho(i) = 8.70359;
-      u(i) = 0.403702;
+#ifdef SPHLATCH_ANEOS_TABLE  
+  //EOS.storeTableS("aneos_tables.hdf5",mat);
+#endif
 
-      EOS(i, sP, sCs);
+  // rho, u -> p, S
+  EOS.rootU(T, rho, mat, p, u, S, cv, dpdt, dpdr, fkros, cs, kpa, fme, fma);
+  std::cout << "rootU:    " << rho << " " << u << " " << S << " " << p << " " << cs << " " << T*eVinK << "\n";
 
-      std::cout << mat(i) << "\t"
-                << sP << "\t"
-                << sCs << "\n";
-    }
+#ifdef SPHLATCH_ANEOS_TABLE  
+  EOS.loadTableU("aneos_tables.hdf5",mat);
+#endif
+  // rho, u -> p, S
+  EOS.tableU(T, rho, mat, p, u, S, cv, dpdt, dpdr, fkros, cs, kpa, fme, fma);
+  std::cout << "tableU:   " << rho << " " << u << " " << S << " " << p << " " << cs << " " << T*eVinK << "\n";
 
-  MPI::Finalize();
+  part.rho = rho;
+  part.u   = u;
+  EOS(part);
+  std::cout << part.S << " " << part.p << " " << part.cs << " " << part.T*11700. << " " << part.phase << "\n";
+  
+  part.rho = 1.e-11;
+  EOS(part);
+  std::cout << part.S << " " << part.p << " " << part.cs << " " << part.T*11700. << " " << part.phase << "\n";
+
+  part.rho = 100.;
+  part.u = 1.e15;
+  EOS(part);
+  std::cout << part.S << " " << part.p << " " << part.cs << " " << part.T*11700. << " " << part.phase << "\n";
+
+#ifdef SPHLATCH_ANEOS_TABLE  
+  //EOS.storeTableU("aneos_tables.hdf5",mat);
+#endif
+  
   return EXIT_SUCCESS;
 }

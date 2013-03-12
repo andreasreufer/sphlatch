@@ -55,6 +55,12 @@ void ParticleSet<_partT>::resize(const size_t _i)
    parts.resize(_i);
 }
 
+  template<typename _partT>
+void ParticleSet<_partT>::reserve(const size_t _i)
+{
+   parts.reserve(_i);
+}
+
 template<typename _partT>
 size_t ParticleSet<_partT>::getNop()
 {
@@ -103,6 +109,36 @@ box3dT ParticleSet<_partT>::getBox()
    box.cen  = 0.5 * (xmax + xmin), 0.5 * (ymax + ymin), 0.5 * (zmax + zmin);
    box.size = std::max(xmax - xmin, std::max(ymax - ymin, zmax - zmin));
    return(box);
+}
+
+template<typename _partT>
+_partT ParticleSet<_partT>::pop(const size_t _i)
+{
+  _partT pp;
+  const size_t li= parts.size()-1;
+  pp = parts[_i];
+  parts[_i] = parts[li];
+  parts.resize(li);
+
+  return pp;
+}
+
+template<typename _partT>
+_partT& ParticleSet<_partT>::insert(_partT _p)
+{
+  const size_t li= parts.size();
+  parts.resize(li+1);
+  parts[li] = _p;
+  return parts[li];
+}
+
+template<typename _partT>
+std::string ParticleSet<_partT>::getStepName()
+{
+  std::string stepstr = boost::lexical_cast<std::string>(step);
+  std::string stepnam = "/Step#";
+  stepnam.append(stepstr);
+  return stepnam;
 }
 
 #ifdef SPHLATCH_HDF5
@@ -351,9 +387,8 @@ void ParticleSet<_partT>::saveHDF5(std::string _filename)
 
    fh = H5Fopen(_filename.c_str(), H5F_ACC_RDWR, fpl);
    H5Pclose(fpl);
-   std::string stepstr = boost::lexical_cast<std::string>(step);
-   std::string stepnam = "/Step#";
-   stepnam.append(stepstr);
+   
+   std::string stepnam = getStepName();
 
    hid_t rg = H5Gopen(fh, "/", H5P_DEFAULT);
 

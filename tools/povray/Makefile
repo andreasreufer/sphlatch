@@ -8,3 +8,9 @@ hdf5topovrayCut:
 ascii2povray:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lboost_program_options -o ascii2povray ascii2povray.cpp
 
+
+h5partpov:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz \
+	  -I../../src/ -fopenmp \
+	  -o h5part_pov h5part_pov.cpp
+

@@ -1,0 +1,125 @@
+Benoetigt werden:
+- C++ compiler mit OpenMP, z.B. gcc  -> export CXX=mpicxx
+- Fortran compiler, z.B. gfortran    -> export FC=gfortran
+- blitz++ Bibliothek (nur headers)
+- Boost (fuer gewisse Tools)
+- HDF5 library
+- python mit pytables (HDF5)
+
+Empfohlen
+- matplotlib fuer plots
+- octave mit HDF5 support
+
+
+Die nachfolgenden Schritte 1-7 beschreiben, wie man eine relaxierte 3D SPH Kugel mit einer gewuenschten Masse und Zusammensetzung erzeugt. In der Regel werden fuer eine Kollision zwei solcher Koerper benoetigt: Das Target und der Impaktor.
+
+Die Schritte A1-
+
+Alternativ kann 
+
+
+1. Vollkugeln mit der gewuenschten Anzahl Teilchen erzeugen
+$ cd sphlatch/initials/vanilla_sphere/
+$ make
+$ vanilla_sphere sphere.h5part <nop>
+ 
+
+2. Pseudo 1D Struktur mit gewuenschter Zusammensetzung aufsetzen
+$ cd strucs/
+Im "initProfile.py" gewuenschte Masse, Zusammensetzung und Filenamen anpassen. Allenfalls die Graviationskonstante anpassen (falls nicht CGS).
+$ ./initProfile.py
+-> Initials file (HDF5 Format) fuer 1D Lagrange Code ist erzeugt
+
+
+3. spherical 1D Lagrange code kompilieren
+$ cd sphlatch/initials/lagrange_sphere1D
+$ make
+-> lagrange_sphere1D_A
+
+
+4. 1D Struktur relaxieren
+Struktur aus Schritt 2 wird nun mit dem spherical 1D Lagrange integriert und mithilfe einer Daempfung relaxiert. Hierzu wird in radialer Richtung ein Beschleunigungsterm addiert: a_fric = (1./t_fric)*v_r
+Damit die Daempfung weder zu stark noch zu schwach ausfaellt, waehlt man t_fric als ein Vielfaches der free fall time. Integriert man nun die Struktur einige t_fric vorwaerts fallen die Radialgegeschwindigkeiten genuegend ab (t_stop >> t_fric). Im Verzeichnis wo der Code laeuft, muessen aneos_tables.hdf5, aneos.input und ANEOS.QUARTZ vorhanden sein (geht auch als softlink).
+Der Lagrange Code wird  folgendermassen ausgefuehrt
+$ lagrange_sphere1D <infile> <outfile> <stoptime> <fric>
+
+<outfile> enthaelt nun eine hinreichend relaxierte Struktur
+
+Ist octave mit HDF5 support installiert, kann die Struktur einfach geplottet werden:
+$ octave
+oct$ filename = "<outfile>"
+oct$ plotprofile
+
+
+5. Die Vollkugel aus Schritt 1 (sphere.h5part) wird nun mit dem gewuenschten Profil aus Schritt 4 (struc.hdf5) "gewuerzt":
+$ cd sphlatch/flavour_sphere
+$ make flavH
+$ flavour_sphere_H sphere.h5part struc.hdf5
+-> sphere.h5part ist nun ein unrelaxierter, selbstgravitierender 3D SPH Koerper mit dem gewuenschten Profil
+
+
+6. Den 3D SPH relaxieren
+$ cd sphlatch/apps/simple_sph
+SPH Code mit friction und Entropie-Integration (die Entropie-Terme in der AV fehlen, d.h. die Entropie bleibt konstant) kompilieren, z.B. die Variante GCSHSm_F (self-gravity, stadard SPH with density sum, integrated entropy, M-ANEOS with tables, no clump search, friction). Die friction funktioniert wie im 1D Lagrange code und verwendet diesselbe t_fric wie aus der 1D Struktur (im SPH dump als Attribut gespeichert).
+$ make simple_sph_GCSHSm_F
+Wie beim 1D Profil, empfiehlt es sich den 3D Koerper mehrer t_fric lang zu integrieren. Am besten nimmt man alle t_fric einen SPH dump um die Relaxierung zu kontrollieren. Der Code wird ausgefuehrt mit:
+$ simple_sph_GCSHSm_F sphere.h5part <t_fric> <t_stop> dump <nothreads>
+Wobei wie vorhin t_stop >> t_fric und die <nothreads> ca. 1.5x die verfuegbare Anzahl CPUs sein sollte.
+
+Ist octave vorhanden, kann mit plotprofile.m wiederum einfach ein Dump analysiert werden:
+$ octave
+oct$ filename = "dump....."
+oct$ plotprofile
+(kann lange dauern, da alle Teilchen als Punkt geplottet werden)
+
+Gelegentlich werden einzelne Teilchen mit hoher Geschwindigkeit aus dem Koerper herausgeschossen. Solche Teilchen koennen mit dem Tool cut_sphere aus einem SPH dump entfernt werden:
+$ cd sphlatch/tools/h5part_tools
+$ make cutSphere
+Es koennen nun ein Radius <rmax> sowie eine Radialgeschwindigkeit <vmax> angegeben, ueber welchem/r Teilchen aus dem dump entfernt werden:
+$ cut_sphere <input dump> <output dump> <rmax> <vmax>
+
+Und fertig ist der relaxierte Koerper!
+
+
+Schritte A7-A12 beschreiben das komfortable Aufsetzen von vielen Kollisionen mit dem SimAdmin (hierzu muessen sich alle *.py Dateien aus tools/py_tools/ und tools/gi_admin/ im Pythonsuchpfad befinden). Der Suchpfad fuer Python Dateien kann mit der Shell-Variable PYTHONPATH gesetzt werden. Eine Variante ist es z.B. ein spezielle Verzeichnis anzulegen und darin Symlinks auf alle *.py aus tools/py_tools/ und tools/gi_admin/ zu setzen. Der Pythonsuchpfad setzt man im besten im ~/.profile mit:
+export PYTHONPATH="$PYTHONPATH:/home0/areufer/tools/python"
+
+A7. Alle mit den vorhergehenden Schritten Koerper in einem Verzeichnis sammeln. Mit dem Skript sphlatch/tools/gi_admin/analyze_bodies.py. Das Skript sucht im <path> nach *.h5part und speichert jeden Dump als potentiellen Koerper mit seiner Masse, Teilchenzahl, Radius usw. in einer Datenbank ab.
+$ analyze_bodies.py <path>
+Das File bodies.db enthaelt diese Datenbank.
+
+A8. Im Verzeichnis 04_simset befindet sich ein Beispielskript fuer eine Set von Simulationen. Es wird ein Verzeichnis mit dem Namen des Sets erzeugt, in welches das bodies.db file aus Schritt A7 kopiert werden muss. Achtung: Die Pfade in diesem File sind absolut, d.h. die Datenbank muss neu erzeugt werden, wenn sich der Ort der Files verschiebt.
+
+A9. Die Datei simmachine.py enthaelt Maschinen-weit gueltige Konstanten zur Sun GridEngine, es sollte einer der drei Varianten auskommentiert werden. Die beiden ersten Varianten sind Linux Cluster, die dritte ein lokaler Computer ohne GridEngine.
+
+A10. Skript t1.py starten. Nach der Initialisierung kommt ein ipython prompt. Simulationen haben einen key bestehend aus Masse der beiden Koerper in Erdmassen, Einschlagswinkel in Grad und Einschlagsgeschwindigkeit relativ zur mutual escape velocity. Bsp: "mtar000.017_mimp000.008_impa80.0_vimp1.00"
+
+A11. Aus einem simkey kann ein SimParam Objekt erzeugt werden. Aus letzterem kann wiederum mit dem simadm eine neue Simulation erstellt werden. Bsp:
+py$ simadm.newSim( SimParam("mtar000.017_mimp000.008_impa50.0_vimp1.00") )
+
+Rueckgabewert der Funktion ist das neu erstellte Simulationsobjekt.
+
+A12. Mit der next() Methode, kann eine Simulation in ihren naechsten Zustand gebracht werden. Am Anfang ist die Simulation im "prepared" state. Die vorhin erstellte Simulation kann folgendermassen submitted werden:
+py$ sim = sims["mtar000.017_mimp000.008_impa50.0_vimp1.00"]
+py$ sim.next()
+Die Simulation sollte nun laufen!
+
+
+
+B7. Die h5part tools kompilieren:
+$ cd sphlatch/tools
+$ make
+
+B8. Die Koerper aus Schritten 1-7 haben ihren Schwerpunkt im Nullpunkt und die Geschwindigkeit Null. Mit h5part_displace koennen ganze Koerper um einen Orts- und Geschwindigkeitsvektor verschoben werden. Die Teilchen IDs koennen ebenfalls um eine Konstante erweitert werden
+$ h5part_displace -i <dump> --pos=[dx,dy,dz] --vel=[dvx, dvy, dvz] --id dID
+
+B9. Befinden sich die beiden Koerper an der gewuenschten Stelle, koennen die beiden Files zusammengefuegt werden. Die Teilchen aus <dumpA> werden zuerst in <outputDump> eingefuegt, danach die aus <dumpB>:
+$ h5part_combine__ <dumpA> <dumpB> <outputDump>
+
+B10. Attribute koennen mit dem Tool h5part_writeattr geschrieben werden, z.B. kann eine Anfangszeit des initial dumps geschrieben werden:
+$ h5part_writeattr -k time -v <t0>
+
+B11. Die Simulation wird gestartet analog zu Schritt 6, jedoch mit einer Code Variante ohne friction, jedoch z.B. mit Klumpensuche:
+$ simple_sph_GCSHSm__ sphere.h5part <t_save> <t_stop> dump <nothreads>
+
+

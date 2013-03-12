@@ -1,4 +1,7 @@
 *
+*materials=1     : number of different material types in file
+*type=1          : material number to initialize
+*
 *    Input file for the version of ANEOS modified for molecular clusters
 *                Copyright H. J. Melosh February 2007
 *

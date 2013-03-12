@@ -20,13 +20,16 @@ typedef sphlatch::valvectType valvectType;
 typedef sphlatch::matrixRefType matrixRefType;
 typedef sphlatch::quantsType quantsType;
 
+typedef sphlatch::vect3dT           vect3dT;
+
+
 #include "particle_manager.h"
 typedef sphlatch::ParticleManager part_type;
 
 #include "io_manager.h"
 typedef sphlatch::IOManager io_type;
 
-#include "parse_po_vectors.h"
+#include "parse_po_vectors.cpp"
 
 using namespace boost::assign;
 using namespace sphlatch;
@@ -84,18 +87,18 @@ int main(int argc, char* argv[])
   if (VMap.count("pos"))
     {
       matrixRefType pos(PartManager.pos);
-      valvectType dpos = vectOptParse(VMap[ "pos" ].as<std::string>());
+      sphlatch::vect3dT dpos = vectOptParse(VMap[ "pos" ].as<std::string>());
 
       std::cerr << "displacing position by ["
-                << dpos(X) << ","
-                << dpos(Y) << ","
-                << dpos(Z) << "]\n";
+                << dpos[X] << ","
+                << dpos[Y] << ","
+                << dpos[Z] << "]\n";
 
       for (size_t i = 0; i < noParts; i++)
         {
-          pos(i, X) += dpos(X);
-          pos(i, Y) += dpos(Y);
-          pos(i, Z) += dpos(Z);
+          pos(i, X) += dpos[X];
+          pos(i, Y) += dpos[Y];
+          pos(i, Z) += dpos[Z];
         }
 
       saveQuants.vects += &pos;
@@ -105,18 +108,18 @@ int main(int argc, char* argv[])
   if (VMap.count("vel"))
     {
       matrixRefType vel(PartManager.vel);
-      valvectType dvel = vectOptParse(VMap[ "vel" ].as<std::string>());
+      sphlatch::vect3dT dvel = vectOptParse(VMap[ "vel" ].as<std::string>());
 
       std::cerr << "displacing velocity by ["
-                << dvel(X) << ","
-                << dvel(Y) << ","
-                << dvel(Z) << "]\n";
+                << dvel[X] << ","
+                << dvel[Y] << ","
+                << dvel[Z] << "]\n";
 
       for (size_t i = 0; i < noParts; i++)
         {
-          vel(i, X) += dvel(X);
-          vel(i, Y) += dvel(Y);
-          vel(i, Z) += dvel(Z);
+          vel(i, X) += dvel[X];
+          vel(i, Y) += dvel[Y];
+          vel(i, Z) += dvel[Z];
         }
 
       saveQuants.vects += &vel;

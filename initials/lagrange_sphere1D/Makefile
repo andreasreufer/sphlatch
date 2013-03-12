@@ -1,19 +1,11 @@
-all: lagrangeSolverTillotson lagrangeSolverANEOS
+all: lagrange1D_A
 	
 libaneos:
 	$(FC) $(FFLAGS) -c ../../aux/libaneos/libaneos.f -o libaneos.o
 
-lagrangeSolverANEOS: libaneos
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
-				      -I../../src/old -I../../src \
+lagrange1D_A: libaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -I../../src \
 				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
-				      -o lagrange_sphere1D_ANEOS \
+				      -DSPHLATCH_ANEOS_TABLE \
+				      -o lagrange_sphere1D_A \
 				      lagrange_sphere1D.cpp
-	
-lagrangeSolverTillotson:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
-				      -I../../src/old -I../../src \
-				      -DSPHLATCH_TILLOTSON \
-				      -o lagrange_sphere1D_tillotson \
-				      lagrange_sphere1D.cpp
-	

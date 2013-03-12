@@ -79,6 +79,13 @@ public:
 
       return(ioVar(_name, offset, 3, FTYPE));
    }
+   
+   ioVar storeVar(const fType _v[], std::string _name, const size_t _w)
+   {
+      const size_t offset = reinterpret_cast<const char*>(&_v[0]) -
+                            reinterpret_cast<char*>(this);
+      return(ioVar(_name, offset, _w, FTYPE));
+   }
 };
 };
 #endif

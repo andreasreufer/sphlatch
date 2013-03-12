@@ -30,6 +30,9 @@ public:
    void calcAccPartRec(const pnodPtrT _part);
    
    typedef sphlatch::Timer   timerT;
+   
+   fType splineOSmoR1(const fType _r, const fType _h);
+   fType splineOSmoR3(const fType _r, const fType _h);
 
 private:
    _macT  MAC;
@@ -46,9 +49,6 @@ private:
    vect3dT  acc, ppos;
    fType pot;
    nodePtrT recCurPartPtr;
-
-   fType splineOSmoR1(const fType _r, const fType _h);
-   fType splineOSmoR3(const fType _r, const fType _h);
 
 protected:
    const fType G;

@@ -40,16 +40,21 @@ public:
    void doublePrecOut();
 #endif
 
-
    void resize(const size_t _i);
+   void reserve(const size_t _i);
    size_t getNop();
 
    vect3dT getCom();
    box3dT  getBox();
 
+   _partT pop(const size_t _i);
+   _partT& insert(_partT _p);
+
    cType   step;
    ioVarLT loadVars, saveVars;
    attrMT  attributes;
+
+   std::string getStepName();
 
 protected:
    std::vector<_partT> parts;

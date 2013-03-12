@@ -31,3 +31,9 @@ h5partSlice:
 
 icePeakP:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -lboost_program_options -o ice_peakp ice_peakp.cpp
+
+cutSphere:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -I../../src \
+	  -fopenmp \
+	  -o cut_sphere cut_sphere.cpp
+

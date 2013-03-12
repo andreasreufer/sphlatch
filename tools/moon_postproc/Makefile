@@ -1,9 +1,11 @@
 all: moonPostProc
 
 moonPostProc:
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
-				      -I../../src \
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz \
+				      -I../../src -fopenmp \
 				      -DSPHLATCH_ANEOS \
+				      -DSPHLATCH_GRAVITY \
+				      -DSPHLATCH_GRAVITY_POTENTIAL\
 				      -o moon_pp moon_postproc.cpp
 
 clean:

@@ -99,6 +99,8 @@ void costzoneCellNode::clear()
 
    domain  = 0;
    relCost = 0.;
+   compTime = 0.;
+
    noParts = 0;
 
    orphFrst = NULL;

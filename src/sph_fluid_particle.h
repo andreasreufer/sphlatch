@@ -27,6 +27,10 @@ enum vect
 class SPHfluidGhost {
 public:
    fType h, rho, p, cs;
+#ifdef SPHLATCH_MISCIBLE
+   fType delta;
+#endif
+
 #ifdef SPHLATCH_PADTO64BYTES
 private:
    char pad[0];
@@ -40,6 +44,13 @@ class SPHfluidPart : public SPHfluidGhost
 {
   public:
    countsType noneigh;
+#ifdef SPHLATCH_INTEGRATERHO
+   fType drhodt;
+#endif
+#ifdef SPHLATCH_XSPH
+   vect3dT dv;
+   static fType xsphfactor;
+#endif
 };
 
 ///
@@ -82,7 +93,7 @@ class ANEOSGhost {};
 class ANEOSPart : public ANEOSGhost 
 {
   public:
-  fType T, S;
+  fType T, S, rhoL, rhoH;
   iType mat, phase;
 };
 

@@ -186,6 +186,20 @@ void BHTree::update(const fType _cmarkLow, const fType _cmarkHigh)
    }
 }
 
+void BHTree::redoMultipoles()
+{
+   // compose vector of CZ cell pointers
+   czllPtrVectT CZbottomV       = getCzllPtrVect(CZbottom);
+   const int    noCZBottomCells = CZbottomV.size();
+  
+   // update particle masses
+   BHTreeMPWorker    MP(this);
+#pragma omp parallel for firstprivate(MP)
+   for (int i = 0; i < noCZBottomCells; i++)
+      MP.calcMultipoles(CZbottomV[i]);
+   MP.calcMultipolesCZ();
+}
+
 void BHTree::clear()
 {
   BHTreeClear TC(this); 
@@ -229,5 +243,19 @@ BHTree::czllPtrVectT BHTree::getCzllPtrVect(czllPtrListT _czllList)
    }
    return(vect);
 }
+
+void BHTree::normalizeCost()
+{
+   czllPtrListT::iterator       CZItr;
+   
+   fType totCost = 0.;
+   for (CZItr = CZbottom.begin(); CZItr != CZbottom.end(); CZItr++)
+     totCost += (*CZItr)->compTime;
+
+   for (CZItr = CZbottom.begin(); CZItr != CZbottom.end(); CZItr++)
+     (*CZItr)->compTime /= totCost;
+}
+
+
 };
 #endif

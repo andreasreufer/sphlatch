@@ -20,10 +20,20 @@ enum clumpType
    CLUMPNONE   = 0,
 };
 
+enum orbitType
+{
+  ORBITNOTSET   = 0,
+  ORBITCLUMP    = 1,
+  ORBITDISK     = 2,
+  ORBITREIMPACT = 3,
+  ORBITESCAPE   = 4
+};
+
 class clumpPart
 {
 public:
-   iType clumpid;
+   iType clumpid, orbit;
+   fType ecc, a;
 };
 };
 #endif

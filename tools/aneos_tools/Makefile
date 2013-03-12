@@ -1,4 +1,37 @@
-all: h5partAddANEOS h5partAddANEOStable
+all: rootpM rootpA rootuM rootuA generateTablesA generateTablesM phaseDiagram
+
+
+rootpM: libmaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz \
+				      -I../../src \
+				      -DSPHLATCH_MANEOS -lgfortran libmaneos.o \
+				      -o rootPM rootP.cpp
+rootpA: libaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz \
+				      -I../../src \
+				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -o rootPA rootP.cpp
+rootuM: libmaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz \
+				      -I../../src \
+				      -DSPHLATCH_MANEOS -lgfortran libmaneos.o \
+				      -o rootUM rootU.cpp
+rootuA: libaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz \
+				      -I../../src \
+				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -o rootUA rootU.cpp
+
+rootsM: libmaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz \
+				      -I../../src \
+				      -DSPHLATCH_MANEOS -lgfortran libmaneos.o \
+				      -o rootSM rootS.cpp
+rootsA: libaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz \
+				      -I../../src \
+				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -o rootSA rootS.cpp
 
 h5partAddANEOS: libaneos
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -lboost_program_options \
@@ -28,6 +61,21 @@ phaseDiagramM: libmaneos
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src \
 				      -DSPHLATCH_ANEOS -lgfortran libmaneos.o \
 				      -o Maneos_phase_diagram phase_diagram.cpp
+
+resetTmaxuav:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -I../../src \
+				      -o reset_Tmax_uav reset_Tmax_uav.cpp
+
+generateTablesA: libaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -I../../src \
+				      -DSPHLATCH_ANEOS -lgfortran libaneos.o \
+				      -o generateTablesA generateTables.cpp
+
+generateTablesM: libmaneos
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -lhdf5 -lz -I../../src \
+				      -DSPHLATCH_MANEOS -lgfortran libmaneos.o \
+				      -o generateTablesM generateTables.cpp
+
 
 libaneos:
 	$(FC) $(FFLAGS) -c ../../aux/libaneos/libaneos.f -o libaneos.o

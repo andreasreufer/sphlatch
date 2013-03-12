@@ -44,7 +44,7 @@ public:
    static const size_t maxDepth       = 128;
    static const size_t maxCZBottCells = 16384;
 
-   static const fType cellsPerThread = 16;
+   static const fType cellsPerThread = 100;
 
    ///
    /// public functions
@@ -53,7 +53,9 @@ public:
    void insertPart(treeGhost& _part);
    void update(const fType _cmin, const fType _cmax);
    void clear();
+   void redoMultipoles();
    czllPtrVectT getCZbottomLoc();
+   void normalizeCost();
 
 private:
    static selfPtr _instance;

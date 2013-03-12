@@ -25,6 +25,8 @@
 #include <blitz/array.h>
 #include <blitz/tinyvec-et.h>
 
+#include <boost/numeric/ublas/vector.hpp>
+
 namespace sphlatch {
 ///
 /// the BLAS namespace
@@ -43,8 +45,10 @@ typedef fType*                        fPtrType;
 typedef fType&                        fRefType;
 
 const fType fTypeInf = std::numeric_limits<fType>::infinity();
+const fType fTypeNan = std::numeric_limits<fType>::quiet_NaN();
 
 typedef blitz::TinyVector<fType, 3>   vect3dT;
+//typedef blitz::Array<fType, 1>        farrT;
 enum dims3
 {
    X, Y, Z
@@ -57,15 +61,44 @@ struct box3dT
 
    box3dT& operator=(const box3dT& _rhs)
    {
-     cen = _rhs.cen; size = _rhs.size;
-     return *this;
+      cen  = _rhs.cen;
+      size = _rhs.size;
+
+      return(* this);
    }
 
    box3dT operator*(const fType mul)
    {
-     box3dT tmp;
-     tmp = *this; tmp.size *= mul;
-     return tmp;
+      box3dT tmp;
+
+      tmp       = *this;
+      tmp.size *= mul;
+      return(tmp);
+   }
+
+   box3dT operator+(const box3dT _rhs)
+   {
+     const fType rhsize = 0.5*_rhs.size;
+     const fType lhsize = 0.5*(this->size);
+
+     const fType xmin = _rhs.cen[0] - rhsize < this->cen[0] - lhsize ?
+       _rhs.cen[0] - rhsize : this->cen[0] - lhsize;
+     const fType ymin = _rhs.cen[1] - rhsize < this->cen[1] - lhsize ?
+       _rhs.cen[1] - rhsize : this->cen[1] - lhsize;
+     const fType zmin = _rhs.cen[2] - rhsize < this->cen[2] - lhsize ?
+       _rhs.cen[2] - rhsize : this->cen[2] - lhsize;
+     
+     const fType xmax = _rhs.cen[0] + rhsize > this->cen[0] + lhsize ?
+       _rhs.cen[0] + rhsize : this->cen[0] + lhsize;
+     const fType ymax = _rhs.cen[1] + rhsize > this->cen[1] + lhsize ?
+       _rhs.cen[1] + rhsize : this->cen[1] + lhsize;
+     const fType zmax = _rhs.cen[2] + rhsize > this->cen[2] + lhsize ?
+       _rhs.cen[2] + rhsize : this->cen[2] + lhsize;
+
+     box3dT nbox;
+     nbox.cen = 0.5 * (xmax + xmin), 0.5 * (ymax + ymin), 0.5 * (zmax + zmin);
+     nbox.size = std::max(xmax - xmin, std::max(ymax - ymin, zmax - zmin));
+     return nbox;
    }
 };
 
@@ -147,6 +180,15 @@ typedef std::set<std::string>      stringSetType;
 /// a list of strings
 ///
 typedef std::list<std::string>     stringListType;
+
+///
+/// vectors of basic data types
+///
+namespace blas = boost::numeric::ublas;
+typedef blas::vector<fType>    fvectT;
+typedef blas::vector<idType>   idvectT;
+typedef blas::matrix<fType>    fmatrT;
+typedef blas::matrix<idType>   idmatrT;
 };
 
 #define LEGACY

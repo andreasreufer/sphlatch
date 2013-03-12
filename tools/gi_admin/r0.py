@@ -168,7 +168,7 @@ cfg_p___XY_z.cbar_fmt  = '%4.1f'
 cfg_p___XY_z.cbar_noticks = 5
 cfg_p___XY_z.colorFunc = colorScalarLog10
 cfg_p___XY_z.postPlot  = plotSimParams
-cfg_p___XY_z.imgdir    = ssconf.dir + "/viz_P___XY_n"
+cfg_p___XY_z.imgdir    = ssconf.dir + "/viz_P___XY_z"
 
 vizcfgs = [ cfg_mat_XY_n, cfg_mat_YZ_n,
     cfg_cid_XY_n, cfg_cid_YZ_n,
@@ -187,8 +187,9 @@ simC = sims["mtar001.000_mimp000.100_impa45.0_vimp1.50"]
 simsA = simadm.getSims( SimParam(1.0, 1.0, nan, 1.15) )
 
 vizcfg = GIvizConfig()
-vizcfg.subcmd = "qsub -M andreas.reufer@space.unibe.ch -b n -cwd -l h_cpu=4:00:00 -l h_vmem=512M -N $JOBNAME $JOBCMD"
+vizcfg.subcmd = "qsub -M andreas.reufer@space.unibe.ch -b n -cwd -l h_cpu=96:00:00 -l h_vmem=512M -N $JOBNAME $JOBCMD"
 vizcfg.scdir = ssconf.dir + "/vizscratch"
+vizcfg.tasksperjob = 1000
 
 vizsim = GIviz(vizcfg)
 
@@ -197,4 +198,9 @@ def vizAll():
     if sim.nodumps > 0:
       vizsim.gatherVizTasks(sim, vizcfgs)
       vizsim.runTasksSGE()
+
+def animAll():
+  for sim in sims.values():
+    for cfg in vizcfgs:
+      vizsim.animSim(sim, [cfg]) 
 

@@ -135,6 +135,8 @@ int main(int argc, char* argv[])
    start = omp_get_wtime();
    for (size_t i = 0; i < nop; i++)
    {
+      if ( partsTree[i].id == 218298 )
+        std::cout << partsTree[i].pos << "\n";
       partsTree[i].cost = cppart;
       Tree.insertPart(partsTree[i]);
    }

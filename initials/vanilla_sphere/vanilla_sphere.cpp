@@ -6,143 +6,124 @@
 #include <fstream>
 #include <string>
 
-#include <boost/program_options/option.hpp>
-#include <boost/program_options/cmdline.hpp>
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/positional_options.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/assign/std/vector.hpp>
-
-namespace po = boost::program_options;
+#define SPHLATCH_HDF5
 
 #include "typedefs.h"
-typedef sphlatch::valueType valueType;
-typedef sphlatch::valvectRefType valvectRefType;
-typedef sphlatch::idvectRefType idvectRefType;
-typedef sphlatch::matrixRefType matrixRefType;
+typedef sphlatch::fType   fType;
+typedef sphlatch::iType   iType;
 
-#include "particle_manager.h"
-typedef sphlatch::ParticleManager part_type;
+#include "bhtree_particle.h"
+#include "sph_fluid_particle.h"
+#include "io_particle.h"
+class particle :
+   public sphlatch::treePart,
+   public sphlatch::SPHfluidPart,
+   public sphlatch::IOPart
+{
+public:
+   ioVarLT getLoadVars()
+   {
+      ioVarLT vars;
 
-#include "io_manager.h"
-typedef sphlatch::IOManager io_type;
+      return(vars);
+   }
+
+   ioVarLT getSaveVars()
+   {
+      ioVarLT vars;
+
+      vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(id, "id"));
+      vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(h, "h"));
+      return(vars);
+   }
+};
+typedef particle                       partT;
+
+#include "particle_set.cpp"
+typedef sphlatch::ParticleSet<partT>   partSetT;
 
 #include "lattice_hcp.h"
-typedef sphlatch::LatticeHCP body_type;
-
-using namespace boost::assign;
-using namespace sphlatch::vectindices;
+typedef sphlatch::LatticeHCP           lattT;
 
 int main(int argc, char* argv[])
 {
-  po::options_description Options("Global Options");
+   if (not (argc == 3))
+   {
+      std::cerr <<
+      "usage: vanilla_sphere <dump> <nop>\n";
+      return(1);
+   }
+   partSetT parts;
 
-  Options.add_options()
-  ("help,h", "Produces this Help")
-  ("output-file,o", po::value<std::string>(), "output file")
-  ("no-parts,n",    po::value<size_t>(),      "number of particles");
+   std::string outFile = argv[1];
 
-  po::variables_map VMap;
-  po::store(po::command_line_parser(argc, argv).options(Options).run(), VMap);
-  po::notify(VMap);
+   std::stringstream nopstr(argv[2]);
+   size_t            nopw;
+   nopstr >> nopw;
 
-  if (VMap.count("help"))
-    {
-      std::cerr << Options << std::endl;
-      return EXIT_FAILURE;
-    }
+   ///
+   /// 1.03 is a fudge factor :-)
+   ///
+   const fType rMax          = 1.;
+   const fType fillingFactor = 0.740;
+   const fType latticeLength = 2. * rMax / pow(fillingFactor * nopw
+                                               / 1.03, 1. / 3.);
 
-  if (!VMap.count("output-file") || !VMap.count("no-parts"))
-    {
-      std::cerr << Options << std::endl;
-      return EXIT_FAILURE;
-    }
+   ///
+   /// now place the SPH particles on a lattice
+   ///
+   lattT Lattice(latticeLength, 1.1 * rMax, 1.1 * rMax, 1.1 * rMax);
 
-  io_type&        IOManager(io_type::instance());
-  part_type&      PartManager(part_type::instance());
-
-
-  matrixRefType pos(PartManager.pos);
-  valvectRefType  m(PartManager.m);
-  valvectRefType  h(PartManager.h);
-  idvectRefType  id(PartManager.id);
-
-  const size_t desNoParts = VMap["no-parts"].as<size_t>();
-
-  ///
-  /// 1.03 is a fudge factor :-)
-  /// 
-  const valueType rMax = 1.;
-  const valueType fillingFactor = 0.740;
-  const valueType latticeLength = 2.*rMax/pow( fillingFactor*desNoParts
-                                               / 1.03, 1./3.);
-
-  ///
-  /// now place the SPH particles on a lattice
-  ///
-  sphlatch::LatticeHCP Lattice(latticeLength, 1.1*rMax, 1.1*rMax, 1.1*rMax);
-
-  size_t partsCount = 0;
-  Lattice.first();
-  while (!Lattice.isLast)
-    {
+   size_t pc = 0;
+   Lattice.first();
+   while (!Lattice.isLast)
+   {
       if (Lattice.rCur < rMax)
-        partsCount++;
+         pc++;
       Lattice.next();
-    }
-  std::cerr << "you asked for " << desNoParts
-            << " and you get " << partsCount << " particles\n";
+   }
+   std::cerr << "you asked for " << nopw
+             << " and you get " << pc << " particles\n";
 
-  PartManager.useBasicSPH();
-  PartManager.setNoParts(partsCount);
-  PartManager.resizeAll();
-  
-  const valueType totVolume = (4.*M_PI/3.)*pow(rMax, 3.);
-  const valueType partVolume = totVolume / partsCount;
-  const valueType smoLength  = 0.85*latticeLength;
+   parts.resize(pc);
 
-  std::cerr << " particle volume: " << partVolume << "\n"
-            << " total    volume: " << totVolume << "\n";
+   const fType totV      = (4. * M_PI / 3.) * pow(rMax, 3.);
+   const fType partV     = totV / pc;
+   const fType smoLength = 0.85 * latticeLength;
 
-  partsCount = 0;
-  Lattice.first();
-  while (!Lattice.isLast)
-    {
+   std::cerr << " particle volume: " << partV << "\n"
+             << " total    volume: " << totV << "\n";
+
+   pc = 0;
+   Lattice.first();
+   while (!Lattice.isLast)
+   {
       if (Lattice.rCur < rMax)
-        {
-          id(partsCount) = partsCount;
+      {
+         parts[pc].id     = pc;
+         parts[pc].pos[0] = Lattice.xCur;
+         parts[pc].pos[1] = Lattice.yCur;
+         parts[pc].pos[2] = Lattice.zCur;
 
-          pos(partsCount, X) = Lattice.xCur;
-          pos(partsCount, Y) = Lattice.yCur;
-          pos(partsCount, Z) = Lattice.zCur;
+         ///
+         /// the particle volume is stored in the mass variable
+         ///
+         /// so, multiplied with the density, one gets the
+         /// particle mass
+         ///
+         parts[pc].h = smoLength;
+         parts[pc].m = partV;
 
-          ///
-          /// the particle volume is stored in the mass variable
-          ///
-          /// so, multiplied with the density, one gets the
-          /// particle mass
-          ///
-          m(partsCount) = partVolume;
-          h(partsCount) = smoLength;
-
-          partsCount++;
-        }
+         pc++;
+      }
       Lattice.next();
-    }
+   }
 
-  sphlatch::quantsType saveQuants;
-  saveQuants.vects += &pos;
-  saveQuants.scalars += &m, &h;
-  saveQuants.ints += &id;
-  PartManager.step = 0;
+   std::cerr << " -> " << outFile << "\n";
+   parts.step = 0;
+   parts.saveHDF5(outFile);
 
-  std::string outputFilename = VMap["output-file"].as<std::string>();
-  std::cerr << " -> " << outputFilename << "\n";
-  IOManager.saveDump(outputFilename, saveQuants);
-
-  return EXIT_SUCCESS;
+   return(EXIT_SUCCESS);
 }
-
-

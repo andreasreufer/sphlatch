@@ -18,8 +18,14 @@
 #include "err_handler.cpp"
 
 #ifdef SPHLATCH_ANEOS_TABLE
-#include "lookup_table2D.cpp"
+ #include "lookup_table2D.cpp"
 #endif
+
+#ifdef SPHLATCH_HDF5
+ #include "hdf5_io.cpp"
+#endif
+
+#include "brent.cpp"
 
 ///
 /// FORTRAN subroutine "ANEOSINIT" to init ANEOS
@@ -30,619 +36,360 @@ extern "C" void aneosinit_(const char*,  /// materials file
 ///
 /// FORTRAN subroutine "ANEOS" for p(rho,T,mat)
 ///
-extern "C" void aneos_(const double*,  /// T (input)
-                       const double*,  /// rho (input)
-                       double*,        /// p
-                       double*,        /// E
-                       double*,        /// S
-                       double*,        /// c_v
-                       double*,        /// dp/dt
-                       double*,        /// dp/dr
-                       double*,        /// fkro (Rosseland mean opacity)
-                       double*,        /// cs
-                       int*,           /// phase
-                       const int*,     /// material (input)
-                       double*,        /// fme (?)
-                       double*         /// fva (?)
-                       );
+extern "C" void aneosd_(const double*,  /// T (input)
+                        const double*,  /// rho (input)
+                        double*,        /// p
+                        double*,        /// E
+                        double*,        /// S
+                        double*,        /// c_v
+                        double*,        /// dp/dT
+                        double*,        /// dp/dRho
+                        double*,        /// fkro (Rosseland mean opacity)
+                        double*,        /// cs
+                        int*,           /// phase
+                        const int*,     /// material (input)
+                        double*,        /// rhoL
+                        double*         /// rhoH
+                        );
+
+extern "C" void aneosv_(const int*,     /// no of array elements
+                        const double*,  /// T (input)
+                        const double*,  /// rho (input)
+                        const int*,     /// material (input)
+                        double*,        /// p
+                        double*,        /// E
+                        double*,        /// S
+                        double*,        /// c_v
+                        double*,        /// dp/dT
+                        double*,        /// dp/dRho
+                        double*,        /// fkro (Rosseland mean opacity)
+                        double*,        /// cs
+                        int*,           /// phase
+                        double*,        /// lower  phase density
+                        double*,        /// higher phase density
+                        double*         /// ionization number
+                        );
 
 namespace sphlatch {
+template<typename lutT>
+class ANEOStables {
+   // FIXME: get ranges
+public:
+#ifdef SPHLATCH_HDF5
+   ANEOStables<lutT>(const std::string _fname, const std::string _path,
+                     const std::string _xname, const std::string _yname,
+                     const std::string _zname) :
+      T(_fname, _path + _xname, _path + _yname, _path + "/T"),
+      p(_fname, _path + _xname, _path + _yname, _path + "/p"),
+      cv(_fname, _path + _xname, _path + _yname, _path + "/cv"),
+      dpdt(_fname, _path + _xname, _path + _yname, _path + "/dpdt"),
+      dpdrho(_fname, _path + _xname, _path + _yname, _path + "/dpdrho"),
+      fkros(_fname, _path + _xname, _path + _yname, _path + "/fkros"),
+      cs(_fname, _path + _xname, _path + _yname, _path + "/cs"),
+      rhoL(_fname, _path + _xname, _path + _yname, _path + "/rhoL"),
+      rhoH(_fname, _path + _xname, _path + _yname, _path + "/rhoH"),
+      phase(_fname, _path + _xname, _path + _yname, _path + "/phase"),
+      z(_fname, _path + _xname, _path + _yname, _path + _zname),
+      xname(_xname),
+      yname(_yname),
+      zname(_zname)
+   { };
+#endif
+   ANEOStables<lutT>(const fvectT &_logx, const fvectT &_logy,
+                     const fmatrT &_T,
+                     const fmatrT &_p,
+                     const fmatrT &_cv,
+                     const fmatrT &_dpdt,
+                     const fmatrT &_dpdrho,
+                     const fmatrT &_fkros,
+                     const fmatrT &_cs,
+                     const fmatrT &_rhoL,
+                     const fmatrT &_rhoH,
+                     const fmatrT &_phase,
+                     const fmatrT &_z,
+                     const std::string _xname,
+                     const std::string _yname,
+                     const std::string _zname) :
+      T(_logx, _logy, _T),
+      p(_logx, _logy, _p),
+      cv(_logx, _logy, _cv),
+      dpdt(_logx, _logy, _dpdt),
+      dpdrho(_logx, _logy, _dpdrho),
+      fkros(_logx, _logy, _fkros),
+      cs(_logx, _logy, _cs),
+      rhoL(_logx, _logy, _rhoL),
+      rhoH(_logx, _logy, _rhoH),
+      phase(_logx, _logy, _phase),
+      z(_logx, _logy, _z),
+      xname(_xname),
+      yname(_yname),
+      zname(_zname)
+   { };
+
+   ~ANEOStables<lutT>() { };
+
+#ifdef SPHLATCH_HDF5
+   void storeTable(const std::string _fname, const std::string _path)
+   {
+      HDF5File tf(_fname);
+
+      tf.doublePrecOut();
+
+      tf.createGroup(_path);
+      tf.savePrimitive(_path + xname, T.getX());
+      tf.savePrimitive(_path + yname, T.getY());
+      tf.savePrimitive(_path + zname, z.getF());
+
+      tf.savePrimitive(_path + "/T", T.getF());
+      tf.savePrimitive(_path + "/p", p.getF());
+      tf.savePrimitive(_path + "/cv", cv.getF());
+      tf.savePrimitive(_path + "/dpdt", dpdt.getF());
+      tf.savePrimitive(_path + "/dpdrho", dpdrho.getF());
+      tf.savePrimitive(_path + "/fkros", fkros.getF());
+      tf.savePrimitive(_path + "/cs", cs.getF());
+      tf.savePrimitive(_path + "/rhoL", rhoL.getF());
+      tf.savePrimitive(_path + "/rhoH", rhoH.getF());
+      tf.savePrimitive(_path + "/phase", phase.getF());
+   }
+#endif
+
+
+private:
+   lutT        T, p, cv, dpdt, dpdrho, fkros, cs, rhoL, rhoH, phase, z;
+   std::string xname, yname, zname;
+
+public:
+   void operator()(const fType _x, const fType _y,
+                   fType& _T,
+                   fType& _p,
+                   fType& _cv,
+                   fType& _dpdt,
+                   fType& _dpdrho,
+                   fType& _fkros,
+                   fType& _cs,
+                   fType& _rhoL,
+                   fType& _rhoH,
+                   iType& _phase,
+                   fType& _z)
+   {
+      const fType lx = log10(_x);
+      const fType ly = log10(_y);
+
+      _p = p(lx, ly);
+      const size_t ixl = p.ixl;
+      const size_t iyl = p.iyl;
+
+      _T      = T(lx, ly, ixl, iyl);
+      _p      = p(lx, ly, ixl, iyl);
+      _cv     = cv(lx, ly, ixl, iyl);
+      _dpdt   = dpdt(lx, ly, ixl, iyl);
+      _dpdrho = dpdrho(lx, ly, ixl, iyl);
+      _fkros  = fkros(lx, ly, ixl, iyl);
+      _cs     = cs(lx, ly, ixl, iyl);
+      _rhoL   = rhoL(lx, ly, ixl, iyl);
+      _rhoH   = rhoH(lx, ly, ixl, iyl);
+      _phase  = lrint(phase(lx, ly, ixl, iyl));
+      _z      = z(lx, ly, ixl, iyl);
+   }
+
+   // just forward the getRange() method
+   void getRange(fType& _xMin, fType& _xMax, fType& _yMin, fType& _yMax)
+   {
+      p.getRange(_xMin, _xMax, _yMin, _yMax);
+   }
+};
+
+
+
 template<typename _partT>
 class ANEOS : public EOS {
 public:
-   ANEOS<_partT>()
-   {
-      std::string matFilename = "aneos.input";
-      
-      aneosinit_(matFilename.c_str(), matFilename.size());
-
- #ifdef SPHLATCH_LOGGER
-      Logger.stream << "init ANEOS EOS with file "
-                    << matFilename;
-      Logger.flushStream();
- #endif
-#ifdef SPHLATCH_ANEOS_TABLE
-      ///
-      /// set the number of points in rho and u
-      /// for the interpolation tables
-      ///
-      noPointsRho = 2000;
-      noPointsU   = 2000;
-
-      /*if (PartManager.attributes.count("umin") < 1)
-         throw GeneralError("umin not set for ANEOS table!");
-         uMin = PartManager.attributes["umin"];
-
-         if (PartManager.attributes.count("umax") < 1)
-         throw GeneralError("umax not set for ANEOS table!");
-         uMax = PartManager.attributes["umax"];
-
-         if (PartManager.attributes.count("rhomin") < 1)
-         throw GeneralError("rhomin not set for ANEOS table!");
-         rhoMin = PartManager.attributes["rhomin"];
-
-         if (PartManager.attributes.count("rhomax") < 1)
-         throw GeneralError("rhomax not set for ANEOS table!");
-         rhoMax = PartManager.attributes["rhomax"];*/
-
-      uMin = 1.e8;
-      uMax = 1.e12;
-
-      rhoMin = 0.001;
-      rhoMax = 15.;
-
-      ///
-      /// the maximal mat id
-      ///
-      const size_t maxMatId = 32;
-
-      presTables.resize(maxMatId + 1);
-      TempTables.resize(maxMatId + 1);
-      csouTables.resize(maxMatId + 1);
-      phasTables.resize(maxMatId + 1);
-
-      tablesInit.resize(maxMatId + 1);
-
-      for (size_t i = 0; i < maxMatId + 1; i++)
-      {
-         presTables[i] = NULL;
-         TempTables[i] = NULL;
-         csouTables[i] = NULL;
-         phasTables[i] = NULL;
-
-         tablesInit[i] = false;
-      }
-#endif
-      nan = std::numeric_limits<fType>::quiet_NaN();
-
-      ///
-      /// throw exceptions per default, keep quiet when generating tables
-      ///
-      quiet = false;
-   }
-
-   ~ANEOS()
-   { }
-
-#ifdef SPHLATCH_ANEOS_TABLE
-   typedef LookupTable2D<InterpolateBilinear>   lut_type;
-   std::vector<lut_type*> presTables, TempTables, csouTables, phasTables;
-   std::vector<bool>      tablesInit;
-#endif
+   ANEOS();
+   ~ANEOS();
 
    static ANEOS& instance();
 
    static ANEOS* _instance;
 
+public:
+   void operator()(_partT& _part);
+
+   void rootS(fType& _T, const fType _rho, const iType _mat,
+              fType& _p, fType& _u, const fType _S, fType& _cv,
+              fType& _dpdt, fType& _dpdrho, fType& _fkros, fType& _cs,
+              iType& _kpa, fType& _rhoL, fType& _rhoH);
+
+   void rootU(fType& _T, const fType _rho, const iType _mat,
+              fType& _p, const fType _u, fType& _S, fType& _cv,
+              fType& _dpdt, fType& _dpdrho, fType& _fkros, fType& _cs,
+              iType& _kpa, fType& _rhoL, fType& _rhoH);
+
+   void rootP(const fType _T, fType& _rho, const iType _mat,
+              const fType _p, fType& _u, fType& _S, fType& _cv,
+              fType& _dpdt, fType& _dpdrho, fType& _fkros, fType& _cs,
+              iType& _kpa, fType& _rhoL, fType& _rhoH);
+
+   static void callaneos(const fType _T, const fType _rho, const iType _mat,
+                         fType& _p, fType& _u, fType& _S, fType& _cv,
+                         fType& _dpdt, fType& _dpdrho, fType& _fkros,
+                         fType& _cs,
+                         identType& _kpa, fType& _rhoL,
+                         fType& _rhoH);
+
+#ifdef SPHLATCH_ANEOS_TABLE
+   void tableU(fType& _T, const fType _rho, const iType _mat,
+               fType& _p, const fType _u, fType& _S, fType& _cv,
+               fType& _dpdt, fType& _dpdrho, fType& _fkros, fType& _cs,
+               iType& _kpa, fType& _rhoL, fType& _rhoH);
+
+   void tableS(fType& _T, const fType _rho, const iType _mat,
+               fType& _p, fType& _u, const fType _S, fType& _cv,
+               fType& _dpdt, fType& _dpdrho, fType& _fkros, fType& _cs,
+               iType& _kpa, fType& _rhoL, fType& _rhoH);
+
+ #ifdef SPHLATCH_HDF5
+   void loadTableU(std::string _fname, const identType _mat);
+   void loadTableS(std::string _fname, const identType _mat);
+
+   void storeTableU(std::string _fname, const identType _mat);
+   void storeTableS(std::string _fname, const identType _mat);
+
+private:
+   std::string getHDFPath(const iType _mat);
+ #endif
+#endif
+
+
+
+
 private:
    fType nan;
    bool  quiet;
 
-#ifdef SPHLATCH_ANEOS_TABLE
-   size_t noPointsRho, noPointsU;
-   fType  rhoMin, rhoMax, uMin, uMax;
-#endif
+   struct uRoot;
+   struct SRoot;
+   struct pRoot;
 
-///
-/// get the pressure & speed of sound for particle _i
-///
-/// common EOS interface for particle use
-///
-public:
-   void operator()(_partT& _part)
-   {
-      (*this)(_part.rho, _part.u, _part.mat, _part.p, _part.cs, _part.T,
-              _part.phase);
-   }
+   typedef BrentRooter<uRoot>   uRooterT;
+   typedef BrentRooter<SRoot>   SRooterT;
+   typedef BrentRooter<pRoot>   pRooterT;
 
-///
-/// get the pressure & speed of sound for given parameters
-///
-/// common EOS interface for independent use
-///
-public:
-   void operator()(const fType _rho, const fType _u, const identType _mat,
-                   fType& _P, fType& _cs)
-   {
-      static identType tmpPhase;
-      static fType     tmpT;
-
-      (*this)(_rho, _u, _mat, _P, _cs, tmpT, tmpPhase);
-   }
-
-///
-/// get the pressure & speed of sound for given parameters
-///
-/// specific interface
-///
-public:
-   void operator()(const fType _rho, const fType _u, const identType _mat,
-                   fType& _P, fType& _cs, fType& _T, identType& _phase)
-   {
-#ifdef SPHLATCH_ANEOS_TABLE
-      ///
-      /// if rho and u are inside the talbe range, use
-      /// the table. otherwise fall back to iteration.
-      ///
-      if ((_rho > rhoMin) && (_rho < rhoMax) &&
-          (_u > uMin) && (_u < uMax))
-      {
-         ///
-         /// check whether for the desired material there are
-         /// already tables available. if not, generate them.
-         ///
-         if (!tablesInit[_mat])
-            initTables(_mat);
-
-         const fType curLogRho = log10(_rho);
-         const fType curLogU   = log10(_u);
-
-         _P = (*presTables[_mat])(curLogU, curLogRho);
-#ifdef SPHLATCH_NONEGPRESS
-         if (_P < 0.)
-            _P = 0.;
-#endif
-
-         ///
-         /// the first table query gives us the indices
-         /// for the other table queries
-         ///
-         const size_t ixl = (presTables[_mat])->ixl;
-         const size_t iyl = (presTables[_mat])->iyl;
-
-         _T  = (*TempTables[_mat])(curLogU, curLogRho, ixl, iyl);
-         _cs = (*csouTables[_mat])(curLogU, curLogRho, ixl, iyl);
-
-         _phase = static_cast<identType>(
-            lrint((*phasTables[_mat])(curLogU, curLogRho, ixl, iyl)));
-      }
-      else
-#endif
-      ///
-      /// use the slower but more accurate iteration
-      ///
-      iterate(_rho, _u, _mat, _P, _cs, _T, _phase);
-#ifdef SPHLATCH_NONEGPRESS
-      if (_P < 0.)
-        _P = 0.;
-#endif
-   }
-
-private:
-   void iterate(const fType _rho, const fType _u, const identType _mat,
-                fType& _P, fType& _cs, fType& _T, identType& _phase)
-   {
-      static double curRho, curU, curP, curCs, curT, curEntr;
-      static int    curMat, curPhase;
-
-      curRho = static_cast<double>(_rho);
-      curU   = static_cast<double>(_u);
-      curMat = static_cast<int>(_mat);
-
-      rooten(curRho, curU, curMat, curT, curP, curCs, curPhase, curEntr);
-
-      _phase = static_cast<identType>(curPhase);
-      _P     = static_cast<fType>(curP);
-      _cs    = static_cast<fType>(curCs);
-      _T     = static_cast<fType>(curT);
-   }
+   uRooterT uRooter;
+   SRooterT SRooter;
+   pRooterT pRooter;
 
 #ifdef SPHLATCH_ANEOS_TABLE
-///
-/// initialize tables for a material
-///
-private:
-   void initTables(const identType _mat)
-   {
- #ifdef SPHLATCH_LOGGER
-      Logger.stream << "ANEOS generate table for mat id " << _mat;
-      Logger.flushStream();
- #endif
-      ///
-      /// prepare the argument vectors log10(rho) and log10(u)
-      ///
-      valvectType loguVect(noPointsU);
-      const fType dlogu   = (log10(uMax) - log10(uMin)) / (noPointsU - 1);
-      const fType loguMin = log10(uMin);
+   const size_t        maxMatId;
+   fvectT              rhoMin, rhoMed, rhoMax, uMin, uMax, SMin, SMax;
+   std::vector<size_t> npRhoL, npRhoH, npU, npS;
 
-      for (size_t i = 0; i < noPointsU; i++)
-      {
-         loguVect(i) = loguMin + dlogu * static_cast<fType>(i);
-      }
+   typedef LookupTable2D<InterpolateBilinear>   lutT;
+   std::vector<ANEOStables<lutT> *> tblUL, tblUH, tblSL, tblSH;
+   std::vector<bool>                tblUinit, tblSinit;
 
-      valvectType logrhoVect(noPointsRho);
-      const fType dlogrho =
-         (log10(rhoMax) - log10(rhoMin)) / (noPointsRho - 1);
-      const fType logrhoMin = log10(rhoMin);
-
-      for (size_t i = 0; i < noPointsRho; i++)
-      {
-         logrhoVect(i) = logrhoMin + dlogrho * static_cast<fType>(i);
-      }
-
-      ///
-      /// prepare the temporary tables
-      /// (this routine may take a long time)
-      ///
-      matrixType presTmpTable(noPointsU, noPointsRho);
-      matrixType TempTmpTable(noPointsU, noPointsRho);
-      matrixType csouTmpTable(noPointsU, noPointsRho);
-      matrixType phasTmpTable(noPointsU, noPointsRho);
-
-      ///
-      /// inhibit NoConvergence throwing during table creation
-      ///
-      quiet = true;
-      identType phaseInt;
-      for (size_t i = 0; i < noPointsU; i++)
-      {
-         for (size_t j = 0; j < noPointsRho; j++)
-         {
-            const fType curU   = pow(10., loguVect(i));
-            const fType curRho = pow(10., logrhoVect(j));
-
-            iterate(curRho, curU, _mat,
-                    presTmpTable(i, j),
-                    csouTmpTable(i, j),
-                    TempTmpTable(i, j),
-                    phaseInt);
-            phasTmpTable(i, j) = lrint(phaseInt);
-         }
-      }
-      quiet = false;
-
-      ///
-      /// instantate the lookup tables
-      ///
-      presTables[_mat] = new lut_type(loguVect, logrhoVect, presTmpTable);
-      TempTables[_mat] = new lut_type(loguVect, logrhoVect, TempTmpTable);
-      csouTables[_mat] = new lut_type(loguVect, logrhoVect, csouTmpTable);
-      phasTables[_mat] = new lut_type(loguVect, logrhoVect, phasTmpTable);
-
-      ///
-      /// flag the tables for material _mat as initialized
-      ///
-      tablesInit[_mat] = true;
- #ifdef SPHLATCH_LOGGER
-      Logger.stream << "ANEOS table (" << noPointsRho << "x" << noPointsU
-                    << ") initialised for mat id " << _mat
-                    << " (range rho: " << rhoMin << "..." << rhoMax
-                    << ", range u: " << uMin << "..." << uMax << ")";
-      Logger.flushStream();
- #endif
-   }
+   template<typename lutT, typename rooterT>
+   ANEOStables<lutT> * generateTable(const iType _mat, const size_t _npx,
+                                     const size_t _npy, const fType _xmin,
+                                     const fType _xmax, const fType _ymin,
+                                     const fType _ymax, rooterT& _rooter,
+                                     const std::string _xname,
+                                     const std::string _yname,
+                                     const std::string _zname);
 #endif
 
-
-
-
-///
-/// get p(rho,T) and u(rho,T)
-///
-public:
-   void getSpecEnergy(const fType _rho, const fType _T,
-                      const identType _mat,
-                      fType& _p, fType& _cs, fType& _u)
-   {
-      static double T, rho, p, u, S, cv, dpdt, dpdr, fkros, cs, fme, fma;
-      static int    kpa, mat;
-
-      rho = static_cast<double>(_rho);
-      T   = static_cast<double>(_T);
-      mat = static_cast<int>(_mat);
-
-      aneos_(&T, &rho, &p, &u, &S, &cv, &dpdt, &dpdr, &fkros,
-             &cs, &kpa, &mat, &fme, &fma);
-
-      _p = static_cast<fType>(p);
-#ifdef SPHLATCH_NONEGPRESS
-      if (_p < 0.)
-         _p = 0.;
-#endif
-      _cs = static_cast<fType>(cs);
-      _u  = static_cast<fType>(u);
-   }
-   
-   void getSpecEnergy(const fType _rho, const fType _T,
-                      const identType _mat,
-                      fType& _p, fType& _cs, fType& _u, fType& _S)
-   {
-      static double T, rho, p, u, S, cv, dpdt, dpdr, fkros, cs, fme, fma;
-      static int    kpa, mat;
-
-      rho = static_cast<double>(_rho);
-      T   = static_cast<double>(_T);
-      mat = static_cast<int>(_mat);
-
-      aneos_(&T, &rho, &p, &u, &S, &cv, &dpdt, &dpdr, &fkros,
-             &cs, &kpa, &mat, &fme, &fma);
-
-      _p = static_cast<fType>(p);
-#ifdef SPHLATCH_NONEGPRESS
-      if (_p < 0.)
-         _p = 0.;
-#endif
-      _cs = static_cast<fType>(cs);
-      _u  = static_cast<fType>(u);
-      _S  = static_cast<fType>(S);
-   }
-
-   void getSpecEnergy(const fType _rho, const fType _T,
-                      const identType _mat,
-                      fType& _p, fType& _cs, fType& _u, identType& _ph)
-   {
-      static double T, rho, p, u, S, cv, dpdt, dpdr, fkros, cs, fme, fma;
-      static int    kpa, mat;
-
-      rho = static_cast<double>(_rho);
-      T   = static_cast<double>(_T);
-      mat = static_cast<int>(_mat);
-
-      aneos_(&T, &rho, &p, &u, &S, &cv, &dpdt, &dpdr, &fkros,
-             &cs, &kpa, &mat, &fme, &fma);
-
-      _p = static_cast<fType>(p);
-#ifdef SPHLATCH_NONEGPRESS
-      if (_p < 0.)
-         _p = 0.;
-#endif
-      _cs = static_cast<fType>(cs);
-      _u  = static_cast<fType>(u);
-      _ph = static_cast<identType>(kpa);
-   }
-
-///
-/// find density for given p and u by bisection
-///
-/// this works only for monotonously increasing pressure
-///
-   fType findRho(const fType _u, const identType _matId,
-                 const fType _pTarget, const fType _pDelta,
-                 const fType _rhoMin, const fType _rhoMax)
-   {
-      fType curP, curCs;
-      fType rhoGuess, rhoMin = _rhoMin, rhoMax = _rhoMax;
-
-      do
-      {
-         rhoGuess = 0.5 * (rhoMin + rhoMax);
-         this->operator()(rhoGuess, _u, _matId, curP, curCs);
-
-         if (curP < _pTarget)
-            rhoMin = rhoGuess;
-         else
-            rhoMax = rhoGuess;
-      } while (fabs(curP - _pTarget) > fabs(_pDelta));
-
-      return(rhoGuess);
-   }
-
-private:
-///
-/// routine to iteratively find the temperature for a given
-/// internal energy and density
-///
-/// copied from ParaSPH, 2004 by Bruno Nyffeler & Willy Benz
-/// modified to give back entropy
-///
-   void rooten(const double _rhoi, const double _ui, const int _mati,
-               double& _Ti, double& _pi, double& _csi, int& _kpai, 
-               double& _S) const
-   {
-      const double  eps   = 1.e-5;
-      const double  Tmin  = 1.e-6; // get this as a parameter?
-      const int     itmax = 30;
-      static double _CV, _DPDT, _DPDR, _FKROS, _FME, _FMA;
-      static double a, b, c, d, e, ei, fa, fb, fc, p, q, r, s, tm, tol1;
-
-      // Initial temperature bracket (in eV)
-      static double Tlb, Tub;
-
-      Tlb = 0.001;
-      Tub = 6.0;
-
-      // Check lower boundary
-      for (fa = 0.0; fa >= 0.0; Tlb *= 0.1)
-      {
-         // minimal temperature and enery
-         if (Tlb < Tmin)
-         {
-            //_ui = ei; this is not the EOS job
-            _Ti = a;
-            return;
-         }
-         a = Tlb;
-         aneos_(&a, &_rhoi, &_pi, &ei, &_S, &_CV, &_DPDT, &_DPDR, &_FKROS,
-                &_csi, &_kpai, &_mati, &_FME, &_FMA);
-         // fa = trial energy - req energy
-         fa = ei - _ui;
-      }
-      // a: lower bound for T
-      // fb: delta to lower bound energy
-
-      // Check upper boundary
-      for (fb = 0.0; fb <= 0.0; Tub *= 3.0)
-      {
-         //FIXME
-
-         /*if (Tub > 1.e15)
-            throw TempOutOfBounds(Tub, 1.e15);*/
-         b = Tub;
-         aneos_(&b, &_rhoi, &_pi, &ei, &_S, &_CV, &_DPDT, &_DPDR, &_FKROS,
-                &_csi, &_kpai, &_mati, &_FME, &_FMA);
-         // fa = trial energy - req energy
-         fb = ei - _ui;
-      }
-      // b: upper bound for T
-      // fb: delta to upper bound energy
-
-      // Start iteration
-      fc = fb; // fc -> upper energy bound
-
-      // just to shut up compiler
-      c = a;     // c -> lower temperature bound
-      d = b - a; // d is temperature range
-      e = d;
-      q = 0;
-
-      for (int i = 0; i < itmax; i++)
-      {
-         if (fb * fc > 0) // why should this be negative?
-         {
-            c  = a;
-            fc = fa;
-            d  = b - a;
-            e  = d;
-         }
-         if (fabs(fc) < fabs(fb))
-         {
-            a  = b;
-            b  = c;
-            c  = a;
-            fa = fb;
-            fb = fc;
-            fc = fa;
-         }
-         tm   = 0.5 * (c - b);
-         tol1 = 2.* eps* fabs(b);
-         if ((fabs(tm) < tol1) || (fabs(fb / _ui) < eps))
-         {
-            _Ti = b;
-            return;
-         }
-         if ((fabs(e) > tol1) && (fabs(fa) > fabs(fb)))
-         {
-            s = fb / fa;
-            if (a == c)
-            {
-               p = 2. * tm * s;
-            }
-            else
-            {
-               q = fa / fc;
-               r = fb / fc;
-               p = s * (2. * tm * q * (q - r) - (b - a) * (r - 1.));
-               q = (q - 1.) * (r - 1.) * (s - 1.);
-            }
-            // there might be a problem with q here
-            if (p > 0.)
-               q = -q;
-            p = fabs(p);
-            if (((2. * p) < (3. * tm * q - fabs(tol1 * q))) &&
-                (2. * p < fabs(e * q)))
-            {
-               e = d;
-               d = p / q;
-            }
-            else
-            {
-               d = tm;
-               e = d;
-            }
-         }
-         else
-         {
-            d = tm;
-            e = d;
-         }
-         a  = b;
-         fa = fb;
-         if (fabs(d) > tol1)
-            b += d;
-         else
-         {
-            if (tm >= 0.)
-               b += fabs(tol1);
-            else
-               b -= fabs(tol1);
-         }
-         aneos_(&b, &_rhoi, &_pi, &ei, &_S, &_CV, &_DPDT, &_DPDR, &_FKROS,
-                &_csi, &_kpai, &_mati, &_FME, &_FMA);
-         fb = ei - _ui;
-      }
-
-      ///
-      /// arriving here means no convergence
-      /// we set all output quantities to NaN
-      ///
-      _Ti   = nan;
-      _pi   = nan;
-      _csi  = nan;
-      _kpai = -1;
-
-      /*if (!quiet)
-         throw NoConvergence(_rhoi, _ui, _mati);*/
-   }
-
-   /*
-      private:
-      class NoConvergence : public GenericError
-      {
-      public:
-      NoConvergence(const double _rho, const double _u, const int _mat)
-      {
-    #ifdef SPHLATCH_LOGGER
-         Logger.stream
-    #else
-         std::cerr
-    #endif
-      << "no convergence in ANEOS temperature iteration, rho = "
-      << _rho << ", u = " << _u << ", mat id = " << _mat;
-    #ifdef SPHLATCH_LOGGER
-         Logger.flushStream();
-    #else
-         std::cerr << "\n";
-    #endif
-      }
-
-      ~NoConvergence()
-      { }
-      };
-
-      private:
-      class TempOutOfBounds : public GenericError
-      {
-      public:
-      TempOutOfBounds(const double _Tub, const double _Tmax)
-      {
-    #ifdef SPHLATCH_LOGGER
-         Logger.stream
-    #else
-         std::cerr
-    #endif
-      << "temperature out of bounds in ANEOS, Tub = " << _Tub
-      << ", Tmax = " << _Tmax;
-    #ifdef SPHLATCH_LOGGER
-         Logger.flushStream();
-    #else
-         std::cerr << "\n";
-    #endif
-      }
-
-      ~TempOutOfBounds()
-      { }
-      };*/
 };
+
+
+template<typename _partT>
+ANEOS<_partT>::ANEOS()
+#ifdef SPHLATCH_ANEOS_TABLE
+   : maxMatId(32),
+     rhoMin(maxMatId + 1),
+     rhoMed(maxMatId + 1),
+     rhoMax(maxMatId + 1),
+     uMin(maxMatId + 1),
+     uMax(maxMatId + 1),
+     SMin(maxMatId + 1),
+     SMax(maxMatId + 1),
+     npRhoL(maxMatId + 1),
+     npRhoH(maxMatId + 1),
+     npU(maxMatId + 1),
+     npS(maxMatId + 1),
+     tblUL(maxMatId + 1),
+     tblUH(maxMatId + 1),
+     tblSL(maxMatId + 1),
+     tblSH(maxMatId + 1),
+     tblUinit(maxMatId + 1),
+     tblSinit(maxMatId + 1)
+#endif
+{
+#ifdef SPHLATCH_MANEOS
+   std::string matFilename = "ANEOS.QUARTZ";
+#else
+   std::string matFilename = "aneos.input";
+#endif
+
+   aneosinit_(matFilename.c_str(), matFilename.size());
+
+#ifdef SPHLATCH_LOGGER
+   Logger.stream << "init ANEOS EOS with file "
+                 << matFilename;
+   Logger.flushStream();
+#endif
+
+#ifdef SPHLATCH_ANEOS_TABLE
+   for (size_t i = 0; i < maxMatId + 1; i++)
+   {
+      npRhoL[i] = 100;
+      npRhoH[i] = 500;
+
+      npU[i] = 1500;
+      npS[i] = 1500;
+
+      uMin[i] = 1.e7;   // erg/g
+      uMax[i] = 1.e14;
+
+      SMin[i] = 1.e9;   // erg/eV/g
+      SMax[i] = 2.e13;
+
+      rhoMin[i] = 1.0e-10; // g/cm3
+      rhoMed[i] = 0.1;
+      rhoMax[i] = 25.;
+
+      tblUL[i] = NULL;
+      tblUH[i] = NULL;
+
+      tblSL[i] = NULL;
+      tblSH[i] = NULL;
+
+      tblUinit[i] = false;
+      tblSinit[i] = false;
+   }
+
+   // iron mat 5
+   uMin[5] = 1.e8;
+   uMax[5] = 1.e14;
+
+   // H2O mat 2
+   rhoMax[2] = 7.; // g/cm3
+
+   // SiO2 mat 1
+   uMin[1]   = 1.e8;
+   uMax[1]   = 1.e16;
+   rhoMax[1] = 50.;
+#endif
+
+
+   nan = std::numeric_limits<fType>::quiet_NaN();
+
+   ///
+   /// throw exceptions per default, keep quiet when generating tables
+   ///
+   quiet = false;
+}
+
+template<typename _partT>
+ANEOS<_partT>::~ANEOS() { }
 
 template<typename _partT>
 ANEOS<_partT> * ANEOS<_partT>::_instance = NULL;
@@ -654,5 +401,596 @@ ANEOS<_partT>& ANEOS<_partT>::instance()
       _instance = new ANEOS;
    return(*_instance);
 }
+
+///
+/// common EOS interface for particle use
+///
+template<typename _partT>
+void ANEOS<_partT>::operator()(_partT& _part)
+{
+   fType dummy;
+
+#ifdef SPHLATCH_ANEOS_TABLE
+   const iType mat = _part.mat;
+   // fall back to rooting algorithm, if outside the table values
+   if (
+ #ifdef SPHLATCH_TIMEDEP_ENTROPY
+      (_part.S < SMin[mat]) or (_part.S > SMax[mat])
+ #else
+      (_part.u < uMin[mat]) or (_part.u > uMax[mat])
+ #endif
+      or (_part.rho < rhoMin[mat]) or (_part.rho > rhoMax[mat]))
+   {
+#endif
+
+#ifdef SPHLATCH_TIMEDEP_ENTROPY
+   rootS(_part.T, _part.rho, _part.mat, _part.p, _part.u, _part.S, dummy,
+         dummy, dummy, dummy, _part.cs, _part.phase, _part.rhoL, _part.rhoH);
+#else
+   rootU(_part.T, _part.rho, _part.mat, _part.p, _part.u, _part.S, dummy,
+         dummy, dummy, dummy, _part.cs, _part.phase, _part.rhoL, _part.rhoH);
+#endif
+
+#ifdef SPHLATCH_ANEOS_TABLE
+}
+
+else
+{
+ #ifdef SPHLATCH_TIMEDEP_ENTROPY
+   tableS(_part.T, _part.rho, _part.mat, _part.p, _part.u, _part.S, dummy,
+          dummy, dummy, dummy, _part.cs, _part.phase, _part.rhoL, _part.rhoH);
+ #else
+   tableU(_part.T, _part.rho, _part.mat, _part.p, _part.u, _part.S, dummy,
+          dummy, dummy, dummy, _part.cs, _part.phase, _part.rhoL, _part.rhoH);
+ #endif
+}
+#endif
+
+
+#ifdef SPHLATCH_NONEGPRESS
+   if (_part.p < 0.)
+      _part.p = 0.;
+#endif
+   if (_part.p != _part.p)
+   {
+#ifdef SPHLATCH_LOGGER
+      Logger.stream << "part ID: " << _part.id << " rho: " << _part.rho <<
+      " u: " << _part.u << " mat: " << _part.mat << " has NaN pressure!";
+      Logger.flushStream();
+#endif
+   }
+}
+
+template<typename _partT>
+void ANEOS<_partT>::rootS(fType& _T, const fType _rho, const iType _mat,
+                          fType& _p, fType& _u, const fType _S, fType& _cv,
+                          fType& _dpdt, fType& _dpdrho, fType& _fkros,
+                          fType& _cs,
+                          iType& _kpa, fType& _rhoL,
+                          fType& _rhoH)
+{
+   fType Tmin = 0.001;
+   fType Tmax = 6.;
+
+   SRooter.f.x     = _rho;
+   SRooter.f.mat   = _mat;
+   SRooter.f.ytarg = _S;
+
+   while (SRooter.f(Tmin) > 0.)
+      Tmin *= 0.1;
+
+   while (SRooter.f(Tmax) < 0.)
+      Tmax *= 3.0;
+
+   _T      = SRooter(Tmin, Tmax, 1.e-5);
+   _p      = SRooter.f.p;
+   _u      = SRooter.f.z;
+   _cv     = SRooter.f.cv;
+   _dpdt   = SRooter.f.dpdt;
+   _dpdrho = SRooter.f.dpdrho;
+   _fkros  = SRooter.f.fkros;
+   _cs     = SRooter.f.cs;
+   _kpa    = SRooter.f.kpa;
+   _rhoL   = SRooter.f.rhoL;
+   _rhoH   = SRooter.f.rhoH;
+}
+
+template<typename _partT>
+void ANEOS<_partT>::rootU(fType& _T, const fType _rho, const iType _mat,
+                          fType& _p, const fType _u, fType& _S, fType& _cv,
+                          fType& _dpdt, fType& _dpdrho, fType& _fkros,
+                          fType& _cs,
+                          iType& _kpa, fType& _rhoL,
+                          fType& _rhoH)
+{
+   fType Tmin = 0.001;
+   fType Tmax = 6.;
+
+   uRooter.f.x     = _rho;
+   uRooter.f.mat   = _mat;
+   uRooter.f.ytarg = _u;
+
+   while (uRooter.f(Tmin) > 0.)
+      Tmin *= 0.1;
+
+   while (uRooter.f(Tmax) < 0.)
+      Tmax *= 3.0;
+
+   std::cout << _rho << " " << _S << " " << Tmin << " " << Tmax << "\n";
+   _T      = uRooter(Tmin, Tmax, 1.e-5);
+   _p      = uRooter.f.p;
+   _S      = uRooter.f.z;
+   _cv     = uRooter.f.cv;
+   _dpdt   = uRooter.f.dpdt;
+   _dpdrho = uRooter.f.dpdrho;
+   _fkros  = uRooter.f.fkros;
+   _cs     = uRooter.f.cs;
+   _kpa    = uRooter.f.kpa;
+   _rhoL   = uRooter.f.rhoL;
+   _rhoH   = uRooter.f.rhoH;
+}
+
+template<typename _partT>
+void ANEOS<_partT>::rootP(const fType _T, fType& _rho, const iType _mat,
+                          const fType _p, fType& _u, fType& _S, fType& _cv,
+                          fType& _dpdt, fType& _dpdrho, fType& _fkros,
+                          fType& _cs,
+                          iType& _kpa, fType& _rhoL,
+                          fType& _rhoH)
+{
+   fType rhoMin = 1.e-3;
+   fType rhoMax = 10.;
+
+   pRooter.f.T     = _T;
+   pRooter.f.mat   = _mat;
+   pRooter.f.ptarg = _p;
+
+   while (pRooter.f(rhoMin) > 0.)
+      rhoMin *= 0.1;
+
+   while (pRooter.f(rhoMax) < 0.)
+      rhoMax *= 3.0;
+
+   _rho    = pRooter(rhoMin, rhoMax, 1.e-5);
+   _u      = pRooter.f.u;
+   _S      = pRooter.f.S;
+   _cv     = pRooter.f.cv;
+   _dpdt   = pRooter.f.dpdt;
+   _dpdrho = pRooter.f.dpdrho;
+   _fkros  = pRooter.f.fkros;
+   _cs     = pRooter.f.cs;
+   _kpa    = pRooter.f.kpa;
+   _rhoL   = pRooter.f.rhoL;
+   _rhoH   = pRooter.f.rhoH;
+}
+
+template<typename _partT>
+void ANEOS<_partT>::callaneos(const fType _T, const fType _rho,
+                              const iType _mat,
+                              fType& _p, fType& _u, fType& _S, fType& _cv,
+                              fType& _dpdt, fType& _dpdrho, fType& _fkros,
+                              fType& _cs,
+                              identType& _kpa, fType& _rhoL,
+                              fType& _rhoH)
+{
+   static double T, rho, p, u, S, cv, dpdt, dpdrho, fkros, cs, rhoL, rhoH, ion;
+   static int    kpa, mat;
+
+   const int n = 1;
+
+   rho = static_cast<double>(_rho);
+   T   = static_cast<double>(_T);
+   mat = static_cast<int>(_mat);
+
+   aneosv_(&n, &T, &rho, &mat, &p, &u, &S, &cv, &dpdt, &dpdrho, &fkros,
+           &cs, &kpa, &rhoL, &rhoH, &ion);
+
+   _p      = static_cast<fType>(p);
+   _u      = static_cast<fType>(u);
+   _S      = static_cast<fType>(S);
+   _cv     = static_cast<fType>(cv);
+   _dpdt   = static_cast<fType>(dpdt);
+   _dpdrho = static_cast<fType>(dpdrho);
+   _fkros  = static_cast<fType>(fkros);
+   _cs     = static_cast<fType>(cs);
+   _kpa    = static_cast<identType>(kpa);
+   _rhoL   = static_cast<fType>(rhoL);
+   _rhoH   = static_cast<fType>(rhoH);
+}
+
+#ifdef SPHLATCH_ANEOS_TABLE
+template<typename _partT>
+void ANEOS<_partT>::tableU(fType& _T, const fType _rho, const iType _mat,
+                           fType& _p, const fType _u, fType& _S, fType& _cv,
+                           fType& _dpdt, fType& _dpdrho, fType& _fkros,
+                           fType& _cs,
+                           iType& _kpa, fType& _rhoL, fType& _rhoH)
+{
+   if (not tblUinit[_mat])
+   {
+      tblUL[_mat] = generateTable<lutT, uRooterT>(_mat, npRhoL[_mat], npU[_mat],
+                                                  rhoMin[_mat], rhoMed[_mat],
+                                                  uMin[_mat], uMax[_mat],
+                                                  uRooter,
+                                                  "/log10rho", "/log10u",
+                                                  "/S");
+      tblUH[_mat] = generateTable<lutT, uRooterT>(_mat, npRhoH[_mat], npU[_mat],
+                                                  rhoMed[_mat], rhoMax[_mat],
+                                                  uMin[_mat], uMax[_mat],
+                                                  uRooter,
+                                                  "/log10rho", "/log10u",
+                                                  "/S");
+      tblUinit[_mat] = true;
+   }
+
+   if (_rho < rhoMed[_mat])
+      tblUL[_mat]->operator()(_rho, _u, _T, _p, _cv, _dpdt, _dpdrho, _fkros,
+                              _cs, _rhoL, _rhoH, _kpa, _S);
+   else
+      tblUH[_mat]->operator()(_rho, _u, _T, _p, _cv, _dpdt, _dpdrho, _fkros,
+                              _cs, _rhoL, _rhoH, _kpa, _S);
+}
+
+template<typename _partT>
+void ANEOS<_partT>::tableS(fType& _T, const fType _rho, const iType _mat,
+                           fType& _p, fType& _u, const fType _S, fType& _cv,
+                           fType& _dpdt, fType& _dpdrho, fType& _fkros,
+                           fType& _cs,
+                           iType& _kpa, fType& _rhoL, fType& _rhoH)
+{
+   if (not tblSinit[_mat])
+   {
+      tblSL[_mat] = generateTable<lutT, SRooterT>(_mat, npRhoL[_mat], npS[_mat],
+                                                  rhoMin[_mat], rhoMed[_mat],
+                                                  SMin[_mat], SMax[_mat],
+                                                  SRooter,
+                                                  "/log10rho", "/log10S",
+                                                  "/u");
+      tblSH[_mat] = generateTable<lutT, SRooterT>(_mat, npRhoH[_mat], npS[_mat],
+                                                  rhoMed[_mat], rhoMax[_mat],
+                                                  SMin[_mat], SMax[_mat],
+                                                  SRooter,
+                                                  "/log10rho", "/log10S",
+                                                  "/u");
+      tblSinit[_mat] = true;
+   }
+
+   if (_rho < rhoMed[_mat])
+      tblSL[_mat]->operator()(_rho, _S, _T, _p, _cv, _dpdt, _dpdrho, _fkros,
+                              _cs, _rhoL, _rhoH, _kpa, _u);
+   else
+      tblSH[_mat]->operator()(_rho, _S, _T, _p, _cv, _dpdt, _dpdrho, _fkros,
+                              _cs, _rhoL, _rhoH, _kpa, _u);
+}
+
+ #ifdef SPHLATCH_HDF5
+template<typename _partT>
+void ANEOS<_partT>::loadTableU(std::string _fname, const identType _mat)
+{
+   if (tblUinit[_mat])
+      delete tblUL[_mat], tblUH[_mat];
+
+   std::string basepath = getHDFPath(_mat);
+   tblUL[_mat] =
+      new ANEOStables<lutT>(_fname, basepath + "UL", "/log10rho", "/log10u",
+                            "/S");
+
+
+   tblUH[_mat] =
+      new ANEOStables<lutT>(_fname, basepath + "UH", "/log10rho", "/log10u",
+                            "/S");
+
+   fType logRhoMin, logRhoMed, logRhoMax, logUMin, logUMax;
+   tblUL[_mat]->getRange(logRhoMin, logRhoMed, logUMin, logUMax);
+   tblUH[_mat]->getRange(logRhoMed, logRhoMax, logUMin, logUMax);
+
+   // override limits
+   rhoMin[_mat] = pow(10., logRhoMin);
+   rhoMed[_mat] = pow(10., logRhoMed);
+   rhoMax[_mat] = pow(10., logRhoMax);
+
+   uMin[_mat] = pow(10., logUMin);
+   uMax[_mat] = pow(10., logUMax);
+
+  #ifdef SPHLATCH_LOGGER
+   Logger.stream << "ANEOS U tables loaded for mat id " << _mat << "\n"
+                 << "   rho: " << rhoMin[_mat]
+                 << " - " << rhoMed[_mat]
+                 << " - " << rhoMax[_mat] << "\n"
+                 << "   u:   " << uMin[_mat]
+                 << " - " << uMax[_mat] << "\n";
+   Logger.flushStream();
+  #endif
+
+   tblUinit[_mat] = true;
+}
+
+template<typename _partT>
+void ANEOS<_partT>::loadTableS(std::string _fname, const identType _mat)
+{
+   if (tblSinit[_mat])
+      delete tblSL[_mat], tblSH[_mat];
+
+   std::string basepath = getHDFPath(_mat);
+   tblSL[_mat] =
+      new ANEOStables<lutT>(_fname, basepath + "SL", "/log10rho", "/log10S",
+                            "/u");
+   tblSH[_mat] =
+      new ANEOStables<lutT>(_fname, basepath + "SH", "/log10rho", "/log10S",
+                            "/u");
+
+   fType logRhoMin, logRhoMed, logRhoMax, logSMin, logSMax;
+   tblSL[_mat]->getRange(logRhoMin, logRhoMed, logSMin, logSMax);
+   tblSH[_mat]->getRange(logRhoMed, logRhoMax, logSMin, logSMax);
+
+   // override limits
+   rhoMin[_mat] = pow(10., logRhoMin);
+   rhoMed[_mat] = pow(10., logRhoMed);
+   rhoMax[_mat] = pow(10., logRhoMax);
+
+   SMin[_mat] = pow(10., logSMin);
+   SMax[_mat] = pow(10., logSMax);
+
+
+  #ifdef SPHLATCH_LOGGER
+   Logger.stream << "ANEOS S tables loaded for mat id " << _mat << "\n"
+                 << "   rho: " << rhoMin[_mat]
+                 << " - " << rhoMed[_mat]
+                 << " - " << rhoMax[_mat] << "\n"
+                 << "   S:   " << SMin[_mat]
+                 << " - " << SMax[_mat] << "\n";
+   Logger.flushStream();
+  #endif
+
+   tblSinit[_mat] = true;
+}
+
+template<typename _partT>
+void ANEOS<_partT>::storeTableU(std::string _fname, const identType _mat)
+{
+   if (not tblUinit[_mat])
+   {
+      tblUL[_mat] = generateTable<lutT, uRooterT>(_mat, npRhoL[_mat], npU[_mat],
+                                                  rhoMin[_mat], rhoMed[_mat],
+                                                  uMin[_mat], uMax[_mat],
+                                                  uRooter,
+                                                  "/log10rho", "/log10u",
+                                                  "/S");
+      tblUH[_mat] = generateTable<lutT, uRooterT>(_mat, npRhoH[_mat], npU[_mat],
+                                                  rhoMed[_mat], rhoMax[_mat],
+                                                  uMin[_mat], uMax[_mat],
+                                                  uRooter,
+                                                  "/log10rho", "/log10u",
+                                                  "/S");
+      tblUinit[_mat] = true;
+   }
+
+   std::string basepath = getHDFPath(_mat);
+   tblUL[_mat]->storeTable(_fname, basepath + "UL");
+   tblUH[_mat]->storeTable(_fname, basepath + "UH");
+}
+
+template<typename _partT>
+void ANEOS<_partT>::storeTableS(std::string _fname, const identType _mat)
+{
+   if (not tblSinit[_mat])
+   {
+      tblSL[_mat] = generateTable<lutT, SRooterT>(_mat, npRhoL[_mat], npS[_mat],
+                                                  rhoMin[_mat], rhoMed[_mat],
+                                                  SMin[_mat], SMax[_mat],
+                                                  SRooter,
+                                                  "/log10rho", "/log10S",
+                                                  "/u");
+      tblSH[_mat] = generateTable<lutT, SRooterT>(_mat, npRhoH[_mat], npS[_mat],
+                                                  rhoMed[_mat], rhoMax[_mat],
+                                                  SMin[_mat], SMax[_mat],
+                                                  SRooter,
+                                                  "/log10rho", "/log10S",
+                                                  "/u");
+      tblSinit[_mat] = true;
+   }
+
+   std::string basepath = getHDFPath(_mat);
+   tblSL[_mat]->storeTable(_fname, basepath + "SL");
+   tblSH[_mat]->storeTable(_fname, basepath + "SH");
+}
+
+template<typename _partT>
+std::string ANEOS<_partT>::getHDFPath(const identType _mat)
+{
+   std::stringstream matstr, basepath;
+
+   matstr << _mat;
+   basepath << "/mat";
+   for (size_t i = matstr.str().size(); i < 2; i++)
+      basepath << "0";
+   basepath << _mat;
+
+   return(basepath.str());
+}
+ #endif
+
+
+
+
+template<typename _partT>
+template<typename lutT, typename rooterT>
+ANEOStables<lutT> * ANEOS<_partT>::generateTable(const iType       _mat,
+                                                 const size_t      _npx,
+                                                 const size_t      _npy,
+                                                 const fType       _xmin,
+                                                 const fType       _xmax,
+                                                 const fType       _ymin,
+                                                 const fType       _ymax,
+                                                 rooterT&          _rooter,
+                                                 const std::string _xname,
+                                                 const std::string _yname,
+                                                 const std::string _zname)
+{
+ #ifdef SPHLATCH_LOGGER
+   Logger.stream << "ANEOS generate table for mat id " << _mat;
+   Logger.flushStream();
+ #endif
+   fvectT      logx(_npx);
+   const fType dlogx   = (log10(_xmax) - log10(_xmin)) / (_npx - 1);
+   const fType logxmin = log10(_xmin);
+
+   for (size_t i = 0; i < _npx; i++)
+      logx(i) = logxmin + dlogx * static_cast<fType>(i);
+
+   fvectT      logy(_npy);
+   const fType dlogy   = (log10(_ymax) - log10(_ymin)) / (_npy - 1);
+   const fType logymin = log10(_ymin);
+
+   for (size_t j = 0; j < _npy; j++)
+      logy(j) = logymin + dlogy * static_cast<fType>(j);
+
+   fmatrT T(_npx, _npy);
+   fmatrT p(_npx, _npy);
+   fmatrT cv(_npx, _npy);
+   fmatrT dpdt(_npx, _npy);
+   fmatrT dpdrho(_npx, _npy);
+   fmatrT fkros(_npx, _npy);
+   fmatrT cs(_npx, _npy);
+   fmatrT phase(_npx, _npy);
+   fmatrT z(_npx, _npy);
+   fmatrT rhoL(_npx, _npy);
+   fmatrT rhoH(_npx, _npy);
+
+   const fType eps = 1.e-5;
+
+   _rooter.quiet = true;
+   _rooter.f.mat = _mat;
+
+   size_t badpts = 0;
+
+   for (size_t i = 0; i < _npx; i++)
+   {
+      _rooter.f.x = pow(10., logx(i));
+
+      for (size_t j = 0; j < _npy; j++)
+      {
+         _rooter.f.ytarg = pow(10., logy(j));
+
+         // use fixed Tmin and Tmax values for iron, comment the next two loops
+         //const fType Tmin = 1.e-6;
+         //const fType Tmax = 100.0;
+
+         fType Tmin = 1.e-5;
+         while (_rooter.f(Tmin) > 0.)
+            Tmin *= 0.1;
+
+         fType Tmax = 5.;
+         while (_rooter.f(Tmax) < 0.)
+            Tmax *= 3.0;
+
+         const fType Ti = _rooter(Tmin, Tmax, eps);
+         if (Ti == Ti)
+         {
+            T(i, j)      = Ti;
+            p(i, j)      = _rooter.f.p;
+            cv(i, j)     = _rooter.f.cv;
+            dpdt(i, j)   = _rooter.f.dpdt;
+            dpdrho(i, j) = _rooter.f.dpdrho;
+            fkros(i, j)  = _rooter.f.fkros;
+            cs(i, j)     = _rooter.f.cs;
+            z(i, j)      = _rooter.f.z;
+            rhoL(i, j)   = _rooter.f.rhoL;
+            rhoH(i, j)   = _rooter.f.rhoH;
+            phase(i, j)  = _rooter.f.kpa;
+         }
+         else
+         {
+            T(i, j)      = fTypeNan;
+            p(i, j)      = fTypeNan;
+            cv(i, j)     = fTypeNan;
+            dpdt(i, j)   = fTypeNan;
+            dpdrho(i, j) = fTypeNan;
+            fkros(i, j)  = fTypeNan;
+            cs(i, j)     = fTypeNan;
+            z(i, j)      = fTypeNan;
+            rhoL(i, j)   = fTypeNan;
+            rhoH(i, j)   = fTypeNan;
+            phase(i, j)  = fTypeNan;
+            badpts++;
+         }
+      }
+   }
+   _rooter.quiet = false;
+
+ #ifdef SPHLATCH_LOGGER
+   Logger.stream << "ANEOS table (" << _npx << "x" << _npy
+                 << ") initialised for mat id " << _mat
+                 << " (range " << _xname << ": " << _xmin << "..." << _xmax
+                 << ", range " << _yname << ": " << _ymin << "..." << _ymax
+                 << ", " << badpts
+                 << "/" << _npx * _npy
+                 << " bad points)";
+   Logger.flushStream();
+ #endif
+
+   ANEOStables<lutT> * tblPtr;
+   tblPtr = new ANEOStables<lutT>(logx, logy, T, p, cv, dpdt, dpdrho, fkros,
+                                  cs, rhoL, rhoH, phase, z, _xname, _yname,
+                                  _zname);
+   return(tblPtr);
+}
+#endif
+
+
+
+
+template<typename _partT>
+struct ANEOS<_partT>::uRoot
+{
+   fType operator()(const fType _T)
+   {
+      T = _T;
+
+      callaneos(T, x, mat, p, y, z, cv, dpdt, dpdrho, fkros, cs, kpa, rhoL,
+                rhoH);
+      return(y - ytarg);
+   }
+
+   fType T, p, cv, dpdt, dpdrho, fkros, cs, rhoL, rhoH;
+   iType mat, kpa;
+   fType x, y, z, ytarg;
+};
+
+template<typename _partT>
+struct ANEOS<_partT>::SRoot
+{
+   fType operator()(const fType _T)
+   {
+      T = _T;
+
+      callaneos(T, x, mat, p, z, y, cv, dpdt, dpdrho, fkros, cs, kpa, rhoL,
+                rhoH);
+      return(y - ytarg);
+   }
+
+   fType T, p, cv, dpdt, dpdrho, fkros, cs, rhoL, rhoH;
+   iType mat, kpa;
+   fType Starg;
+   fType x, y, z, ytarg;
+};
+
+template<typename _partT>
+struct ANEOS<_partT>::pRoot
+{
+   // f(x) to find the root
+   fType operator()(const fType _rho)
+   {
+      rho = _rho;
+
+      callaneos(T, rho, mat, p, u, S, cv, dpdt, dpdrho, fkros, cs, kpa, rhoL,
+                rhoH);
+      return(p - ptarg);
+   }
+
+   fType T, rho, p, u, S, cv, dpdt, dpdrho, fkros, cs, rhoL, rhoH;
+   iType mat, kpa;
+   fType ptarg;
+};
 }
 #endif

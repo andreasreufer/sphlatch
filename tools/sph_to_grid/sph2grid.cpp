@@ -9,44 +9,23 @@
 #define SPHLATCH_HDF5
 #define SPHLATCH_NONEIGH
 
-#ifdef SPHLATCH_TIMEDEP_ENERGY
- #ifndef SPHLATCH_VELDIV
-  #define SPHLATCH_VELDIV
- #endif
-#endif
-
-#ifdef SPHLATCH_TIMEDEP_SMOOTHING
- #ifndef SPHLATCH_VELDIV
-  #define SPHLATCH_VELDIV
- #endif
- #ifndef SPHLATCH_NONEIGH
-  #define SPHLATCH_NONEIGH
- #endif
-#endif
-
-#ifdef SPHLATCH_INTEGRATERHO
- #ifndef SPHLATCH_VELDIV
-  #define SPHLATCH_VELDIV
- #endif
-#endif
-
-#ifdef SPHLATCH_ANEOS
- #ifndef SPHLATCH_NONEGPRESS
-  #define SPHLATCH_NONEGPRESS
- #endif
-#endif
-
 
 #include "typedefs.h"
 typedef sphlatch::fType     fType;
 typedef sphlatch::cType     cType;
 typedef sphlatch::vect3dT   vect3dT;
 typedef sphlatch::box3dT    box3dT;
+typedef sphlatch::fmatrT    fmatrT;
 
 const fType finf = sphlatch::fTypeInf;
 
+#include "parse_po_vectors.cpp"
+
 #include "bhtree.cpp"
 typedef sphlatch::BHTree   treeT;
+
+#include "hdf5_io.cpp"
+typedef sphlatch::HDF5File H5FT;
 
 ///
 /// define the particle we are using
@@ -77,17 +56,16 @@ public:
       vars.push_back(storeVar(pos, "pos"));
       vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(h, "h"));
-      vars.push_back(storeVar(id, "id"));
 
-      vars.push_back(storeVar(u, "u"));
-      
-      vars.push_back(storeVar(f, "p"));
-
+#ifdef SPHLATCH_INTERPOLATE_SCALAR
       if (not fName.empty())
          vars.push_back(storeVar(f, fName));
+#endif
 
+#ifdef SPHLATCH_INTERPOLATE_VECTOR
       if (not vName.empty())
          vars.push_back(storeVar(v, vName));
+#endif
 
       return(vars);
    }
@@ -95,37 +73,41 @@ public:
    ioVarLT getSaveVars()
    {
       ioVarLT vars;
-      
-      vars.push_back(storeVar(pos, "pos"));
-      
-      if (not fName.empty())
-         vars.push_back(storeVar(ftar, fName));
-
-      if (not vName.empty())
-         vars.push_back(storeVar(vtar, vName));
-      
       return(vars);
    }
 
-   static std::string fName, vName;
 
 public:
+#ifdef SPHLATCH_INTERPOLATE_SCALAR
+   static std::string fName;
+   
    fType   f, ftar;
-   vect3dT v, vtar;
-
+   
    void setLoadF(std::string _str)
    {
       fName = _str;
    }
+#endif
+
+
+#ifdef SPHLATCH_INTERPOLATE_VECTOR
+   static std::string vName;
+   
+   vect3dT v, vtar;
 
    void setLoadV(std::string _str)
    {
       vName = _str;
    }
+#endif
 };
 
+#ifdef SPHLATCH_INTERPOLATE_SCALAR
 std::string particle::fName;
+#endif
+#ifdef SPHLATCH_INTERPOLATE_VECTOR
 std::string particle::vName;
+#endif
 
 template<typename _partT, typename _krnlT>
 struct interpolSum
@@ -144,13 +126,22 @@ struct interpolSum
       const fType r  = sqrt(_rr);
       const fType hi = _i->h;
 
+#ifdef SPHLATCH_MISCIBLE
+      const fType deltai = _i->delta;
+      const fType k = (K.value(r, hi)) * (1./deltai);
+#else
       const fType rhoi = _i->rho;
       const fType mi   = _i->m;
-
       const fType k = (K.value(r, hi)) * (mi / rhoi);
+#endif
 
+#ifdef SPHLATCH_INTERPOLATE_SCALAR
       _j->ftar += k * _i->f;
+#endif
+      
+#ifdef SPHLATCH_INTERPOLATE_VECTOR
       _j->vtar += k * _i->v;
+#endif
    }
 
    void postSum(_partT* const _i)
@@ -196,8 +187,6 @@ typedef sphlatch::IdealGas<partT>                  eosT;
 partSetT parts;
 partSetT gridParts;
 
-
-
 void derive()
 {
    treeT& Tree(treeT::instance());
@@ -207,7 +196,7 @@ void derive()
    
    const fType  costppart = 1. / ( nop + nogp);
 
-   Tree.setExtent(parts.getBox() * 1.1);
+   Tree.setExtent(( parts.getBox() + gridParts.getBox() ) * 1.1);
 
    for (int i = 0; i < nop; i++)
    {
@@ -248,30 +237,47 @@ int main(int argc, char* argv[])
    MPI::Init(argc, argv);
 #endif
 
-   if (not ((argc == 5) || (argc == 6)))
+   if (not ((argc == 9) || (argc == 10)))
    {
       std::cerr <<
-      "usage: sph2grid <inputdump> <outputFile> <scalar> <vector> (<numthreads>)\n";
+      "usage: sph2grid_X <inputdump> <outputFile> <var> <nx> <ny> <r0> <ri> <rj> (<numthreads>)\n";
       return(1);
    }
 
    std::string inFilename = argv[1];
    std::string outFilename = argv[2];
-   std::string scalStr     = argv[3];
-   std::string vectStr     = argv[4];
+   std::string varname     = argv[3];
 
+   std::istringstream niStr(argv[4]);
+   size_t ni;
+   niStr >> ni;
+   
+   std::istringstream njStr(argv[5]);
+   size_t nj;
+   njStr >> nj;
 
-   if (argc == 4)
+   
+   const vect3dT r0 = vectOptParse(argv[6]);
+   const vect3dT ri = vectOptParse(argv[7]);
+   const vect3dT rj = vectOptParse(argv[8]);
+      
+
+   if (argc == 10)
    {
-      std::istringstream threadStr(argv[3]);
+      std::istringstream threadStr(argv[9]);
       int numThreads;
       threadStr >> numThreads;
       omp_set_num_threads(numThreads);
    }
   
    parts.resize(1);
-   parts[0].setLoadF(scalStr);
-   parts[0].setLoadV(vectStr);
+   
+#ifdef SPHLATCH_INTERPOLATE_SCALAR
+   parts[0].setLoadF(varname);
+#endif
+#ifdef SPHLATCH_INTERPOLATE_VECTOR
+   parts[0].setLoadV(varname);
+#endif
    
    // load the particles
    parts.loadHDF5(inFilename);
@@ -279,25 +285,6 @@ int main(int argc, char* argv[])
 
    gridParts.step = parts.step;
    gridParts.attributes = parts.attributes;
-
-   const box3dT box = parts.getBox();
-
-   const size_t ni = 400;
-   const size_t nj = 800;
-
-   vect3dT r0;
-
-   r0[0] = box.cen[0] - 0.5*box.size;
-   r0[1] = 0.;
-   r0[2] = box.cen[2] - 0.5*box.size;
-
-   vect3dT ri, rj;
-   ri[0] = box.size / ( ni + 1. );
-   ri[1] = 0.;
-   ri[2] = 0.;
-   rj[0] = 0.;
-   rj[1] = 0.;
-   rj[2] = box.size / ( nj + 1. );
 
    const size_t nogp = ni*nj;
    gridParts.resize(nogp);
@@ -315,12 +302,65 @@ int main(int argc, char* argv[])
        gridParts[k].h = 0.;
        gridParts[k].rho = 1.;
      }
+
   
-   // first bootstrapping step
+   // interpolate
    derive();
 
-   gridParts.doublePrecOut();
-   gridParts.saveHDF5(outFilename);
+   fmatrT ripos(ni,3), rjpos(nj,3);
+
+   for (size_t i = 0; i < ni; i++)
+   {
+     ripos(i, 0) = r0[0] + i*ri[0];
+     ripos(i, 1) = r0[1] + i*ri[1];
+     ripos(i, 2) = r0[2] + i*ri[2];
+   }
+   
+   for (size_t j = 0; j < nj; j++)
+   {
+     ripos(j, 0) = r0[0] + j*rj[0];
+     ripos(j, 1) = r0[1] + j*rj[1];
+     ripos(j, 2) = r0[2] + j*rj[2];
+   }
+   
+   
+#ifdef SPHLATCH_INTERPOLATE_SCALAR
+   fmatrT f(ni, nj);
+#endif
+
+#ifdef SPHLATCH_INTERPOLATE_VECTOR
+   fmatrT v0(ni,nj),  v1(ni,nj), v2(ni,nj);
+#endif
+
+   for (size_t i = 0; i < ni; i++)
+     for (size_t j = 0; j < nj; j++)
+     {
+       const size_t k = j*ni + i;
+
+#ifdef SPHLATCH_INTERPOLATE_SCALAR
+       f(i,j)= gridParts[k].ftar;
+#endif
+
+#ifdef SPHLATCH_INTERPOLATE_VECTOR
+       v0(i,j) =  gridParts[k].vtar(0);
+       v1(i,j) =  gridParts[k].vtar(1);
+       v2(i,j) =  gridParts[k].vtar(2);
+#endif
+     }
+   
+   H5FT gridFile(outFilename);
+   
+   gridFile.savePrimitive("ripos",ripos);
+  
+#ifdef SPHLATCH_INTERPOLATE_SCALAR
+   gridFile.savePrimitive(varname,f);
+#endif
+   
+#ifdef SPHLATCH_INTERPOLATE_VECTOR
+   gridFile.savePrimitive(varname + "_x",v0);
+   gridFile.savePrimitive(varname + "_y",v1);
+   gridFile.savePrimitive(varname + "_z",v2);
+#endif
 
 #ifdef SPHLATCH_MPI
    MPI::Finalize();

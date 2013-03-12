@@ -41,12 +41,10 @@ public:
       ioVarLT vars;
 
       vars.push_back(storeVar(pos, "pos"));
-      vars.push_back(storeVar(vel, "vel"));
       vars.push_back(storeVar(m, "m"));
       vars.push_back(storeVar(h, "h"));
       vars.push_back(storeVar(id, "id"));
 
-      vars.push_back(storeVar(u, "u"));
       return(vars);
    }
 
@@ -55,10 +53,16 @@ public:
       ioVarLT vars;
 
       vars.push_back(storeVar(pos, "pos"));
+      vars.push_back(storeVar(vel, "vel"));
+      vars.push_back(storeVar(rho, "rho"));
+#ifdef SPHLATCH_MISCIBLE
+      vars.push_back(storeVar(delta, "delta"));
+#endif
       vars.push_back(storeVar(mat, "mat"));
       vars.push_back(storeVar(u, "u"));
       vars.push_back(storeVar(h, "h"));
       vars.push_back(storeVar(m, "m"));
+      vars.push_back(storeVar(S, "S"));
       vars.push_back(storeVar(noneigh, "noneigh"));
       vars.push_back(storeVar(cost, "cost"));
       return(vars);
@@ -84,8 +88,11 @@ typedef sphlatch::CostWorker<partT>            costT;
 
 
 #include "lookup_table1D.cpp"
-typedef sphlatch::InterpolateLinear            intplT;
-typedef sphlatch::LookupTable1D<intplT>        LUT1DlinT;
+typedef sphlatch::InterpolateLinear            intLinT;
+typedef sphlatch::InterpolateStepwise          intStepT;
+
+typedef sphlatch::LookupTable1D<intLinT>       LUT1DlinT;
+typedef sphlatch::LookupTable1D<intStepT>      LUT1DstepT;
 
 #include "hdf5_io.cpp"
 typedef sphlatch::HDF5File                     H5FT;
@@ -118,9 +125,10 @@ int main(int argc, char* argv[])
 
    std::cout << "loaded " << nop << "\n";
 
-   LUT1DlinT rhoLUT(pname, "r", "rho");
-   LUT1DlinT engLUT(pname, "r", "u");
-   LUT1DlinT matLUT(pname, "r", "mat");
+   LUT1DstepT rhoLUT(pname, "r", "rho");
+   LUT1DstepT engLUT(pname, "r", "u");
+   LUT1DstepT etrLUT(pname, "r", "S");
+   LUT1DstepT matLUT(pname, "r", "mat");
 
    std::cout << "1D profile " << pname << " loaded" << "\n";
 
@@ -160,6 +168,7 @@ int main(int argc, char* argv[])
       parts[i].rho = rhoi;
 
       parts[i].u   = engLUT(ri);
+      parts[i].S   = etrLUT(ri);
       parts[i].mat = lrint(matLUT(ri));
 
       totM += parts[i].m;
@@ -201,11 +210,11 @@ int main(int argc, char* argv[])
 
    // store some important attributes
    H5FT profile(pname);
-   parts.attributes["G"]    = profile.loadAttribute("gravconst");
-   parts.attributes["umin"] = profile.loadAttribute("umin");
-   
+   parts.attributes["gravconst"] = profile.loadAttribute("gravconst");
+   parts.attributes["frictime"]  = profile.loadAttribute("frictime");
+   //parts.attributes["umin"] = profile.loadAttribute("umin");
    parts.attributes["courant"] = 0.3;
-   parts.attributes["time"] = 0.;
+   parts.attributes["time"]    = 0.;
 
    parts.doublePrecOut();
    parts.saveHDF5(dname);

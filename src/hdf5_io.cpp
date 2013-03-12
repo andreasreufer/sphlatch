@@ -25,10 +25,26 @@ public:
    ~HDF5File();
 
    void getDims(std::string _name, size_t& _nx, size_t& _ny);
-   void loadPrimitive(std::string _name, valvectType& _v);
-   void savePrimitive(std::string _name, valvectType& _v);
+
+   void loadPrimitive(std::string _name, fvectT& _v);
+   void loadPrimitive(std::string _name, idvectT& _v);
+   void loadPrimitive(std::string _name, fmatrT& _m);
+
+   void savePrimitive(std::string _name, const fvectT& _v);
+   void savePrimitive(std::string _name, const idvectT& _v);
+   void savePrimitive(std::string _name, const fmatrT& _m);
 
    fType loadAttribute(std::string _name);
+   void saveAttribute(std::string _name, const fType _v);
+   void saveAttributes(attrMT _amap);
+
+   void createGroup(std::string _name);
+   void renameGroup(std::string _oldname, std::string _newname);
+   void deleteGroup(std::string _name);
+   bool groupExists(std::string _name);
+   hid_t createPath(std::string _name);
+
+   void setNewRoot(std::string _path);
 
    void singlePrecOut();
    void doublePrecOut();
@@ -78,7 +94,7 @@ HDF5File::HDF5File(std::string _file)
 
    h5mITYPE = H5T_NATIVE_INT;
 
-   h5fFTYPE = H5T_IEEE_F32LE;
+   h5fFTYPE = H5T_IEEE_F64LE;
    h5fITYPE = H5T_STD_I32LE;
 }
 
@@ -89,14 +105,34 @@ HDF5File::~HDF5File()
    H5Fclose(fh);
 }
 
-void HDF5File::loadPrimitive(std::string _name, valvectType& _v)
+void HDF5File::loadPrimitive(std::string _name, fvectT& _v)
 {
    loadRaw(_name, rgrp, h5mFTYPE, &_v(0));
 }
 
-void HDF5File::savePrimitive(std::string _name, valvectType& _v)
+void HDF5File::loadPrimitive(std::string _name, idvectT& _v)
+{
+   loadRaw(_name, rgrp, h5mITYPE, &_v(0));
+}
+
+void HDF5File::loadPrimitive(std::string _name, fmatrT& _m)
+{
+   loadRaw(_name, rgrp, h5mFTYPE, &_m(0, 0));
+}
+
+void HDF5File::savePrimitive(std::string _name, const fvectT& _v)
 {
    saveRaw(_name, rgrp, h5mFTYPE, h5fFTYPE, _v.size(), 1, &_v(0));
+}
+
+void HDF5File::savePrimitive(std::string _name, const idvectT& _v)
+{
+   saveRaw(_name, rgrp, h5mITYPE, h5fITYPE, _v.size(), 1, &_v(0));
+}
+
+void HDF5File::savePrimitive(std::string _name, const fmatrT& _m)
+{
+   saveRaw(_name, rgrp, h5mFTYPE, h5fFTYPE, _m.size1(), _m.size2(), &_m(0, 0));
 }
 
 void HDF5File::saveRaw(std::string  _name,
@@ -187,10 +223,79 @@ fType HDF5File::loadAttribute(std::string _aid)
 {
    fType buff;
    hid_t cattr = H5Aopen(rgrp, _aid.c_str(), H5P_DEFAULT);
-   H5Aread(cattr, h5mFTYPE , &buff);
+
+   H5Aread(cattr, h5mFTYPE, &buff);
    H5Aclose(cattr);
-   
+
    return(buff);
+}
+
+void HDF5File::saveAttribute(std::string _aid, const fType _v)
+{
+   if (H5Aexists(rgrp, _aid.c_str()))
+      H5Adelete(rgrp, _aid.c_str());
+
+   /// dataset dimensions in memory
+   hsize_t dimsm[1];
+
+   dimsm[0] = 1;
+   hid_t mspc  = H5Screate_simple(1, dimsm, NULL);
+   hid_t cattr = H5Acreate(rgrp, _aid.c_str(), h5fFTYPE, mspc, H5P_DEFAULT,
+                           H5P_DEFAULT);
+   H5Awrite(cattr, h5mFTYPE, &_v);
+   H5Aclose(cattr);
+   H5Sclose(mspc);
+}
+
+void HDF5File::saveAttributes(attrMT _amap)
+{
+   attrMT::const_iterator aItr = _amap.begin();
+
+   for (aItr = _amap.begin(); aItr != _amap.end(); aItr++)
+      saveAttribute(aItr->first, aItr->second);
+}
+
+void HDF5File::createGroup(std::string _name)
+{
+   if (not objExist(rgrp, _name))
+      H5Gcreate(rgrp, _name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+}
+
+void HDF5File::renameGroup(std::string _oldname, std::string _newname)
+{
+   if (objExist(rgrp, _oldname) and not objExist(rgrp, _newname))
+      H5Lmove(rgrp, _oldname.c_str(),
+              rgrp, _newname.c_str(), H5P_DEFAULT, H5P_DEFAULT);
+}
+   
+void HDF5File::deleteGroup(std::string _name)
+{
+   if (objExist(rgrp, _name))
+     H5Ldelete(rgrp, _name.c_str(), H5P_DEFAULT);
+}
+   
+bool HDF5File::groupExists(std::string _name)
+{
+  return objExist(rgrp, _name);
+}
+
+hid_t HDF5File::createPath(std::string _name)
+{
+   hid_t lcpl_id = H5Pcreate(H5P_LINK_CREATE);
+
+   H5Pset_create_intermediate_group(lcpl_id, true);
+   hid_t gid = H5Gcreate_anon(fh, H5P_DEFAULT, H5P_DEFAULT);
+   H5Olink(gid, fh, _name.c_str(), lcpl_id, H5P_DEFAULT);
+   return(gid);
+}
+
+void HDF5File::setNewRoot(std::string _path)
+{
+   H5Gclose(rgrp);
+   if (not objExist(fh, _path))
+      rgrp = createPath(_path);
+   else
+      rgrp = H5Gopen(fh, _path.c_str(), H5P_DEFAULT);
 }
 
 bool HDF5File::objExist(hid_t _fh, std::string _op)

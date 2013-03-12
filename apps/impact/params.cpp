@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
                                e);
 
       //if (((gamma > 0.05) && (m_tar > 0.05 * m_E)) || (b_scal < 0.9))
-      if ((gamma > 0.01) && (m_tar > 0.001 * m_E))
+      if ((gamma > 0.10) && (m_tar > 0.100 * m_E))
       //if (gamma > 0.05)
       //if (m_tar > 0.05 * m_E)
       {

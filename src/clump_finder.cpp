@@ -42,6 +42,7 @@ public:
    ~Clumps() { }
 
    void getClumps(partSetT& _parts, const fType _minMass);
+   void noClumps(partSetT& _parts);
 
 private:
 
@@ -64,24 +65,23 @@ public:
       }
    };
 
-   cType nextFreeId;
+   iType nextFreeId;
 };
-
 
 template<typename _partT>
 void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
                                const fType          _minMass)
 {
-   parentT::step       = _parts.step;
-   parentT::attributes = _parts.attributes;
-
    const size_t nop = _parts.getNop();
    const fType  G   = _parts.attributes["gravconst"];
 
    partPtrLT unbdParts;
-
    for (size_t i = 0; i < nop; i++)
+   {
+      _parts[i].orbit = ORBITNOTSET;
+      _parts[i].ecc   = -1.;
       unbdParts.push_back(&(_parts[i]));
+   }
 
    lowerPot potSorter;
    unbdParts.sort(potSorter);
@@ -142,7 +142,7 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
 
    clumpLT clist_final;
 
-   cType cId = 1;
+   iType cId = 1;
    for (typename clumpLT::iterator cItr = clist.begin();
         cItr != clist.end();
         cItr++)
@@ -159,6 +159,7 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
    const size_t noc = parentT::getNop();
 
    clumpT& noneClump(clumps[0]);
+   noneClump.clear();
    noneClump.assignID(CLUMPNONE);
 
    for (size_t i = 0; i < nop; i++)
@@ -177,7 +178,43 @@ void Clumps<_partT>::getClumps(ParticleSet<_partT>& _parts,
    }
 
    for (size_t i = 0; i < noc; i++)
+   {
+      clumps[i].calcProperties();
       clumps[i].calcAngularMom();
+   }
+   
+   _parts.attributes["noclumps"] = static_cast<fType>(noc-1);
+   _parts.attributes["mminclump"] = _minMass;
+   
+   parentT::step       = _parts.step;
+   parentT::attributes = _parts.attributes;
+}
+
+template<typename _partT>
+void Clumps<_partT>::noClumps(ParticleSet<_partT>& _parts)
+{
+   parentT::step       = _parts.step;
+   parentT::attributes = _parts.attributes;
+   parentT::resize(1);
+   clumpT& noneClump(clumps[0]);
+   
+   noneClump.clear();
+   noneClump.assignID(CLUMPNONE);
+
+   const size_t nop = _parts.getNop();
+   for (size_t i = 0; i < nop; i++)
+   {
+     _parts[i].clumpid = CLUMPNONE;
+     noneClump.addParticle(&_parts[i]);
+   }
+   
+   noneClump.calcProperties();
+   noneClump.calcAngularMom();
+   
+   _parts.attributes["noclumps"] = -1.;
+   
+   parentT::step       = _parts.step;
+   parentT::attributes = _parts.attributes;
 }
 }
 

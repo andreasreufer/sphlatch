@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
   const fType rhoLdelta = ( log(rhoMax) - log(rhoMin) ) / rhoSteps;
   const fType TLdelta = ( log(Tmax) - log(Tmin) ) / Tsteps;
 
-  fType P, cs, u;
+  fType P, cs, u, S;
   
   iType mat, phase;
   std::istringstream matstr(argv[1]);
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
       const fType T =   Tmin*exp(  TLdelta*j);
   
       std::cout << rho << " " << T*evToK << "\n";
-      EOS.getSpecEnergy(rho, T, mat, P, cs, u, phase);
+      EOS.getSpecEnergy(rho, T, mat, P, cs, u, phase, S);
 
       std::cerr << std::setw(14) << std::setprecision(6) << std::scientific 
                 << rho << "\t"
@@ -66,6 +66,7 @@ int main(int argc, char* argv[])
                 << P << "\t"
                 << cs << "\t"
                 << u << "\t"
+                << S << "\t"
                 << phase << "\n";
     }
   }

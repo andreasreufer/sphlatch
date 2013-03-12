@@ -56,7 +56,7 @@ void BHTreePartsInsertMover::move(const czllPtrT _czll)
       _czll->chldLast->next = NULL;
 
    ///
-   /// of there is a last child, set its next pointer to NULL,
+   /// if there is a last child, set its next pointer to NULL,
    /// so that the next walk for moving terminates
    ///
    while (curPart != NULL)
