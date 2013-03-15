@@ -32,42 +32,38 @@ $ make
 
 
 4. Relax the 1D structure with the 1D Lagrange code
-A fricition term in the 1D Lagrange code damps the initial motions. 
-
-Struktur aus Schritt 2 wird nun mit dem spherical 1D Lagrange integriert und mithilfe einer Daempfung relaxiert. Hierzu wird in radialer Richtung ein Beschleunigungsterm addiert: a_fric = (1./t_fric)*v_r
-Damit die Daempfung weder zu stark noch zu schwach ausfaellt, waehlt man t_fric als ein Vielfaches der free fall time. Integriert man nun die Struktur einige t_fric vorwaerts fallen die Radialgegeschwindigkeiten genuegend ab (t_stop >> t_fric). Im Verzeichnis wo der Code laeuft, muessen aneos_tables.hdf5, aneos.input und ANEOS.QUARTZ vorhanden sein (geht auch als softlink).
-Der Lagrange Code wird  folgendermassen ausgefuehrt
+A fricition term in the 1D Lagrange code damps the initial motions: a_fric = (1./t_fric)*v_r
+Choose a t_fric as a multiple of the free fall time. By integrating the 1D structure a multiple of t_fric, radial velocities get sufficiently damped (t_stop >> t_fric). Note that in the same directory the code runs, aneos_tables.hdf5, aneos.input and ANEOS.QUARTZ have to be present (can be a softlink). The 1D Lagrange code is executed with the following arguments 
 $ lagrange_sphere1D <infile> <outfile> <stoptime> <fric>
 
-<outfile> enthaelt nun eine hinreichend relaxierte Struktur
+<outfile> will then contain a sufficiently relaxed structure.
 
-Ist octave mit HDF5 support installiert, kann die Struktur einfach geplottet werden:
+If octave with HDF5 is present, the structure can easily be plotted with
 $ octave
 oct$ filename = "<outfile>"
 oct$ plotprofile
 
 
-5. Die Vollkugel aus Schritt 1 (sphere.h5part) wird nun mit dem gewuenschten Profil aus Schritt 4 (struc.hdf5) "gewuerzt":
+5. The full sphere from step 1 ("sphere.h5part") is now being "flavoured" with the desired 1D profile from step 4 ("struc.hdf5"):
 $ cd sphlatch/flavour_sphere
 $ make flavH
 $ flavour_sphere_H sphere.h5part struc.hdf5
--> sphere.h5part ist nun ein unrelaxierter, selbstgravitierender 3D SPH Koerper mit dem gewuenschten Profil
+-> sphere.h5part is now an unrelaxed, self-gravitating 3D SPH body with the desired mass and profile
 
-
-6. Den 3D SPH relaxieren
-$ cd sphlatch/apps/simple_sph
-SPH Code mit friction und Entropie-Integration (die Entropie-Terme in der AV fehlen, d.h. die Entropie bleibt konstant) kompilieren, z.B. die Variante GCSHSm_F (self-gravity, stadard SPH with density sum, integrated entropy, M-ANEOS with tables, no clump search, friction). Die friction funktioniert wie im 1D Lagrange code und verwendet diesselbe t_fric wie aus der 1D Struktur (im SPH dump als Attribut gespeichert).
+6. Relax the 3D SPH body
+Compile the SPH code with friciton and integrated entropy (AV terms for the entropy are missing, so entropy stays constant), e.g. variant "GCSHSm_F" (self-gravity, stadard SPH with density sum, integrated entropy, M-ANEOS with tables, no clump search, friction). Friction works as in the 1D Lagrange code.
 $ make simple_sph_GCSHSm_F
-Wie beim 1D Profil, empfiehlt es sich den 3D Koerper mehrer t_fric lang zu integrieren. Am besten nimmt man alle t_fric einen SPH dump um die Relaxierung zu kontrollieren. Der Code wird ausgefuehrt mit:
+As for the 1D profile, it is recommended to integrate the 3D body several times t_fric. It's good practice to extract a dump every t_fric in order to monitor radial velocities:
 $ simple_sph_GCSHSm_F sphere.h5part <t_fric> <t_stop> dump <nothreads>
-Wobei wie vorhin t_stop >> t_fric und die <nothreads> ca. 1.5x die verfuegbare Anzahl CPUs sein sollte.
+As before: t_stop >> t_fric and <nothreads> should be about 1.5x the amount of available CPU cores.
 
-Ist octave vorhanden, kann mit plotprofile.m wiederum einfach ein Dump analysiert werden:
+If octave is present, plotprofile.m can be used to analyze a dump for it's radial velocities:
 $ octave
 oct$ filename = "dump....."
 oct$ plotprofile
-(kann lange dauern, da alle Teilchen als Punkt geplottet werden)
+(may take a long time, as all particles are being plotted as individual points)
 
+Some times individual particles are being ejected with a high velocity out of the body (SPH 
 Gelegentlich werden einzelne Teilchen mit hoher Geschwindigkeit aus dem Koerper herausgeschossen. Solche Teilchen koennen mit dem Tool cut_sphere aus einem SPH dump entfernt werden:
 $ cd sphlatch/tools/h5part_tools
 $ make cutSphere
