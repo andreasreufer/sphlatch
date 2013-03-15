@@ -1,43 +1,39 @@
-Benoetigt werden:
-- C++ compiler mit OpenMP, z.B. gcc  -> export CXX=mpicxx
-- Fortran compiler, z.B. gfortran    -> export FC=gfortran
-- blitz++ Bibliothek (nur headers)
-- Boost (fuer gewisse Tools)
+required are
+- C++ compiler with OpenMP, e.g. gcc  -> export CXX=mpicxx
+- FORTRAN compiler, e.g. gfortran    -> export FC=gfortran
+- blitz++ library (headers only)
+- BOOST (for certain tools)
 - HDF5 library
-- python mit pytables (HDF5)
+- python with pytables (HDF5)
 
-Empfohlen
-- matplotlib fuer plots
-- octave mit HDF5 support
-
-
-Die nachfolgenden Schritte 1-7 beschreiben, wie man eine relaxierte 3D SPH Kugel mit einer gewuenschten Masse und Zusammensetzung erzeugt. In der Regel werden fuer eine Kollision zwei solcher Koerper benoetigt: Das Target und der Impaktor.
-
-Die Schritte A1-
-
-Alternativ kann 
+recommended are
+- matplotlib for plots & viz
+- octave with HDF5 support
 
 
-1. Vollkugeln mit der gewuenschten Anzahl Teilchen erzeugen
+Steps 1-7 describe how to produce a relaxed 3D SPH sphee with a given mass and composition. For a collision usually two such bodies are required: The impactor and the target
+
+1. Produce a full sphere with the desired number of particles
 $ cd sphlatch/initials/vanilla_sphere/
 $ make
 $ vanilla_sphere sphere.h5part <nop>
  
-
-2. Pseudo 1D Struktur mit gewuenschter Zusammensetzung aufsetzen
+2. Produce a pseudo 1D structure with the desired composition
 $ cd strucs/
-Im "initProfile.py" gewuenschte Masse, Zusammensetzung und Filenamen anpassen. Allenfalls die Graviationskonstante anpassen (falls nicht CGS).
+Adapt "initProfile.py" with the desired mass, composition and filename. If a non-CGS system is to be used, adapt the gravitational constant G
 $ ./initProfile.py
--> Initials file (HDF5 Format) fuer 1D Lagrange Code ist erzeugt
+-> a initial structure file in HDF5 format for the 1D Lagrange code has been been produced
 
 
-3. spherical 1D Lagrange code kompilieren
+3. compile the spherical 1D Lagrange code
 $ cd sphlatch/initials/lagrange_sphere1D
 $ make
 -> lagrange_sphere1D_A
 
 
-4. 1D Struktur relaxieren
+4. Relax the 1D structure with the 1D Lagrange code
+A fricition term in the 1D Lagrange code damps the initial motions. 
+
 Struktur aus Schritt 2 wird nun mit dem spherical 1D Lagrange integriert und mithilfe einer Daempfung relaxiert. Hierzu wird in radialer Richtung ein Beschleunigungsterm addiert: a_fric = (1./t_fric)*v_r
 Damit die Daempfung weder zu stark noch zu schwach ausfaellt, waehlt man t_fric als ein Vielfaches der free fall time. Integriert man nun die Struktur einige t_fric vorwaerts fallen die Radialgegeschwindigkeiten genuegend ab (t_stop >> t_fric). Im Verzeichnis wo der Code laeuft, muessen aneos_tables.hdf5, aneos.input und ANEOS.QUARTZ vorhanden sein (geht auch als softlink).
 Der Lagrange Code wird  folgendermassen ausgefuehrt
