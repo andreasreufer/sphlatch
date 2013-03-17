@@ -339,8 +339,8 @@ class Simulation(object):
         "--pos [%e,%e,%e] " % (r0imp[0], r0imp[1], r0imp[2]) +\
         "--vel [%e,%e,%e] " % (v0imp[0], v0imp[1], v0imp[2]) +\
         "--id %d" % self.cfg.idfilt )
-    cmds.append("h5part_combine -a " + self.dir + "tarb.h5part -b " +\
-        self.dir + "impb.h5part -o " + self.dir + "initial.h5part")
+    cmds.append("h5part_combineA_ " + self.dir + "tarb.h5part " +\
+        self.dir + "impb.h5part " + self.dir + "initial.h5part")
     cmds.append("rm " + self.dir + "tarb.h5part " + self.dir + "impb.h5part")
     
     # write attributes (gravconst, attrs)
