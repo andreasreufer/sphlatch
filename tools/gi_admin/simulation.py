@@ -419,16 +419,33 @@ class Simulation(object):
     self.Log.write("tcol = %9.3e" % self.tcol)
     self.Log.write("tstop = %9.3e" % self.tstop)
 
-    subcmd = subcmd.replace('$NOCPUS' , str(nocpus))
-    subcmd = subcmd.replace('$SIMNAME', self.jobname)
-    subcmd = subcmd.replace('$BINARY' , binary)
-    
-    subcmd = subcmd.replace('$SAVETIME' , str(self.tanim))
-    subcmd = subcmd.replace('$STOPTIME' , str(self.tstop))
-    subcmd = subcmd.replace('$RUNARGS' ,  runarg)
-
     oldwd = os.getcwd()
     os.chdir(self.dir)
+    
+    if hasattr(sim_machine, "qsub_scr"):
+      script = sim_machine.qsub_scr
+      script = script.replace('$NOCPUS' , str(nocpus))
+      script = script.replace('$SIMNAME', self.jobname)
+      script = script.replace('$BINARY' , binary)
+    
+      script = script.replace('$SAVETIME' , str(self.tanim))
+      script = script.replace('$STOPTIME' , str(self.tstop))
+      script = script.replace('$RUNARGS' ,  runarg)
+
+      scrfile = open("jobscript.sh", 'w')
+      scrfile.write(script)
+      scrfile.close()
+
+      subcmd = subcmd.replace('$SCRIPT' , "jobscript.sh")
+    else:
+      subcmd = subcmd.replace('$NOCPUS' , str(nocpus))
+      subcmd = subcmd.replace('$SIMNAME', self.jobname)
+      subcmd = subcmd.replace('$BINARY' , binary)
+    
+      subcmd = subcmd.replace('$SAVETIME' , str(self.tanim))
+      subcmd = subcmd.replace('$STOPTIME' , str(self.tstop))
+      subcmd = subcmd.replace('$RUNARGS' ,  runarg)
+	  
     (exstat, out) = commands.getstatusoutput(subcmd)
     os.chdir(oldwd)
       
