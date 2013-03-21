@@ -5,12 +5,15 @@ import os
 import tarfile
 import os.path as path
 import shelve
+import sim_machine
 
 def resolvePath(_path):
     return path.abspath( path.expanduser(_path) )
 
 from simulation import SimSet, SimParam, SimSetConfig, Simulation
 from sge_query import SGEquery
+from pbs_query import PBSquery
+from dummy_query import DUMMYquery
 
 class bcolors:
       black  = '\033[0;30m'
@@ -34,13 +37,20 @@ class bcolors:
 class SimAdmin(object):
   def __init__(self, ssetcfg):
     self._simset = SimSet(ssetcfg)
-    self._sgeqry = SGEquery()
+    
+    #TODO
+    if sim_machine.qsys is "sge":
+      self._qsysqry = SGEquery()
+    if sim_machine.qsys is "pbs":
+      self._qsysqry = PBSquery()
+    if sim_machine.qsys is "none":
+      self._qsysqry = DUMMYquery()
 
     self._sims = self._simset.sims
     self.user = getpass.getuser()
     self.nosgejobs = 0
     
-    self._updateSGE()
+    self._updateQSYS()
     
     for sim in self._sims.values():
       sim.getState()
@@ -58,7 +68,7 @@ class SimAdmin(object):
 
   def update(self):
     self._simset.discoverSims()
-    self._updateSGE()
+    self._updateQSYS()
     for sim in self._sims.values():
       if sim.state == "run" or sim.state == "stuck":
         sim.getState()
@@ -191,15 +201,15 @@ class SimAdmin(object):
     return col + "{0:{1}}".format(state, width) + bcolors.black
 
 
-  def _updateSGE(self):
+  def _updateQSYS(self):
     ssname = self._simset.cfg.name
-    sgejobs = self._sgeqry.getJobs()
-    self.nosgejobs = 0
+    qsysjobs = self._qsysqry.getJobs()
+    self.noqsysjobs = 0
 
-    for id in sgejobs:
-      (sname, user, state) = sgejobs[id]
+    for id in qsysjobs:
+      (sname, user, state) = qsysjobs[id]
       if (user == self.user):
-        fname = self._sgeqry.getFullname(id)
+        fname = self._qsysqry.getFullname(id)
 	if len(fname) < 1:
 	  continue
 	if fname.count("_") < 1:
@@ -208,10 +218,10 @@ class SimAdmin(object):
         if prefix == ssname:
           simname = fname.replace(prefix + "_", "")
           if self._simset.sims.has_key(simname):
-            self._simset.sims[simname].setSGEjobid(id)
-            self._simset.sims[simname].setSGEstat(state)
+            self._simset.sims[simname].set_jobid(id)
+            self._simset.sims[simname].set_state(state)
 	    if state == "queued" or state == "run":
-	       self.nosgejobs += 1
+	       self.noqsysjobs += 1
 
 
 

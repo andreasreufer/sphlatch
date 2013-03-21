@@ -519,10 +519,10 @@ class Simulation(object):
   def _continue(self):
     pass
 
-  def setSGEjobid(self, jobid):
+  def set_jobid(self, jobid):
     self.jobid = jobid
 
-  def setSGEstat(self, str):
+  def set_state(self, str):
     if self.state == "error":
       return
       

@@ -7,6 +7,7 @@ required are
 - python with pytables (HDF5)
 
 recommended are
+- numpy, pytables
 - matplotlib for plots & viz
 - octave with HDF5 support
 
