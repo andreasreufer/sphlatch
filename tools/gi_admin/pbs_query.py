@@ -36,7 +36,8 @@ class PBSquery(object):
 
   def _refreshData(self):
     jobslist = {}
-    (stat, runwaitraw) = commands.getstatusoutput("qstat -g d")
+    # TODO: most probably the wrong parameter
+    (stat, runwaitraw) = commands.getstatusoutput("qstat -f")
     if stat != 0:
       return
     for line in runwaitraw.splitlines()[2:]:
@@ -50,7 +51,7 @@ class PBSquery(object):
       if statestr == "E":
         state = "finished"
 
-      joblist[ idstr.split('.')[0] ] = (abbrname, user, state)
+      jobslist[ idstr.split('.')[0] ] = (abbrname, user, state)
   
     self.timestamp = time.time()
     self.jobslist = jobslist
