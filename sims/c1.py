@@ -19,14 +19,10 @@ import datetime
 
 nan = float('nan')
 lem = 3.40000e41
+eVinK = 11604.505
 
 sscfg = SimSetConfig()
 sscfg.name = "c1"
-
-simadm = SimAdmin(sscfg)
-sims = simadm._sims
-
-eVinK = 11604.505
 
 sscfg.maketarg = "simple_sph_GCSHUmD_"
 sscfg.binary   = "simple_sph_GCSHUmD_"
@@ -37,8 +33,6 @@ sscfg.runargs = "dump 6"
 
 simadm = SimAdmin(sscfg)
 sims = simadm._sims
-
-eVinK = 11604.505
 
 cfg_orb_XY_m.imgdir = sscfg.dir + "/viz_orb_XY_m"
 

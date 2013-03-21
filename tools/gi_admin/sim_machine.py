@@ -29,7 +29,7 @@
 qsys     = "pbs"
 qsub_sgl = "qsub -cwd -M andreas.reufer@space.unibe.ch  -N $JOBNAME $JOBCMD"
 qsub_omp = "qsub $SCRIPT"
-qsub_scr = "#!/bin/bash\n\n#PBS -l walltime=100:00:00\n#PBS -l nodes=1:ppn=$NOCPUS\n#PBS -N $SIMNAME\n\nsource ~/.profile\ncd $PBS_O_WORKDIR\n./$BINARY initial.h5part $SAVETIME $STOPTIME $RUNARGS"
+qsub_scr = "#!/bin/bash\n\n#PBS -l walltime=96:00:00\n#PBS -l nodes=1:ppn=$NOCPUS\n#PBS -N $SIMNAME\n\nsource ~/.profile\ncd $PBS_O_WORKDIR\n./$BINARY initial.h5part $SAVETIME $STOPTIME $RUNARGS"
 qdel     = "qdel $JOBID"
 basedir  = "/home/areufer/"
 srcdir   = basedir + "repos/sphlatch/apps/simple_sph"
