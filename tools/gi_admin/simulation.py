@@ -322,8 +322,6 @@ class Simulation(object):
     gilog.close()
     self.Log.write("giant impact calculated")
 
-
-
     # displace bodies
     r0tar = self.r0tar
     r0imp = self.r0imp

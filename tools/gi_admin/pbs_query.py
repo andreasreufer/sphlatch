@@ -50,6 +50,8 @@ class PBSquery(object):
         state = "run"
       if statestr == "E":
         state = "finished"
+      if statestr == "C":
+        state = "partial"
 
       jobslist[ idstr.split('.')[0] ] = (abbrname, user, state)
   
