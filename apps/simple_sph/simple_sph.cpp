@@ -367,6 +367,8 @@ void derive()
    treeT& Tree(treeT::instance());
    logT&  Logger(logT::instance());
 
+   Logger << "start deriving step";
+
    const size_t nop = parts.getNop();
 
    Tree.setExtent(parts.getBox() * 1.1);
