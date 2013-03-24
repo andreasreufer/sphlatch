@@ -111,6 +111,7 @@ int main(int argc, char* argv[])
    const size_t noA = partsA.getNop();
    const size_t noB = partsB.getNop();
 
+
    partsO.resize(noA + noB);
 
    for (size_t i = 0; i < noA; i++)
@@ -122,15 +123,16 @@ int main(int argc, char* argv[])
         aItr++)
      partsO.attributes.insert(*aItr);
 
-   
    for (size_t i = 0; i < noB; i++)
-     partsO[i+noB] = partsB[i];
+   {
+     partsO[i+noA] = partsB[i];
+   }
 
    for (aItr  = partsB.attributes.begin();
         aItr != partsB.attributes.end();
         aItr++)
      partsO.attributes.insert(*aItr);
-
+   
    partsO.step = partsA.step;
    partsO.saveHDF5(argv[3]);
 
