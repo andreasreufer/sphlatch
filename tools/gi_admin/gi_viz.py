@@ -17,6 +17,7 @@ class GIvizConfig(object):
     self.scdir = "./givizscr"
     self.tasksperjob = 50
     self.subcmd = sim_machine.qsub_sgl
+    self.python = sim_machine.python
     self.axrel = [-32., 32., -18., 18.]
 
 class GIvizTask(object):
@@ -223,16 +224,21 @@ class GIviz(object):
     jid  = 0
     for job in jobs:
       jobname = self.scdir + jprfx + ( "%03i" % jid ) + '.sh'
+	  
       jobstr = "#!/bin/bash\n"
+      if hasattr(sim_machine, "qsub_sglscr"):
+        jobstr = sim_machine.qsub_sglscr
+        jobstr = jobstr.replace('$JOBCMD', '')
 
       for task in job:
-        jobstr += ( drvname + " " + str(task.id) + "\n" )
+        jobstr += ( self.cfg.python + " " + drvname + " " + str(task.id) + "\n" )
         taskdb[str(task.id)] = task
 
       jobfile = open(jobname,"w")
       print >>jobfile, jobstr
       jobfile.close()
       os.chmod(jobname, stat.S_IRWXU)
+      print jobname
 
       jid += 1
     

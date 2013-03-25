@@ -27,8 +27,9 @@
 
 # saguaro.fulton.asu.edu, OpenPBS
 qsys     = "pbs"
-qsub_sgl = "qsub"
-qsub_sglscr = "#!/bin/bash\n\n#PBS -l walltime=95:59:59\n#PBS -N $SIMNAME\n\nsource ~/.profile\ncd $PBS_O_WORKDIR\n\n"
+qsub_sgl = "qsub $JOBCMD"
+qsub_sglscr = "#!/bin/bash\n\n#PBS -l walltime=95:59:59\n\nsource ~/.profile\ncd $PBS_O_WORKDIR\n\n$JOBCMD"
+python   = "/home/areufer/bin/python2.7"
 qsub_omp = "qsub $SCRIPT"
 qsub_ompscr = "#!/bin/bash\n\n#PBS -l walltime=95:59:59\n#PBS -l nodes=1:ppn=$NOCPUS\n#PBS -N $SIMNAME\n\nsource ~/.profile\ncd $PBS_O_WORKDIR\n./$BINARY initial.h5part $SAVETIME $STOPTIME $RUNARGS\n"
 qdel     = "qdel $JOBID"
