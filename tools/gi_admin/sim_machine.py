@@ -27,9 +27,10 @@
 
 # saguaro.fulton.asu.edu, OpenPBS
 qsys     = "pbs"
-qsub_sgl = "qsub -cwd -M andreas.reufer@space.unibe.ch  -N $JOBNAME $JOBCMD"
+qsub_sgl = "qsub"
+qsub_sglscr = "#!/bin/bash\n\n#PBS -l walltime=95:59:59\n#PBS -N $SIMNAME\n\nsource ~/.profile\ncd $PBS_O_WORKDIR\n\n"
 qsub_omp = "qsub $SCRIPT"
-qsub_scr = "#!/bin/bash\n\n#PBS -l walltime=100:00:00\n#PBS -l nodes=1:ppn=$NOCPUS\n#PBS -N $SIMNAME\n\nsource ~/.profile\ncd $PBS_O_WORKDIR\n./$BINARY initial.h5part $SAVETIME $STOPTIME $RUNARGS"
+qsub_ompscr = "#!/bin/bash\n\n#PBS -l walltime=95:59:59\n#PBS -l nodes=1:ppn=$NOCPUS\n#PBS -N $SIMNAME\n\nsource ~/.profile\ncd $PBS_O_WORKDIR\n./$BINARY initial.h5part $SAVETIME $STOPTIME $RUNARGS\n"
 qdel     = "qdel $JOBID"
 basedir  = "/home/areufer/"
 srcdir   = basedir + "repos/sphlatch/apps/simple_sph"
