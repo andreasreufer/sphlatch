@@ -18,7 +18,7 @@ typedef sphlatch::box3dT     box3dT;
 typedef sphlatch::fvectT     fvectT;
 
 #include "hdf5_io.cpp"
-typedef sphlatch::HDF5File   h5FT;
+typedef sphlatch::HDF5File   H5FT;
 
 const fType finf = sphlatch::fTypeInf;
 
@@ -129,7 +129,6 @@ int main(int argc, char* argv[])
 
    // load the particles
    parts.loadHDF5(inFilename);
-   const fType  G   = parts.attributes["gravconst"];
    const size_t nop = parts.getNop();
 
    std::cerr << nop << " particles loaded\n";
@@ -155,7 +154,6 @@ int main(int argc, char* argv[])
          minMassOrbits = parts.attributes["mminorbit"];
 
    treeT& Tree(treeT::instance());
-   gravT  gravWorker(&Tree, G);
 
    Tree.setExtent(parts.getBox() * 1.1);
 
@@ -166,79 +164,111 @@ int main(int argc, char* argv[])
       Tree.insertPart(parts[i]);
    }
    Tree.update(0.8, 1.2);
-
+   
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    const int           noCZbottomLoc = CZbottomLoc.size();
 
-#ifdef SPHLATCH_CALC_POTENTIAL
+#ifdef SPHLATCH_GRAVITY
+   const fType G = parts.attributes["gravconst"];
+   gravT       gravWorker(&Tree, G);
  #pragma omp parallel for firstprivate(gravWorker)
    for (int i = 0; i < noCZbottomLoc; i++)
       gravWorker.calcPot(CZbottomLoc[i]);
-   std::cerr << "potential calculated\n";
-#endif
+   std::cout << "calculated potential\n";
 
-   fType Ethm = 0., Ekin = 0., Epot = 0.;
+
+   fType Ethm = 0., Ekin = 0.;
+ #ifdef SPHLATCH_GRAVITY
+   fType Epot = 0.;
+ #endif
+
+   //
    for (size_t i = 0; i < nop; i++)
    {
-      const fType   mi   = parts[i].m;
-      const fType   ui   = parts[i].u;
-      const vect3dT vi   = parts[i].vel;
-      const fType   poti = parts[i].pot;
+      const fType   mi = parts[i].m;
+      const fType   ui = parts[i].u;
+      const vect3dT vi = parts[i].vel;
 
       Ekin += 0.5 * dot(vi, vi) * mi;
-      Epot += 0.5 * poti * mi;
       Ethm += ui * mi;
+
+ #ifdef SPHLATCH_GRAVITY
+      const fType poti = parts[i].pot;
+      Epot += 0.5 * poti * mi;
+ #endif
    }
+
+
+ #ifdef SPHLATCH_ESCAPEES
+   const size_t noep = escapees.getNop();
+   for (size_t i = 0; i < noep; i++)
+   {
+      const fType   mi = escapees[i].m;
+      const fType   ui = escapees[i].u;
+      const vect3dT vi = escapees[i].vel;
+
+      Ekin += 0.5 * dot(vi, vi) * mi;
+      Ethm += ui * mi;
+
+  #ifdef SPHLATCH_GRAVITY
+      const fType poti = escapees[i].pot;
+      Epot += 0.5 * poti * mi;
+  #endif
+   }
+ #endif
 
    parts.attributes["ekin"] = Ekin;
    parts.attributes["ethm"] = Ethm;
+ #ifdef SPHLATCH_GRAVITY
    parts.attributes["epot"] = Epot;
+ #endif
 
-   clumps.getClumps(parts, minMass);
+
+ #ifdef SPHLATCH_FIND_CLUMPS
+   // set the minimal clump mass to 10 times that of the lightest particles
+   fType pMinMass = 0., totMass = 0.;
+   for (size_t i = 0; i < nop; i++)
+   {
+      pMinMass = parts[i].m > pMinMass ? parts[i].m : pMinMass;
+      totMass += parts[i].m;
+   }
+   const fType cMinMass       = 10. * pMinMass;
+   const fType cMinMassOrbits = 0.1 * totMass;
+   const fType cMinRho        = parts.attributes["rhominclump"];
+
+   parts.attributes["mminclump"] = cMinMass;
+   parts.attributes["mminorbit"] = cMinMassOrbits;
+
+   clumps.getClumps(parts, cMinMass);
+
    const size_t noc = clumps.getNop();
-   std::cerr << noc - 1 << " clump(s) found!\n";
+   std::cout << "found " << noc - 1 << " clump(s) with m > "
+                 << cMinMass << "\n";
 
+   std::fstream cfile;
+   cfile.open("clumps.txt", std::ios::app | std::ios::out);
+   cfile << std::setw(18) << std::setprecision(6) << std::scientific;
+   cfile << time << "   ";
+   for (size_t i = 0; i < noc; i++)
+      cfile << clumps[i].m << " ";
+   for (size_t i = noc; i < 10; i++)
+      cfile << 0. << " ";
+   cfile << "\n";
+   cfile.close();
+
+  #ifdef SPHLATCH_GRAVITY
+   // store original mass
    for (size_t i = 0; i < nop; i++)
       parts[i].morig = parts[i].m;
+  #endif
 
    for (size_t i = 1; i < noc; i++)
-      if (clumps[i].m > minMassOrbits)
+      if (clumps[i].m > cMinMassOrbits)
       {
-         fvectT mfrac = clumps[i].getMassFractions(32);
+         clumps[i].getCentralBodyOrbits(cMinRho, G);
+         std::cout << "got orbits for clump " << i << "\n";
 
-         fType rhoMin = 0.75;
-         // if there is no rhominclump in attributes, use standard values below
-         if (parts.attributes.count("rhominclump") == 0)
-         {
-#ifdef SPHLATCH_ANEOS
-            // take rho0 from the lightes material with a mass
-            // fraction of at least 10%
-            const fType minfrac = 0.1;
-            fType       rho0    = 1.;
-
-            if (mfrac(2) > minfrac)
-               rho0 = 1.11;
-            else if (mfrac(1) > minfrac)
-               rho0 = 2.65;
-            else if (mfrac(4) > minfrac)
-               rho0 = 3.32;
-            else if (mfrac(5) > minfrac)
-               rho0 = 7.85;
-
-            rhoMin = 0.75 * rho0;
-#endif
-         }
-         else
-            rhoMin = parts.attributes["rhominclump"];
-
-         /*rhoMin = 2.00;
-         clumps[i].getCentralBodyOrbits(rhoMin, G);
-         std::cerr << "got orbits for clump " << i
-                   << " (rhoMin: " << rhoMin
-                   << ", rho: "   << clumps[i].rho
-                   << ", rclmp: " << clumps[i].rclmp
-                   << ", rmean: " << clumps[i].rc << ")\n";*/
-
+  #ifdef SPHLATCH_GRAVITY
          const int cid = i;
          for (size_t j = 0; j < nop; j++)
          {
@@ -248,21 +278,14 @@ int main(int argc, char* argv[])
                parts[j].m = 0.;
             parts[j].treeNode->update();
          }
+
          Tree.redoMultipoles();
-         std::cerr << "    Tree.redoMultipoles()\n";
-         
-         clumps[i].getCentralBodyOrbits(rhoMin, G);
-         std::cerr << "got orbits for clump " << i
-                   << " (rhoMin: " << rhoMin
-                   << ", rho: "   << clumps[i].rho
-                   << ", rclmp: " << clumps[i].rclmp
-                   << ", rmean: " << clumps[i].rc << ")\n";
+         std::cout << "    Tree.redoMultipoles()\n";
 
-
-#pragma omp parallel for firstprivate(gravWorker)
+   #pragma omp parallel for firstprivate(gravWorker)
          for (int j = 0; j < noCZbottomLoc; j++)
             gravWorker.calcPot(CZbottomLoc[j]);
-         std::cerr << "    Tree.calcPot()\n";
+         std::cout << "    Tree.calcPot()\n";
 
          fType EpotCC = 0.;
          for (size_t j = 0; j < nop; j++)
@@ -271,43 +294,53 @@ int main(int argc, char* argv[])
 
          clumps[i].Epot = EpotCC;
 
-         fType EpotCCCB = 0.;
-         fType ErotCCCB = 0.;
-         for (size_t j = 0; j < nop; j++)
-         {
-            if (parts[j].clumpid == cid and parts[j].orbit ==
-                sphlatch::ORBITCLUMP)
-            {
-               const fType mj   = parts[j].m;
-               const fType potj = parts[j].pot;
-
-               const vect3dT rj  = parts[j].pos - clumps[i].posclmp;
-               const vect3dT vj  = parts[j].vel - clumps[i].velclmp;
-               const vect3dT rXv = cross(rj, vj);
-
-               const fType rXvrXv = dot(rXv, rXv);
-               const fType rr     = dot(rj, rj);
-               ErotCCCB += 0.5 * mj * rXvrXv / rr;
-               EpotCCCB += 0.5 * potj * mj;
-            }
-         }
-
-         clumps[i].Epotclmp = EpotCCCB;
-         clumps[i].Erotclmp = ErotCCCB;
-
-         std::cerr << "    Epot = " << EpotCC
-                   << ", Erot  = " << clumps[i].Erot
-                   << ", EpotCB = " << clumps[i].Epotclmp
-                   << ", ErotCB = " << clumps[i].Erotclmp
-                   << ", Ekin   = " << clumps[i].Ekin << "\n";
+         std::cout << "    Epot = " << EpotCC
+                       << ", Erot = " << clumps[i].Erot
+                       << ", Ekin = " << clumps[i].Ekin << "\n";
+  #endif
       }
-   
+
+  #ifdef SPHLATCH_GRAVITY
+   // restore original mass
+   for (size_t i = 0; i < nop; i++)
+      parts[i].m = parts[i].morig;
+  #endif
+
+   clumps.doublePrecOut();
+   clumps.saveHDF5("clumps.h5part");
+ #endif
+#endif
+
+
+#ifdef SPHLATCH_FIND_CLUMPS
+   H5FT clumpf("clumps.h5part");
+   clumpf.setNewRoot(parts.getStepName());
+
+   clumpf.saveAttribute("ekin", Ekin);
+   clumpf.saveAttribute("ethm", Ethm);
+ #ifdef SPHLATCH_GRAVITY
+   clumpf.saveAttribute("epot", Epot);
+ #endif
+#endif
+
+   Tree.clear();
+   std::cout << "Tree.clear() \n";
+
+#ifdef SPHLATCH_LRDISK
+   const fType rmin = parts.attributes["diskrmin"];
+   const fType rmax = parts.attributes["diskrmax"];
+
+   dbinT diskBinner(parts);
+   diskBinner.saveBins(1., rmin, rmax, 100, "disk.hdf5");
+   std::cout << "binned disk and stored to disk.hdf5\n";
+#endif
+
    std::cerr << "storing clump IDs in " << inFilename << "\n";
    parts.saveHDF5(inFilename);
    
    if (sphlatch::fileExists(clFilename))
    {
-      h5FT        clFile(clFilename);
+      H5FT        clFile(clFilename);
       std::string grpName = clumps.getStepName();
       if (clFile.groupExists(grpName))
       {
@@ -321,3 +354,6 @@ int main(int argc, char* argv[])
 
    return(0);
 }
+
+
+

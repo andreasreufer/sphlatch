@@ -24,6 +24,7 @@ findClumps_A_:
 	   -fopenmp \
 	   -DSPHLATCH_GRAVITY \
 	   -DSPHLATCH_GRAVITY_POTENTIAL \
+	   -DSPHLATCH_FIND_CLUMPS \
 	   -DSPHLATCH_ANEOS \
 	   -o find_clumps_A_ find_clumps.cpp
 
