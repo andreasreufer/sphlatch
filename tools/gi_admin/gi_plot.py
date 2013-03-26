@@ -432,7 +432,8 @@ class GIplotConfig(object):
     
     self.copy_vc = [0.65, 0.06]
     self.copy_txts = 3
-    self.copy_txt = "Andreas Reufer, University of Bern"
+    #self.copy_txt = "Andreas Reufer, University of Bern"
+    self.copy_txt = "Andreas Reufer, Arizona State University"
   
     self.dmass_vc = [0.05, 0.2]
 

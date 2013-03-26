@@ -420,8 +420,8 @@ class Simulation(object):
     oldwd = os.getcwd()
     os.chdir(self.dir)
     
-    if hasattr(sim_machine, "qsub_scr"):
-      script = sim_machine.qsub_scr
+    if hasattr(sim_machine, "qsub_ompscr"):
+      script = sim_machine.qsub_ompscr
       script = script.replace('$NOCPUS' , str(nocpus))
       script = script.replace('$SIMNAME', self.jobname)
       script = script.replace('$BINARY' , binary)
