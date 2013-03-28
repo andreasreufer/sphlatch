@@ -188,6 +188,18 @@ void BHTreePartsInsertMover::pushDownSingle(const pnodPtrT _pnodPtr)
       }
       else
       {
+         /*if (curPtr->depth > 256)
+         {
+            const vect3dT posB = static_cast<pnodPtrT>(static_cast<gcllPtrT>(curPtr)->child[curOct])->pos;
+            const vect3dT dpos = pos-posB;
+            std::cerr << "particle A ID: " << _pnodPtr->ident << "\n"
+                      << "particle B ID: "
+                      << static_cast<gcllPtrT>(curPtr)->child[curOct]->ident << "\n"
+                      << pos << "\n"
+                      << posB << "\n"
+                      << dpos << "\n";
+            exit(-1);
+         }*/
          if (static_cast<gcllPtrT>(curPtr)->child[curOct]->isParticle)
             static_cast<gcllPtrT>(curPtr)->child[curOct] =
                partToCell(curPtr, curOct);

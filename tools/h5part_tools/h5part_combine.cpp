@@ -2,8 +2,6 @@
 #include <sstream>
 #include <vector>
 
-//#define SPHLATCH_SINGLEPREC
-
 #include <omp.h>
 #define SPHLATCH_OPENMP
 #define SPHLATCH_HDF5

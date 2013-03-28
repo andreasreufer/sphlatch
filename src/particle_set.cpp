@@ -17,7 +17,7 @@ ParticleSet<_partT>::ParticleSet()
 
    h5mITYPE = H5T_NATIVE_INT;
 
-   h5fFTYPE = H5T_IEEE_F32LE;
+   //h5fFTYPE = H5T_IEEE_F32LE;
    h5fITYPE = H5T_STD_I32LE;
 #endif
 }
@@ -544,12 +544,11 @@ void ParticleSet<_partT>::singlePrecOut()
   h5fFTYPE = H5T_IEEE_F32LE;
 }
 
-  template<typename _partT>
+template<typename _partT>
 void ParticleSet<_partT>::doublePrecOut()
 {
   h5fFTYPE = H5T_IEEE_F64LE;
 }
-
 
 template<typename _partT>
 herr_t ParticleSet<_partT>::getObsCB(hid_t _fh, const char* _name,
