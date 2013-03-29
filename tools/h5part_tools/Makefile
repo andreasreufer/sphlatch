@@ -1,4 +1,4 @@
-all: h5partDisplace h5partReadAttr h5partWriteAttr h5partCombineSolid h5partSlice h5partCombineA_ h5partCombine_E h5partCombine__
+all: h5partDisplace h5partReadAttr h5partWriteAttr h5partCombineSolid h5partCombineA_ h5partCombine_E h5partCombine__
 
 h5partDisplace:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -I../../src/old -lhdf5 -lz -lboost_program_options -o h5part_displace h5part_displace.cpp

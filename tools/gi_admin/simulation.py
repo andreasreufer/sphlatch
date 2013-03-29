@@ -509,7 +509,7 @@ class Simulation(object):
           os.remove(os.path.join(root, fname))
         for dname in dirs:
           os.rmdir(os.path.join(root, dname))
-      os.rmdir(self.dir)
+      #os.rmdir(self.dir)
       self.state = "unprepared"
       self.next = self._prepare
 

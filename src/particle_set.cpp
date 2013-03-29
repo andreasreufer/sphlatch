@@ -11,13 +11,17 @@ ParticleSet<_partT>::ParticleSet()
 {
 #ifdef SPHLATCH_HDF5
    if (sizeof(fType) == 8)
+   {
       h5mFTYPE = H5T_NATIVE_DOUBLE;
+      h5fFTYPE = H5T_IEEE_F64LE;
+   }
    else
+   {
       h5mFTYPE = H5T_NATIVE_FLOAT;
+      h5fFTYPE = H5T_IEEE_F32LE;
+   }
 
    h5mITYPE = H5T_NATIVE_INT;
-
-   //h5fFTYPE = H5T_IEEE_F32LE;
    h5fITYPE = H5T_STD_I32LE;
 #endif
 }
