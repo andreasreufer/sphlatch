@@ -346,7 +346,7 @@ class GIviz(object):
         cdir = idir + "/" + key
         filelist = os.listdir( cdir )
         for cfile in filelist:
-          os.remove(cfile)
+          os.remove(cdir+"/"+cfile)
         os.removedirs(cdir)      
     
 
