@@ -53,7 +53,7 @@ vimpimpaa = [ (15.0, 2.5), (15.0, 3.0), (15.0, 3.5), (15.0, 4.0),
 
 vizcfg = GIvizConfig()
 vizcfg.scdir = sscfg.dir + "/vizscratch"
-vizcfg.tasksperjob = 10
+vizcfg.tasksperjob = 50
 
 cfg_mat_XY_n.imgdir = sscfg.dir + "/viz_mat_XY_n"
 cfg_mat_XY_n.ax = [-8.0e9, 8.0e9, -4.5e9, 4.5e9]
@@ -62,10 +62,11 @@ cfg_mat_XY_n.ax = [-8.0e9, 8.0e9, -4.5e9, 4.5e9]
 vizsim = GIviz(vizcfg)
 
 def vizAll():
-  for sim in sims.values():
-    #vizsim.doSims(sims.values(), [cfg_T___XY_n, cfg_grd_rho_XY_m, cfg_grd_p___XY_m])
-    vizsim.doSims(sims.values(), [cfg_mat_XY_n])
+  vizsim.doSims(sims.values(), [cfg_mat_XY_n])
 
-def viz():
-  vizsim.doSims( [ sims["mtar001.000_mimp000.200_impa60.0_vimp2.50"] ], [cfg_mat_XY_n] )
+def animAll():
+  vizsim.animSims(sims.values(), [cfg_mat_XY_n])
+
+def clearImgs():
+  vizsim.clearImgDir( simadm.getSimsByState("unprepared"), [cfg_mat_XY_n])
 

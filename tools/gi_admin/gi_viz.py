@@ -335,5 +335,19 @@ class GIviz(object):
     for file in filelist:
       os.remove(self.scdir + file)
 
+  def clearImgDir(self,sims,pcfgs):
+    idirs = []
+    for pcfg in pcfgs:
+      idirs.append(pcfg.imgdir)
+
+    for sim in sims:
+      key = sim.params.key
+      for idir in idirs:
+        cdir = idir + "/" + key
+        filelist = os.listdir( cdir )
+        for cfile in filelist:
+          os.remove(cfile)
+        os.removedirs(cdir)      
+    
 
 

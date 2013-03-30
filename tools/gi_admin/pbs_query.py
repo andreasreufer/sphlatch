@@ -20,7 +20,7 @@ class PBSquery(object):
       for line in out.splitlines():
         if line.count("Job_Name"):
           return line.split()[2]
-    return None
+    return " "
 
   def delJobID(self, jobid):
     (stat, out) = commands.getstatusoutput("qdel " + str(jobid))
