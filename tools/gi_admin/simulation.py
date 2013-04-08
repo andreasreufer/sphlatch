@@ -443,7 +443,8 @@ class Simulation(object):
       subcmd = subcmd.replace('$SAVETIME' , str(self.tanim))
       subcmd = subcmd.replace('$STOPTIME' , str(self.tstop))
       subcmd = subcmd.replace('$RUNARGS' ,  runarg)
-	  
+      
+    print "cd " + self.dir + ";" + subcmd
     (exstat, out) = commands.getstatusoutput(subcmd)
     os.chdir(oldwd)
       

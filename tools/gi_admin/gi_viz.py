@@ -325,6 +325,7 @@ class GIviz(object):
     oldwd = os.getcwd()
     os.chdir(self.scdir)
     (exstat, out) = commands.getstatusoutput(jobsubstr)
+    print out
     os.chdir(oldwd)
 
 
@@ -335,5 +336,19 @@ class GIviz(object):
     for file in filelist:
       os.remove(self.scdir + file)
 
+  def clearImgDir(self,sims,pcfgs):
+    idirs = []
+    for pcfg in pcfgs:
+      idirs.append(pcfg.imgdir)
+
+    for sim in sims:
+      key = sim.params.key
+      for idir in idirs:
+        cdir = idir + "/" + key
+        filelist = os.listdir( cdir )
+        for cfile in filelist:
+          os.remove(cdir+"/"+cfile)
+        os.removedirs(cdir)      
+    
 
 
