@@ -325,6 +325,7 @@ class GIviz(object):
     oldwd = os.getcwd()
     os.chdir(self.scdir)
     (exstat, out) = commands.getstatusoutput(jobsubstr)
+    print out
     os.chdir(oldwd)
 
 
