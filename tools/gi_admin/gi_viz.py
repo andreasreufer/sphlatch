@@ -17,7 +17,8 @@ class GIvizConfig(object):
     self.scdir = "./givizscr"
     self.tasksperjob = 50
     self.subcmd = sim_machine.qsub_sgl
-    self.python = sim_machine.python
+    if hasattr(sim_machine, "qsub_sglscr"):
+      self.python = sim_machine.python
     self.axrel = [-32., 32., -18., 18.]
 
 class GIvizTask(object):
