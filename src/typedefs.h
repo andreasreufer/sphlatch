@@ -23,7 +23,7 @@
 
 #define BZ_THREADSAFE
 #include <blitz/array.h>
-#include <blitz/tinyvec-et.h>
+#include <blitz/tinymat2.h>
 
 #include <boost/numeric/ublas/vector.hpp>
 
