@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
    treeT::czllPtrVectT CZbottomLoc   = Tree.getCZbottomLoc();
    //const int           noCZbottomLoc = CZbottomLoc.size();
 
-   // get central clump
+   // get largest remnant
    clumpT cb;
    for (size_t i = 0; i < nop; i++)
    {
@@ -190,7 +190,7 @@ int main(int argc, char* argv[])
       rho0 = 7.85;
 
    fType rhoClmpMin = 0.75 * rho0;
-   std::cerr << "central body surface density: " << rhoClmpMin << "\n";
+   std::cerr << "parent body surface density:  " << rhoClmpMin << "\n";
 
    // get central clump surface
    cb.getCentralBodyOrbits(rhoClmpMin, G);
@@ -198,18 +198,16 @@ int main(int argc, char* argv[])
    const fType mcb(cb.m);
    const fType rhocb(cb.rho);
 
-   std::cerr << "central body surface radius:  " << rcb << "\n";
+   std::cerr << "parent body surface radius:   " << rcb << "\n";
 
    // now search friends of friends
    fofT fof(parts, Tree);
    fof.search(rhomin, hmult, minMass);
    const size_t noc = fof.getNop();
-   std::cerr << fof[0].m << " " << fof[0].nop << "\n";
    std::cerr << noc - 1 << " clump(s) found!\n";
+   std::cerr << "parent body no. of parts.:    " << fof[0].nop << " / "
+             << parts.getNop() << "\n";
 
-
-   //partSetT partscl(&(fof[0]));
-   //
    size_t j = 0;
 
    const vect3dT com = fof[0].pos;
@@ -238,85 +236,10 @@ int main(int argc, char* argv[])
        j++;
      }
 
-  vect3dT omega = L / I;
-  vect3dT rotpe = (I / L)/(2*pi);
-
-  std::cout << omega << "\n";
-  std::cout << rotpe << "\n";
-  std::cout << L     << "\n";
-  std::cout << I     << "\n";
-  //std::cout << fof[0].pos << "\n";
-
-   std::cerr << nop << " " << j << "\n";
-
-
-    //std::cerr << parts[i].friendid << " ";
-
-
+   fof[0].Lparent = L;
+   fof[0].Iparent = I;
    
-   // now get the clumps orbits
-   for (size_t i = 2; i < noc; i++)
-   {
-      //clumps
-      clumpT& cc(fof[i]);
-
-      cc.calcProperties();
-      cc.getCentralBodyOrbits(rhoClmpMin, G);
-
-      const vect3dT r0v = cc.pos - cb.posclmp;
-      const vect3dT v0v = cc.vel - cb.vel;
-
-      const fType mi   = cc.m;
-      const fType rhoi = cc.rho;
-
-      const fType r0 = sqrt(dot(r0v, r0v));
-      const fType v0 = sqrt(dot(v0v, v0v));
-
-      const fType K  = (mcb + mi) * G;
-      const fType k1 = r0 * v0 * v0 / K;
-
-      const fType beta0  = asin(dot(r0v, v0v) / (r0 * v0));
-      const fType theta0 = atan2(k1 * sin(beta0) * cos(beta0),
-                                 (k1 * cos(beta0) * cos(beta0) - 1.));
-
-      const vect3dT h = cross(r0v, v0v);
-
-      const vect3dT ev = (cross(v0v, h) / K) - (r0v / r0);
-      const fType   e  = sqrt(dot(ev, ev));
-      const fType   a  = dot(h, h) / (K * (1. - e * e));
-      const fType   T  = 2.*M_PI*pow( a, 3./2.)/sqrt(K);
-      
-      const fType   rp = r0 * ((1. + e * cos(theta0)) / (1. + e));
-      const fType   ra = rp * (1. + e) / (1. - e);
-
-
-      const fType rrche = 2.455* rcb* sqrt(rhocb / rhoi);
-      std::cout << "FOF clump " << i << "\n"
-                << "  m: " << mi << "   rho: " << cc.rho << "   rRoche: "
-                << rrche << "\n"
-                << "  e: " << e << "    rp: " << rp << "       ra: "
-                << ra << "\n"
-                << "  a: " << a << "   T: " << T /day << " days\n"
-                << "  rp/rcb: " << rp / rcb << "    rp/rRoche: "
-                << rp / rrche << "  m/mL: " << mi / ML << "\n"
-                << "\n"
-                << "  SiO2: " << cc.mmat[1]
-                << "   (" << 100. * cc.mtarg[1] / cc.mmat[1] << " % targ)\n"
-                << "  Fe:   " << cc.mmat[5]
-                << "   (" << 100. * cc.mtarg[5] / cc.mmat[5] << " % targ)\n"
-                << "  H2O:  " << cc.mmat[2]
-                << "   (" << 100. * cc.mtarg[2] / cc.mmat[2] << " % targ)\n"
-                << "\n"
-                << "\n";
-   }
-   
-   if (noc > 1)
-     fof[1].getCentralBodyOrbits(rhoClmpMin, G);
-
-   std::cerr << "storing clump IDs in " << inFilename << "\n";
-   parts.saveHDF5(inFilename);
-
-   /*if (sphlatch::fileExists(clFilename))
+   if (sphlatch::fileExists(clFilename))
    {
       h5FT        clFile(clFilename);
       std::string grpName = fof.getStepName();
@@ -328,7 +251,7 @@ int main(int argc, char* argv[])
    }
    fof.doublePrecOut();
    std::cerr << "storing clumps    in " << clFilename << "\n";
-   fof.saveHDF5(clFilename);*/
+   fof.saveHDF5(clFilename);
 
    return(0);
 }

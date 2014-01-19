@@ -8,6 +8,7 @@ getRotation:
 	   -DSPHLATCH_GRAVITY_POTENTIAL \
 	   -DSPHLATCH_ANEOS \
 	   -DSPHLATCH_ANEOS_TRACKORIG \
+	   -DSPHLATCH_PARENTBODY_ROT \
 	   -o get_rotation get_rotation.cpp
 
 clean:

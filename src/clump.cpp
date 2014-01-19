@@ -43,6 +43,11 @@ public:
    fType mtarg[33], mproj[33];
 #endif
 
+#ifdef SPHLATCH_PARENTBODY_ROT
+   vect3dT Lparent;
+   fType   Iparent;
+#endif
+
    cType id, nop;
 
    Clump()
@@ -101,6 +106,11 @@ public:
       vel = 0., 0., 0.;
       P   = 0., 0., 0.;
       L   = 0., 0., 0.;
+
+#ifdef SPHLATCH_PARENTBODY_ROT
+      Lparent = 0., 0., 0.;
+      Iparent = 0.;
+#endif
 
       posclmp = 0., 0., 0.;
       velclmp = 0., 0., 0.;
@@ -492,6 +502,11 @@ public:
 #ifdef SPHLATCH_ANEOS_TRACKORIG
       vars.push_back(storeVar(mtarg, "mtarg", 33));
       vars.push_back(storeVar(mproj, "mproj", 33));
+#endif
+
+#ifdef SPHLATCH_PARENTBODY_ROT
+      vars.push_back(storeVar(Lparent, "Lparent"));
+      vars.push_back(storeVar(Iparent, "Iparent"));
 #endif
 
       vars.push_back(storeVar(Lclmp, "Lclmp"));
