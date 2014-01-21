@@ -135,8 +135,8 @@ int main(int argc, char* argv[])
    parts.loadHDF5(inFilename);
    const fType  G   = parts.attributes["gravconst"];
    const size_t nop = parts.getNop();
-   const fType  ML  = 7.34770e25;
-   const fType day = 86400;
+   //const fType  ML  = 7.34770e25;
+   //const fType day = 86400;
 
    std::cerr << nop << " particles loaded\n";
 
@@ -195,8 +195,8 @@ int main(int argc, char* argv[])
    // get central clump surface
    cb.getCentralBodyOrbits(rhoClmpMin, G);
    const fType rcb(cb.rclmp);
-   const fType mcb(cb.m);
-   const fType rhocb(cb.rho);
+   //const fType mcb(cb.m);
+   //const fType rhocb(cb.rho);
 
    std::cerr << "parent body surface radius:   " << rcb << "\n";
 
@@ -205,39 +205,42 @@ int main(int argc, char* argv[])
    fof.search(rhomin, hmult, minMass);
    const size_t noc = fof.getNop();
    std::cerr << noc - 1 << " clump(s) found!\n";
-   std::cerr << "parent body no. of parts.:    " << fof[0].nop << " / "
-             << parts.getNop() << "\n";
 
-   size_t j = 0;
+   
+   for (size_t cf = 0; cf < noc; cf++)
+   {
+     const vect3dT com = fof[cf].pos;
+     const vect3dT vom = fof[cf].vel;
+   
+     vect3dT L;
+     L = 0., 0., 0.;
+     fType I = 0., Erot = 0;
+     size_t nocp = 0;
 
-   const vect3dT com = fof[0].pos;
-   const vect3dT vom = fof[0].vel;
-
-   vect3dT L;
-   L = 0., 0., 0.;
-   fType I = 0., Erot = 0;
-
-   for (size_t i = 0; i < nop; i++)
-     if (parts[i].friendid == 1)
-     {
-       const fType   mi   = parts[i].m;
-       const vect3dT rpos = parts[i].pos - com;
-       const vect3dT rvel = parts[i].vel - vom;
+     for (size_t i = 0; i < nop; i++)
+      if (parts[i].friendid == cf)
+      {
+        const fType   mi   = parts[i].m;
+        const vect3dT rpos = parts[i].pos - com;
+        const vect3dT rvel = parts[i].vel - vom;
 
 
-       const vect3dT rXv    = cross(rpos, rvel);
-       const fType   rXvrXv = dot(rXv, rXv);
-       const fType   rr     = dot(rpos, rpos);
+        const vect3dT rXv    = cross(rpos, rvel);
+        const fType   rXvrXv = dot(rXv, rXv);
+        const fType   rr     = dot(rpos, rpos);
        
-       L    += mi * rXv;
-       I    += mi * rr;
-       Erot += (0.5 * mi * rXvrXv / rr);
+        L    += mi * rXv;
+        I    += mi * rr;
+        Erot += (0.5 * mi * rXvrXv / rr);
 
-       j++;
+        nocp++;
      }
+   
+     fof[cf].Lparent = L;
+     fof[cf].Iparent = I;
+     std::cerr << " Friend ID " << cf << " :   " << nocp << " parts\n";
 
-   fof[0].Lparent = L;
-   fof[0].Iparent = I;
+   }
    
    if (sphlatch::fileExists(clFilename))
    {

@@ -688,6 +688,13 @@ class Simulation(object):
 
       except:
         self.results.problem = True
+  
+  def _getRotation(self,tmin=0.90,tmax=0.99):
+    if self.nodumps > 0:
+      (lfile, ltime, mtime) = self.dumps[-1]
+
+    
+      (exstat, out) = commands.getstatusoutput("h5dump -A " + file)
 
   def _plotSummary(self):
     if path.exists(self.dir + "clumps.h5part"):
