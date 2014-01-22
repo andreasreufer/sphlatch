@@ -57,6 +57,7 @@ class SimAdmin(object):
 
     if path.exists(ssetcfg.resultsdb):
       resdb = shelve.open(resolvePath(self._simset.cfg.resultsdb))
+      print "loading results from " + resolvePath(self._simset.cfg.resultsdb)
 
       for key in resdb.keys():
         if self._sims.has_key(key) and resdb.has_key(key):
@@ -72,6 +73,13 @@ class SimAdmin(object):
     for sim in self._sims.values():
       if sim.state == "run" or sim.state == "stuck":
         sim.getState()
+  
+  def loadResults(self):
+    resdb = shelve.open(resolvePath(self._simset.cfg.resultsdb))
+    print "loading results from " + resolvePath(self._simset.cfg.resultsdb)
+    for key in self._sims.keys():
+      self._sims[key].results = resdb[key]
+    resdb.close()
 
   def storeResults(self):
     resdb = shelve.open(resolvePath(self._simset.cfg.resultsdb))

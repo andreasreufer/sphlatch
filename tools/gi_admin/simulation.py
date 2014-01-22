@@ -1186,7 +1186,8 @@ class SimSet(object):
     else:
       cfg.dir += "/" + cfg.name
 
-    cfg.resultsdb = cfg.dir + "/results"
+    if not hasattr(cfg, 'resultsdb'):
+      cfg.resultsdb = cfg.dir + "/results"
     cfg.bodiesdb  = cfg.dir + "/bodies"
 
     cfg.subcmd = sim_machine.qsub_omp
