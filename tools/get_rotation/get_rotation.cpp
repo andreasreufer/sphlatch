@@ -215,7 +215,7 @@ int main(int argc, char* argv[])
    
      vect3dT L;
      L = 0., 0., 0.;
-     fType I = 0., Erot = 0;
+     fType I = 0.;
      size_t nocp = 0;
 
      for (size_t i = 0; i < nop; i++)
@@ -226,12 +226,17 @@ int main(int argc, char* argv[])
         const vect3dT rvel = parts[i].vel - vom;
 
         const vect3dT rXv    = cross(rpos, rvel);
-        const fType   rXvrXv = dot(rXv, rXv);
         const fType   rr     = dot(rpos, rpos);
+
+#ifdef SPHLATCH_ANEOS
+        const iType mat = parts[i].mat;
+#else
+        const iType mat = 0;
+#endif
        
-        L    += mi * rXv;
-        I    += mi * rr;
-        Erot += (0.5 * mi * rXvrXv / rr);
+        L      += mi * rXv;
+        I      += mi * rr;
+        fof[cf].mparentmat[mat] += mi;
 
         nocp++;
      }

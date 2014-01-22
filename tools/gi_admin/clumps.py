@@ -160,6 +160,9 @@ class SimClumps(object):
     if self.loadeng:
       self.maxmat = step.mmat.shape[1]
       self.engloaded = True
+    
+    if self.loadcrot:
+      self.maxmat = step.mparentmat.shape[1]
 
   def __getBasicData(self, step):
     if step._v_pathname == '/Step#0' and not self.forceload:
@@ -236,6 +239,7 @@ class SimClumps(object):
     
     self.Lparent[i,0:cnoc,:] = step.Lparent[:,:]
     self.Iparent[i,0:cnoc]  = step.Iparent[:,0]
+    self.mparentmat[i,0:cnoc,:]  = step.mparentmat[:,:]
 
   def __getStepNum(self,sname):
     return int(sname.replace("/Step#",""))
@@ -351,8 +355,10 @@ class SimClumps(object):
       dump.forEachStep(self.__getClmpeng)
     
     if loadcrot:
+      maxmat = self.maxmat
       self.Lparent = np.zeros([nos,maxnoc,3])
       self.Iparent = np.zeros([nos,maxnoc])
+      self.mparentmat = np.zeros([nos,maxnoc,maxmat])
       
       dump.forEachStep(self.__getClmprot)
 

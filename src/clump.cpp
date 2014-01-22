@@ -46,6 +46,7 @@ public:
 #ifdef SPHLATCH_PARENTBODY_ROT
    vect3dT Lparent;
    fType   Iparent;
+   fType   mparentmat[33];
 #endif
 
    cType id, nop;
@@ -110,6 +111,8 @@ public:
 #ifdef SPHLATCH_PARENTBODY_ROT
       Lparent = 0., 0., 0.;
       Iparent = 0.;
+      for (size_t i = 0; i < 33; i++)
+        mparentmat[i] = 0.;
 #endif
 
       posclmp = 0., 0., 0.;
@@ -507,6 +510,7 @@ public:
 #ifdef SPHLATCH_PARENTBODY_ROT
       vars.push_back(storeVar(Lparent, "Lparent"));
       vars.push_back(storeVar(Iparent, "Iparent"));
+      vars.push_back(storeVar(mparentmat, "mparentmat", 33));
 #endif
 
       vars.push_back(storeVar(Lclmp, "Lclmp"));

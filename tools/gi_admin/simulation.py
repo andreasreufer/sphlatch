@@ -710,11 +710,13 @@ class Simulation(object):
       
       self.results.Lparent = clmp.Lparent[0,:,:]
       self.results.Iparent = clmp.Iparent[0,:]
+      self.results.mparentmat = clmp.mparentmat[0,:,:]
         
       os.remove(cfile)
     else:
       self.results.Lparent = np.zeros_like( self.results.Lm )*nan
       self.results.Iparent = np.zeros_like( self.results.Im )*nan
+      self.results.mparentmat = np.zeros_like( self.results.mmatm )*nan
 
   def _plotSummary(self):
     if path.exists(self.dir + "clumps.h5part"):
@@ -1016,6 +1018,7 @@ class SimResults(object):
     
     self.Lparent = []
     self.Iparent = []
+    self.mparentmat = []
 
     self.nopm = []
     self.nopv = []
@@ -1092,6 +1095,7 @@ class SimResults(object):
     
     self.Lparent = np.zeros([noc,3])
     self.Iparent = np.zeros([noc]) 
+    self.mparentmat = np.zeros([noc,nomat]) 
 
     self.nopm = np.zeros([noc]) 
     self.nopv = np.zeros([noc]) 
