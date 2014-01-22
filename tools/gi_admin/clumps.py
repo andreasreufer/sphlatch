@@ -229,6 +229,13 @@ class SimClumps(object):
     self.Erotclmp[i,0:cnoc]  = step.Erotclmp[:,0]
     self.Epotclmp[i,0:cnoc]  = step.Epotclmp[:,0]
     self.Iclmp[i,0:cnoc]     = step.Iclmp[:,0]
+  
+  def __getClmprot(self, step):
+    i = self.snames.index(step._v_pathname)
+    cnoc = step.m.shape[0]
+    
+    self.Lparent[i,0:cnoc,:] = step.Lparent[:,:]
+    self.Iparent[i,0:cnoc]  = step.Iparent[:,0]
 
   def __getStepNum(self,sname):
     return int(sname.replace("/Step#",""))
@@ -236,11 +243,12 @@ class SimClumps(object):
   def __getdiskData(self, step):
     i = self.snames.index(step._v_pathname)
 
-  def __init__(self,sim,fname="clumps.h5part",loadsat=False,loadeng=False,loadclmp=False,forceload=False):
+  def __init__(self,sim,fname="clumps.h5part",loadsat=False,loadeng=False,loadclmp=False,loadcrot=False,forceload=False):
     dump = H5PartDump(sim.dir + fname)
     self.loadsat = loadsat
     self.loadeng = loadeng
     self.loadclmp = loadclmp
+    self.loadcrot = loadcrot
     self.forceload = forceload
     self.sim = sim
       
@@ -339,8 +347,14 @@ class SimClumps(object):
       self.Epotclmp  = np.zeros([nos,maxnoc])
       self.Erotclmp  = np.zeros([nos,maxnoc])
       self.Iclmp     = np.zeros([nos,maxnoc])
-      
+
       dump.forEachStep(self.__getClmpeng)
+    
+    if loadcrot:
+      self.Lparent = np.zeros([nos,maxnoc,3])
+      self.Iparent = np.zeros([nos,maxnoc])
+      
+      dump.forEachStep(self.__getClmprot)
 
     self.m[:,0] = self.sim.mtot - self.m[:,1:].sum(axis=1)
     m = self.m

@@ -689,12 +689,32 @@ class Simulation(object):
       except:
         self.results.problem = True
   
-  def _getRotation(self,tmin=0.90,tmax=0.99):
+  def _getRotation(self,mminrel=0.01,rhozero=1.5,hmult=2.0):
     if self.nodumps > 0:
-      (lfile, ltime, mtime) = self.dumps[-1]
+      sdir = self.dir
+      mmin = self.gi.mtot*mminrel
+      
+      cfile = sdir + "clumps_rot.h5part"
+      dfile = sdir + self.dumps[-1][0]
 
-    
-      (exstat, out) = commands.getstatusoutput("h5dump -A " + file)
+      cmd = "get_rotation " + dfile + " " \
+        + cfile        + " " \
+        + str(mmin)    + " " \
+        + str(rhozero) + " " \
+        + str(hmult)   + " "
+
+      (exstat, out) = commands.getstatusoutput(cmd)
+      print out
+      
+      clmp = SimClumps(self, fname="clumps_rot.h5part", loadcrot=True)
+      
+      self.results.Lparent = clmp.Lparent[0,:,:]
+      self.results.Iparent = clmp.Iparent[0,:]
+        
+      os.remove(cfile)
+    else:
+      self.results.Lparent = np.zeros_like( self.results.Lm )*nan
+      self.results.Iparent = np.zeros_like( self.results.Im )*nan
 
   def _plotSummary(self):
     if path.exists(self.dir + "clumps.h5part"):
@@ -993,6 +1013,9 @@ class SimResults(object):
     
     self.Im = []
     self.Iv = []
+    
+    self.Lparent = []
+    self.Iparent = []
 
     self.nopm = []
     self.nopv = []
@@ -1066,6 +1089,9 @@ class SimResults(object):
     
     self.Im = np.zeros([noc]) 
     self.Iv = np.zeros([noc]) 
+    
+    self.Lparent = np.zeros([noc,3])
+    self.Iparent = np.zeros([noc]) 
 
     self.nopm = np.zeros([noc]) 
     self.nopv = np.zeros([noc]) 

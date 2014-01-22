@@ -11,6 +11,7 @@
 
 #include "typedefs.h"
 typedef sphlatch::fType      fType;
+typedef sphlatch::iType      iType;
 typedef sphlatch::cType      cType;
 typedef sphlatch::vect3dT    vect3dT;
 typedef sphlatch::box3dT     box3dT;
@@ -203,11 +204,11 @@ int main(int argc, char* argv[])
    // now search friends of friends
    fofT fof(parts, Tree);
    fof.search(rhomin, hmult, minMass);
-   const size_t noc = fof.getNop();
+   const iType noc = fof.getNop();
    std::cerr << noc - 1 << " clump(s) found!\n";
 
    
-   for (size_t cf = 0; cf < noc; cf++)
+   for (iType cf = 0; cf < noc; cf++)
    {
      const vect3dT com = fof[cf].pos;
      const vect3dT vom = fof[cf].vel;
@@ -223,7 +224,6 @@ int main(int argc, char* argv[])
         const fType   mi   = parts[i].m;
         const vect3dT rpos = parts[i].pos - com;
         const vect3dT rvel = parts[i].vel - vom;
-
 
         const vect3dT rXv    = cross(rpos, rvel);
         const fType   rXvrXv = dot(rXv, rXv);
