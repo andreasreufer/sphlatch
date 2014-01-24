@@ -31,6 +31,7 @@ all: simple_sph_GCSHUmD_ simple_sph_GCSHSm_F simple_sph_GMSHUmD_ simple_sph_GMSH
 #
 # 8.    F  friction
 #       Z  no acceleration in Z-direction
+#       S  spin-up everything according to rigid rotation
 #       _  none
 #
 	   
@@ -118,6 +119,25 @@ simple_sph_GCSHSm_F: libmaneos
 	   -DSPHLATCH_FRICTION \
 	   -fopenmp \
 	   -o simple_sph_GCSHSm_F simple_sph.cpp
+
+simple_sph_GCSHSm_S: libmaneos
+	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	   -lhdf5 -lz -I../../src \
+	   -DSPHLATCH_GRAVITY \
+	   -DSPHLATCH_GRAVITY_POTENTIAL \
+	   -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
+	   -DSPHLATCH_TIMEDEP_SMOOTHING \
+	   -DSPHLATCH_TIMEDEP_ENTROPY \
+	   -DSPHLATCH_ANEOS \
+	   -DSPHLATCH_MANEOS -lgfortran libmaneos.o \
+	   -DSPHLATCH_ANEOS_TABLE \
+	   -DSPHLATCH_TRACK_TMAX \
+	   -DSPHLATCH_TRACK_PMAX \
+	   -DSPHLATCH_TRACK_UAV \
+	   -DSPHLATCH_TRACK_ACCP \
+	   -DSPHLATCH_SPINUP \
+	   -fopenmp \
+	   -o simple_sph_GCSHSm_S simple_sph.cpp
 
 simple_sph_GMSHUmD_: libmaneos
 	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \

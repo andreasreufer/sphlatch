@@ -517,7 +517,8 @@ void derive()
    Logger.flushStream();
 #endif
 
-#ifdef SPHLATCH_KEEPENERGYPROFILE
+
+#if defined SPHLATCH_KEEPENERGYPROFILE || defined SPHLATCH_SPINUP
    vect3dT com;
    com = 0., 0., 0.;
    fType totM = 0.;
@@ -534,14 +535,22 @@ void derive()
                  << com[2] << "]";
    Logger.flushStream();
 
+#ifdef SPHLATCH_KEEPENERGYPROFILE
    const fType thermFricCoeff = 1. / parts.attributes["frictime"];
+#endif
+#ifdef SPHLATCH_SPINUP
+   const fType spinupCoeff = 1. / parts.attributes["spinuptime"];
+#endif
+
    for (size_t i = 0; i < nop; i++)
    {
       const vect3dT rveci  = parts[i].pos - com;
       const fType   ri     = sqrt(dot(rveci, rveci));
+      
+#ifdef SPHLATCH_KEEPENERGYPROFILE
       const fType   utheoi = energyLUT(ri);
-
       parts[i].dudt -= (parts[i].u - utheoi) * thermFricCoeff;
+#endif
    }
 #endif
 

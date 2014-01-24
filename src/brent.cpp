@@ -10,35 +10,33 @@ public:
    BrentRooter() :
       maxItr(50),
       eps(3.e-8),
-      nan( std::numeric_limits<fType>::quiet_NaN() ),
+      nan(std::numeric_limits<fType>::quiet_NaN()),
       quiet(false)
    { }
    ~BrentRooter() { }
 
 private:
-   class noConvergence { 
-     public:
-     noConvergence(const fType _a, const fType _fa,
-                   const fType _b, const fType _fb,
-                   const fType _c, const fType _fc)
-     {
-       std::cerr << "no convergence in BrentRooter:\n"
-                 << "   a: " << _a << "   fa: " << _fa << "\n"
-                 << "   b: " << _b << "   fb: " << _fb << "\n"
-                 << "   c: " << _c << "   fc: " << _fc << "\n";
-
-     }
+   class noConvergence {
+public:
+      noConvergence(const fType _a, const fType _fa,
+                    const fType _b, const fType _fb,
+                    const fType _c, const fType _fc)
+      {
+         std::cerr << "no convergence in BrentRooter:\n"
+                   << "   a: " << _a << "   fa: " << _fa << "\n"
+                   << "   b: " << _b << "   fb: " << _fb << "\n"
+                   << "   c: " << _c << "   fc: " << _fc << "\n";
+      }
    };
    class rootNotBracketed {
-     public:
-     rootNotBracketed(const fType _a, const fType _fa,
-                   const fType _b, const fType _fb)
-     {
-       std::cerr << "not bracketed  in BrentRooter:\n"
-                 << "   a: " << _a << "   fa: " << _fa << "\n"
-                 << "   b: " << _b << "   fb: " << _fb << "\n";
-
-     }
+public:
+      rootNotBracketed(const fType _a, const fType _fa,
+                       const fType _b, const fType _fb)
+      {
+         std::cerr << "not bracketed  in BrentRooter:\n"
+                   << "   a: " << _a << "   fa: " << _fa << "\n"
+                   << "   b: " << _b << "   fb: " << _fb << "\n";
+      }
    };
 
 public:
@@ -52,11 +50,13 @@ public:
       fType fa, fb, fc, P, Q, R, S, min1, min2, tol1, xm;
       fa = f(a);
       fb = f(b);
-      if ( ((fa > 0.) && (fb > 0.)) or ((fa < 0.) && (fb < 0.)) )
-        if (quiet)
-          return nan;
-        else
-          throw rootNotBracketed(a,fa,b,fb);
+      if (((fa > 0.) && (fb > 0.)) or ((fa < 0.) && (fb < 0.)))
+      {
+         if (quiet)
+            return(nan);
+         else
+            throw rootNotBracketed(a, fa, b, fb);
+      }
 
       fc = fb;
 
@@ -132,9 +132,9 @@ public:
          fb = f(b);
       }
       if (not quiet)
-        throw noConvergence(a,fa,b,fb,c,fc);
+         throw noConvergence(a, fa, b, fb, c, fc);
       else
-        return nan;
+         return(nan);
    }
 
    _funcT f;
