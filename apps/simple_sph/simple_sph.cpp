@@ -540,6 +540,7 @@ void derive()
 #endif
 #ifdef SPHLATCH_SPINUP
    const fType spinupCoeff = 1. / parts.attributes["spinuptime"];
+   const fType targetOmega= (2*M_PI) / parts.attributes["targetrotperiod"];
 #endif
 
    for (size_t i = 0; i < nop; i++)
@@ -551,7 +552,20 @@ void derive()
       const fType   utheoi = energyLUT(ri);
       parts[i].dudt -= (parts[i].u - utheoi) * thermFricCoeff;
 #endif
+
+      // FIXME:
+      // for every particle
+      // 1. determine omega
+      // 2. determine resulting omega dot 
+      // 3. translate omega dot into linear acceleration
    }
+#ifdef SPHLATCH_KEEPENERGYPROFILE
+   Logger << " enforced radial energy profile";
+#endif
+#ifdef SPHLATCH_SPINUP
+   Logger.stream << " spin up to " << (1./(2*M_PI*targetOmega)) << " s";
+   Logger.flushStream();
+#endif
 #endif
 
 #ifdef SPHLATCH_ZONLY
