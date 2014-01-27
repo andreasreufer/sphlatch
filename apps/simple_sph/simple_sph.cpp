@@ -440,7 +440,7 @@ void derive()
       densWorker(CZbottomLoc[i]);
    Logger << "Tree.densWorker()";
 #endif
-   
+
    const fType pmin = parts.attributes["pmin"];
    Logger.stream << "assure minimal pressure     pmin = " << pmin;
    Logger.flushStream();
@@ -479,8 +479,8 @@ void derive()
 
       fType& pcur(parts[i].p);
       if (pcur < pmin)
-        pcur = pmin;
-   
+         pcur = pmin;
+
 #ifdef SPHLATCH_TRACK_PMAX
       fType& pmax(parts[i].pmax);
       if (pcur > pmax)
@@ -535,37 +535,52 @@ void derive()
                  << com[2] << "]";
    Logger.flushStream();
 
-#ifdef SPHLATCH_KEEPENERGYPROFILE
+ #ifdef SPHLATCH_KEEPENERGYPROFILE
    const fType thermFricCoeff = 1. / parts.attributes["frictime"];
-#endif
-#ifdef SPHLATCH_SPINUP
-   const fType spinupCoeff = 1. / parts.attributes["spinuptime"];
-   const fType targetOmega= (2*M_PI) / parts.attributes["targetrotperiod"];
-#endif
+ #endif
+ #ifdef SPHLATCH_SPINUP
+   const fType   spinupCoeff = 1. / parts.attributes["spinuptime"];
+   const fType   omega       = (2 * M_PI) / parts.attributes["targetrotperiod"];
+   const vect3dT omegavec(0., 0., omega);
+ #endif
+
 
    for (size_t i = 0; i < nop; i++)
    {
-      const vect3dT rveci  = parts[i].pos - com;
-      const fType   ri     = sqrt(dot(rveci, rveci));
-      
-#ifdef SPHLATCH_KEEPENERGYPROFILE
-      const fType   utheoi = energyLUT(ri);
-      parts[i].dudt -= (parts[i].u - utheoi) * thermFricCoeff;
-#endif
+      const vect3dT rveci = parts[i].pos - com;
+      const fType   ri    = sqrt(dot(rveci, rveci));
 
-      // FIXME:
+ #ifdef SPHLATCH_KEEPENERGYPROFILE
+      const fType utheoi = energyLUT(ri);
+      parts[i].dudt -= (parts[i].u - utheoi) * thermFricCoeff;
+ #endif
+
+ #ifdef SPHLATCH_SPINUP
       // for every particle
       // 1. determine omega
-      // 2. determine resulting omega dot 
+      // 2. determine resulting omega dot
       // 3. translate omega dot into linear acceleration
+      //
+      // plan B
+      // 1. determine local radius
+      // 2. determine v_targ
+      //    omega = (1./r**2)*( r x v )
+      //    vtarg = -(1./r*r) *(r x omega)
+      // 3. acc += (vtarg - v)*spinupcoeff
+
+      // FIXME: check math
+      vect3dT vtarg = (1. / (ri * ri)) * cross(rveci, omegavec);
+      parts[i].acc += spinupCoeff * (parts[i].vel - vtarg);
+ #endif
    }
-#ifdef SPHLATCH_KEEPENERGYPROFILE
+ #ifdef SPHLATCH_KEEPENERGYPROFILE
    Logger << " enforced radial energy profile";
-#endif
-#ifdef SPHLATCH_SPINUP
-   Logger.stream << " spin up to " << (1./(2*M_PI*targetOmega)) << " s";
+ #endif
+ #ifdef SPHLATCH_SPINUP
+   // FIXME: check math
+   Logger.stream << " spin up to " << (1. / (2 * M_PI * omega)) << " s";
    Logger.flushStream();
-#endif
+ #endif
 #endif
 
 #ifdef SPHLATCH_ZONLY
@@ -613,7 +628,7 @@ fType timestep(const fType _stepTime, const fType _nextTime)
       const fType ai = sqrt(dot(parts[i].acc, parts[i].acc));
       if (ai > 0.)
       {
-         const fType dtAi = 0.25*sqrt(parts[i].h / ai);
+         const fType dtAi = 0.25 * sqrt(parts[i].h / ai);
          dtA = dtAi < dtA ? dtAi : dtA;
       }
 
@@ -1146,7 +1161,7 @@ int main(int argc, char* argv[])
 #ifdef SPHLATCH_XSPH
    if (parts.attributes.count("xsphfactor") == 0)
       parts.attributes["xsphfactor"] = 0.5;
-   
+
    parts[0].xsphfactor = parts.attributes["xsphfactor"];
 #endif
 
