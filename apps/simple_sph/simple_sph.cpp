@@ -519,21 +519,24 @@ void derive()
 
 
 #if defined SPHLATCH_KEEPENERGYPROFILE || defined SPHLATCH_SPINUP
-   vect3dT com;
-   com = 0., 0., 0.;
-   fType totM = 0.;
+   vect3dT com(0., 0., 0.);
+   vect3dT vom(0., 0., 0.);
+   fType   totM = 0.;
    for (size_t i = 0; i < nop; i++)
    {
       com  += parts[i].pos * parts[i].m;
+      vom  += parts[i].vel * parts[i].m;
       totM += parts[i].m;
    }
    com /= totM;
+   vom /= totM;
 
-   Logger.stream << "center of mass: ["
-                 << com[0] << ","
-                 << com[1] << ","
-                 << com[2] << "]";
+   Logger.stream << " center of mass: " << com;
    Logger.flushStream();
+   Logger.stream << " vel of com.   : " << vom;
+   Logger.flushStream();
+
+
 
  #ifdef SPHLATCH_KEEPENERGYPROFILE
    const fType thermFricCoeff = 1. / parts.attributes["frictime"];
@@ -542,12 +545,15 @@ void derive()
    const fType   spinupCoeff = 1. / parts.attributes["spinuptime"];
    const fType   omega       = (2 * M_PI) / parts.attributes["targetrotperiod"];
    const vect3dT omegavec(0., 0., omega);
+   vect3dT       L(0., 0., 0.);
+   fType         I = 0.;
  #endif
 
 
    for (size_t i = 0; i < nop; i++)
    {
       const vect3dT rveci = parts[i].pos - com;
+      const vect3dT vveci = parts[i].vel - vom;
       const fType   ri    = sqrt(dot(rveci, rveci));
 
  #ifdef SPHLATCH_KEEPENERGYPROFILE
@@ -556,16 +562,23 @@ void derive()
  #endif
 
  #ifdef SPHLATCH_SPINUP
-      // FIXME: actually measure omega
       vect3dT vtarg = cross(omegavec, rveci);
-      parts[i].acc += spinupCoeff * (parts[i].vel - vtarg);
+      parts[i].acc += spinupCoeff * (vtarg - parts[i].vel);
+
+      L += parts[i].m* cross(rveci, vveci);
+      I += parts[i].m * ri * ri;
  #endif
    }
+
+   vect3dT rotperact = (2. * M_PI * I) / (3600. * L);
  #ifdef SPHLATCH_KEEPENERGYPROFILE
    Logger << " enforced radial energy profile";
  #endif
  #ifdef SPHLATCH_SPINUP
-   Logger.stream << " spin up to " << ((2 * M_PI) / omega) << " s";
+   Logger.stream << " spin up to:    "
+                 << ((2 * M_PI) / (omega / 3600.)) << " h";
+   Logger.flushStream();
+   Logger.stream << " current omega: " << rotperact << " h";
    Logger.flushStream();
  #endif
 #endif
