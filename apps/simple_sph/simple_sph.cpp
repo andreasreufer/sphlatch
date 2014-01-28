@@ -563,7 +563,8 @@ void derive()
 
  #ifdef SPHLATCH_SPINUP
       vect3dT vtarg = cross(omegavec, rveci);
-      parts[i].acc += spinupCoeff * (vtarg - parts[i].vel);
+      //parts[i].acc += spinupCoeff * (vtarg - parts[i].vel);
+      parts[i].acc += spinupCoeff * vtarg;
 
       L += parts[i].m* cross(rveci, vveci);
       I += parts[i].m * ri * ri;
@@ -576,7 +577,7 @@ void derive()
  #endif
  #ifdef SPHLATCH_SPINUP
    Logger.stream << " spin up to:    "
-                 << ((2 * M_PI) / (omega / 3600.)) << " h";
+                 << ((2 * M_PI) / (omega * 3600.)) << " h";
    Logger.flushStream();
    Logger.stream << " current omega: " << rotperact << " h";
    Logger.flushStream();
