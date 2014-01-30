@@ -22,7 +22,7 @@ lem = 3.40000e41
 eVinK = 11604.505
 
 sscfg = SimSetConfig()
-sscfg.name = "c2_P06h"
+sscfg.name = "c2_P04h"
 
 sscfg.maketarg = "simple_sph_GCSHUmD_"
 sscfg.binary   = "simple_sph_GCSHUmD_"
@@ -59,7 +59,7 @@ cfg_fat_XY_Z.imgdir = sscfg.dir + "/viz_fat_XY_Z"
 
 #mimpa = [0.1, 0.2, 0.5, 1.0, 2.0]
 #mtara = [0.1, 0.2, 0.5, 1.0, 2.0]
-mimpa = [0.002]
+mimpa = [0.007]
 mtara = [0.01]
 
 vimpimpaa = [ \

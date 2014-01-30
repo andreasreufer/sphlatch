@@ -138,6 +138,27 @@ simple_sph_GCSHSm_S: libmaneos
 	   -DSPHLATCH_SPINUP \
 	   -fopenmp \
 	   -o simple_sph_GCSHSm_S simple_sph.cpp
+	   
+simple_sph_GCSHSmES: libmaneos
+	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
+	   -lhdf5 -lz -I../../src \
+	   -DSPHLATCH_GRAVITY \
+	   -DSPHLATCH_GRAVITY_POTENTIAL \
+	   -DSPHLATCH_GRAVITY_SPLINESMOOTHING \
+	   -DSPHLATCH_TIMEDEP_SMOOTHING \
+	   -DSPHLATCH_TIMEDEP_ENTROPY \
+	   -DSPHLATCH_ANEOS \
+	   -DSPHLATCH_MANEOS -lgfortran libmaneos.o \
+	   -DSPHLATCH_ANEOS_TABLE \
+	   -DSPHLATCH_TRACK_TMAX \
+	   -DSPHLATCH_TRACK_PMAX \
+	   -DSPHLATCH_TRACK_UAV \
+	   -DSPHLATCH_TRACK_ACCP \
+	   -DSPHLATCH_FIND_CLUMPS \
+	   -DSPHLATCH_ESCAPEES \
+	   -DSPHLATCH_SPINUP \
+	   -fopenmp \
+	   -o simple_sph_GCSHSmES simple_sph.cpp
 
 simple_sph_GMSHUmD_: libmaneos
 	 $(CXX) $(CXXFLAGS) $(LDFLAGS) \
