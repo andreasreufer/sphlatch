@@ -444,7 +444,7 @@ class Simulation(object):
       subcmd = subcmd.replace('$STOPTIME' , str(self.tstop))
       subcmd = subcmd.replace('$RUNARGS' ,  runarg)
       
-    print "cd " + self.dir + ";" + subcmd
+    print "cd " + self.dir + "; qsub jobscript.sh"
     (exstat, out) = commands.getstatusoutput(subcmd)
     os.chdir(oldwd)
       
