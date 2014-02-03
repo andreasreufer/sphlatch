@@ -67,7 +67,14 @@ for file in os.listdir(wdir):
     dump  = dumpf.getStepFirst()
 
     (m, mmat, r, rmat, h, nop, attrs) = getMetaData(dump)
-    
+
+    rnewstr = raw_input("proposed radius:  %e " % r)
+    try:
+      r = float(rnewstr)
+      print (" using new radius of %e " % r)
+    except:
+      pass
+
     #T = float(file[16:20])
     #T = float(file[17:24])
     #T = float(file[19:26])
