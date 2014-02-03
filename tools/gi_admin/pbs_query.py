@@ -1,5 +1,6 @@
 import time
 import commands
+import xml.etree.ElementTree as ET
 
 class PBSquery(object):
   def __init__(self, notolderthan=10):
@@ -15,13 +16,12 @@ class PBSquery(object):
     return self.jobslist
   
   def getFullname(self, jobid):
-    (stat, out) = commands.getstatusoutput("qstat -f " + str(jobid))
-    if stat == 0:
-      for line in out.splitlines():
-        if line.count("Job_Name"):
-          return line.split()[2]
-    return " "
-
+    if self.jobslist.has_key(jobid):
+      (name, user, state) = self.jobslist[jobid]
+      return name
+    else:
+      return ""
+    
   def delJobID(self, jobid):
     (stat, out) = commands.getstatusoutput("qdel " + str(jobid))
     return stat
@@ -36,24 +36,30 @@ class PBSquery(object):
 
   def _refreshData(self):
     jobslist = {}
-    # TODO: most probably the wrong parameter
-    (stat, runwaitraw) = commands.getstatusoutput("qstat")
+    (stat, runwaitraw) = commands.getstatusoutput("qstat -x")
     if stat != 0:
       return
-    for line in runwaitraw.splitlines()[2:]:
-      (idstr, abbrname, user, timeused, statestr, queue) = line.split()
+    
+    qroot = ET.fromstring(runwaitraw)
 
-      state = "unknown"
-      if statestr == "Q":
-        state = "queued"
-      if statestr == "R":
-        state = "run"
-      if statestr == "E":
-        state = "finished"
-      if statestr == "C":
-        state = "partial"
+    for child in qroot:
+      if child.tag == "Job":
+        name = child.findtext('Job_Name')
+        flid = child.findtext('Job_Id')
+        sstr = child.findtext('job_state')
+        user = child.findtext('Job_Owner').split('@')[0]
+      
+        state = "unknown"
+        if sstr == "Q":
+          state = "queued"
+        if sstr == "R":
+          state = "run"
+        if sstr == "C":
+          state = "partial"
+        if sstr == "E":
+          state = "partial"
 
-      jobslist[ idstr.split('.')[0] ] = (abbrname, user, state)
+        jobslist[ flid.split('.')[0] ] = (name, user, state)
   
     self.timestamp = time.time()
     self.jobslist = jobslist

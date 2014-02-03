@@ -8,7 +8,7 @@ import shelve
 import sim_machine
 
 def resolvePath(_path):
-    return path.abspath( path.expanduser(_path) )
+   return path.abspath( path.expanduser(_path) )
 
 from simulation import SimSet, SimParam, SimSetConfig, Simulation
 from sge_query import SGEquery
@@ -218,18 +218,18 @@ class SimAdmin(object):
       (sname, user, state) = qsysjobs[id]
       if (user == self.user):
         fname = self._qsysqry.getFullname(id)
-	if len(fname) < 1:
-	  continue
-	if fname.count("_") < 1:
-	  continue
-        prefix = fname.split("_")[0]
+        if len(fname) < 1 or len(fname) < len(ssname):
+	      continue
+        if fname.count("_") < 1:
+	      continue
+        prefix = fname[0:len(ssname)]
         if prefix == ssname:
           simname = fname.replace(prefix + "_", "")
           if self._simset.sims.has_key(simname):
             self._simset.sims[simname].set_jobid(id)
             self._simset.sims[simname].set_state(state)
-	    if state == "queued" or state == "run":
-	       self.noqsysjobs += 1
+            if state == "queued" or state == "run":
+              self.noqsysjobs += 1
 
 
 

@@ -791,17 +791,21 @@ class Simulation(object):
          retdumps.append( (dfile,dtime,dmtime) )
     return retdumps
 
-
   def _redoClumpsIfnodata(self):
     sdir = self.dir
     noescdump = self._getDumpsWithoutESC()
     if len(noescdump) > 0 and (not os.path.exists(self.dir + "clumps_done")):
-      self._redoClumps()
+      return self._redoClumps()
+    else:
+      return ""
+  
+  def _redoClumpsIfNotOK(self):
+    if not self._clumpsOK():
+       self._redoClumps()
   
   def _redoClumpsLocally(self):
     print self.params.key
     sdir = self.dir
-    
     orgclmpfile = sdir + "clumps.h5part"
     
     if not path.exists(orgclmpfile):
@@ -860,13 +864,16 @@ class Simulation(object):
     jobsub = jobsub.replace("$JOBCMD" , "redoclumps.sh")
 
     if hasattr(sim_machine, "qsub_sglscr"):
-      print "cd " + sdir + "; qsub redoclumps.sh"
+      retstr = "cd " + sdir + "; qsub redoclumps.sh"
+      print retstr
+      return retstr
     else:
       oldwd = os.getcwd()
       os.chdir(self.dir)
       (exstat, out) = commands.getstatusoutput(jobsub)
       os.chdir(oldwd)
       print out
+      return out
 
   def _findNoClumps(self):
     sdir = self.dir
@@ -907,10 +914,6 @@ class Simulation(object):
     os.chdir(oldwd)
     print out
     self.clumpjobid = re.split( '\W+', out )[2]
-
-  def _redoClumpsIfNotOK(self):
-    if not self._clumpsOK():
-       self._redoClumps()
 
   def _delCorrupt(self):
     for (dfile, dtime, mtime) in self.dumps:
