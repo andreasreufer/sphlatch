@@ -90,7 +90,7 @@ cond  = "mimp <= mtar"
 
 vizcfg = GIvizConfig()
 vizcfg.scdir = sscfg.dir + "/vizscratch"
-vizcfg.tasksperjob = 30
+vizcfg.tasksperjob = 100
 
 vizsim = GIviz(vizcfg)
 
@@ -101,10 +101,14 @@ def vizAll():
 def animAll():
   vizsim.animSims(sims.values(), [cfg_T___XY_n, cfg_mat_XY_n])
 
-def findNoClumpsAll():
-  for sim in sims.values():
-    print sim.params.key,":"
-    sim._findNoClumps()
+def findClumps():
+  scrname = sscfg.name+"_do_clumps.sh"
+  scrfile = open(scrname,"w")
+  print >>scrfile, "#!/bin/bash"
+  for sim in simadm.getSimsByState("finished"):
+     print >>scrfile, sim._redoClumpsIfnodata()
+  scrfile.close()
+  os.chmod(scrname, stat.S_IRWXU)
 
 def resubmitStuck():
   for sim in sims.values():
@@ -142,34 +146,5 @@ def housekeepingLoop():
     vizAll()
     print "sleep for half-an-hour ..."
     time.sleep(1800)
-
-
-def impaPicAll(trel):
-  for sim in sims.values():
-    impaPic(sim, trel)
-
-def impaPic(sim, trel):
-  tcol = sim.tcol
-  for drec in sim.dumps:
-    (dfile, dtime) = drec
-    if abs( dtime / tcol  - trel ) < 1.e-3:
-      vizsim.addTask(sim, drec, cfg_orb_XY_Z)
-  vizsim.runTasksSGE()
-
-def fatePic(sim, trel):
-  (lfile, ltime) = sim.dumps[-1]
-  labsfile = sim.dir + lfile
-
-  tcol = sim.tcol
-  for drec in sim.dumps:
-    (dfile, dtime) = drec
-    if abs( dtime / tcol  - trel ) < 1.e-3:
-      (lfile, ltime) = sim.dumps[-1]
-      labsfile = sim.dir + lfile
-      
-      cfg_fat_XY_Z.lfile = labsfile
-      vizsim.addTask(sim, drec, cfg_fat_XY_Z)
-  vizsim.runTasksSGE()
-
 
 

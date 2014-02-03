@@ -90,7 +90,7 @@ cond  = "mimp <= mtar"
 
 vizcfg = GIvizConfig()
 vizcfg.scdir = sscfg.dir + "/vizscratch"
-vizcfg.tasksperjob = 30
+vizcfg.tasksperjob = 100
 
 vizsim = GIviz(vizcfg)
 
@@ -101,10 +101,15 @@ def vizAll():
 def animAll():
   vizsim.animSims(sims.values(), [cfg_T___XY_n, cfg_mat_XY_n])
 
-def findNoClumpsAll():
-  for sim in sims.values():
-    print sim.params.key,":"
-    sim._findNoClumps()
+def findClumps():
+  scrname = sscfg.name+"_do_clumps.sh"
+  scrfile = open(scrname,"w")
+  print >>scrfile, "#!/bin/bash"
+  for sim in simadm.getSimsByState("finished"):
+     print >>scrfile, sim._redoClumpsIfnodata()
+  scrfile.close()
+  os.chmod(scrname, stat.S_IRWXU)
+
 
 def resubmitStuck():
   for sim in sims.values():
