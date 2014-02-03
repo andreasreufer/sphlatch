@@ -783,6 +783,14 @@ class Simulation(object):
     else:
       return False
   
+  def _getDumpsWithoutESC(self):
+    retdumps = []
+    for (dfile,dtime,dmtime) in self.dumps:
+      efile = dfile.replace(".h5part","_esc.h5part")
+      if not os.path.exists(self.dir + efile):
+         retdumps.append( (dfile,dtime,dmtime) )
+    return retdumps
+  
   def _redoClumpsLocally(self):
     print self.params.key
     sdir = self.dir
@@ -807,7 +815,6 @@ class Simulation(object):
       (stat, out) = commands.getstatusoutput(cmd)
       print out
 
-    
   def _redoClumps(self):
     if not len(self.cfg.subcmdsgl) > 0:
       self._redoClumpsLocally()
@@ -819,10 +826,18 @@ class Simulation(object):
     
     jobscr  = self.dir + "redoclumps.sh"
     scrfile = open(jobscr,"w")
-    
+
+    if hasattr(sim_machine, "qsub_sglscr"):
+      scrhead = sim_machine.qsub_sglscr
+      scrhead = scrhead.replace('$JOBNAME', "redoClp_"+self.params.key)
+      scrhead = scrhead.replace("$JOBCMD" , "")
+      scrfile.write(scrhead)
+      
     mmassclmp = 1.e-4*self.mtot
     mmassorb  = 1.e-3*self.mtot
-
+    
+    print >>scrfile, "mv clumps.h5part clumps_sim.h5part"
+    
     for (dfile,dtime,dmtime) in self.dumps:
       #cmd = "find_clumps_A_ " + sdir + dfile + " " + sdir + \
       #      "clumps.h5part -1. -1."
@@ -834,15 +849,19 @@ class Simulation(object):
     print >>scrfile, "rm " + jobscr
     scrfile.close()
     os.chmod(jobscr, stat.S_IRWXU)
+    
     jobsub = self.cfg.subcmdsgl
     jobsub = jobsub.replace("$JOBNAME", "redoClp_"+self.params.key)
     jobsub = jobsub.replace("$JOBCMD" , "redoclumps.sh")
 
-    oldwd = os.getcwd()
-    os.chdir(self.dir)
-    (exstat, out) = commands.getstatusoutput(jobsub)
-    os.chdir(oldwd)
-    print out
+    if hasattr(sim_machine, "qsub_sglscr"):
+      print "cd " + sdir + "; qsub redoclumps.sh"
+    else:
+      oldwd = os.getcwd()
+      os.chdir(self.dir)
+      (exstat, out) = commands.getstatusoutput(jobsub)
+      os.chdir(oldwd)
+      print out
 
   def _findNoClumps(self):
     sdir = self.dir
