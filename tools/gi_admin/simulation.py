@@ -790,6 +790,13 @@ class Simulation(object):
       if not os.path.exists(self.dir + efile):
          retdumps.append( (dfile,dtime,dmtime) )
     return retdumps
+
+
+  def _redoClumpsIfnodata(self):
+    sdir = self.dir
+    noescdump = self._getDumpsWithoutESC()
+    if len(noescdump) > 0 and (not os.path.exists(self.dir + "clumps_done")):
+      self._redoClumps()
   
   def _redoClumpsLocally(self):
     print self.params.key
@@ -819,10 +826,7 @@ class Simulation(object):
     if not len(self.cfg.subcmdsgl) > 0:
       self._redoClumpsLocally()
       return
-
     sdir = self.dir
-    cmd = "rm " + sdir + "clumps.h5part"
-    (exstat, out) = commands.getstatusoutput(cmd)
     
     jobscr  = self.dir + "redoclumps.sh"
     scrfile = open(jobscr,"w")
@@ -847,6 +851,7 @@ class Simulation(object):
       #(stat, out) = commands.getstatusoutput(cmd)
       #print out
     print >>scrfile, "rm " + jobscr
+    print >>scrfile, "touch " + sdir + "clumps_done"
     scrfile.close()
     os.chmod(jobscr, stat.S_IRWXU)
     
