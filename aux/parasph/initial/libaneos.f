@@ -1,1 +1,0 @@
-../../../aux/libaneos/libaneos.f
