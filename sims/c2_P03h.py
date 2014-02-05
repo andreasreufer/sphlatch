@@ -43,15 +43,12 @@ cfg_T___XY_n.imgdir = sscfg.dir + "/viz_T___XY_n"
 cfg_T___XY_n.scal_min  =  150. / eVinK
 cfg_T___XY_n.MminPlt = 1.e-5*ME
 cfg_T___XY_n.MminPlt = 5.e-4*ME
-
+cfg_T___XY_n.axreluse = True
 
 cfg_mat_XY_n.imgdir = sscfg.dir + "/viz_mat_XY_n"
 cfg_mat_XY_n.MminPlt = 1.e-5*ME
 cfg_mat_XY_n.MminPlt = 5.e-4*ME
-
-# for 0.01ME targets
-cfg_T___XY_n.ax = [-5.2e9 , 5.2e9 , -2.9e9 , 2.9e9 ]
-cfg_mat_XY_n.ax = [-5.2e9 , 5.2e9 , -2.9e9 , 2.9e9 ]
+cfg_mat_XY_n.axreluse = True
 
 cfg_grd_rho_XY_m.imgdir = sscfg.dir + "/viz_rho_XY_m"
 cfg_grd_p___XY_m.imgdir = sscfg.dir + "/viz_p___XY_m"
@@ -102,6 +99,7 @@ vizsim = GIviz(vizcfg)
 
 
 def vizAll():
+  vizsim.clearScratch()
   vizsim.doSims(sims.values(), [cfg_T___XY_n, cfg_mat_XY_n])
 
 def animAll():
@@ -117,12 +115,6 @@ def findClumps():
   os.chmod(scrname, stat.S_IRWXU)
 
 
-def resubmitStuck():
-  for sim in sims.values():
-    if sim.state == "stuck":
-      sim._abort()
-      sim._resubmit()
-
 def finalizeSims(sims):
   for sim in sims:
     vizsim.clearSim(sim, [cfg_T___XY_n, cfg_mat_XY_n])
@@ -134,53 +126,4 @@ def finalizeSims(sims):
   for sim in sims:
     if not sim.state == "run":
       sim._delAll()
-
-def housekeepingLoop():
-  while True:
-    print "simadm.update()"
-    simadm.update()
-
-    print "re-submit stuck jobs ..."
-    resubmitStuck()
-
-    print "find clumps ..."
-    findNoClumpsAll()
-    print "sleep for half-an-hour ..."
-    time.sleep(1800)
-
-    print "visualize ..."
-    vizsim.clearScratch()
-    vizAll()
-    print "sleep for half-an-hour ..."
-    time.sleep(1800)
-
-
-def impaPicAll(trel):
-  for sim in sims.values():
-    impaPic(sim, trel)
-
-def impaPic(sim, trel):
-  tcol = sim.tcol
-  for drec in sim.dumps:
-    (dfile, dtime) = drec
-    if abs( dtime / tcol  - trel ) < 1.e-3:
-      vizsim.addTask(sim, drec, cfg_orb_XY_Z)
-  vizsim.runTasksSGE()
-
-def fatePic(sim, trel):
-  (lfile, ltime) = sim.dumps[-1]
-  labsfile = sim.dir + lfile
-
-  tcol = sim.tcol
-  for drec in sim.dumps:
-    (dfile, dtime) = drec
-    if abs( dtime / tcol  - trel ) < 1.e-3:
-      (lfile, ltime) = sim.dumps[-1]
-      labsfile = sim.dir + lfile
-      
-      cfg_fat_XY_Z.lfile = labsfile
-      vizsim.addTask(sim, drec, cfg_fat_XY_Z)
-  vizsim.runTasksSGE()
-
-
 

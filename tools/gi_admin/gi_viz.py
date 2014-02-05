@@ -230,6 +230,7 @@ class GIviz(object):
       if hasattr(sim_machine, "qsub_sglscr"):
         jobstr = sim_machine.qsub_sglscr
         jobstr = jobstr.replace('$JOBCMD', '')
+        jobstr = jobstr.replace('$JOBNAME', jobname)
 
       for task in job:
         jobstr += ( self.cfg.python + " " + drvname + " " + str(task.id) + "\n" )

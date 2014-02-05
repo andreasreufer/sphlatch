@@ -43,15 +43,12 @@ cfg_T___XY_n.imgdir = sscfg.dir + "/viz_T___XY_n"
 cfg_T___XY_n.scal_min  =  150. / eVinK
 cfg_T___XY_n.MminPlt = 1.e-5*ME
 cfg_T___XY_n.MminPlt = 5.e-4*ME
-
+cfg_T___XY_n.axreluse = True
 
 cfg_mat_XY_n.imgdir = sscfg.dir + "/viz_mat_XY_n"
 cfg_mat_XY_n.MminPlt = 1.e-5*ME
 cfg_mat_XY_n.MminPlt = 5.e-4*ME
-
-# for 0.01ME targets
-cfg_T___XY_n.ax = [-5.2e9 , 5.2e9 , -2.9e9 , 2.9e9 ]
-cfg_mat_XY_n.ax = [-5.2e9 , 5.2e9 , -2.9e9 , 2.9e9 ]
+cfg_mat_XY_n.axreluse = True
 
 cfg_grd_rho_XY_m.imgdir = sscfg.dir + "/viz_rho_XY_m"
 cfg_grd_p___XY_m.imgdir = sscfg.dir + "/viz_p___XY_m"
@@ -59,7 +56,7 @@ cfg_fat_XY_Z.imgdir = sscfg.dir + "/viz_fat_XY_Z"
 
 #mimpa = [0.1, 0.2, 0.5, 1.0, 2.0]
 #mtara = [0.1, 0.2, 0.5, 1.0, 2.0]
-mimpa = [0.002]
+mimpa = [0.007]
 mtara = [0.01]
 
 vimpimpaa = [ \
@@ -84,6 +81,12 @@ vimpimpaa = [ \
  (82.5, 1.0), (82.5, 1.05), (82.5, 1.1), (82.5, 1.15), (82.5, 1.2), (82.5, 1.3),
  (89.0, 1.0), (89.5, 1.05), (89.5, 1.1), (89.5, 1.15), (89.5, 1.2), (89.5, 1.3)
  ]
+
+vimpimpaa2 = [ \
+ (15., 1.0), (30., 1.0), (45., 1.0), (60., 1.0), (75., 1.0), (89.5, 1.0),
+ (15., 1.05), (30., 1.05), (45., 1.05), (60., 1.05), (75., 1.05), (89.5, 1.05),
+ (15., 1.1), (30., 1.1), (45., 1.1), (60., 1.1), (75., 1.1), (89.5, 1.1),
+ (15., 1.2), (30., 1.2), (45., 1.2), (60., 1.2), (75., 1.2), (89.5, 1.2) ]
  
 cond  = "mimp <= mtar"
 
@@ -96,6 +99,7 @@ vizsim = GIviz(vizcfg)
 
 
 def vizAll():
+  vizsim.clearScratch()
   vizsim.doSims(sims.values(), [cfg_T___XY_n, cfg_mat_XY_n])
 
 def animAll():
@@ -110,11 +114,6 @@ def findClumps():
   scrfile.close()
   os.chmod(scrname, stat.S_IRWXU)
 
-def resubmitStuck():
-  for sim in sims.values():
-    if sim.state == "stuck":
-      sim._abort()
-      sim._resubmit()
 
 def finalizeSims(sims):
   for sim in sims:
@@ -127,24 +126,4 @@ def finalizeSims(sims):
   for sim in sims:
     if not sim.state == "run":
       sim._delAll()
-
-def housekeepingLoop():
-  while True:
-    print "simadm.update()"
-    simadm.update()
-
-    print "re-submit stuck jobs ..."
-    resubmitStuck()
-
-    print "find clumps ..."
-    findNoClumpsAll()
-    print "sleep for half-an-hour ..."
-    time.sleep(1800)
-
-    print "visualize ..."
-    vizsim.clearScratch()
-    vizAll()
-    print "sleep for half-an-hour ..."
-    time.sleep(1800)
-
 
