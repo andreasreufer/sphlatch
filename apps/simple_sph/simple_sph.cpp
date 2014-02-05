@@ -922,7 +922,7 @@ void save(std::string _dumpPrefix)
    const fType rmax = parts.attributes["diskrmax"];
 
    dbinT diskBinner(parts);
-   diskBinner.saveBins(1., rmin, rmax, 100, "disk.hdf5");
+   diskBinner.saveBins(1, rmin, rmax, 100, "disk.hdf5");
    Logger << "binned disk and stored to disk.hdf5";
 
  #ifdef SPHLATCH_LRDISKFOF
