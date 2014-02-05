@@ -230,7 +230,7 @@ class GIviz(object):
       if hasattr(sim_machine, "qsub_sglscr"):
         jobstr = sim_machine.qsub_sglscr
         jobstr = jobstr.replace('$JOBCMD', '')
-        jobstr = jobstr.replace('$JOBNAME', jobname)
+        jobstr = jobstr.replace('$JOBNAME', (jprfx + ( "%03i" % jid )))
 
       for task in job:
         jobstr += ( self.cfg.python + " " + drvname + " " + str(task.id) + "\n" )
