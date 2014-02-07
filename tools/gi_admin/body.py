@@ -19,8 +19,11 @@ class BodyFile(object):
     # not logic, so that 'nan' acts like a wildcard
     fitMass = not abs( ( self.m - bod.m ) / self.m ) > tol
     fitRes  = not abs( ( self.h - bod.h ) / self.h ) > tol
+    
+    # ignore temperature for the moment
     #fitTemp = not abs( ( self.T - bod.T ) / self.T ) > tol
     fitTemp = True
+    
     return  fitMass and fitRes and fitTemp 
 
 

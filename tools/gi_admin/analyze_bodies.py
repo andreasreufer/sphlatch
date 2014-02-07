@@ -17,11 +17,13 @@ def getMetaData(dump):
   h   = dump.h[:,0].compress(filt)
   m   = dump.m[:,0].compress(filt)
   pos = dump.pos[:,:].compress(filt, axis=0)
+  vel = dump.vel[:,:].compress(filt, axis=0)
   mat = dump.mat[:,0].compress(filt)
-  
 
   mtot = np.sum(m[:])
   com  = np.sum( ( dump.pos[:,:] * dump.m[:] ).compress(filt, axis=0) , \
+      axis=0) / mtot
+  vom  = np.sum( ( dump.vel[:,:] * dump.m[:] ).compress(filt, axis=0) , \
       axis=0) / mtot
   nop  = m.shape[0]
   rhook = (dump.rho[:,0] > 0.5)
@@ -42,12 +44,22 @@ def getMetaData(dump):
       rmat[i]  = np.sqrt( np.max( np.sum( posfilt * posfilt, axis = 1 ) ) )
     else:
       rmat[i]  = nan
+
+  L = np.zeros(3)
+  I = 0.
+
+  for i in range(0,nop):
+    ri = pos[i] - com
+    vi = vel[i] - vom
+
+    L += m[i]*np.cross(ri,vi)
+    I += m[i]*np.sqrt(np.dot(ri,ri))
   
   attrs = {}
   for key in dump._v_attrs._f_list():
     attrs[key] = float( dump._v_attrs[key] )
 
-  return (mtot, mmat, rmax, rmat, res, nop, attrs)
+  return (mtot, mmat, rmax, rmat, res, L, I, nop, attrs)
 
 
 sfile = sys.argv[1]
@@ -66,7 +78,8 @@ for file in os.listdir(wdir):
     dumpf = H5PartDump(ffile)
     dump  = dumpf.getStepFirst()
 
-    (m, mmat, r, rmat, h, nop, attrs) = getMetaData(dump)
+    #(m, mmat, r, rmat, h, nop, attrs) = getMetaData(dump)
+    (m, mmat, r, rmat, h, L, I, nop, attrs) = getMetaData(dump)
 
     rnewstr = raw_input("proposed radius:  %e " % r)
     try:
@@ -80,8 +93,12 @@ for file in os.listdir(wdir):
     #T = float(file[19:26])
     T = float('nan')
 
-    bodydb[ffile] = BodyFile(ffile, m, mmat, r, T, h, nop, attrs, rmat=rmat)
-    print ffile, " r = ", r, " nop = ",nop 
+    #bodydb[ffile] = BodyFile(ffile, m, mmat, r, T, h, nop, attrs, rmat=rmat)
+    bfile = BodyFile(ffile, m, mmat, r, T, h, nop, attrs, rmat=rmat)
+    bfile.L = L
+    bfile.I = I
+    bodydb[ffile] = bfile
+    print ffile, " r = ", r, " nop = ",nop," L =",L
     bodydb.sync()
 
 bodydb.sync()
