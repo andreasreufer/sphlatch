@@ -376,6 +376,7 @@ class GIplotConfig(object):
 
     self.filt = "clumpnegz"
     self.plotGas = True
+    self.hmed = float('nan')
 
     self.ds = 5.e7
     self.pt2size = 4.00
@@ -819,7 +820,9 @@ class GIplot(object):
     if cfg.verbose:
       print "determine mean h ..."
     
-    if not cfg.plotGas:
+    if not np.isnan(cfg.hmed):
+      self.hmed = cfg.hmed
+    else if not cfg.plotGas:
       self.hmed = np.median(pdump.h[:,0].compress( pdump.mat[:,0] > 0 )[:] )
     else:
       self.hmed = np.median(pdump.h[:,0])

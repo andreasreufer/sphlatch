@@ -344,7 +344,8 @@ class SimClumps(object):
 
       dump.forEachStep(self.__getEnergies)
       
-      self.ETtot = self.ETkin + self.ETpot + self.ETthm
+      #self.ETtot = self.ETkin + self.ETpot + self.ETthm 
+      self.ETtot = self.ETkin + self.ETpot + self.ETthm + self.Erot
       self.Tot  = self.Erot / (-self.Epot)
     
     if loadclmp:

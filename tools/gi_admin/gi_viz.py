@@ -183,6 +183,7 @@ class GIviz(object):
     pcfg.vimp = sparm.vimprel
     pcfg.T    = sparm.temp
     pcfg.r    = sim.tarb.r
+    pcfg.hmed = sim.tarb.h
     
     ntid = len(self.tasks)
     if path.exists(pfile) and \
