@@ -822,7 +822,7 @@ class GIplot(object):
     
     if not np.isnan(cfg.hmed):
       self.hmed = cfg.hmed
-    else if not cfg.plotGas:
+    elif not cfg.plotGas:
       self.hmed = np.median(pdump.h[:,0].compress( pdump.mat[:,0] > 0 )[:] )
     else:
       self.hmed = np.median(pdump.h[:,0])
