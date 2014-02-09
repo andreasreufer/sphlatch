@@ -219,6 +219,7 @@ class GiantImpact(object):
 
     Ltotvect = cross( r0vect, v0vect )*self.mred
     Ltot     = sqrt( dot( Ltotvect, Ltotvect ) )
+    self.Ltotvect = Ltotvect
     self.Ltot = Ltot
 
     logstr += "# alpha  = %12.6f deg (incoming angle)" % \

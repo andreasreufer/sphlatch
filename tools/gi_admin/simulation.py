@@ -193,7 +193,7 @@ class Simulation(object):
 
     self.t0 = t0
     
-    self.totdumps = int( ( self.tstop - self.t0 ) / self.tdump )
+    self.totdumps = int( ( self.tstop - self.t0 ) / self.tanim )
 
     self.nop  = self.tarb.nop + self.impb.nop
 
