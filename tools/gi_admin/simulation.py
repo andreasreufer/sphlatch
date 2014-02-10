@@ -1281,6 +1281,6 @@ class SimSetConfig(object):
     self.mpconf = MoonsPlotConfig()
 
     self.keepdumps = [0., 1., 10., 50.]
-    self.keepfiles = "clumps.h5part disk.hdf5 moons.pdf"
+    self.keepfiles = "clumps.h5part clumps_sim.h5part disk.hdf5 moons.pdf"
 
 
