@@ -90,7 +90,6 @@ vimpimpaa2 = [ \
  
 cond  = "mimp <= mtar"
 
-
 vizcfg = GIvizConfig()
 vizcfg.scdir = sscfg.dir + "/vizscratch"
 vizcfg.tasksperjob = 100
@@ -127,3 +126,18 @@ def finalizeSims(sims):
     if not sim.state == "run":
       sim._delAll()
 
+def partialProblems():
+  for sim in simadm.getSimsByState("partial"):
+    llog = sim._lastLog()
+    prob = "unkn"
+    if llog.rsplit()[-1] == "pressure":
+      prob = "eosc"
+    if llog.count("NaN"):
+      prob = "nanp"
+    
+    print sim.params.key + ("  %5.2f " % (sim.tlast/sim.tcol) ) + prob
+    sim.crashproblem = prob
+  
+  for sim in simadm.getSimsByState("partial"):
+    if sim.crashproblem == "unkn":
+      sim._resubmit()

@@ -516,7 +516,6 @@ void ANEOS<_partT>::rootU(fType& _T, const fType _rho, const iType _mat,
    while (uRooter.f(Tmax) < 0.)
       Tmax *= 3.0;
 
-   //std::cout << _rho << " " << _S << " " << Tmin << " " << Tmax << "\n";
    _T      = uRooter(Tmin, Tmax, 1.e-5);
    _p      = uRooter.f.p;
    _S      = uRooter.f.z;

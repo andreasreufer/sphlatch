@@ -75,6 +75,7 @@ class Simulation(object):
     self.getState()
     self.results = SimResults()
     self.clumpjobid = 0
+    self.courant = nan
 
   def setError(self, str=None):
     if not str == None and hasattr(self, "Log"):
@@ -277,7 +278,13 @@ class Simulation(object):
 
 
   def _delAll(self):
-    (exstat, out) = commands.getstatusoutput("rm -rf "+self.dir)
+    sdir = self.dir[:-1]
+    if os.path.islink(sdir):
+      lfile = sdir
+      sdir = os.path.realpath(sdir)
+      (exstat, out) = commands.getstatusoutput("rm "+lfile)
+    (exstat, out) = commands.getstatusoutput("rm -rf "+sdir)
+
     self.state = "unprepared"
     self.next  = self._prepare
     self.nodumps = 0
@@ -462,6 +469,18 @@ class Simulation(object):
     self.tstop = self.tcol * tcolmax
     self._resubmit()
 
+  def _getCourant(self):
+    dfile = "initial.h5part"
+
+    if self.nodumps > 0:
+      (dfile,dtime,dmtime) = self.dumps[-1]
+    
+    cmd = "h5part_readattr -i " + self.dir + dfile + " -k courant "
+    if path.exists(self.dir + dfile):
+      (exstat, out) = commands.getstatusoutput(cmd)
+      self.courant = float( out.split()[1] )
+    return self.courant
+
   def _setCourant(self,courant):
     self.courant = courant
     dfile = "initial.h5part"
@@ -474,7 +493,7 @@ class Simulation(object):
     if path.exists(self.dir + dfile):
       (exstat, out) = commands.getstatusoutput(cmd)
       print "set courant attribute in file " + dfile + " to ",str(courant)
-
+  
   def _setAttribute(self,key,val):
     (dfile,dtime,dmtime) = self.dumps[-1]
     cmd = "h5part_writeattr -i " + self.dir + dfile +\
