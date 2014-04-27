@@ -104,12 +104,14 @@ int main(int argc, char* argv[])
      return(1);
 
    const fType scl = 1.e7;
+   
    //const fType r = 9520359.;
-   const fType r = 0.3*9520359./scl;
+   //const fType r = 0.3*9520359./scl;
+   const fType r = 1.0*9520359./scl;
 
-   fout << "#version 3.6;\n";
+   fout << "#version 3.7;\n";
    fout << "global_settings {  assumed_gamma 1.0 }\n";
-   fout << "#default{ finish{ ambient 0.1 diffuse 0.9}}\n";
+   fout << "#default{ finish{ ambient 0.2 diffuse 0.9}}\n";
    fout << "#include \"colors.inc\"\n";
    fout << "#declare tsilc = rgb <0.54509804,0.,0.>;\n";
    fout << "#declare twatr = rgb <0.,0.54509804,0.54509804>;\n";
@@ -117,11 +119,11 @@ int main(int argc, char* argv[])
    fout << "#declare isilc = rgb <1.,0.54901961,0.>;\n";
    fout << "#declare iwatr = rgb <0.,1.,1.>;\n";
    fout << "#declare iiron = rgb <0.11764706,0.56470588,1.>;\n";
-   fout << "camera {location < 0.0, 0.0,80.0 >\n";
+   fout << "camera {location < -10.0, 10.0,120.0 >\n";
    fout << "        up       < 0.0, 4.5, 0.0 > \n";
    fout << "        right    < 8.0, 0.0, 0.0 > \n";
    fout << "        look_at  < 0.0, 0.0, 0.0 > \n";
-   fout << "        rotate   <   0,   0,  90> } \n";
+   fout << "        rotate   <   0,   0,   0> } \n";
    fout << "light_source{<1500,2500,  500> color White}\n";
    //fout << "light_source{<1.5e11, 2.5e11, -2.5e11> color White}\n";
 
