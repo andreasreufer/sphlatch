@@ -7,6 +7,10 @@ h5partCombine__:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz \
 	  -o h5part_combine__ h5part_combine.cpp
 
+h5part2Ascii:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz -fopenmp \
+	  -o h5part2ascii h5part2ascii.cpp
+
 h5partCombineA_:
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -I../../src -lhdf5 -lz \
 	  -DSPHLATCH_ANEOS \
