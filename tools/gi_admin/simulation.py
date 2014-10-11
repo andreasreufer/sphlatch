@@ -2,7 +2,7 @@ import os
 import os.path as path
 import stat
 import time
-import commands
+import subprocess
 import shelve
 import numpy as np
 import shutil
@@ -97,7 +97,7 @@ class Simulation(object):
       neededfiles.append(self.cfg.binary)
       neededfiles.append("initial.h5part")
       
-      print "find dumps for ",self.params.key
+      print("find dumps for ",self.params.key)
       self._findDumps()
 
       for file in neededfiles:
@@ -113,20 +113,18 @@ class Simulation(object):
           self.next = self._submit
         else:
           (dfile, dtime, mtime) = self.dumps[-1]
-	  if dtime >= 0.99*self.tstop:
-	    self.state = "finished"
-	  else:
-	    self.state = "partial"
+          if (dtime >= 0.99*self.tstop):
+            self.state = "finished"
+          else:
+            self.state = "partial"
       else:
-        # there is a job id, so state was set by SimAdmin
-	if self.state == "run":
+      # there is a job id, so state was set by SimAdmin
+        if self.state == "run":
           self.next = self._postproc
-          if self._isSlow(5.):
-            self.state = "slow"
-
-	  if self._isLogStuck(1800.):
-	    self.state = "stuck"
-      
+        if self._isSlow(5.):
+          self.state = "slow"
+        if self._isLogStuck(1800.):
+          self.state = "stuck"
       return self.state
     
     
@@ -146,7 +144,7 @@ class Simulation(object):
     # find fitting bodies
     (self.tarb, self.impb) = self._findBodies()
     if (self.tarb, self.impb) == (None, None):
-      print "no suitable bodies found!"
+      print("no suitable bodies found!")
       self.setError("no suitable bodies found!")
       return
 
@@ -205,7 +203,7 @@ class Simulation(object):
         dumps[file] = float(file[13:24])
   
     self.dumps = []
-    for key in dumps.keys():
+    for key in list(dumps.keys()):
       self.dumps.append( (key, dumps[key], os.path.getmtime(self.dir + key)) )
     self.nodumps = len(self.dumps)
     self.dumps.sort(key=lambda dmp: dmp[0])
@@ -246,21 +244,21 @@ class Simulation(object):
       deltadump = abs( rdump - round(rdump) )
 
       if deltaanim < delta and deltadump > delta:
-        print "delete  ", dfile, dtime
+        print("delete  ", dfile, dtime)
         os.remove(self.dir + dfile)
 
   def _delEscapeeOrphans(self):
     for file in os.listdir(self.dir):
       if "_esc.h5part" in file and \
       not os.path.exists(self.dir + file.replace("_esc","")):
-	print "delete ",self.dir+file
-        (exstat, out) = commands.getstatusoutput("rm "+self.dir+file)
+        print("delete ",self.dir+file)
+        (exstat, out) = subprocess.getstatusoutput("rm "+self.dir+file)
 
   def _delDumpsSmaller(self,nob):
     for (dfile, dtime, dmtime) in self.dumps:
       if os.path.getsize(self.dir + dfile) < nob:
-        print "delete  ", self.dir+dfile
-	(exstat, out) = commands.getstatusoutput("rm "+self.dir+dfile)
+        print("delete  ", self.dir+dfile)
+        (exstat, out) = subprocess.getstatusoutput("rm "+self.dir+dfile)
 
     self._delEscapeeOrphans()
 
@@ -270,11 +268,11 @@ class Simulation(object):
       dfile = self.dir + dfile
       efile = dfile.replace(".h5part","") + "_esc.h5part"
       
-      print "delete  ", dfile
-      (exstat, out) = commands.getstatusoutput("rm " + dfile)
+      print("delete  ", dfile)
+      (exstat, out) = subprocess.getstatusoutput("rm " + dfile)
       if os.path.exists(efile):
-        print "delete  ", efile
-        (exstat, out) = commands.getstatusoutput("rm " + efile)
+        print("delete  ", efile)
+        (exstat, out) = subprocess.getstatusoutput("rm " + efile)
 
 
   def _delAll(self):
@@ -282,8 +280,8 @@ class Simulation(object):
     if os.path.islink(sdir):
       lfile = sdir
       sdir = os.path.realpath(sdir)
-      (exstat, out) = commands.getstatusoutput("rm "+lfile)
-    (exstat, out) = commands.getstatusoutput("rm -rf "+sdir)
+      (exstat, out) = subprocess.getstatusoutput("rm "+lfile)
+    (exstat, out) = subprocess.getstatusoutput("rm -rf "+sdir)
 
     self.state = "unprepared"
     self.next  = self._prepare
@@ -298,10 +296,10 @@ class Simulation(object):
     for n in range( len(dumps) ):
        (dfile, dtime, dmtime) = dumps[n]
        if not ( n % nth == 0 ):
-	  print "delete  ", dfile, dtime
-	  os.remove(self.dir + dfile)
+         print("delete  ", dfile, dtime)
+         os.remove(self.dir + dfile)
        else:
-          print "keep    ", dfile, dtime
+         print("keep    ", dfile, dtime)
 
   def _prepare(self):
     # if it does not yet exist, make dir
@@ -325,7 +323,7 @@ class Simulation(object):
 
     # get orbit
     gilog = open(self.dir + "gi_setup.log", "w")
-    print >>gilog, self.gilogstr
+    print(self.gilogstr, file=gilog)
     gilog.close()
     self.Log.write("giant impact calculated")
 
@@ -375,14 +373,14 @@ class Simulation(object):
     if not path.exists(binfile):
       oldwd = os.getcwd()
       os.chdir(self.cfg.srcdir)
-      (exstat, out) = commands.getstatusoutput("make " + self.cfg.maketarg)
+      (exstat, out) = subprocess.getstatusoutput("make " + self.cfg.maketarg)
       os.chdir(oldwd)
       self.Log.write("binary compiled")
     cmds.append("cp -Rpv " + binfile + " " + self.dir)
 
     # now execute the commands
     for cmd in cmds:
-      (exstat, out) = commands.getstatusoutput(cmd)
+      (exstat, out) = subprocess.getstatusoutput(cmd)
       self.Log.write(out)
       if not exstat == 0:
         self.setError(cmd + " failed")
@@ -398,7 +396,7 @@ class Simulation(object):
     (dfile,dtime,dmtime) = self.dumps[-1]
     cmd = "h5part_writeattr -i " + self.dir + "initial.h5part" +\
           " -k courant -v " + str(courant)
-    (exstat, out) = commands.getstatusoutput(cmd)
+    (exstat, out) = subprocess.getstatusoutput(cmd)
 
   def _grabBinary(self):
     # prepare and copy binary
@@ -406,7 +404,7 @@ class Simulation(object):
     if not path.exists(binfile):
       return
     cmd = "cp -Rpv " + binfile + " " + self.dir
-    (exstat, out) = commands.getstatusoutput(cmd)
+    (exstat, out) = subprocess.getstatusoutput(cmd)
 
   def _submit(self):
     if not ( self.state == "prepared" or self.state == "partial"):
@@ -451,8 +449,8 @@ class Simulation(object):
       subcmd = subcmd.replace('$STOPTIME' , str(self.tstop))
       subcmd = subcmd.replace('$RUNARGS' ,  runarg)
       
-    print "cd " + self.dir + "; qsub jobscript.sh"
-    (exstat, out) = commands.getstatusoutput(subcmd)
+    print("cd " + self.dir + "; qsub jobscript.sh")
+    (exstat, out) = subprocess.getstatusoutput(subcmd)
     os.chdir(oldwd)
       
     self.Log.write(subcmd)
@@ -477,7 +475,7 @@ class Simulation(object):
     
     cmd = "h5part_readattr -i " + self.dir + dfile + " -k courant "
     if path.exists(self.dir + dfile):
-      (exstat, out) = commands.getstatusoutput(cmd)
+      (exstat, out) = subprocess.getstatusoutput(cmd)
       self.courant = float( out.split()[1] )
     return self.courant
 
@@ -491,14 +489,14 @@ class Simulation(object):
     cmd = "h5part_writeattr -i " + self.dir + dfile +\
           " -k courant -v " + str(courant)
     if path.exists(self.dir + dfile):
-      (exstat, out) = commands.getstatusoutput(cmd)
-      print "set courant attribute in file " + dfile + " to ",str(courant)
+      (exstat, out) = subprocess.getstatusoutput(cmd)
+      print("set courant attribute in file " + dfile + " to ",str(courant))
   
   def _setAttribute(self,key,val):
     (dfile,dtime,dmtime) = self.dumps[-1]
     cmd = "h5part_writeattr -i " + self.dir + dfile +\
           " -k " + str(key) + " -v " + str(val)
-    (exstat, out) = commands.getstatusoutput(cmd)
+    (exstat, out) = subprocess.getstatusoutput(cmd)
   
   def _resubmit(self):
     sdir = self.dir
@@ -506,10 +504,10 @@ class Simulation(object):
     efile = dfile.replace(".h5part","_esc.h5part")
     
     cmd = "mv " + sdir + dfile + " " + sdir + "/initial.h5part"
-    (exstat, out) = commands.getstatusoutput(cmd)
+    (exstat, out) = subprocess.getstatusoutput(cmd)
     
     cmd = "mv " + sdir + efile + " " + sdir + "/initial_esc.h5part"
-    (exstat, out) = commands.getstatusoutput(cmd)
+    (exstat, out) = subprocess.getstatusoutput(cmd)
   
     self.state = "prepared"
     self._submit()
@@ -519,8 +517,8 @@ class Simulation(object):
     if not self.jobid == 0:
       delcmd = self.cfg.delcmd
       delcmd = delcmd.replace('$JOBID', str(self.jobid))
-      (dstat, dout) = commands.getstatusoutput(delcmd)
-      print dout
+      (dstat, dout) = subprocess.getstatusoutput(delcmd)
+      print(dout)
 
   def _del(self):
     if not self.state == "run":
@@ -593,8 +591,8 @@ class Simulation(object):
 
       escfiles = []
       for afile in archfiles:
-      	aesc = afile.replace(".h5part","_esc.h5part")
-	if path.exists(aesc):
+        aesc = afile.replace(".h5part","_esc.h5part")
+        if path.exists(aesc):
           escfiles.append( aesc )
       archfiles.extend( escfiles )
     
@@ -610,12 +608,12 @@ class Simulation(object):
     
     if not path.exists(tdir):
       os.mkdir(tdir)
-      print tdir
+      print(tdir)
 
     for (dfile, dtime, mtime) in self.dumps:
       cmd = "cp -Rpv " + sdir + dfile + " " + tdir + dfile
-      (exstat, out) = commands.getstatusoutput(cmd)
-      print out
+      (exstat, out) = subprocess.getstatusoutput(cmd)
+      print(out)
 
   def _getDump(self, trel):
     eps = 1.e-3
@@ -635,7 +633,7 @@ class Simulation(object):
     targtmpl = BodyFile("", Me*self.params.mtar, mmatdummy, nan, \
         self.params.temp, nan, nan, {})
     targcand = []
-    for key in boddb.keys():
+    for key in list(boddb.keys()):
       if boddb[key].isSimilar(targtmpl, toler):
         targcand.append(boddb[key])
 
@@ -643,7 +641,7 @@ class Simulation(object):
     impatmpl = BodyFile("", Me*self.params.mimp, mmatdummy, nan, \
         self.params.temp, nan, nan, {})
     impacand = []
-    for key in boddb.keys():
+    for key in list(boddb.keys()):
       if boddb[key].isSimilar(impatmpl, toler):
         impacand.append(boddb[key])
 
@@ -655,8 +653,8 @@ class Simulation(object):
     for tarbd in targcand:
       for impbd in impacand:
         hdev = abs((impbd.h - tarbd.h)/tarbd.h)
-	gdev = abs((gammaparm - (impbd.m/tarbd.m))/gammaparm)
-	if gdev < toler and hdev < htoler:
+        gdev = abs((gammaparm - (impbd.m/tarbd.m))/gammaparm)
+        if gdev < toler and hdev < htoler:
           pairs.append( (tarbd, impbd) )
     
     if len(pairs) == 0:
@@ -667,7 +665,7 @@ class Simulation(object):
        for (tarb, impb) in pairs:
          cfit = abs( float( desnop - ( tarb.nop +   impb.nop) )/desnop )
          bfit = abs( float( desnop - (btarb.nop +  bimpb.nop) )/desnop )
-	 if ( cfit < bfit ):
+         if ( cfit < bfit ):
            btarb = tarb
            bimpb = impb
 
@@ -686,7 +684,7 @@ class Simulation(object):
     if path.exists(self.dir + "clumps.h5part"):
       self.clmps = SimClumps(self)
       self.clmps.plotDynamics(self.dir + "dynamics.pdf", self.cfg.cpconf)
-      print self.dir + "dynamics.pdf"
+      print(self.dir + "dynamics.pdf")
 
   def _getDynamics(self):
     if path.exists(self.dir + "clumps.h5part"):
@@ -722,8 +720,8 @@ class Simulation(object):
         + str(rhozero) + " " \
         + str(hmult)   + " "
 
-      (exstat, out) = commands.getstatusoutput(cmd)
-      print out
+      (exstat, out) = subprocess.getstatusoutput(cmd)
+      print(out)
       
       clmp = SimClumps(self, fname="clumps_rot.h5part", loadcrot=True)
       
@@ -754,9 +752,9 @@ class Simulation(object):
       res.Erotclmp = clmps.Erotclmp[-1,:]
       res.Iclmp    = clmps.Iclmp[-1,:]
         
-      print - res.Erotclmp[1] / res.Epotclmp[1], \
-          res.mm[0] / clmps.m[-1,0], res.mm[1] / clmps.m[-1,1]
-      print "Epotclmp and Erotclmp loaded!"
+      print(- res.Erotclmp[1] / res.Epotclmp[1], \
+          res.mm[0] / clmps.m[-1,0], res.mm[1] / clmps.m[-1,1])
+      print("Epotclmp and Erotclmp loaded!")
       
     except:
       noc = 0
@@ -766,29 +764,29 @@ class Simulation(object):
       res.Epotclmp = nan*np.zeros(noc)
       res.Epotclmp = nan*np.zeros(noc)
       res.Iclmp    = nan*np.zeros(noc)
-      print "Epotclmp and Erotclmp failed!"
+      print("Epotclmp and Erotclmp failed!")
 
   def _totEnergy(self):
     sdir  = self.dir
     for (dfile,dtime,dmtime) in self.dumps:
       cmd = "totEnergy__ " + sdir + dfile + " " + sdir + "clumps.h5part"
-      (exstat, out) = commands.getstatusoutput(cmd)
-      print out
+      (exstat, out) = subprocess.getstatusoutput(cmd)
+      print(out)
 
   def _lastLog(self, n=10):
     sdir  = self.dir
     cmd = "tail -n " + str(n) + " " + sdir + "logDomain000"
-    (exstat, out) = commands.getstatusoutput(cmd)
+    (exstat, out) = subprocess.getstatusoutput(cmd)
     return out
 
   def _lastDt(self):
     sdir  = self.dir
     cmd = "tail -n 100 " + sdir + "logDomain000 | grep dt:|tail -n1"
-    (exstat, out) = commands.getstatusoutput(cmd)
+    (exstat, out) = subprocess.getstatusoutput(cmd)
     return out[24:]
 
   def _hdf5OK(self, file):
-    (exstat, out) = commands.getstatusoutput("h5dump -A " + file)
+    (exstat, out) = subprocess.getstatusoutput("h5dump -A " + file)
 
     if exstat == 0:
       return True
@@ -823,16 +821,16 @@ class Simulation(object):
        self._redoClumps()
   
   def _redoClumpsLocally(self):
-    print self.params.key
+    print(self.params.key)
     sdir = self.dir
     orgclmpfile = sdir + "clumps.h5part"
     
     if not path.exists(orgclmpfile):
       cmd = "mv " + sdir + "clumps.h5part " + sdir + "clumps_sim.h5part"
-      (exstat, out) = commands.getstatusoutput(cmd)
+      (exstat, out) = subprocess.getstatusoutput(cmd)
     else:
       cmd = "rm " + sdir + "clumps.h5part "
-      (exstat, out) = commands.getstatusoutput(cmd)
+      (exstat, out) = subprocess.getstatusoutput(cmd)
 
     mmassclmp = 0.01*self.mtot
     mmassorb  = 0.01*self.mtot
@@ -842,8 +840,8 @@ class Simulation(object):
       (dfile,dtime,dmtime) = self.dumps[-1]
       cmd = "find_clumps_A_ " + sdir + dfile + " " + sdir + \
             "clumps.h5part " + str(mmassclmp) + " " + str(mmassorb)
-      (stat, out) = commands.getstatusoutput(cmd)
-      print out
+      (stat, out) = subprocess.getstatusoutput(cmd)
+      print(out)
 
   def _redoClumps(self):
     if not len(self.cfg.subcmdsgl) > 0:
@@ -863,18 +861,18 @@ class Simulation(object):
     mmassclmp = 1.e-4*self.mtot
     mmassorb  = 1.e-3*self.mtot
     
-    print >>scrfile, "mv clumps.h5part clumps_sim.h5part"
+    print("mv clumps.h5part clumps_sim.h5part", file=scrfile)
     
     for (dfile,dtime,dmtime) in self.dumps:
       #cmd = "find_clumps_A_ " + sdir + dfile + " " + sdir + \
       #      "clumps.h5part -1. -1."
       cmd = "find_clumps_A_ " + sdir + dfile + " " + sdir + \
             "clumps.h5part " + str(mmassclmp) + " " + str(mmassorb)
-      print >>scrfile, cmd
+      print(cmd, file=scrfile)
       #(stat, out) = commands.getstatusoutput(cmd)
       #print out
-    print >>scrfile, "rm " + jobscr
-    print >>scrfile, "touch " + sdir + "clumps_done"
+    print("rm " + jobscr, file=scrfile)
+    print("touch " + sdir + "clumps_done", file=scrfile)
     scrfile.close()
     os.chmod(jobscr, stat.S_IRWXU)
     
@@ -884,14 +882,14 @@ class Simulation(object):
 
     if hasattr(sim_machine, "qsub_sglscr"):
       retstr = "cd " + sdir + "; qsub redoclumps.sh"
-      print retstr
+      print(retstr)
       return retstr
     else:
       oldwd = os.getcwd()
       os.chdir(self.dir)
-      (exstat, out) = commands.getstatusoutput(jobsub)
+      (exstat, out) = subprocess.getstatusoutput(jobsub)
       os.chdir(oldwd)
-      print out
+      print(out)
       return out
 
   def _findNoClumps(self):
@@ -900,26 +898,26 @@ class Simulation(object):
     wcmd = "h5part_writeattr -k noclumps -v -2. -i "
 
     jobscr  = sdir + "doclumps.sh"
-    (exstat, out) = commands.getstatusoutput("rm " + jobscr)
+    (exstat, out) = subprocess.getstatusoutput("rm " + jobscr)
     scrfile = open(jobscr,"w")
 
     if not self.clumpjobid == 0:
       jobdel = self.cfg.delcmd
       jobdel = jobdel.replace("$JOBID", self.clumpjobid)
-      (exstat, out) = commands.getstatusoutput(jobdel)
-      print out
+      (exstat, out) = subprocess.getstatusoutput(jobdel)
+      print(out)
 
     for (dfile,dtime,dmtime) in self.dumps:
-      (exstat, out) = commands.getstatusoutput(rcmd + sdir + dfile)
+      (exstat, out) = subprocess.getstatusoutput(rcmd + sdir + dfile)
       if not exstat == 0:
-        print sdir + dfile, " corrupted!"
-	continue
+        print(sdir + dfile, " corrupted!")
+        continue
       noc = int(float(out[10:]))
       if noc == -1:
         cmd = "find_clumps_A_ " + sdir + dfile + " " + sdir + \
             "clumps.h5part -1. -1."
-        print >>scrfile, cmd
-    print >>scrfile, "rm " + jobscr
+        print(cmd, file=scrfile)
+    print("rm " + jobscr, file=scrfile)
     scrfile.close()
     
     os.chmod(jobscr, stat.S_IRWXU)
@@ -929,19 +927,19 @@ class Simulation(object):
 
     oldwd = os.getcwd()
     os.chdir(self.dir)
-    (exstat, out) = commands.getstatusoutput(jobsub)
+    (exstat, out) = subprocess.getstatusoutput(jobsub)
     os.chdir(oldwd)
-    print out
+    print(out)
     self.clumpjobid = re.split( '\W+', out )[2]
 
   def _delCorrupt(self):
     for (dfile, dtime, mtime) in self.dumps:
       if not self._hdf5OK(self.dir + dfile):
-        (exstat, out) = commands.getstatusoutput("rm " + self.dir + dfile)
-        print "rm " + self.dir + dfile
+        (exstat, out) = subprocess.getstatusoutput("rm " + self.dir + dfile)
+        print("rm " + self.dir + dfile)
     if not self._clumpsOK():
-      (exstat, out) = commands.getstatusoutput("rm " + self.dir + "clumps.h5part")
-      print "rm " + self.dir + "clumps.h5part"
+      (exstat, out) = subprocess.getstatusoutput("rm " + self.dir + "clumps.h5part")
+      print("rm " + self.dir + "clumps.h5part")
 
   def _redoEnergies(self):
     sdir = self.dir
@@ -951,8 +949,8 @@ class Simulation(object):
     for (dfile,dtime,dmtime) in self.dumps:
       cmd = "get_energies__ " + sdir + dfile + " " + sdir + \
             "clumps.h5part "
-      print >>scrfile, cmd
-    print >>scrfile, "rm " + jobscr
+      print(cmd, file=scrfile)
+    print("rm " + jobscr, file=scrfile)
     scrfile.close()
     os.chmod(jobscr, stat.S_IRWXU)
     jobsub = self.cfg.subcmdsgl
@@ -961,20 +959,20 @@ class Simulation(object):
 
     oldwd = os.getcwd()
     os.chdir(self.dir)
-    (exstat, out) = commands.getstatusoutput(jobsub)
-    print jobsub
+    (exstat, out) = subprocess.getstatusoutput(jobsub)
+    print(jobsub)
     os.chdir(oldwd)
-    print out
+    print(out)
 
   def _getSecondaryImpact(self, rhomin):
     sdir = self.dir
     
     (dfile,dtime,dmtime) = self.dumps[-1]
     cmd = "find_fof " + sdir + dfile + " " + sdir + "last_fof.h5part 0. " + str(rhomin) + " 2.0 2 "
-    (exstat, out) = commands.getstatusoutput(cmd)
-    print out
+    (exstat, out) = subprocess.getstatusoutput(cmd)
+    print(out)
     last_fof = SimClumps(self, "last_fof.h5part", loadsat=True, loadeng=True)
-    (exstat, out) = commands.getstatusoutput("rm " + sdir + "last_fof.h5part")
+    (exstat, out) = subprocess.getstatusoutput("rm " + sdir + "last_fof.h5part")
 
     if last_fof.nofc[0] >= 2:
       r0vect = last_fof.pos[0,2,:] - last_fof.pos[0,1,:]

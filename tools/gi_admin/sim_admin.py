@@ -52,15 +52,15 @@ class SimAdmin(object):
     
     self._updateQSYS()
     
-    for sim in self._sims.values():
+    for sim in list(self._sims.values()):
       sim.getState()
 
     if path.exists(ssetcfg.resultsdb):
       resdb = shelve.open(resolvePath(self._simset.cfg.resultsdb))
-      print ("loading results from " + resolvePath(self._simset.cfg.resultsdb))
+      print(("loading results from " + resolvePath(self._simset.cfg.resultsdb)))
 
-      for key in resdb.keys():
-        if self._sims.has_key(key) and resdb.has_key(key):
+      for key in list(resdb.keys()):
+        if key in self._sims and key in resdb:
           self._sims[key].results = resdb[key]
       resdb.close()
 
@@ -70,20 +70,20 @@ class SimAdmin(object):
   def update(self):
     self._simset.discoverSims()
     self._updateQSYS()
-    for sim in self._sims.values():
+    for sim in list(self._sims.values()):
       if sim.state == "run" or sim.state == "stuck":
         sim.getState()
   
   def loadResults(self):
     resdb = shelve.open(resolvePath(self._simset.cfg.resultsdb))
-    print ("loading results from " + resolvePath(self._simset.cfg.resultsdb))
-    for key in self._sims.keys():
+    print(("loading results from " + resolvePath(self._simset.cfg.resultsdb)))
+    for key in list(self._sims.keys()):
       self._sims[key].results = resdb[key]
     resdb.close()
 
   def storeResults(self):
     resdb = shelve.open(resolvePath(self._simset.cfg.resultsdb))
-    for key in self._sims.keys():
+    for key in list(self._sims.keys()):
       resdb[key] = self._sims[key].results
     resdb.close()
 
@@ -107,23 +107,23 @@ class SimAdmin(object):
       filt = SimParam(nan, nan, nan, nan)
     
     filtSims = []
-    for sim in self._sims.values():
+    for sim in list(self._sims.values()):
       if sim.params.isSimilar(filt, 0.01):
         filtSims.append(sim)
     return filtSims
 
   def getSimsByState(self, state):
     filtSims = []
-    for sim in self._sims.values():
+    for sim in list(self._sims.values()):
       if sim.state == state:
         filtSims.append(sim)
     return filtSims
 
   def lastLogStuck(self, ll):
     for sim in self.getSimsByState("stuck"):
-      print sim.params.key
+      print(sim.params.key)
       sim._lastLog(ll)
-      print "-----------------------------------------"
+      print("-----------------------------------------")
 
   def archiveSims(self, tfname, sims):
     archfiles = []
@@ -135,18 +135,18 @@ class SimAdmin(object):
     cwd = os.getcwd() + "/"
     for f in archfiles:
        relf = f.replace(cwd, "")
-       print relf
+       print(relf)
        tf.add(relf)
     #print archfiles
     tf.close()
     
 
   def newSim(self, params):
-    if self._sims.has_key(params.key):
-      print ("sim: ",params.key," already exists!")
+    if params.key in self._sims:
+      print(("sim: ",params.key," already exists!"))
     else:
       csim = Simulation( params, self._simset.cfg )
-      csim.next()
+      next(csim)
       self._sims[params.key] = csim
       return csim
 
@@ -166,7 +166,7 @@ class SimAdmin(object):
               self.newSim( SimParam(mimp, mtar, impa, vimp) )
 
   def forEachSim(self,func):
-    for sim in self._sims.values():
+    for sim in list(self._sims.values()):
       func(sim)
 
   def showState(self, filt=None):
@@ -179,7 +179,7 @@ class SimAdmin(object):
       if sim.nodumps > 0:
          (lfile, ltime, lmtime) = sim.dumps[-1]
          str += "  %6.2f" % (ltime / sim.tcol)
-      print str
+      print(str)
 
 
   def _colorState(self, state, width=10):
@@ -219,13 +219,13 @@ class SimAdmin(object):
       if (user == self.user):
         fname = self._qsysqry.getFullname(id)
         if len(fname) < 1 or len(fname) < len(ssname):
-	      continue
+            continue
         if fname.count("_") < 1:
-	      continue
+            continue
         prefix = fname[0:len(ssname)]
         if prefix == ssname:
           simname = fname.replace(prefix + "_", "")
-          if self._simset.sims.has_key(simname):
+          if simname in self._simset.sims:
             self._simset.sims[simname].set_jobid(id)
             self._simset.sims[simname].set_state(state)
             if state == "queued" or state == "run":
