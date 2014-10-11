@@ -57,7 +57,7 @@ class SimAdmin(object):
 
     if path.exists(ssetcfg.resultsdb):
       resdb = shelve.open(resolvePath(self._simset.cfg.resultsdb))
-      print "loading results from " + resolvePath(self._simset.cfg.resultsdb)
+      print ("loading results from " + resolvePath(self._simset.cfg.resultsdb))
 
       for key in resdb.keys():
         if self._sims.has_key(key) and resdb.has_key(key):
@@ -76,7 +76,7 @@ class SimAdmin(object):
   
   def loadResults(self):
     resdb = shelve.open(resolvePath(self._simset.cfg.resultsdb))
-    print "loading results from " + resolvePath(self._simset.cfg.resultsdb)
+    print ("loading results from " + resolvePath(self._simset.cfg.resultsdb))
     for key in self._sims.keys():
       self._sims[key].results = resdb[key]
     resdb.close()
@@ -143,7 +143,7 @@ class SimAdmin(object):
 
   def newSim(self, params):
     if self._sims.has_key(params.key):
-      print "sim: ",params.key," already exists!"
+      print ("sim: ",params.key," already exists!")
     else:
       csim = Simulation( params, self._simset.cfg )
       csim.next()
